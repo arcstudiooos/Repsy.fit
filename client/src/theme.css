@@ -1,0 +1,43 @@
+/* Repsy design system — values from the approved prototype. Do not add new colours. */
+
+:root {
+  color-scheme: light dark;
+
+  /* Light */
+  --bg: #faf7f2;            /* warm cream page */
+  --surface: #ffffff;       /* cards */
+  --surface2: #f1ede6;      /* inputs, soft areas */
+  --text: #1a1a1a;
+  --dim: #6b6560;           /* secondary text */
+  --border: #e6e0d6;
+  --accent: #ff4a1f;        /* brand orange-red */
+  --accent2: #0e7c6b;       /* teal */
+  --amber: #d97706;
+  --tab-inactive: #e9e3d8;
+  --header: #141414;        /* header strip background */
+
+  /* Assignment type colours (same in light and dark) */
+  --type-workout: #ff4a1f;
+  --type-nutrition: #0e7c6b;
+  --type-habit: #d97706;
+  --type-recovery: #7c5cfc;
+
+  /* Fonts */
+  --font-heading: "Barlow Condensed", system-ui, sans-serif;
+  --font-body: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Shape */
+  --radius-card: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141414;
+    --surface: #1e1e1e;
+    --surface2: #262626;
+    --text: #f5f1eb;
+    --dim: #a8a29e;
+    --border: #333333;
+    --tab-inactive: #262626;
+  }
+}

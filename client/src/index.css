@@ -1,1 +1,68 @@
 @import "tailwindcss";
+@import "./theme.css";
+
+/*
+  Tailwind tokens point at the theme variables, so utilities follow light/dark
+  automatically. Tailwind's default colour palette is removed so only Repsy
+  colours exist: bg-bg, bg-surface, bg-surface2, text-text, text-dim,
+  border-border, text-accent, bg-accent2, text-amber, bg-tab-inactive, bg-header,
+  bg-type-workout / -nutrition / -habit / -recovery, font-heading, font-body,
+  rounded-card.
+*/
+@theme inline {
+  --color-*: initial;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-text: var(--text);
+  --color-dim: var(--dim);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent2: var(--accent2);
+  --color-amber: var(--amber);
+  --color-tab-inactive: var(--tab-inactive);
+  --color-header: var(--header);
+
+  --color-type-workout: var(--type-workout);
+  --color-type-nutrition: var(--type-nutrition);
+  --color-type-habit: var(--type-habit);
+  --color-type-recovery: var(--type-recovery);
+
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+
+  --radius-card: var(--radius-card);
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+}
+
+/* Card: surface background, 1px border, 14px radius, no heavy shadow. */
+@utility card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
