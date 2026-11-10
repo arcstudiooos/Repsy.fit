@@ -42,12 +42,14 @@ The landing code lives in `client/src/landing/`, and its design rules are in
 WebGL errors all get a static poster instead of the 3D scene. Rendering also pauses when the
 hero is scrolled off-screen.
 
-**Lighthouse** (Lighthouse 12, landing page `/`):
+**Lighthouse** (Lighthouse 12, landing page `/`, run on 2026-11-10):
 
 | Run | Performance | Accessibility | Best practices | SEO |
 |---|---|---|---|---|
-| Desktop, 3D on (local build, no compression) | 97 | 100 | 100 | 100 |
-| Mobile, poster mode (local build, no compression) | 86 | 100 | 100 | 100 |
+| Desktop, 3D on, live site | 95 | 100 | 100 | 100 |
+| Mobile, poster mode, live site | 86 | 100 | 100 | 100 |
+| Desktop, 3D on, local build without compression | 97 | 100 | 100 | 100 |
+| Mobile, poster mode, local build without compression | 86 | 100 | 100 | 100 |
 
 Phones always get the poster, by design, so there is no separate mobile score with 3D on.
 The mobile run is the same fallback mode that reduced-motion and no-WebGL visitors get. It
