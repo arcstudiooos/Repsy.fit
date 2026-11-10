@@ -22,6 +22,8 @@ Production: `npm run build` then `npm start` (serves the built client and the AP
 create client, list clients. They need `DATABASE_URL` (read from `.env` locally) and clean up
 after themselves.
 
+Run `npm run build` before `npm run test:e2e` (the browser tests run against the built app).
+
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`: install, build,

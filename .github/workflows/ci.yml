@@ -47,8 +47,37 @@ jobs:
       - name: Test
         run: npm test
 
+      # Playwright: cache the browser AND the system packages (.deb files) it needs, so
+      # neither is downloaded on every run. The Ubuntu package mirror is the slow part.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-browser-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Cache Playwright system packages
+        id: pw-apt
+        uses: actions/cache@v4
+        with:
+          path: ~/pw-apt-cache
+          key: pw-apt-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: |
+          # Keep downloaded .deb files, and reuse cached ones instead of downloading.
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-debs > /dev/null
+          mkdir -p ~/pw-apt-cache
+          sudo cp ~/pw-apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          npx playwright install --with-deps chromium
+          # First run only: save the downloaded packages for the cache.
+          if [ "${{ steps.pw-apt.outputs.cache-hit }}" != "true" ]; then
+            cp /var/cache/apt/archives/*.deb ~/pw-apt-cache/ 2>/dev/null || true
+          fi
+          echo "cached system packages: $(ls ~/pw-apt-cache/*.deb 2>/dev/null | wc -l)"
 
       - name: Browser smoke tests
         run: npm run test:e2e
