@@ -52,7 +52,7 @@ test("/ is the landing page: one h1, sticky header with logo, nav, Start free, c
   expect(apiCalls).toEqual([]); // the landing page calls no API
 });
 
-test("landing copy sticks to shipped features: no prices, testimonials or user counts", async ({ page }) => {
+test("landing copy sticks to shipped features: no testimonials, logos or user counts", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
   await expect(page.locator("#features")).toContainText("Plan by hand");
@@ -60,7 +60,9 @@ test("landing copy sticks to shipped features: no prices, testimonials or user c
   for (const fact of ["AI Coach, with the reasoning shown", "Plan by hand", "sets, reps and rest", "Progress you can see", "sample client"]) {
     expect(text).toContain(fact);
   }
-  expect(text).not.toMatch(/\$\s?\d|per month|\/mo\b|testimonial|trusted by|\d[\d,]*\+? (coaches|users|customers)/i);
+  expect(text).not.toMatch(/testimonial|trusted by|\d[\d,]*\+? (coaches|users|customers)/i);
+  // The only prices are the 3 published plans (Prompt 41).
+  expect(text.match(/\$\d+/g)).toEqual(["$39", "$89", "$199"]);
 });
 
 test("Start free opens the dashboard at /app with all 4 tabs", async ({ page }) => {

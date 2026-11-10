@@ -11,8 +11,10 @@ import type {
   AutoAssignInput,
   ChatMessage,
   Client,
+  Lead,
   NewAssignment,
   NewClient,
+  NewLead,
   NewProgressLog,
   ProgressLog,
 } from "./types";
@@ -120,6 +122,10 @@ export const seedDemo = () => request<Client[]>("POST", "/seed/demo");
 /** Adds the 10 six-month demo clients (26 weekly check-ins each), skipping names that already
  *  exist; returns the clients it created ([] when all 10 were already there). */
 export const seedSixMonthDemo = () => request<Client[]>("POST", "/seed/six-month-demo");
+
+// ----- Landing page -----
+/** Saves a "Start free" sign-up. 409 "You are already on the list." for a known email. */
+export const createLead = (input: NewLead) => request<Lead>("POST", "/leads", input);
 
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.

@@ -95,3 +95,12 @@ export type AutoAssignInput = { type: AssignmentType; date?: DateString };
 
 export type NewProgressLog = Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;
+
+/** Landing page "Start free" sign-up (Prompt 41). */
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+export type NewLead = Pick<Lead, "name" | "email">;

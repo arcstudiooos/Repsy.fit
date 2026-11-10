@@ -6,6 +6,7 @@ import { chatRouter } from "./routes/chat.js";
 import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
+import { leadsRouter } from "./routes/leads.js";
 import { prisma } from "./db.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -45,6 +46,7 @@ app.use("/api/clients/:clientId/chat", chatRouter);
 app.use("/api/clients/:clientId/progress", progressRouter);
 app.use("/api/clients", clientsRouter);
 app.use("/api/seed", seedRouter);
+app.use("/api/leads", leadsRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
 // "Not found" is reserved for missing routes (see API contract in CLAUDE.md).

@@ -89,3 +89,14 @@ model ProgressLog {
   @@index([coachId])
   @@map("progress_logs")
 }
+
+/// Landing page "Start free" sign-ups (Prompt 41). No password, no payment. Not coach-owned.
+model Lead {
+  id        String   @id @default(cuid())
+  name      String
+  /// Stored lower-case; one row per email.
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("leads")
+}

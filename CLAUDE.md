@@ -16,7 +16,7 @@ Progress in charts. Built one feature at a time, across many separate prompts.
    - Routes: `/` = public landing page, `/app` (and `/app/...`) = the coach dashboard.
    - Backend (`server/`): Node.js + Express (TypeScript), REST API, zod for validation
    - Database: PostgreSQL on Render, Prisma (`server/prisma/`). Tables: clients, assignments,
-     chat_messages, progress_logs
+     chat_messages, progress_logs, leads (landing page sign-ups, Prompt 41)
    - AI: AI API via key, read from env vars `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`
    - Hosting: GitHub + Render (1 Web Service serving frontend + backend, 1 PostgreSQL).
      Render env vars: `DATABASE_URL`, `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `PORT`
@@ -157,6 +157,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
 | `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
 | `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client[]` (the six-month clients it created; `[]` when all 10 exist) |
+| `createLead(input)` | POST | `/api/leads` | `{ name, email }` | `Lead` 201 `{ id, name, email, createdAt }`; 400 `{ error }` (missing name / bad email); 409 `{ "error": "You are already on the list." }` for a known email (case-insensitive, stored lower-case). Landing page only; no password or payment. |
 
 `askAI`: `question` is the saved coach message (`role: "coach"`), `reply` is the saved AI
 message (`role: "ai"`). Both are stored in `chat_messages` for that client. `suggestion` is

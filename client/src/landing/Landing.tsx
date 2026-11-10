@@ -2,7 +2,10 @@
 // testimonials, user counts or unreleased features.
 import { Suspense, lazy, useEffect, useState } from "react";
 import "./landing.css";
+import Faq from "./Faq";
 import { Hero, TrainingLogBand } from "./Hero";
+import LeadForm from "./LeadForm";
+import Pricing from "./Pricing";
 
 // The scroll story (with GSAP) is its own lazy chunk, so it never delays the hero.
 const Story = lazy(() => import("./Story"));
@@ -92,11 +95,18 @@ export default function Landing() {
             Try it in the app
           </a>
         </Section>
-        <Section id="pricing" n="06" kicker="Pricing" title="Pricing">
-          <p className="landing-dim mt-3">Pricing is coming soon.</p>
+        <Section id="pricing" n="06" kicker="Pricing" title="Simple monthly plans">
+          <Pricing />
         </Section>
         <Section id="faq" n="07" kicker="Questions" title="FAQ">
-          <p className="landing-dim mt-3">Answers to common questions are coming soon.</p>
+          <Faq />
+        </Section>
+        <Section id="start" n="08" kicker="Start free" title="Get your free trial">
+          <p className="landing-dim mt-4 max-w-2xl text-lg">
+            Leave your name and email and we'll set you up. In the meantime, the app is open with
+            sample data.
+          </p>
+          <LeadForm />
         </Section>
       </main>
       <footer className="landing-dark">
