@@ -137,9 +137,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `api.ts` function | Method | Path | Accepts (JSON body) | Returns |
 | --- | --- | --- | --- | --- |
 | *(health)* | GET | `/api/health` | — | `{ "ok": true }` *(exists)* |
-| `listClients()` | GET | `/api/clients` | — | `Client[]` |
-| `createClient(input)` | POST | `/api/clients` | `NewClient` | `Client` |
-| `deleteClient(clientId)` | DELETE | `/api/clients/:clientId` | — | 204, no body |
+| `listClients()` | GET | `/api/clients` | — | `Client[]` (oldest first) |
+| `createClient(input)` | POST | `/api/clients` | `NewClient` | `Client` (201) |
+| `getClient(clientId)` | GET | `/api/clients/:clientId` | — | `Client` |
+| `deleteClient(clientId)` | DELETE | `/api/clients/:clientId` | — | 204, no body (also deletes the client's assignments, chat messages and progress logs) |
 | `listAssignments(clientId)` | GET | `/api/clients/:clientId/assignments` | — | `Assignment[]` |
 | `createAssignment(clientId, input)` | POST | `/api/clients/:clientId/assignments` | `NewAssignment` | `Assignment` |
 | `updateAssignmentStatus(clientId, assignmentId, status)` | PATCH | `/api/clients/:clientId/assignments/:assignmentId` | `{ "status": AssignmentStatus }` | `Assignment` |
@@ -164,17 +165,38 @@ message (`role: "ai"`). Both are stored in `chat_messages` for that client.
 | `NewAssignment` | `type`, `title`, `details`, `date` | `reasoning`, `source`, `status` |
 | `NewProgressLog` | `date` | `weightKg`, `adherence`, `workoutsDone`, `note` |
 
-Allowed values: `level` ∈ Beginner / Intermediate / Advanced; `type` ∈ Workout / Nutrition /
+Allowed values: `goal` ∈ Fat loss / Muscle gain / Fat loss + strength / Marathon prep +
+conditioning / General fitness / Athletic performance / Rehab & mobility (default General
+fitness); `level` ∈ Beginner / Intermediate / Advanced; `type` ∈ Workout / Nutrition /
 Habit / Recovery; `source` ∈ ai / manual; `status` ∈ Active / Done / Paused; chat `role` ∈
 coach / ai; `adherence` 0–100. The server validates these with zod and replies
 `400 {"error": "..."}` on bad input.
 
+Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 1–120;
+`weightKg` above 0, up to 500; `heightCm` above 0, up to 300; `focus` up to 500 characters;
+`notes` (notes for AI) up to 2000 characters. Unknown body fields are ignored.
+
+### Decided when built
+
+- `GET /api/clients` lists **oldest first** (`createdAt`, then `id`), so the first client
+  added is the default selected client. Other list endpoints: decide when built.
+- Creates reply **201 Created** with the full record.
+- A client that does not exist, or belongs to another coach, returns
+  `404 {"error":"Client not found"}`.
+- Malformed JSON bodies return `400 {"error":"Request body is not valid JSON."}`; unexpected
+  server errors return `500 {"error":"Something went wrong on the server."}` (never a stack trace).
+
 ### Not fixed by `api.ts` (decide when the endpoint is built)
 
-- Sort order of the list endpoints.
-- Exact success status for creates (200 vs 201 — both work with `api.ts`).
+- Sort order of the other list endpoints.
 
 ### Differences from the prototype
 
-The approved prototype was not available when this contract was written, so it has not
-been compared. If a difference is found later, follow `api.ts` and record it here.
+The approved prototype and the 36-prompt document were not available when this contract
+was written, so they have not been compared. If a difference is found later, follow `api.ts`
+and record it here.
+
+- Prompt 11 asked for "get one client", which was not in the original contract:
+  `getClient()` / `GET /api/clients/:clientId` was added to `api.ts` and here.
+- A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
+  create, `{ ok: true }` on delete). The user chose to keep this contract.

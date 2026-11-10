@@ -76,6 +76,7 @@ const enc = encodeURIComponent;
 // ----- Clients -----
 export const listClients = () => request<Client[]>("GET", "/clients");
 export const createClient = (input: NewClient) => request<Client>("POST", "/clients", input);
+export const getClient = (clientId: string) => request<Client>("GET", `/clients/${enc(clientId)}`);
 export const deleteClient = (clientId: string) => request<void>("DELETE", `/clients/${enc(clientId)}`);
 
 // ----- Assignments (per client) -----

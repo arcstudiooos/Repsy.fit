@@ -1,5 +1,6 @@
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
+import { clientsRouter } from "./routes/clients.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,9 +19,23 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use("/api/clients", clientsRouter);
+
 // Unknown API routes return JSON 404 instead of the client page.
+// "Not found" is reserved for missing routes (see API contract in CLAUDE.md).
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Not found" });
+});
+
+// Errors always come back as JSON { error } (API contract), never an HTML page.
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) return next(err);
+  if (err && typeof err === "object" && (err as { type?: string }).type === "entity.parse.failed") {
+    res.status(400).json({ error: "Request body is not valid JSON." });
+    return;
+  }
+  console.error(err);
+  res.status(500).json({ error: "Something went wrong on the server." });
 });
 
 // Production: serve the built client. In dev, Vite serves it instead.

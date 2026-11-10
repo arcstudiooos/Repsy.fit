@@ -23,6 +23,8 @@ create client, list clients. They need `DATABASE_URL` (read from `.env` locally)
 after themselves.
 
 Run `npm run build` before `npm run test:e2e` (the browser tests run against the built app).
+The browser tests **delete all clients** to set up each test, so point `DATABASE_URL` at a test
+database (they refuse to run against a Render database).
 
 ## CI
 
@@ -36,17 +38,3 @@ Render deploys `main` **only after CI passes** (`autoDeployTrigger: checksPass`)
 with failing CI never goes live. On start, `npm start` applies database migrations
 (`prisma migrate deploy`) and then starts the server. Secrets (`AI_API_KEY` etc.) are set in the
 Render dashboard, never in code.
-
-## TEMP: `?tempState`
-
-Until the real clients API exists, the app uses sample clients and lets you preview each
-screen state by adding `?tempState=` to the URL:
-
-| URL | Shows |
-| --- | --- |
-| `/` | the 3 sample clients (default) |
-| `/?tempState=empty` | the empty state (no clients) |
-| `/?tempState=loading` | the loading state |
-| `/?tempState=error` | the error state with Retry |
-
-This is TEMP code (`client/src/tempSampleClients.ts`) and will be removed in Prompt 11.

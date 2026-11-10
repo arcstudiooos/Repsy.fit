@@ -4,6 +4,17 @@
 export const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 export type Level = (typeof LEVELS)[number];
 
+export const GOALS = [
+  "Fat loss",
+  "Muscle gain",
+  "Fat loss + strength",
+  "Marathon prep + conditioning",
+  "General fitness",
+  "Athletic performance",
+  "Rehab & mobility",
+] as const;
+export type Goal = (typeof GOALS)[number];
+
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 export type AssignmentType = (typeof ASSIGNMENT_TYPES)[number];
 
@@ -23,12 +34,13 @@ export interface Client {
   id: string;
   coachId: string;
   name: string;
-  goal: string;
+  goal: Goal;
   age: number | null;
   weightKg: number | null;
   heightCm: number | null;
   level: Level;
   focus: string;
+  /** Notes for AI */
   notes: string;
   createdAt: string;
 }

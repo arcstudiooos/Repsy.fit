@@ -1,12 +1,35 @@
 // Browser smoke tests: app shell, client strip, and empty / loading / error states.
 // A small set on purpose - not a full UI suite.
-// The client strip and states use the TEMP sample clients and ?tempState scenarios
-// (client/src/tempSampleClients.ts); update these tests when Prompt 11 removes TEMP.
-import { expect, test, type Page } from "@playwright/test";
+// Each test sets up REAL clients through the API first (all clients are deleted, then the
+// needed ones created), so run these only against a test database.
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const TABS = ["AI Coach", "Clients", "Manual Planner", "Progress"];
+const SAMPLE_CLIENTS = [
+  { name: "Maya Patel", goal: "Fat loss + strength" },
+  { name: "Arjun Mehta", goal: "Muscle gain" },
+  { name: "Casey Jordan", goal: "Marathon prep + conditioning" },
+];
+
 const panel = (page: Page) => page.getByRole("tabpanel");
 const strip = (page: Page) => page.getByRole("group", { name: "Select client" });
+
+/** Deletes every client, then creates the given ones in order (oldest first = first chip). */
+async function setClients(request: APIRequestContext, clients: { name: string; goal: string }[]) {
+  const list = await request.get("/api/clients");
+  expect(list.ok()).toBeTruthy();
+  for (const c of (await list.json()) as { id: string }[]) {
+    expect((await request.delete(`/api/clients/${c.id}`)).status()).toBe(204);
+  }
+  for (const c of clients) {
+    expect((await request.post("/api/clients", { data: c })).status()).toBe(201);
+  }
+}
+
+// Default for every test: the 3 sample clients. The empty-state tests override this.
+test.beforeEach(async ({ request }) => {
+  await setClients(request, SAMPLE_CLIENTS);
+});
 
 test.describe("app shell", () => {
   test("header strip shows the R mark, REPSY and subtitle", async ({ page }) => {
@@ -49,7 +72,7 @@ test.describe("app shell", () => {
   });
 });
 
-test.describe("client strip", () => {
+test.describe("client strip (real clients from the API)", () => {
   test("shows 3 chips with initials, first name and goal", async ({ page }) => {
     await page.goto("/");
     const chips = strip(page).getByRole("button");
@@ -86,32 +109,49 @@ test.describe("client strip", () => {
   });
 });
 
-test.describe("states (TEMP ?tempState)", () => {
-  test("loading: shows the Loading... card", async ({ page }) => {
-    await page.goto("/?tempState=loading");
+test.describe("states", () => {
+  test("loading: shows the Loading... card until the clients arrive", async ({ page }) => {
+    // Hold the real /api/clients request so the loading state stays visible.
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    await page.route("**/api/clients", async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto("/");
     await expect(page.getByRole("status")).toHaveText(/loading\.\.\./i);
+    release();
+    await expect(strip(page)).toBeVisible(); // real clients load
   });
 
-  test("error: plain-words message, Retry refetches", async ({ page }) => {
-    await page.goto("/?tempState=error");
+  test("error: plain-words message, Retry loads the real clients", async ({ page }) => {
+    // Make the first /api/clients request fail with a server error; Retry goes through.
+    await page.route("**/api/clients", (route) =>
+      route.fulfill({ status: 500, json: { error: "Database is down" } }),
+    );
+    await page.goto("/");
     const alert = page.getByRole("alert");
-    await expect(alert).toContainText("We couldn't reach the server. Check your connection and try again.");
+    // Server errors are retried 3 times with backoff (~7s) before the error card shows.
+    await expect(alert).toContainText("The server had a problem. Please try again in a moment.", { timeout: 15_000 });
     await expect(alert).not.toContainText("/api");
+    await page.unroute("**/api/clients");
     await page.getByRole("button", { name: "Retry" }).click();
-    await expect(page.getByRole("status")).toBeVisible(); // refetching
-    await expect(page.getByRole("alert")).toBeVisible(); // scenario still fails
+    await expect(strip(page)).toBeVisible();
+    await expect(panel(page)).toContainText("Selected: Maya Patel");
   });
 
-  test("empty: card with both buttons and the note", async ({ page }) => {
-    await page.goto("/?tempState=empty");
+  test("empty: card with both buttons and the note", async ({ page, request }) => {
+    await setClients(request, []);
+    await page.goto("/");
     await expect(panel(page)).toContainText("Add your first client, or load demo clients to explore.");
     await expect(page.getByRole("button", { name: "Add a client" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Load demo clients" })).toBeVisible();
     await expect(panel(page)).toContainText("Demo data is sample data - delete any client anytime.");
   });
 
-  test("empty: Add a client switches to the Clients tab", async ({ page }) => {
-    await page.goto("/?tempState=empty");
+  test("empty: Add a client switches to the Clients tab", async ({ page, request }) => {
+    await setClients(request, []);
+    await page.goto("/");
     await page.getByRole("button", { name: "Add a client" }).click();
     await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   });

@@ -5,11 +5,19 @@ import { defineConfig, devices } from "@playwright/test";
 // from the workflow. Existing environment variables are not overridden.
 if (fs.existsSync(".env")) process.loadEnvFile(".env");
 
+// The browser tests DELETE ALL CLIENTS to set up each test. Never run them against the
+// real (Render) database - use a local or CI test database.
+if (/render\.com|dpg-/.test(process.env.DATABASE_URL ?? "")) {
+  throw new Error("Refusing to run browser tests against a Render database. Point DATABASE_URL at a test database.");
+}
+
 const PORT = 3100;
 
 export default defineConfig({
   testDir: "e2e",
-  fullyParallel: true,
+  // Tests share one database and reset its clients, so they run one at a time.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? [["list"], ["github"]] : "list",

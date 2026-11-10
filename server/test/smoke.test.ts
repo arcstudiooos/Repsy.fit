@@ -25,20 +25,21 @@ describe("smoke", () => {
     expect(rows[0].ok).toBe(1);
   });
 
-  // No client API endpoints exist yet, so these two go through Prisma directly.
-  // Switch them to HTTP (Supertest) tests when the client endpoints are built.
   it("create client works", async () => {
-    const client = await prisma.client.create({ data: { name: "Smoke Test Client" } });
-    createdIds.push(client.id);
-    expect(client.id).toBeTruthy();
-    expect(client.name).toBe("Smoke Test Client");
-    expect(client.goal).toBe("General fitness");
-    expect(client.level).toBe("Beginner");
+    const res = await request(app).post("/api/clients").send({ name: "Smoke Test Client" });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.id);
+    expect(res.body.id).toBeTruthy();
+    expect(res.body.name).toBe("Smoke Test Client");
+    expect(res.body.goal).toBe("General fitness");
+    expect(res.body.level).toBe("Beginner");
+    expect(res.body.coachId).toBe("default-coach");
   });
 
   it("list clients works", async () => {
-    const clients = await prisma.client.findMany();
-    expect(Array.isArray(clients)).toBe(true);
-    expect(clients.some((c) => c.id === createdIds[0])).toBe(true);
+    const res = await request(app).get("/api/clients");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.some((c: { id: string }) => c.id === createdIds[0])).toBe(true);
   });
 });

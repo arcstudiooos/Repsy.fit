@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { listClients, queryKeys } from "./api";
 import { ClientStrip } from "./ClientStrip";
 import { EmptyState, ErrorState, LoadingState } from "./components/States";
-import { tempListClients, USE_TEMP_SAMPLE_CLIENTS } from "./tempSampleClients"; // TEMP: remove in Prompt 11
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -100,9 +99,7 @@ export default function App() {
   // Shared "selected client" for the whole app.
   const clientsQuery = useQuery({
     queryKey: queryKeys.clients,
-    // TEMP: sample clients / state scenarios until the real API arrives in Prompt 11.
-    queryFn: USE_TEMP_SAMPLE_CLIENTS ? tempListClients : listClients,
-    retry: USE_TEMP_SAMPLE_CLIENTS ? false : undefined, // TEMP: show the simulated error straight away
+    queryFn: listClients,
   });
   const loadedClients: Client[] | undefined = clientsQuery.data;
   const clients = loadedClients ?? [];
