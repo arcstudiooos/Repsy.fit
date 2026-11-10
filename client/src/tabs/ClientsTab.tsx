@@ -4,7 +4,8 @@ import { deleteClient, listAssignments, listClients, queryKeys } from "../api";
 import { initials } from "../ClientStrip";
 import { AddClientForm } from "../components/AddClientForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import { DemoSeedError, EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
   onClientCreated: (clientId: string) => void;
   /** A client was deleted; nextClientId is the client to select if it was the selected one. */
   onClientDeleted: (deletedId: string, nextClientId: string | null) => void;
-  seedDemo: () => void;
+  seedDemo: DemoSeed;
 };
 
 // Clients tab: the add-client form plus the full client list as cards, from GET /api/clients.
@@ -95,15 +96,28 @@ export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, on
           <h2 className="text-2xl">Clients</h2>
           <span className="text-sm text-dim">{clients.length === 1 ? "1 client" : `${clients.length} clients`}</span>
         </div>
-        {!formOpen && (
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={openForm}
-            className="btn-primary rounded-lg px-4 py-2 text-sm"
+            onClick={seedDemo.run}
+            disabled={seedDemo.pending}
+            className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
           >
-            Add client
+            {seedDemo.pending ? "Loading demo..." : (seedDemo.message ?? "Load demo")}
           </button>
-        )}
+          {!formOpen && (
+            <button
+              type="button"
+              onClick={openForm}
+              className="btn-primary rounded-lg px-4 py-2 text-sm"
+            >
+              Add client
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="mb-4 empty:hidden">
+        <DemoSeedError seed={seedDemo} />
       </div>
       {form}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

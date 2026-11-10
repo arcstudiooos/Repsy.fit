@@ -1,4 +1,5 @@
 import { ApiError } from "../api";
+import type { DemoSeed } from "../lib/useDemoSeed";
 
 /** Turns any error into a short, plain-words message for coaches. */
 export function plainErrorMessage(error: unknown): string {
@@ -17,7 +18,7 @@ const secondaryButton =
 
 type EmptyStateProps = {
   onAddClient: () => void;
-  seedDemo: () => void;
+  seedDemo: DemoSeed;
 };
 
 /** Shown when there are zero clients. */
@@ -30,12 +31,23 @@ export function EmptyState({ onAddClient, seedDemo }: EmptyStateProps) {
         <button type="button" onClick={onAddClient} className="btn-primary rounded-lg px-4 py-2 text-sm">
           Add a client
         </button>
-        <button type="button" onClick={seedDemo} className={secondaryButton}>
-          Load demo clients
+        <button type="button" onClick={seedDemo.run} disabled={seedDemo.pending} className={`${secondaryButton} disabled:opacity-60`}>
+          {seedDemo.pending ? "Loading demo..." : "Load demo clients"}
         </button>
       </div>
+      <DemoSeedError seed={seedDemo} />
       <p className="mt-4 text-xs text-dim">Demo data is sample data - delete any client anytime.</p>
     </div>
+  );
+}
+
+/** The last failed seed's error, in plain words. */
+export function DemoSeedError({ seed }: { seed: DemoSeed }) {
+  if (!seed.error) return null;
+  return (
+    <p role="alert" className="mt-3 text-sm font-semibold text-accent">
+      Couldn't load demo clients: {seed.error}
+    </p>
   );
 }
 

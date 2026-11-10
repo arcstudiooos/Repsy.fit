@@ -7,6 +7,7 @@ import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
+import { useDemoSeed } from "./lib/useDemoSeed";
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -119,8 +120,8 @@ export default function App() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
-  // TEMP: real seeding arrives in Prompt 29.
-  const seedDemo = () => console.log("[TEMP] Load demo clients clicked - real seed arrives in Prompt 29");
+  // Both "Load demo" buttons share this; after a seed the first demo client is selected.
+  const seedDemo = useDemoSeed(setSelectedClientId);
 
   // What the panel shows. The Clients tab handles its own loading / error / empty states.
   // Other tabs: loading / error / empty states, or the strip + tab content.
@@ -187,6 +188,11 @@ export default function App() {
           aria-labelledby={`tab-${current.id}`}
           className="card rounded-t-none border-t-0 p-6"
         >
+          {seedDemo.message && (
+            <p role="status" className="mb-3 text-sm font-semibold text-accent2">
+              {seedDemo.message}
+            </p>
+          )}
           {panelContent}
         </section>
       </main>
