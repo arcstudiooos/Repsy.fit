@@ -16,7 +16,7 @@ describe("smoke", () => {
   it("health check works", async () => {
     const res = await request(app).get("/api/health");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ok: true });
+    expect(res.body).toEqual({ ok: true, db: true });
   });
 
   it("database is connected", async () => {

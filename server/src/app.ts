@@ -6,6 +6,7 @@ import { chatRouter } from "./routes/chat.js";
 import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
+import { prisma } from "./db.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,8 +21,22 @@ export const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
+// Health check for Render and the coach: also checks the database answers (within 3 s).
+// 503 when it doesn't, so Render never switches traffic to an instance without a database.
+app.get("/api/health", async (_req, res) => {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("database health check timed out")), 3_000);
+  });
+  try {
+    await Promise.race([prisma.$queryRaw`SELECT 1`, timeout]);
+    res.json({ ok: true, db: true });
+  } catch (err) {
+    console.error("Health check: database unavailable.", err instanceof Error ? err.message : err);
+    res.status(503).json({ ok: false, db: false });
+  } finally {
+    clearTimeout(timer);
+  }
 });
 
 app.use("/api/clients/:clientId/assignments", assignmentsRouter);

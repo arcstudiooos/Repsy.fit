@@ -29,12 +29,16 @@ database (they refuse to run against a Render database).
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main`: install, build,
-apply migrations to a throwaway Postgres 16, then `npm test`.
+apply migrations to a throwaway Postgres 16, `npm test`, then the browser smoke tests against
+the production server (`npm start`) and the mocked UI tests (`npm run test:ui`).
 
-## Deploy (Render)
+## Deploy on Render
 
 Live: https://repsy-coach.onrender.com — 1 Web Service + 1 PostgreSQL, defined in `render.yaml`.
 Render deploys `main` **only after CI passes** (`autoDeployTrigger: checksPass`), so a commit
 with failing CI never goes live. On start, `npm start` applies database migrations
 (`prisma migrate deploy`) and then starts the server. Secrets (`AI_API_KEY` etc.) are set in the
 Render dashboard, never in code.
+
+Health check: `GET /api/health` returns `{ "ok": true, "db": true }`, or `503 { "ok": false, "db": false }`
+when the database doesn't answer. Step-by-step first deploy: to be filled in (Prompt 33).

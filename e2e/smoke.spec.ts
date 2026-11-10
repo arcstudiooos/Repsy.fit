@@ -156,3 +156,26 @@ test.describe("states", () => {
     await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   });
 });
+
+// Runs against `npm start` - the production server serving the built client (Prompt 32).
+test.describe("production server", () => {
+  test("health check reports the database", async ({ request }) => {
+    const res = await request.get("/api/health");
+    expect(res.status()).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, db: true });
+  });
+
+  test("refreshing on a non-API path still opens the full app", async ({ page }) => {
+    const res = await page.goto("/some/deep/link");
+    expect(res?.status()).toBe(200);
+    await expect(page.getByRole("tab")).toHaveCount(4);
+    await expect(strip(page).getByRole("button")).toHaveCount(3);
+  });
+
+  test("unknown /api paths are JSON 404, not the app page", async ({ request }) => {
+    const res = await request.get("/api/no-such-route");
+    expect(res.status()).toBe(404);
+    expect(res.headers()["content-type"]).toMatch(/application\/json/);
+    expect(await res.json()).toEqual({ error: "Not found" });
+  });
+});
