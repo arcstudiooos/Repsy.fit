@@ -48,7 +48,8 @@ below exist. Use the values exactly; do not invent colours.
 | `--accent2` | `#0E7C6B` | same | teal | `bg-accent2` / `text-accent2` |
 | `--amber` | `#D97706` | same | icons and large labels only | `text-amber` |
 | `--tab-inactive` | `#E9E3D8` | `#262626` | inactive tabs | `bg-tab-inactive` |
-| `--header` | `#141414` | same | header strip background | `bg-header` |
+| `--header` | `#141414` | `#1E1E1E` | header strip background | `bg-header` |
+| `--header-border` | none | `#333333` | header strip 1px bottom border (dark mode only) | `.header-strip` |
 | `--white` | `#FFFFFF` | same | white | `bg-white` / `text-white` |
 | `--on-accent` | `#141414` | same | text on orange buttons | `text-on-accent` |
 | `--amber-text` | `#92400E` | `#D97706` | small amber text | `text-amber-text` |
@@ -90,3 +91,90 @@ below exist. Use the values exactly; do not invent colours.
 
 - Every Client, Assignment and ProgressLog has `coachId`. Until login exists, all records use
   the placeholder coach `"default-coach"` (the column default).
+
+## API contract
+
+**Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
+must match this contract exactly — same methods, paths, bodies and return shapes. Do not add,
+rename or reshape routes without updating `api.ts` in the same prompt.
+
+### Conventions
+
+- Base path `/api`. Request and response bodies are JSON (`Content-Type: application/json`).
+- Ids are strings (cuid). Dates: `createdAt` is an ISO timestamp string; `date` is `"YYYY-MM-DD"`.
+- **Every per-client route is scoped to one client.** The server must check that the
+  assignment / progress log in the path belongs to `:clientId` and never return or change
+  another client's data.
+- **`coachId` is never sent by the client.** The server sets it (currently `"default-coach"`).
+- Fields omitted from create bodies get the database defaults (see Prisma schema).
+- Any 2xx means success. A route that returns nothing replies **204 No Content**
+  (`api.ts` returns `undefined` for 204).
+- Response objects are the full records as defined in `types.ts` (`Client`, `Assignment`,
+  `ChatMessage`, `ProgressLog`), including `id`, `coachId` (except `ChatMessage`) and
+  `createdAt`.
+
+### Error shape
+
+Every error response is JSON:
+
+```json
+{ "error": "Plain-words message" }
+```
+
+with a matching HTTP status (400 invalid input, 404 not found, 500 server error, …).
+
+- **Reserved message:** `404 {"error":"Not found"}` means *the route does not exist* — the
+  server's catch-all for unknown `/api` routes sends exactly this, and `api.ts` turns it into
+  "Endpoint not available yet: METHOD /api/…". **A route that exists but cannot find a record
+  must use a different message**, e.g. `404 {"error":"Client not found"}`, otherwise the UI
+  will wrongly report the endpoint as missing.
+- In the client, every failure becomes an `ApiError` with `kind`:
+  `"endpoint_missing"` (404 `"Not found"`, or a non-JSON reply), `"network"` (server
+  unreachable) or `"http"` (any other error — `message` is the server's `error` text).
+
+### Endpoints
+
+| `api.ts` function | Method | Path | Accepts (JSON body) | Returns |
+| --- | --- | --- | --- | --- |
+| *(health)* | GET | `/api/health` | — | `{ "ok": true }` *(exists)* |
+| `listClients()` | GET | `/api/clients` | — | `Client[]` |
+| `createClient(input)` | POST | `/api/clients` | `NewClient` | `Client` |
+| `deleteClient(clientId)` | DELETE | `/api/clients/:clientId` | — | 204, no body |
+| `listAssignments(clientId)` | GET | `/api/clients/:clientId/assignments` | — | `Assignment[]` |
+| `createAssignment(clientId, input)` | POST | `/api/clients/:clientId/assignments` | `NewAssignment` | `Assignment` |
+| `updateAssignmentStatus(clientId, assignmentId, status)` | PATCH | `/api/clients/:clientId/assignments/:assignmentId` | `{ "status": AssignmentStatus }` | `Assignment` |
+| `deleteAssignment(clientId, assignmentId)` | DELETE | `/api/clients/:clientId/assignments/:assignmentId` | — | 204, no body |
+| `listChat(clientId)` | GET | `/api/clients/:clientId/chat` | — | `ChatMessage[]` |
+| `askAI(clientId, question)` | POST | `/api/clients/:clientId/chat` | `{ "question": string }` | `{ "question": ChatMessage, "reply": ChatMessage }` |
+| `autoAssign(clientId)` | POST | `/api/clients/:clientId/auto-assign` | — *(no body)* | `Assignment[]` (the new assignments) |
+| `listProgress(clientId)` | GET | `/api/clients/:clientId/progress` | — | `ProgressLog[]` |
+| `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
+| `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
+| `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
+| `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client` (the client with six months of history) |
+
+`askAI`: `question` is the saved coach message (`role: "coach"`), `reply` is the saved AI
+message (`role: "ai"`). Both are stored in `chat_messages` for that client.
+
+### Body types (from `types.ts`)
+
+| Type | Required | Optional |
+| --- | --- | --- |
+| `NewClient` | `name` | `goal`, `age`, `weightKg`, `heightCm`, `level`, `focus`, `notes` |
+| `NewAssignment` | `type`, `title`, `details`, `date` | `reasoning`, `source`, `status` |
+| `NewProgressLog` | `date` | `weightKg`, `adherence`, `workoutsDone`, `note` |
+
+Allowed values: `level` ∈ Beginner / Intermediate / Advanced; `type` ∈ Workout / Nutrition /
+Habit / Recovery; `source` ∈ ai / manual; `status` ∈ Active / Done / Paused; chat `role` ∈
+coach / ai; `adherence` 0–100. The server validates these with zod and replies
+`400 {"error": "..."}` on bad input.
+
+### Not fixed by `api.ts` (decide when the endpoint is built)
+
+- Sort order of the list endpoints.
+- Exact success status for creates (200 vs 201 — both work with `api.ts`).
+
+### Differences from the prototype
+
+The approved prototype was not available when this contract was written, so it has not
+been compared. If a difference is found later, follow `api.ts` and record it here.

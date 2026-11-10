@@ -44,6 +44,9 @@
     --dim: #a8a29e;
     --border: #333333;
     --tab-inactive: #262626;
+    /* Header strip is lifted off the #141414 page in dark mode, with a 1px bottom border. */
+    --header: #1e1e1e;
+    --header-border: #333333;
     /* #92400E is unreadable on dark backgrounds; #D97706 passes contrast there. */
     --amber-text: #d97706;
   }

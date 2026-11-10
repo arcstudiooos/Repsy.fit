@@ -7,6 +7,9 @@ services:
     plan: free
     region: virginia
     branch: main
+    # Deploy a commit on main only after its GitHub checks (the CI workflow) pass.
+    # A commit with failing CI is never deployed.
+    autoDeployTrigger: checksPass
     buildCommand: npm ci --include=dev && npm run build
     # `npm start` runs `prisma migrate deploy` first, then starts the server.
     startCommand: npm start

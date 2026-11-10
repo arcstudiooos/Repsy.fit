@@ -17,7 +17,7 @@ const TABS: { id: TabId; label: string }[] = [
 
 function Header() {
   return (
-    <header className="bg-header">
+    <header className="header-strip bg-header">
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
         <div
           aria-hidden="true"

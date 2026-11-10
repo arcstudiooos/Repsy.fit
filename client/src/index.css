@@ -64,6 +64,13 @@
   }
 }
 
+/* Header strip: dark mode only gets a 1px bottom border (light mode unchanged). */
+@media (prefers-color-scheme: dark) {
+  .header-strip {
+    border-bottom: 1px solid var(--header-border);
+  }
+}
+
 /* Card: surface background, 1px border, 14px radius, no heavy shadow. */
 @utility card {
   background-color: var(--surface);
