@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { listClients, queryKeys } from "./api";
+import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
 
@@ -73,9 +76,38 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
   );
 }
 
+// Every tab receives the selected client. All data views are per selected client -
+// never mixed data from two clients.
+type TabProps = { tab: { id: TabId; label: string }; client: Client | null };
+
+function PlaceholderTab({ tab, client }: TabProps) {
+  return (
+    <>
+      <h2 className="text-2xl">{tab.label}</h2>
+      <p className="mt-2 text-dim">Placeholder - {tab.label} content comes in a later prompt.</p>
+      <p className="mt-1 text-sm text-dim">Selected client: {client ? client.name : "none"}</p>
+    </>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("ai");
   const current = TABS.find((t) => t.id === activeTab)!;
+
+  // Shared "selected client" for the whole app.
+  const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
+  const clients = clientsQuery.data ?? [];
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+
+  // Default to the first client when the list loads, and fall back to the first client
+  // if the selected one disappears (e.g. deleted).
+  useEffect(() => {
+    if (!clientsQuery.data) return;
+    const stillExists = clientsQuery.data.some((c) => c.id === selectedClientId);
+    if (!stillExists) setSelectedClientId(clientsQuery.data[0]?.id ?? null);
+  }, [clientsQuery.data, selectedClientId]);
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
   return (
     <div className="min-h-screen">
@@ -88,8 +120,9 @@ export default function App() {
           aria-labelledby={`tab-${current.id}`}
           className="card rounded-t-none border-t-0 p-6"
         >
-          <h2 className="text-2xl">{current.label}</h2>
-          <p className="mt-2 text-dim">Placeholder - {current.label} content comes in a later prompt.</p>
+          {/* key forces a clean remount when the selected client changes, so no tab can
+              keep showing the previous client's data. */}
+          <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
         </section>
       </main>
     </div>
