@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listAssignments, listProgress, queryKeys } from "../api";
 import { ErrorState, LoadingState } from "../components/States";
+import { CheckInForm } from "../components/CheckInForm";
 import { CheckInList } from "../components/CheckInList";
 import { ProgressCharts } from "../components/ProgressCharts";
 import { formatWeightChange, progressStats } from "../lib/progressStats";
@@ -72,6 +73,7 @@ export function ProgressTab({ client }: Props) {
           />
         </div>
         <ProgressCharts logs={logs} assignments={assignmentsQuery.data ?? []} />
+        <CheckInForm clientId={client.id} />
         <CheckInList clientId={client.id} logs={logs} />
       </>
     );
