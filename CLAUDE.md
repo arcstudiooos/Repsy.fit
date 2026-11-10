@@ -152,7 +152,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
 | `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
-| `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client` (the client with six months of history) |
+| `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client[]` (the six-month clients it created; `[]` when all 10 exist) |
 
 `askAI`: `question` is the saved coach message (`role: "coach"`), `reply` is the saved AI
 message (`role: "ai"`). Both are stored in `chat_messages` for that client. `suggestion` is
@@ -242,5 +242,14 @@ and record it here.
   `createdAt`, `id`), create 201 full `ProgressLog`, DELETE 204. Limits: `adherence` whole number
   0–100, `workoutsDone` whole number 0–14, `weightKg` above 0 up to 500, `date` a real
   `YYYY-MM-DD` date, `note` default "". Unknown log -> `404 {"error":"Progress log not found"}`.
+- Prompt 29 asked `POST /api/seed/demo` to return `{ created: 0 }` when skipped. Kept `Client[]`:
+  201 with the 3 new clients, or 200 `[]` when ANY client already exists.
+- Prompt 30 named `POST /api/seed/six-month`; built on the existing `/api/seed/six-month-demo`,
+  returning the created clients (`Client[]`, 201) or 200 `[]`. It skips clients whose name
+  already exists. Both seeds take one Postgres advisory lock, so two quick taps can't seed twice.
+- Prompt 32 asked for the database to be named `repsy-coach-db`. `render.yaml` keeps `repsy-db`:
+  renaming it would make Render create a new, empty database.
+- `GET /api/health` returns `{ ok: true, db: true }`, or `503 { ok: false, db: false }` when the
+  database doesn't answer within 3 s.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.
