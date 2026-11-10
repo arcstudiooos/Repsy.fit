@@ -95,7 +95,7 @@ const panel = (page: Page) => page.getByRole("tabpanel");
 const card = (page: Page) => panel(page).getByRole("region", { name: "AI suggestion" });
 
 async function askForWorkout(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await panel(page).getByRole("button", { name: "Make a workout plan" }).click();
   await expect(card(page)).toContainText("Lower-body strength session");
 }

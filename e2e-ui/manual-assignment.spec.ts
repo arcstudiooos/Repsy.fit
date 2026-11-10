@@ -85,7 +85,7 @@ function localToday() {
 
 const panel = (page: Page) => page.getByRole("tabpanel");
 const openPlanner = async (page: Page) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
 };
 const form = (page: Page) => panel(page).getByRole("form", { name: "New assignment" });

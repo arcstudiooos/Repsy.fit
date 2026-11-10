@@ -4,7 +4,8 @@ Repsy Coach is a web dashboard for a fitness coach. Pick a client, ask an AI ass
 them, turn its suggestions into plans (or plan by hand), and track the client's weekly progress
 in cards and charts.
 
-Live: https://repsy-coach.onrender.com
+Live: https://repsy-coach.onrender.com (public landing page) - the dashboard is at
+https://repsy-coach.onrender.com/app
 
 ## The 4 tabs
 

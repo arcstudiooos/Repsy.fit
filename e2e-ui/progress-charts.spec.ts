@@ -77,7 +77,7 @@ const panel = (page: Page) => page.getByRole("tabpanel");
 const chart = (page: Page, name: string) => panel(page).getByRole("figure", { name });
 const checkIns = (page: Page) => panel(page).getByRole("list", { name: "Check-ins" }).getByRole("listitem");
 const openProgress = async (page: Page) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
 };
 

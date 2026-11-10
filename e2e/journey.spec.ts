@@ -34,7 +34,7 @@ test.afterAll(async ({ request }) => {
 });
 
 test("1. add client", async ({ page, request }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   // Wait for the list (or the empty state) before deciding whether the form needs opening.
   await expect(panel(page)).toContainText(/\d+ clients?|No clients yet/, { timeout: 60_000 });
@@ -54,7 +54,7 @@ test("1. add client", async ({ page, request }) => {
 });
 
 test("2. ask AI a question", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await selectClient(page, A);
   await panel(page).getByRole("textbox", { name: "Ask the AI coach" }).fill("Make a workout plan for this week");
   await panel(page).getByRole("button", { name: "Send" }).click();
@@ -68,7 +68,7 @@ test("2. ask AI a question", async ({ page }) => {
 
 test("3. assign from the AI suggestion", async ({ page, request }) => {
   test.skip(!aiWorks, "No AI suggestion: the AI answered with the fallback, which never carries a suggestion.");
-  await page.goto("/");
+  await page.goto("/app");
   await selectClient(page, A);
   const card = panel(page).getByRole("region", { name: "AI suggestion" });
   if (!(await card.isVisible())) {
@@ -82,7 +82,7 @@ test("3. assign from the AI suggestion", async ({ page, request }) => {
 test("4. auto-assign a Nutrition plan", async ({ page, request }) => {
   test.skip(!aiWorks, "Auto-assign needs a working AI; without it the app correctly shows 'Nothing was saved'.");
   const before = (await counts(request, idA)).assignments;
-  await page.goto("/");
+  await page.goto("/app");
   await selectClient(page, A);
   await panel(page).getByRole("group", { name: "Auto-assign" }).getByRole("button", { name: /Nutrition/ }).click();
   await expect(panel(page).getByRole("region", { name: "Auto-assigned plan" })).toBeVisible({ timeout: 90_000 });
@@ -90,7 +90,7 @@ test("4. auto-assign a Nutrition plan", async ({ page, request }) => {
 });
 
 test("5. manual Workout with exercise search, sets, reps, rest", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
   await selectClient(page, A);
   const form = panel(page).getByRole("form", { name: "New assignment" });
@@ -106,7 +106,7 @@ test("5. manual Workout with exercise search, sets, reps, rest", async ({ page }
 });
 
 test("6. mark it Done", async ({ page, request }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
   await selectClient(page, A);
   const card = panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem").filter({ hasText: "Journey leg day" });
@@ -117,7 +117,7 @@ test("6. mark it Done", async ({ page, request }) => {
 });
 
 test("7. add a progress check-in", async ({ page, request }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
   await selectClient(page, A);
   const form = panel(page).getByRole("form", { name: "Weekly check-in" });
@@ -133,7 +133,7 @@ test("7. add a progress check-in", async ({ page, request }) => {
 });
 
 test("8. Progress cards and all 3 charts update", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
   await selectClient(page, A);
   await expect(panel(page).getByRole("group", { name: "Current weight" })).toContainText("67.6 kg");
@@ -152,7 +152,7 @@ test("8. Progress cards and all 3 charts update", async ({ page }) => {
 
 test("9. switch client: zero data leakage", async ({ page, request }) => {
   expect(await counts(request, idB)).toEqual({ assignments: 0, progress: 0, chat: 0 });
-  await page.goto("/");
+  await page.goto("/app");
   await selectClient(page, B);
   await expect(panel(page)).not.toContainText("Make a workout plan for this week");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
@@ -164,7 +164,7 @@ test("9. switch client: zero data leakage", async ({ page, request }) => {
 });
 
 test("10. delete the test client and confirm cascade", async ({ page, request }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await panel(page).getByRole("button", { name: `Delete ${A}` }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();

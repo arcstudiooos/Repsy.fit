@@ -74,7 +74,7 @@ const PROMPT_25_LOGS: Log[] = [
 const panel = (page: Page) => page.getByRole("tabpanel");
 const stat = (page: Page, label: string) => panel(page).getByRole("group", { name: label });
 const openProgress = async (page: Page) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
 };
 

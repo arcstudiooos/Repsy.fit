@@ -91,7 +91,7 @@ const mayaCard = (page: Page) => panel(page).getByRole("button", { name: "Maya P
 
 test("each card has Active / Done / Paused buttons with the current one highlighted", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Manual Planner");
   const group = statusGroup(page, "Squat day");
   await expect(group.getByRole("button")).toHaveText(["Active", "Done", "Paused"]);
@@ -103,7 +103,7 @@ test("each card has Active / Done / Paused buttons with the current one highligh
 
 test("mark Done, pause, delete: list and Clients tab counts update without a reload", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Clients");
   await expect(mayaCard(page)).toContainText("3 assignments");
   await expect(mayaCard(page)).toContainText("3 active");
@@ -164,7 +164,7 @@ test("mark Done, pause, delete: list and Clients tab counts update without a rel
 
 test("a failed status change shows the error on that card and keeps the old status", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Manual Planner");
   mock.failNext = true;
   await statusGroup(page, "Squat day").getByRole("button", { name: "Done" }).click();

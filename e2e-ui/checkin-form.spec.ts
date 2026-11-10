@@ -76,7 +76,7 @@ const checkIns = (page: Page) => panel(page).getByRole("list", { name: "Check-in
 const weightCard = (page: Page) => panel(page).getByRole("group", { name: "Current weight" });
 const weightDots = (page: Page) => panel(page).getByRole("figure", { name: "Weight" }).locator(".recharts-line-dots circle");
 const openProgress = async (page: Page) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
 };
 

@@ -10,6 +10,10 @@ Progress in charts. Built one feature at a time, across many separate prompts.
 2. **The stack is fixed.** Do not add other frameworks or services.
    - Frontend (`client/`): React + Vite + TypeScript, Tailwind CSS, Recharts (progress charts),
      React Query (loading / saving data)
+   - Landing page only (`client/src/landing/`, from Prompt 37): three, @react-three/fiber,
+     @react-three/drei and gsap. They load lazily on the landing page and must never be imported
+     by `/app` code (`client/scripts/check-budget.mjs` fails the build if they are).
+   - Routes: `/` = public landing page, `/app` (and `/app/...`) = the coach dashboard.
    - Backend (`server/`): Node.js + Express (TypeScript), REST API, zod for validation
    - Database: PostgreSQL on Render, Prisma (`server/prisma/`). Tables: clients, assignments,
      chat_messages, progress_logs

@@ -59,7 +59,7 @@ const resultRows = (page: Page) => results(page).getByRole("button");
 const selected = (page: Page) => form(page).getByRole("list", { name: "Selected exercises" }).getByRole("listitem");
 
 async function openPlanner(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
 }
 

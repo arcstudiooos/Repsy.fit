@@ -42,7 +42,7 @@ const quickPick = (page: Page, name: string, seconds: number) =>
   form(page).getByRole("group", { name: `Rest quick picks for ${name}` }).getByRole("button", { name: `${seconds}s` });
 
 async function openPlanner(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
 }
 

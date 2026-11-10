@@ -66,7 +66,7 @@ const submit = (page: Page) => form(page).getByRole("button", { name: "Assign pl
 const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem");
 
 async function openPlanner(page: Page) {
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
 }
 

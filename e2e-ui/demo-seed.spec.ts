@@ -49,7 +49,7 @@ const strip = (page: Page) => page.getByRole("group", { name: "Select client" })
 
 test("the empty-state button seeds 3 clients, refreshes, and selects Maya", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("button", { name: "Load demo clients" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Added 3 demo clients" })).toBeVisible();
   await expect(strip(page).getByRole("button")).toHaveCount(3);
@@ -60,7 +60,7 @@ test("the empty-state button seeds 3 clients, refreshes, and selects Maya", asyn
 
 test("the Clients tab 'Load demo' button: first tap adds 3, second tap says already loaded", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   // Zero clients: the empty-state button seeds.
   await page.getByRole("button", { name: "Load demo clients" }).click();
@@ -76,7 +76,7 @@ test("the Clients tab 'Load demo' button: first tap adds 3, second tap says alre
 
 test("with clients already there, 'Load demo' says 'Demo already loaded'", async ({ page }) => {
   await mockApi(page, DEMO.slice(0, 1));
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await page.getByRole("button", { name: "Load demo" }).click();
   await expect(page.getByRole("button", { name: "Demo already loaded" })).toBeVisible();
@@ -86,7 +86,7 @@ test("with clients already there, 'Load demo' says 'Demo already loaded'", async
 test("a failed seed shows the error and adds nothing", async ({ page }) => {
   const mock = await mockApi(page);
   mock.failSeed = true;
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("button", { name: "Load demo clients" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Couldn't load demo clients" })).toContainText("The server had a problem");
   await expect(page.getByRole("button", { name: "Load demo clients" })).toBeEnabled();
@@ -94,7 +94,7 @@ test("a failed seed shows the error and adds nothing", async ({ page }) => {
 
 test("the 6-month button adds 10, then says already loaded; quick demo still adds its 3 for 13 total", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await expect(page.getByRole("tabpanel")).toContainText(
     "Loading both demo sets gives 13 clients in total, because the names do not overlap.",
@@ -111,7 +111,7 @@ test("the 6-month button adds 10, then says already loaded; quick demo still add
 
 test("after the 6-month seed the first new client is selected", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
   await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
@@ -121,7 +121,7 @@ test("after the 6-month seed the first new client is selected", async ({ page })
 
 test("with the 3 quick-demo clients already there, the 6-month demo brings the total to 13", async ({ page }) => {
   await mockApi(page, DEMO);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("3 clients");
   await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();

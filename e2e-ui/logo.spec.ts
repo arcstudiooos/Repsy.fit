@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 for (const width of [375, 1280]) {
   test(`${width}px: the header shows the loaded Repsy logo, 36px tall, beside the subtitle`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
-    await page.goto("/");
+    await page.goto("/app");
     const header = page.locator("header");
     const logo = header.getByRole("img", { name: "Repsy" });
     await expect(logo).toBeVisible();
@@ -22,7 +22,7 @@ for (const width of [375, 1280]) {
 }
 
 test("the favicon and touch icon are the R mark and load", async ({ page, request }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.png");
   for (const path of ["/favicon.png", "/apple-touch-icon.png", "/repsy-logo.png"]) {
     const res = await request.get(path);

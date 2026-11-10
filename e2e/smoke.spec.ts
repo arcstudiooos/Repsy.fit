@@ -33,7 +33,7 @@ test.beforeEach(async ({ request }) => {
 
 test.describe("app shell", () => {
   test("header strip shows the Repsy logo and subtitle", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     const header = page.locator("header");
     await expect(header).toHaveCSS("background-color", "rgb(20, 20, 20)");
     const logo = header.getByRole("img", { name: "Repsy" });
@@ -44,14 +44,14 @@ test.describe("app shell", () => {
   });
 
   test("exactly 4 horizontal tabs, in order", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     await expect(page.getByRole("tab")).toHaveText(TABS);
     await expect(page.getByRole("tablist")).toHaveCSS("flex-direction", "row");
     await expect(page.locator("nav, aside, [role=navigation]")).toHaveCount(0);
   });
 
   test("clicking each tab switches the panel", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     for (const name of TABS) {
       await page.getByRole("tab", { name }).click();
       await expect(page.getByRole("tab", { name })).toHaveAttribute("aria-selected", "true");
@@ -61,7 +61,7 @@ test.describe("app shell", () => {
 
   test("phone width: tabs stay in one row and scroll sideways", async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
-    await page.goto("/");
+    await page.goto("/app");
     const r = await page.getByRole("tablist").evaluate((list) => {
       const tops = [...list.children].map((t) => Math.round(t.getBoundingClientRect().top));
       return {
@@ -76,7 +76,7 @@ test.describe("app shell", () => {
 
 test.describe("client strip (real clients from the API)", () => {
   test("shows 3 chips with initials, first name and goal", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     const chips = strip(page).getByRole("button");
     await expect(chips).toHaveCount(3);
     await expect(chips.nth(0)).toHaveText(/^MPMayaFat loss \+ strength$/);
@@ -85,7 +85,7 @@ test.describe("client strip (real clients from the API)", () => {
   });
 
   test("defaults to the first client, with the accent border", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     await expect(panel(page)).toContainText("Selected: Maya Patel");
     const maya = strip(page).getByRole("button", { name: /Maya/ });
     await expect(maya).toHaveAttribute("aria-pressed", "true");
@@ -93,7 +93,7 @@ test.describe("client strip (real clients from the API)", () => {
   });
 
   test("tapping a chip changes the selected client on all three tabs", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     for (const [first, full] of [["Arjun", "Arjun Mehta"], ["Casey", "Casey Jordan"]]) {
       await page.getByRole("tab", { name: "AI Coach" }).click();
       await strip(page).getByRole("button", { name: new RegExp(first) }).click();
@@ -105,7 +105,7 @@ test.describe("client strip (real clients from the API)", () => {
   });
 
   test("Clients tab has no strip", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/app");
     await page.getByRole("tab", { name: "Clients" }).click();
     await expect(strip(page)).toHaveCount(0);
   });
@@ -120,7 +120,7 @@ test.describe("states", () => {
       await held;
       await route.continue();
     });
-    await page.goto("/");
+    await page.goto("/app");
     await expect(page.getByRole("status")).toHaveText(/loading\.\.\./i);
     release();
     await expect(strip(page)).toBeVisible(); // real clients load
@@ -131,7 +131,7 @@ test.describe("states", () => {
     await page.route("**/api/clients", (route) =>
       route.fulfill({ status: 500, json: { error: "Database is down" } }),
     );
-    await page.goto("/");
+    await page.goto("/app");
     const alert = page.getByRole("alert");
     // Server errors are retried 3 times with backoff (~7s) before the error card shows.
     await expect(alert).toContainText("The server had a problem. Please try again in a moment.", { timeout: 15_000 });
@@ -144,7 +144,7 @@ test.describe("states", () => {
 
   test("empty: card with both buttons and the note", async ({ page, request }) => {
     await setClients(request, []);
-    await page.goto("/");
+    await page.goto("/app");
     await expect(panel(page)).toContainText("Add your first client, or load demo clients to explore.");
     await expect(page.getByRole("button", { name: "Add a client" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Load demo clients" })).toBeVisible();
@@ -153,7 +153,7 @@ test.describe("states", () => {
 
   test("empty: Add a client switches to the Clients tab", async ({ page, request }) => {
     await setClients(request, []);
-    await page.goto("/");
+    await page.goto("/app");
     await page.getByRole("button", { name: "Add a client" }).click();
     await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   });
@@ -167,8 +167,8 @@ test.describe("production server", () => {
     expect(await res.json()).toEqual({ ok: true, db: true });
   });
 
-  test("refreshing on a non-API path still opens the full app", async ({ page }) => {
-    const res = await page.goto("/some/deep/link");
+  test("refreshing on a deep /app path still opens the full app", async ({ page }) => {
+    const res = await page.goto("/app/some/deep/link");
     expect(res?.status()).toBe(200);
     await expect(page.getByRole("tab")).toHaveCount(4);
     await expect(strip(page).getByRole("button")).toHaveCount(3);

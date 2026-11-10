@@ -91,7 +91,7 @@ const cardFor = (page: Page, title: string) => cards(page).filter({ hasText: tit
 
 test("the 4 auto-assigned plans appear newest first with type chips, AI labels and Why lines", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const autoRow = panel(page).getByRole("group", { name: "Auto-assign" });
   for (const label of ["Auto-assign Workout", "Nutrition", "Habit", "Recovery"]) {
     await autoRow.getByRole("button", { name: label, exact: true }).click();
@@ -134,7 +134,7 @@ test("filter chips narrow the list instantly on the client", async ({ page }) =>
   page.on("request", (r) => {
     if (r.method() === "GET" && r.url().endsWith("/assignments")) gets++;
   });
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Manual Planner");
   await expect(filters(page).getByRole("button")).toHaveText(["All", "Workout", "Nutrition", "Habit", "Recovery"]);
   await expect(filters(page).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
@@ -169,7 +169,7 @@ test("cards show source, status, date, line breaks, and no Why line when reasoni
       }),
     ],
   });
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Manual Planner");
   const card = cardFor(page, "Meal prep");
   await expect(card.getByText("Manual", { exact: true })).toBeVisible();
@@ -184,7 +184,7 @@ test("cards show source, status, date, line breaks, and no Why line when reasoni
 
 test("a filter with no matches says so; an empty list offers the AI Coach", async ({ page }) => {
   await mockApi(page, { "c-maya": [assignment("c-maya", { type: "Workout", title: "Squat day" })] });
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Manual Planner");
   await filters(page).getByRole("button", { name: "Habit" }).click();
   await expect(cards(page)).toHaveCount(0);
@@ -202,7 +202,7 @@ test("a filter with no matches says so; an empty list offers the AI Coach", asyn
 test("a failed load shows an error with Retry", async ({ page }) => {
   const mock = await mockApi(page);
   mock.assignmentsBehaviour = "fail";
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Manual Planner");
   await expect(panel(page)).toContainText("Could not load plans for this client.");
   mock.assignmentsBehaviour = "ok";
@@ -218,7 +218,7 @@ test("Clients tab counts use the real assignments", async ({ page }) => {
       assignment("c-maya", { status: "Active" }),
     ],
   });
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Clients");
   const maya = panel(page).getByRole("button", { name: "Maya Patel - open in AI Coach" });
   await expect(maya).toContainText("3 assignments");
@@ -230,7 +230,7 @@ test("Clients tab counts use the real assignments", async ({ page }) => {
 test("Clients tab counts show '-' when the assignments endpoint is missing (no fake 0)", async ({ page }) => {
   const mock = await mockApi(page);
   mock.assignmentsBehaviour = "missing";
-  await page.goto("/");
+  await page.goto("/app");
   await openTab(page, "Clients");
   const maya = panel(page).getByRole("button", { name: "Maya Patel - open in AI Coach" });
   await expect(maya).toContainText("- assignments");

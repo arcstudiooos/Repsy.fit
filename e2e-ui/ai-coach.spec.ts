@@ -101,14 +101,14 @@ const conversation = (page: Page) => panel(page).getByRole("list", { name: "Conv
 
 test("keeps the existing heading and Selected line", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("AI Coach");
   await expect(panel(page)).toContainText("Selected: Maya Patel");
 });
 
 test("summary card shows whose data the AI is using", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const summary = panel(page).getByRole("region", { name: "Client summary" });
   for (const text of [
     "Maya Patel",
@@ -124,7 +124,7 @@ test("summary card shows whose data the AI is using", async ({ page }) => {
 
 test("coach messages sit right in accent colour, AI messages left in a white card", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const coach = conversation(page).getByText("How is Maya doing?", { exact: true });
   const ai = conversation(page).getByText("Maya is consistent with training.", { exact: true });
   await expect(coach).toHaveCSS("background-color", "rgb(255, 74, 31)");
@@ -137,7 +137,7 @@ test("coach messages sit right in accent colour, AI messages left in a white car
 
 test("quick prompt chips are exactly the four prompts and tapping one sends it", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const chips = panel(page).getByRole("group", { name: "Quick prompts" }).getByRole("button");
   await expect(chips).toHaveText([
     "Summarise this client",
@@ -152,7 +152,7 @@ test("quick prompt chips are exactly the four prompts and tapping one sends it",
 
 test("Enter sends, Shift+Enter adds a line", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const box = composer(page);
   await box.fill("Line one");
   await box.press("Shift+Enter");
@@ -168,7 +168,7 @@ test("Enter sends, Shift+Enter adds a line", async ({ page }) => {
 test("while waiting, Send is disabled and reads Thinking...", async ({ page }) => {
   const mock = await mockApi(page);
   mock.askBehaviour = "hold";
-  await page.goto("/");
+  await page.goto("/app");
   await composer(page).fill("Hold on");
   await panel(page).getByRole("button", { name: "Send" }).click();
   await expect(panel(page).getByRole("button", { name: "Thinking..." })).toBeDisabled();
@@ -181,7 +181,7 @@ test("while waiting, Send is disabled and reads Thinking...", async ({ page }) =
 
 test("an AI suggestion shows under the answer with Assign and a working Dismiss", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await panel(page).getByRole("button", { name: "Make a workout plan" }).click();
   const answer = conversation(page).getByText("Answer about c-maya: keep going.", { exact: true });
   const card = panel(page).getByRole("region", { name: "AI suggestion" });
@@ -198,7 +198,7 @@ test("an AI suggestion shows under the answer with Assign and a working Dismiss"
 test("a failed send shows the error in the chat and keeps the typed text", async ({ page }) => {
   const mock = await mockApi(page);
   mock.askBehaviour = "fail";
-  await page.goto("/");
+  await page.goto("/app");
   await composer(page).fill("Will this fail?");
   await composer(page).press("Enter");
   await expect(panel(page).getByRole("alert")).toContainText("The server had a problem");
@@ -216,7 +216,7 @@ test("the chat auto-scrolls to the newest message", async ({ page }) => {
       createdAt: "2026-11-09T12:00:00.000Z",
     });
   }
-  await page.goto("/");
+  await page.goto("/app");
   await expect(conversation(page).getByText("Message number 29", { exact: true })).toBeInViewport();
   await composer(page).fill("Newest question");
   await composer(page).press("Enter");
@@ -225,7 +225,7 @@ test("the chat auto-scrolls to the newest message", async ({ page }) => {
 
 test("history survives a reload and each client sees only their own chat", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   // Wait for the saved history first, so typing can't race the chat loading.
   await expect(conversation(page)).toContainText("How is Maya doing?");
   await composer(page).fill("Persist me");

@@ -110,7 +110,7 @@ for (const width of [375, 1280]) {
     for (const tab of TABS) {
       test(`${tab}: no sideways page scroll, 40px+ buttons, labelled fields, named buttons`, async ({ page }) => {
         await mockApi(page);
-        await page.goto("/");
+        await page.goto("/app");
         await openTab(page, tab);
         if (tab === "Manual Planner") {
           // Add an exercise row so its sets/reps/rest controls are checked too.
@@ -134,7 +134,7 @@ test.describe("375px layout", () => {
 
   test("tabs stay on one row and the chip strip scrolls sideways", async ({ page }) => {
     await mockApi(page);
-    await page.goto("/");
+    await page.goto("/app");
     const tops = await page.getByRole("tab").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
     expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
     const strip = page.getByRole("group", { name: "Select client" });
@@ -144,7 +144,7 @@ test.describe("375px layout", () => {
 
   test("stat cards wrap 2 x 2", async ({ page }) => {
     await mockApi(page);
-    await page.goto("/");
+    await page.goto("/app");
     await openTab(page, "Progress");
     const boxes = await panel(page)
       .getByRole("group", { name: /Current weight|Average adherence|Total workouts|Plan completion/ })
@@ -155,7 +155,7 @@ test.describe("375px layout", () => {
 
   test("the four type names under the bar chart don't overlap", async ({ page }) => {
     await mockApi(page);
-    await page.goto("/");
+    await page.goto("/app");
     await openTab(page, "Progress");
     const ticks = panel(page).getByRole("figure", { name: "Assignments by type" }).locator(".recharts-xAxis .recharts-cartesian-axis-tick-value");
     await expect(ticks).toHaveCount(4);
@@ -165,7 +165,7 @@ test.describe("375px layout", () => {
 
   test("forms are single column", async ({ page }) => {
     await mockApi(page);
-    await page.goto("/");
+    await page.goto("/app");
     await openTab(page, "Progress");
     const form = panel(page).getByRole("form", { name: "Weekly check-in" });
     const lefts = await form.locator("input").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
@@ -175,7 +175,7 @@ test.describe("375px layout", () => {
 
 test("focus is visible: tabbing to a tab and a button shows an outline", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "AI Coach" }).focus();
   await page.keyboard.press("Tab");
   const outline = await page.evaluate(() => {
@@ -188,7 +188,7 @@ test("focus is visible: tabbing to a tab and a button shows an outline", async (
 
 test("focused inputs and buttons show the teal focus ring", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
   const weight = page.getByRole("tabpanel").getByLabel("Weight kg", { exact: true });
   await weight.focus();
@@ -202,7 +202,7 @@ test.describe("empty-proofing", () => {
   for (const tab of TABS) {
     test(`${tab}: zero clients renders calmly`, async ({ page }) => {
       await mockApi(page, { clients: [] });
-      await page.goto("/");
+      await page.goto("/app");
       await page.getByRole("tab", { name: tab }).click();
       await expect(panel(page)).toContainText(/No clients yet|Add a client/);
       await expect(panel(page).getByRole("alert")).toHaveCount(0);
@@ -212,7 +212,7 @@ test.describe("empty-proofing", () => {
   for (const n of [0, 1]) {
     test(`Progress with ${n} log(s) and ${n} assignment(s) renders calmly`, async ({ page }) => {
       await mockApi(page, { logs: n, assignments: n });
-      await page.goto("/");
+      await page.goto("/app");
       await openTab(page, "Progress");
       await expect(panel(page).getByRole("group", { name: "Current weight" })).toBeVisible();
       await expect(panel(page)).not.toContainText("NaN");
@@ -222,7 +222,7 @@ test.describe("empty-proofing", () => {
 
   test("Planner with zero assignments renders calmly", async ({ page }) => {
     await mockApi(page, { assignments: 0 });
-    await page.goto("/");
+    await page.goto("/app");
     await openTab(page, "Manual Planner");
     await expect(panel(page).getByRole("alert")).toHaveCount(0);
     await expect(panel(page)).not.toContainText("undefined");
@@ -238,7 +238,7 @@ test.describe("errors show plain words where the action happened", () => {
   for (const [tab, fail] of cases) {
     test(`${tab}: a failed load shows plain words and Retry, not a blank screen`, async ({ page }) => {
       await mockApi(page, { fail });
-      await page.goto("/");
+      await page.goto("/app");
       await page.getByRole("tab", { name: tab }).click();
       const alert = panel(page).getByRole("alert").first();
       await expect(alert).toBeVisible({ timeout: 15_000 });
@@ -248,7 +248,7 @@ test.describe("errors show plain words where the action happened", () => {
 
   test("Clients: a failed client list shows plain words and Retry on every tab", async ({ page }) => {
     await mockApi(page, { fail: /^\/api\/clients$/ });
-    await page.goto("/");
+    await page.goto("/app");
     for (const tab of TABS) {
       await page.getByRole("tab", { name: tab }).click();
       await expect(panel(page).getByRole("alert")).toContainText("The server had a problem", { timeout: 15_000 });

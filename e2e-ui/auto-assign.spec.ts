@@ -85,7 +85,7 @@ const browserToday = (page: Page) =>
 
 test("shows 4 auto-assign buttons in the type colours", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const labels = ["Auto-assign Workout", "Nutrition", "Habit", "Recovery"];
   await expect(row(page).getByRole("button")).toHaveText(labels);
   await expect(button(page, "Auto-assign Workout")).toHaveClass(/bg-type-workout/);
@@ -96,7 +96,7 @@ test("shows 4 auto-assign buttons in the type colours", async ({ page }) => {
 
 test("one of each type saves 4 distinct plans and shows each saved plan with a planner link", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/app");
   const today = await browserToday(page);
 
   for (const [label, type] of [
@@ -121,7 +121,7 @@ test("one of each type saves 4 distinct plans and shows each saved plan with a p
 test("shows Generating... and disables all buttons, so a double click saves once", async ({ page }) => {
   const mock = await mockApi(page);
   mock.behaviour = "hold";
-  await page.goto("/");
+  await page.goto("/app");
   await button(page, "Habit").click();
   const running = button(page, "Generating...");
   await expect(running).toBeDisabled();
@@ -138,7 +138,7 @@ test("shows Generating... and disables all buttons, so a double click saves once
 test("an AI failure shows the error and no success card", async ({ page }) => {
   const mock = await mockApi(page);
   mock.behaviour = "fail";
-  await page.goto("/");
+  await page.goto("/app");
   await button(page, "Recovery").click();
   await expect(panel(page).getByRole("alert")).toContainText("Nothing was saved");
   await expect(result(page)).toHaveCount(0);

@@ -1,0 +1,26 @@
+/* Landing page only. Colours are the existing design-system values (CLAUDE.md), fixed here
+   so the landing page looks the same in light and dark OS mode: dark #141414 hero, cream
+   #FAF7F2 sections with #1A1A1A text. No new colours. */
+.landing-dark {
+  background-color: #141414;
+  color: #ffffff;
+}
+.landing-cream {
+  background-color: #faf7f2;
+  color: #1a1a1a;
+}
+.landing-cream .landing-dim {
+  color: #6b6560;
+}
+.landing-card {
+  background-color: #ffffff;
+  border: 1px solid #e6e0d6;
+  border-radius: 14px;
+}
+/* Static hero poster: used when the 3D scene can't or shouldn't run. */
+.landing-poster {
+  background:
+    radial-gradient(circle at 70% 40%, rgba(255, 74, 31, 0.35), transparent 55%),
+    radial-gradient(circle at 30% 80%, rgba(250, 247, 242, 0.08), transparent 50%),
+    #141414;
+}
