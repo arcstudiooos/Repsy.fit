@@ -6,21 +6,11 @@ import { prisma } from "../db.js";
 /** Placeholder coach until login exists. Every record belongs to this coach. */
 export const DEFAULT_COACH_ID = "default-coach";
 
-export const GOALS = [
-  "Fat loss",
-  "Muscle gain",
-  "Fat loss + strength",
-  "Marathon prep + conditioning",
-  "General fitness",
-  "Athletic performance",
-  "Rehab & mobility",
-] as const;
-
 export const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
 const NewClientSchema = z.object({
   name: z.string({ required_error: "Name is required." }).trim().min(1, "Name is required.").max(100),
-  goal: z.enum(GOALS).optional(),
+  goal: z.string().trim().min(1, "Goal can't be empty.").max(100).optional(), // free text; default "General fitness"
   level: z.enum(LEVELS).optional(),
   age: z.number().int().min(1).max(120).nullable().optional(),
   weightKg: z.number().positive().max(500).nullable().optional(),
@@ -29,7 +19,7 @@ const NewClientSchema = z.object({
   notes: z.string().trim().max(2000).optional(), // notes for AI
 });
 
-/** First validation problem, in plain words: "goal: Invalid enum value..." */
+/** First validation problem, in plain words: "level: Invalid enum value..." */
 function validationMessage(error: z.ZodError): string {
   const issue = error.issues[0];
   const field = issue.path.join(".");

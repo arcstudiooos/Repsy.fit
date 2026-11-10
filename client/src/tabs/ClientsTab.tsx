@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, listAssignments, listClients, queryKeys } from "../api";
 import { initials } from "../ClientStrip";
+import { AddClientForm } from "../components/AddClientForm";
 import { EmptyState, ErrorState, LoadingState } from "../components/States";
 import type { Client } from "../types";
 
@@ -8,27 +10,76 @@ type Props = {
   selectedClientId: string | null;
   /** Selects the client and switches to the AI Coach tab. */
   onOpenClient: (clientId: string) => void;
-  onAddClient: () => void;
+  /** Selects a newly added client (stays on the Clients tab). */
+  onClientCreated: (clientId: string) => void;
   seedDemo: () => void;
 };
 
-// Clients tab: the full client list as cards, from GET /api/clients.
-export function ClientsTab({ selectedClientId, onOpenClient, onAddClient, seedDemo }: Props) {
+// Clients tab: the add-client form plus the full client list as cards, from GET /api/clients.
+export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, seedDemo }: Props) {
   const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
+  const clientCount = clientsQuery.data?.length;
+  const [formOpen, setFormOpen] = useState(false);
+  const [focusSignal, setFocusSignal] = useState(0);
+  const openForm = () => {
+    setFormOpen(true);
+    setFocusSignal((n) => n + 1); // focus Name once the form is on screen
+  };
+
+  // The form is open by default when there are zero clients.
+  useEffect(() => {
+    if (clientCount === 0) setFormOpen(true);
+  }, [clientCount]);
 
   if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) return <LoadingState />;
   if (clientsQuery.isError) {
     return <ErrorState error={clientsQuery.error} onRetry={() => void clientsQuery.refetch()} />;
   }
   const clients = clientsQuery.data;
-  if (clients.length === 0) return <EmptyState onAddClient={onAddClient} seedDemo={seedDemo} />;
+
+  const form = formOpen && (
+    <AddClientForm
+      focusSignal={focusSignal}
+      onCreated={(client) => {
+        setFormOpen(false);
+        onClientCreated(client.id);
+      }}
+      onCancel={clients.length > 0 ? () => setFormOpen(false) : undefined}
+    />
+  );
+
+  if (clients.length === 0) {
+    return (
+      <>
+        <div className="mb-5">
+          <EmptyState
+            onAddClient={openForm}
+            seedDemo={seedDemo}
+          />
+        </div>
+        {form}
+      </>
+    );
+  }
 
   return (
     <>
-      <div className="mb-4 flex items-baseline gap-3">
-        <h2 className="text-2xl">Clients</h2>
-        <span className="text-sm text-dim">{clients.length === 1 ? "1 client" : `${clients.length} clients`}</span>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-2xl">Clients</h2>
+          <span className="text-sm text-dim">{clients.length === 1 ? "1 client" : `${clients.length} clients`}</span>
+        </div>
+        {!formOpen && (
+          <button
+            type="button"
+            onClick={openForm}
+            className="btn-primary rounded-lg px-4 py-2 text-sm"
+          >
+            Add client
+          </button>
+        )}
       </div>
+      {form}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {clients.map((client) => (
           <ClientCard
@@ -75,8 +126,8 @@ function ClientCard({ client, selected, onOpen }: { client: Client; selected: bo
           {initials(client.name)}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-text">{client.name}</div>
-          <div className="truncate text-sm text-dim">{client.goal}</div>
+          <div className="break-words font-semibold text-text">{client.name}</div>
+          <div className="break-words text-sm text-dim">{client.goal}</div>
         </div>
         <span className="shrink-0 rounded-full bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-text">
           {client.level}

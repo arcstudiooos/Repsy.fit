@@ -165,9 +165,10 @@ message (`role: "ai"`). Both are stored in `chat_messages` for that client.
 | `NewAssignment` | `type`, `title`, `details`, `date` | `reasoning`, `source`, `status` |
 | `NewProgressLog` | `date` | `weightKg`, `adherence`, `workoutsDone`, `note` |
 
-Allowed values: `goal` ∈ Fat loss / Muscle gain / Fat loss + strength / Marathon prep +
-conditioning / General fitness / Athletic performance / Rehab & mobility (default General
-fitness); `level` ∈ Beginner / Intermediate / Advanced; `type` ∈ Workout / Nutrition /
+Allowed values: `goal` is free text, 1–100 characters (default General fitness); the form
+suggests Fat loss / Fat loss + strength / Muscle gain / Marathon prep + conditioning /
+Athletic performance / General fitness / Rehab & mobility (`GOALS` in `types.ts`).
+`level` ∈ Beginner / Intermediate / Advanced; `type` ∈ Workout / Nutrition /
 Habit / Recovery; `source` ∈ ai / manual; `status` ∈ Active / Done / Paused; chat `role` ∈
 coach / ai; `adherence` 0–100. The server validates these with zod and replies
 `400 {"error": "..."}` on bad input.
@@ -198,5 +199,7 @@ and record it here.
 
 - Prompt 11 asked for "get one client", which was not in the original contract:
   `getClient()` / `GET /api/clients/:clientId` was added to `api.ts` and here.
+- Prompt 13: the prototype's goal list allows free text too, so the server accepts any goal
+  text (Prompt 11 had limited it to the 7 goals). Decided by the user.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

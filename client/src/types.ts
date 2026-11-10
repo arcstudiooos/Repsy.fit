@@ -4,16 +4,16 @@
 export const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 export type Level = (typeof LEVELS)[number];
 
+/** Suggested goals, in form order. Goal is free text - any other value is allowed too. */
 export const GOALS = [
   "Fat loss",
-  "Muscle gain",
   "Fat loss + strength",
+  "Muscle gain",
   "Marathon prep + conditioning",
-  "General fitness",
   "Athletic performance",
+  "General fitness",
   "Rehab & mobility",
 ] as const;
-export type Goal = (typeof GOALS)[number];
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 export type AssignmentType = (typeof ASSIGNMENT_TYPES)[number];
@@ -34,7 +34,8 @@ export interface Client {
   id: string;
   coachId: string;
   name: string;
-  goal: Goal;
+  /** Free text; suggestions in GOALS. Default "General fitness". */
+  goal: string;
   age: number | null;
   weightKg: number | null;
   heightCm: number | null;

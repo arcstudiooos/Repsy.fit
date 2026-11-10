@@ -130,7 +130,7 @@ export default function App() {
           setSelectedClientId(clientId);
           setActiveTab("ai");
         }}
-        onAddClient={() => setActiveTab("clients")}
+        onClientCreated={setSelectedClientId}
         seedDemo={seedDemo}
       />
     );
