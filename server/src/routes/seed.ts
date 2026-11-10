@@ -194,8 +194,71 @@ export function sixMonthLogs(c: SixMonthClient) {
   });
 }
 
-// POST /api/seed/six-month-demo - adds the 10 six-month clients, skipping any whose name already
-// exists. Returns the clients it created: 201, or 200 [] when all 10 were already there.
+const planDate = (week: number) => isoDate(new Date(new Date(`${SIX_MONTH_START}T00:00:00Z`).getTime() + week * 7 * DAY_MS));
+const plan = (rows: [string, number, number, number][]) =>
+  rows.map(([name, sets, reps, rest], i) => `${i + 1}. ${name} — ${sets} sets × ${reps} reps · Rest ${rest}s`).join("\n");
+
+/** The 5 plans every six-month client gets (Prompt 31), about every 5 weeks from 2026-05-11. */
+export function sixMonthAssignments() {
+  return [
+    {
+      type: "Workout",
+      status: "Done",
+      source: "manual",
+      title: "Strength block A - full body",
+      details: plan([
+        ["Back Squat", 3, 8, 90],
+        ["Bench Press", 3, 8, 90],
+        ["Barbell Row", 3, 10, 60],
+      ]),
+      reasoning: "Builds a full-body strength base to progress from.",
+      date: planDate(0),
+    },
+    {
+      type: "Nutrition",
+      status: "Done",
+      source: "ai",
+      title: "Protein-first daily framework",
+      details: "Protein target about 1.8g/kg daily. 3 structured meals + 1 protein snack. Hydration 2.5L+ water.",
+      reasoning: "Supports the goal while keeping adherence simple and measurable.",
+      date: planDate(5),
+    },
+    {
+      type: "Workout",
+      status: "Done",
+      source: "manual",
+      title: "Progressive overload block B",
+      details: plan([
+        ["Romanian Deadlift", 4, 6, 120],
+        ["Overhead Press", 4, 6, 120],
+        ["Lat Pulldown", 3, 10, 60],
+      ]),
+      reasoning: "Adds load week to week now that block A technique is solid.",
+      date: planDate(10),
+    },
+    {
+      type: "Habit",
+      status: "Active",
+      source: "ai",
+      title: "Daily steps + sleep routine",
+      details: "8,000+ steps every day. Screens off 30 min before bed. Log every meal.",
+      reasoning: "Daily movement and better sleep support recovery and steady progress.",
+      date: planDate(15),
+    },
+    {
+      type: "Recovery",
+      status: "Active",
+      source: "manual",
+      title: "Deload & mobility week",
+      details: "Train at about 60% load all week. Daily 10-min mobility routine. Take 2 rest days.",
+      reasoning: "A planned deload lets the body absorb months of training before the next block.",
+      date: planDate(20),
+    },
+  ];
+}
+
+// POST /api/seed/six-month-demo - adds the 10 six-month clients (26 check-ins + 5 plans each),
+// skipping any whose name already exists, so nothing is ever duplicated. Returns the clients it created: 201, or 200 [] when all 10 were already there.
 seedRouter.post(
   "/six-month-demo",
   asyncHandler(async (_req, res) => {
@@ -222,6 +285,14 @@ seedRouter.post(
                 createdAt: new Date(base + i),
                 progressLogs: {
                   create: sixMonthLogs(c).map((log) => ({ ...log, coachId: DEFAULT_COACH_ID })),
+                },
+                assignments: {
+                  create: sixMonthAssignments().map((a) => ({
+                    ...a,
+                    coachId: DEFAULT_COACH_ID,
+                    // createdAt on the plan's date, so the Planner lists newest first.
+                    createdAt: new Date(`${a.date}T09:00:00Z`),
+                  })),
                 },
               },
             }),

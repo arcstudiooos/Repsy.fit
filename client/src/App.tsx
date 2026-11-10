@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listClients, queryKeys } from "./api";
+import { listClients, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientStrip } from "./ClientStrip";
 import { EmptyState, ErrorState, LoadingState } from "./components/States";
 import { AiCoachTab } from "./tabs/AiCoachTab";
@@ -121,7 +121,11 @@ export default function App() {
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
   // Both "Load demo" buttons share this; after a seed the first demo client is selected.
-  const seedDemo = useDemoSeed(setSelectedClientId);
+  const seedDemo = useDemoSeed(setSelectedClientId, { seed: seedQuickDemo, alreadyLoaded: "Demo already loaded" });
+  const seedSixMonth = useDemoSeed(setSelectedClientId, {
+    seed: seedSixMonthDemo,
+    alreadyLoaded: "6-month demo already loaded",
+  });
 
   // What the panel shows. The Clients tab handles its own loading / error / empty states.
   // Other tabs: loading / error / empty states, or the strip + tab content.
@@ -140,6 +144,7 @@ export default function App() {
           setSelectedClientId((current) => (current === deletedId ? nextClientId : current));
         }}
         seedDemo={seedDemo}
+        seedSixMonth={seedSixMonth}
       />
     );
   } else if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {

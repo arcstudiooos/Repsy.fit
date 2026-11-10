@@ -16,10 +16,12 @@ const DEMO = ["Maya Patel", "Arjun Mehta", "Casey Jordan"].map((name, i) => ({
   createdAt: `2026-11-10T00:00:00.00${i}Z`,
 }));
 
-type Mock = { clients: typeof DEMO; seeds: number; failSeed: boolean };
+const SIX = Array.from({ length: 10 }, (_, i) => ({ ...DEMO[0], id: `six-${i}`, name: `Six Month ${i}` }));
+
+type Mock = { clients: typeof DEMO; seeds: number; sixSeeds: number; failSeed: boolean };
 
 async function mockApi(page: Page, start: typeof DEMO = []): Promise<Mock> {
-  const mock: Mock = { clients: [...start], seeds: 0, failSeed: false };
+  const mock: Mock = { clients: [...start], seeds: 0, sixSeeds: 0, failSeed: false };
   await page.route("**/api/**", async (route: Route) => {
     const req = route.request();
     const path = new URL(req.url()).pathname;
@@ -30,6 +32,12 @@ async function mockApi(page: Page, start: typeof DEMO = []): Promise<Mock> {
       if (mock.clients.length > 0) return route.fulfill({ status: 200, json: [] });
       mock.clients = [...DEMO];
       return route.fulfill({ status: 201, json: DEMO });
+    }
+    if (req.method() === "POST" && path === "/api/seed/six-month-demo") {
+      mock.sixSeeds++;
+      const missing = SIX.filter((c) => !mock.clients.some((m) => m.name === c.name));
+      mock.clients = [...mock.clients, ...missing];
+      return route.fulfill({ status: missing.length ? 201 : 200, json: missing });
     }
     if (req.method() === "GET" && /\/(chat|assignments|progress)$/.test(path)) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { error: "Not found" } });
@@ -82,4 +90,41 @@ test("a failed seed shows the error and adds nothing", async ({ page }) => {
   await page.getByRole("button", { name: "Load demo clients" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Couldn't load demo clients" })).toContainText("The server had a problem");
   await expect(page.getByRole("button", { name: "Load demo clients" })).toBeEnabled();
+});
+
+test("the 6-month button adds 10, then says already loaded; quick demo still adds its 3 for 13 total", async ({ page }) => {
+  const mock = await mockApi(page);
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Clients" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText(
+    "Loading both demo sets gives 13 clients in total, because the names do not overlap.",
+  );
+  await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
+  await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
+  await expect(page.getByRole("tabpanel")).toContainText("10 clients");
+
+  await page.getByRole("button", { name: "Added 10 demo clients" }).click();
+  await expect(page.getByRole("button", { name: "6-month demo already loaded" })).toBeVisible();
+  expect(mock.sixSeeds).toBe(2);
+
+});
+
+test("after the 6-month seed the first new client is selected", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Clients" }).click();
+  await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
+  await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
+  await page.getByRole("tab", { name: "AI Coach" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("Selected: Six Month 0");
+});
+
+test("with the 3 quick-demo clients already there, the 6-month demo brings the total to 13", async ({ page }) => {
+  await mockApi(page, DEMO);
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Clients" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("3 clients");
+  await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
+  await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
+  await expect(page.getByRole("tabpanel")).toContainText("13 clients");
 });

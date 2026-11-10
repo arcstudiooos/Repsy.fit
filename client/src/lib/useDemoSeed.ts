@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { seedDemo } from "../api";
+import type { Client } from "../types";
 import { plainErrorMessage } from "../components/States";
 
 /** Shared state for every "Load demo" button (empty state and Clients tab). */
@@ -13,12 +13,19 @@ export type DemoSeed = {
   error: string | null;
 };
 
+type Options = {
+  /** The seed call, e.g. api.seedDemo or api.seedSixMonthDemo; resolves to the created clients. */
+  seed: () => Promise<Client[]>;
+  /** Shown when the seed created nothing. */
+  alreadyLoaded: string;
+};
+
 /** onSeeded gets the first new demo client's id once every list has refreshed. */
-export function useDemoSeed(onSeeded: (firstClientId: string) => void): DemoSeed {
+export function useDemoSeed(onSeeded: (firstClientId: string) => void, { seed, alreadyLoaded }: Options): DemoSeed {
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: seedDemo,
+    mutationFn: seed,
     onMutate: () => setMessage(null),
     onSuccess: async (created) => {
       // Refresh everything first, so the new clients exist before one is selected.
@@ -27,7 +34,7 @@ export function useDemoSeed(onSeeded: (firstClientId: string) => void): DemoSeed
         setMessage(`Added ${created.length} demo clients`);
         onSeeded(created[0].id);
       } else {
-        setMessage("Demo already loaded");
+        setMessage(alreadyLoaded);
       }
     },
   });

@@ -17,10 +17,18 @@ type Props = {
   /** A client was deleted; nextClientId is the client to select if it was the selected one. */
   onClientDeleted: (deletedId: string, nextClientId: string | null) => void;
   seedDemo: DemoSeed;
+  seedSixMonth: DemoSeed;
 };
 
 // Clients tab: the add-client form plus the full client list as cards, from GET /api/clients.
-export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, onClientDeleted, seedDemo }: Props) {
+export function ClientsTab({
+  selectedClientId,
+  onOpenClient,
+  onClientCreated,
+  onClientDeleted,
+  seedDemo,
+  seedSixMonth,
+}: Props) {
   const queryClient = useQueryClient();
   const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
   const [confirmClient, setConfirmClient] = useState<Client | null>(null); // delete confirm box
@@ -84,6 +92,7 @@ export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, on
             seedDemo={seedDemo}
           />
         </div>
+        <SixMonthDemoControl seed={seedSixMonth} />
         {form}
       </>
     );
@@ -119,6 +128,7 @@ export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, on
       <div className="mb-4 empty:hidden">
         <DemoSeedError seed={seedDemo} />
       </div>
+      <SixMonthDemoControl seed={seedSixMonth} />
       {form}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {clients.map((client) => (
@@ -248,4 +258,30 @@ function useAssignmentCounts(clientId: string): { total: number | string; active
   if (q.data) return { total: q.data.length, active: q.data.filter((a) => a.status === "Active").length };
   if (q.isError) return { total: "-", active: "-" };
   return { total: 0, active: 0 };
+}
+
+/** "Load 6-month demo (10 clients)" plus the note on how the two demo sets add up. */
+function SixMonthDemoControl({ seed }: { seed: DemoSeed }) {
+  return (
+    <div className="mb-5 flex flex-col gap-1">
+      <div>
+        <button
+          type="button"
+          onClick={seed.run}
+          disabled={seed.pending}
+          className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+        >
+          {seed.pending ? "Loading 6-month demo..." : (seed.message ?? "Load 6-month demo (10 clients)")}
+        </button>
+      </div>
+      <p className="text-xs text-dim">
+        Loading both demo sets gives 13 clients in total, because the names do not overlap.
+      </p>
+      {seed.error && (
+        <p role="alert" className="text-sm font-semibold text-accent">
+          Couldn't load the 6-month demo: {seed.error}
+        </p>
+      )}
+    </div>
+  );
 }

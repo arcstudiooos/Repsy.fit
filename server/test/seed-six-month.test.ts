@@ -13,7 +13,7 @@ const { prisma, tx } = vi.hoisted(() => {
 vi.mock("../src/db.js", () => ({ prisma }));
 
 import { app } from "../src/app.js";
-import { SIX_MONTH_ROSTER, sixMonthLogs } from "../src/routes/seed.js";
+import { SIX_MONTH_ROSTER, sixMonthAssignments, sixMonthLogs } from "../src/routes/seed.js";
 
 const NAMES = [
   "Rohan Kapoor",
@@ -100,7 +100,44 @@ describe("sixMonthLogs", () => {
   });
 });
 
-type CreateArg = { data: { name: string; weightKg: number; progressLogs: { create: unknown[] }; [k: string]: unknown } };
+describe("sixMonthAssignments (Prompt 31)", () => {
+  const plans = sixMonthAssignments();
+
+  it("is the 5 plans in order, with type, status, source and title from the prompt", () => {
+    expect(plans.map((p) => [p.type, p.status, p.source, p.title])).toEqual([
+      ["Workout", "Done", "manual", "Strength block A - full body"],
+      ["Nutrition", "Done", "ai", "Protein-first daily framework"],
+      ["Workout", "Done", "manual", "Progressive overload block B"],
+      ["Habit", "Active", "ai", "Daily steps + sleep routine"],
+      ["Recovery", "Active", "manual", "Deload & mobility week"],
+    ]);
+  });
+
+  it("spreads them about every 5 weeks across the six months", () => {
+    expect(plans.map((p) => p.date)).toEqual(["2026-05-11", "2026-06-15", "2026-07-20", "2026-08-24", "2026-09-28"]);
+  });
+
+  it("uses the prompt's wording and the numbered sets/reps/rest format", () => {
+    const lines = plans[0].details.split("\n");
+    expect(lines).toHaveLength(3);
+    lines.forEach((line, i) => expect(line).toMatch(new RegExp(`^${i + 1}\\. [A-Z][A-Za-z -]+ — \\d+ sets × \\d+ reps · Rest \\d+s$`)));
+    expect(plans[1].details).toBe("Protein target about 1.8g/kg daily. 3 structured meals + 1 protein snack. Hydration 2.5L+ water.");
+    expect(plans[1].reasoning).toBe("Supports the goal while keeping adherence simple and measurable.");
+    expect(plans[2].details.split("\n")).toHaveLength(3);
+    expect(plans[3].details).toMatch(/8,000\+ steps/);
+    expect(plans[3].details).toMatch(/screens off 30 min before bed/i);
+    expect(plans[3].details).toMatch(/log every meal/i);
+    expect(plans[4].details).toMatch(/60% load/);
+    expect(plans[4].details).toMatch(/10-min mobility/);
+    expect(plans[4].details).toMatch(/2 rest days/);
+  });
+
+  it("never leaves reasoning empty", () => {
+    for (const p of plans) expect(p.reasoning.trim()).not.toBe("");
+  });
+});
+
+type CreateArg = { data: { name: string; weightKg: number; progressLogs: { create: unknown[] }; assignments: { create: { coachId: string }[] }; [k: string]: unknown } };
 
 describe("POST /api/seed/six-month-demo", () => {
   beforeEach(() => {
@@ -118,6 +155,8 @@ describe("POST /api/seed/six-month-demo", () => {
     for (const d of data) {
       expect(d.coachId).toBe("default-coach");
       expect(d.progressLogs.create).toHaveLength(26);
+      expect(d.assignments.create).toHaveLength(5);
+      expect(d.assignments.create.every((a) => a.coachId === "default-coach")).toBe(true);
       expect(d.weightKg).toBe(SIX_MONTH_ROSTER.find((c) => c.name === d.name)!.endKg);
       expect(d).not.toHaveProperty("startKg");
       expect(d).not.toHaveProperty("baseAdherence");
