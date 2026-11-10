@@ -41,4 +41,26 @@ with failing CI never goes live. On start, `npm start` applies database migratio
 Render dashboard, never in code.
 
 Health check: `GET /api/health` returns `{ "ok": true, "db": true }`, or `503 { "ok": false, "db": false }`
-when the database doesn't answer. Step-by-step first deploy: to be filled in (Prompt 33).
+when the database doesn't answer.
+
+### Steps (first deploy)
+
+1. Render dashboard -> **New -> Blueprint** -> pick this GitHub repo. Render reads `render.yaml`
+   and shows 1 Web Service (`repsy-coach`, Node, free plan) and 1 PostgreSQL (`repsy-db`, free).
+2. Environment variables (set in the Render dashboard, never pasted into chat or code):
+   - `DATABASE_URL` - filled in automatically from the linked `repsy-db` database. Don't type it.
+   - `AI_API_KEY` - your AI provider key. Paste it in Render only.
+   - `AI_BASE_URL` / `AI_MODEL` - your OpenAI-compatible provider's base URL and model name
+     (for example `https://api.openai.com/v1` with a chat model).
+   - `PORT` - set by Render; the server reads `process.env.PORT` (never hard-coded).
+3. Apply the Blueprint. The build runs `npm ci --include=dev && npm run build`; the start command
+   `npm start` runs `prisma migrate deploy`, then the server. Watch the deploy log until it says
+   `Repsy Coach server listening`.
+4. Check `https://repsy-coach.onrender.com/api/health` shows `{"ok":true,"db":true}`.
+
+After that, every push to `main` redeploys automatically once CI passes (about 2 minutes after CI
+finishes). The free plan sleeps when idle, so the first request after a while can take ~1 minute.
+
+If the AI Coach only gives the "Here's what I can see for ..." answer, the AI call is failing
+(usually `AI_API_KEY`, `AI_BASE_URL` or `AI_MODEL` missing or wrong in Render) - the app still
+works, using the fallback answer.
