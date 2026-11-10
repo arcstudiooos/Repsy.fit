@@ -20,7 +20,7 @@ const NewClientSchema = z.object({
 });
 
 /** First validation problem, in plain words: "level: Invalid enum value..." */
-function validationMessage(error: z.ZodError): string {
+export function validationMessage(error: z.ZodError): string {
   const issue = error.issues[0];
   const field = issue.path.join(".");
   return field ? `${field}: ${issue.message}` : issue.message;

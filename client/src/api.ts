@@ -7,6 +7,7 @@
 import type {
   Assignment,
   AssignmentStatus,
+  AssignmentType,
   ChatMessage,
   Client,
   NewAssignment,
@@ -91,9 +92,15 @@ export const deleteAssignment = (clientId: string, assignmentId: string) =>
 
 // ----- AI chat (per client) -----
 export const listChat = (clientId: string) => request<ChatMessage[]>("GET", `/clients/${enc(clientId)}/chat`);
-/** Sends the coach's question; returns the saved coach message and the AI reply. */
+/** A plan the AI suggests with its answer (not saved as an assignment). */
+export type AiSuggestion = { type: AssignmentType; title: string; details: string; reasoning: string };
+/** Sends the coach's question; returns the saved coach message, the AI reply and an optional suggestion. */
 export const askAI = (clientId: string, question: string) =>
-  request<{ question: ChatMessage; reply: ChatMessage }>("POST", `/clients/${enc(clientId)}/chat`, { question });
+  request<{ question: ChatMessage; reply: ChatMessage; suggestion: AiSuggestion | null }>(
+    "POST",
+    `/clients/${enc(clientId)}/chat`,
+    { question },
+  );
 /** Asks the AI to create plans with reasoning; returns the new assignments. */
 export const autoAssign = (clientId: string) =>
   request<Assignment[]>("POST", `/clients/${enc(clientId)}/auto-assign`);

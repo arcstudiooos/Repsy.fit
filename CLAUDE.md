@@ -146,7 +146,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `updateAssignmentStatus(clientId, assignmentId, status)` | PATCH | `/api/clients/:clientId/assignments/:assignmentId` | `{ "status": AssignmentStatus }` | `Assignment` |
 | `deleteAssignment(clientId, assignmentId)` | DELETE | `/api/clients/:clientId/assignments/:assignmentId` | — | 204, no body |
 | `listChat(clientId)` | GET | `/api/clients/:clientId/chat` | — | `ChatMessage[]` |
-| `askAI(clientId, question)` | POST | `/api/clients/:clientId/chat` | `{ "question": string }` | `{ "question": ChatMessage, "reply": ChatMessage }` |
+| `askAI(clientId, question)` | POST | `/api/clients/:clientId/chat` | `{ "question": string }` | `{ "question": ChatMessage, "reply": ChatMessage, "suggestion": AiSuggestion \| null }` (201) |
 | `autoAssign(clientId)` | POST | `/api/clients/:clientId/auto-assign` | — *(no body)* | `Assignment[]` (the new assignments) |
 | `listProgress(clientId)` | GET | `/api/clients/:clientId/progress` | — | `ProgressLog[]` |
 | `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
@@ -155,7 +155,11 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client` (the client with six months of history) |
 
 `askAI`: `question` is the saved coach message (`role: "coach"`), `reply` is the saved AI
-message (`role: "ai"`). Both are stored in `chat_messages` for that client.
+message (`role: "ai"`). Both are stored in `chat_messages` for that client. `suggestion` is
+`null` or `{ type, title, details, reasoning }` (`AiSuggestion` in `api.ts`; `type` ∈ Workout /
+Nutrition / Habit / Recovery) - it is not saved.
+If the AI provider call or its JSON fails, the server logs a safe reason and saves a
+client-specific fallback reply with `suggestion: null` (still 201).
 
 ### Body types (from `types.ts`)
 
@@ -185,7 +189,7 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   unknown client -> `404 {"error":"Client not found"}`.
 - **Chat messages have no public write route.** They are saved only server-side with
   `saveMessage(clientId, role, content)` (`server/src/routes/chat.ts`), which the ask endpoint
-  (`askAI`, `POST /api/clients/:clientId/chat`) will use - so fake chat history can't be created.
+  (`askAI`, `POST /api/clients/:clientId/chat`) uses - so fake chat history can't be created.
 - Creates reply **201 Created** with the full record.
 - A client that does not exist, or belongs to another coach, returns
   `404 {"error":"Client not found"}`.
