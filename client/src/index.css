@@ -6,6 +6,7 @@
   automatically. Tailwind's default colour palette is removed so only Repsy
   colours exist: bg-bg, bg-surface, bg-surface2, text-text, text-dim,
   border-border, text-accent, bg-accent2, text-amber, bg-tab-inactive, bg-header,
+  bg-white, text-on-accent, text-amber-text,
   bg-type-workout / -nutrition / -habit / -recovery, font-heading, font-body,
   rounded-card.
 */
@@ -23,6 +24,9 @@
   --color-amber: var(--amber);
   --color-tab-inactive: var(--tab-inactive);
   --color-header: var(--header);
+  --color-white: var(--white);
+  --color-on-accent: var(--on-accent);
+  --color-amber-text: var(--amber-text);
 
   --color-type-workout: var(--type-workout);
   --color-type-nutrition: var(--type-nutrition);
@@ -65,4 +69,11 @@
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
+}
+
+/* Primary (orange) button: dark bold text for contrast - never white on orange. */
+@utility btn-primary {
+  background-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
 }
