@@ -144,14 +144,16 @@ test("a made-up name can be added as Custom", async ({ page }) => {
   await expect(selected(page).first()).toContainText("Zercher Carry");
 });
 
-test("the selected list does not change what is saved", async ({ page }) => {
+// Prompt 23 changed this: the selected rows now become the details (no new request fields).
+test("the selected list adds no new fields to what is saved", async ({ page }) => {
   const mock = await mockApi(page);
   await openPlanner(page);
   await search(page).fill("squat");
   await resultRows(page).filter({ hasText: "Back Squat" }).click();
   await form(page).getByLabel("Title").fill("Leg day");
-  await form(page).getByLabel("Details").fill("Back Squat 5x5");
+  await form(page).getByLabel("Extra notes (optional)").fill("Back Squat 5x5");
   await form(page).getByRole("button", { name: "Assign plan" }).click();
   await expect.poll(() => mock.posts.length).toBe(1);
   expect(Object.keys(mock.posts[0]).sort()).toEqual(["date", "details", "reasoning", "source", "title", "type"]);
+  expect(mock.posts[0].details).toBe("1. Back Squat — 3 sets × 10 reps · Rest 60s\n\nBack Squat 5x5");
 });

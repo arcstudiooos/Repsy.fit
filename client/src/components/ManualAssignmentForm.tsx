@@ -28,6 +28,13 @@ const MAX_SETS = 10;
 const MIN_REST = 6;
 const REST_PICKS = [30, 60, 90, 120];
 
+// The prototype's plan line: "1. Back Squat — 4 sets × 6 reps · Rest 120s", in the coach's row
+// order. Extra notes follow after a blank line.
+function workoutDetails(rows: DoseRow[], notes: string): string {
+  const list = rows.map((r, i) => `${i + 1}. ${r.name} — ${r.sets} sets × ${r.reps.trim()} reps · Rest ${r.rest}s`).join("\n");
+  return notes ? `${list}\n\n${notes}` : list;
+}
+
 type Props = {
   clientId: string;
   /** Called after the plan is saved and the list refreshed. */
@@ -44,7 +51,7 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
   const [reasoning, setReasoning] = useState("");
   const [date, setDate] = useState(localToday);
   const [exerciseQuery, setExerciseQuery] = useState("");
-  // Picked exercises with their dose (Workout only). Kept while the type changes; not saved yet.
+  // Picked exercises with their dose (Workout only). Kept while the type changes; saved as the details.
   const [exercises, setExercises] = useState<DoseRow[]>([]);
   const [nextExerciseKey, setNextExerciseKey] = useState(1);
   const exerciseResults = searchExercises(exerciseQuery);
@@ -79,11 +86,17 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
       setDetails("");
       setReasoning("");
       setDate(localToday());
+      setExercises([]);
       onCreated(saved);
     },
   });
 
-  const canSubmit = title.trim() !== "" && details.trim() !== "" && !mutation.isPending;
+  // Workout with exercise rows: details are built from the rows, the textarea is optional notes.
+  const fromExercises = type === "Workout" && exercises.length > 0;
+  // Every saved plan line needs a rep count ("3 sets × 10 reps"), so a blank Reps box blocks saving.
+  const missingReps = fromExercises && exercises.some((r) => r.reps.trim() === "");
+  const canSubmit =
+    title.trim() !== "" && (fromExercises || details.trim() !== "") && !missingReps && !mutation.isPending;
 
   function submit(ev: FormEvent) {
     ev.preventDefault();
@@ -91,7 +104,7 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
     const input: NewAssignment = {
       type,
       title: title.trim(),
-      details: details.trim(),
+      details: fromExercises ? workoutDetails(exercises, details.trim()) : details.trim(),
       reasoning: reasoning.trim(),
       source: "manual",
     };
@@ -200,7 +213,7 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
         )}
         <div>
           <label htmlFor="assignment-details" className="mb-1 block text-sm font-semibold text-text">
-            Details
+            {fromExercises ? "Extra notes (optional)" : "Details"}
           </label>
           <textarea
             id="assignment-details"
@@ -208,8 +221,10 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
             className={inputClass + " resize-y"}
             value={details}
             onChange={(e) => setDetails(e.target.value)}
-            placeholder="Write the full plan - meals with portions, or habit steps."
-            aria-required="true"
+            placeholder={
+              fromExercises ? "Warm-up, form cues, tempo." : "Write the full plan - meals with portions, or habit steps."
+            }
+            aria-required={fromExercises ? undefined : "true"}
           />
         </div>
         <div>
@@ -243,6 +258,8 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
           {plainErrorMessage(mutation.error)}
         </p>
       )}
+
+      {missingReps && <p className="mt-4 text-sm text-dim">Add reps for every exercise to save this plan.</p>}
 
       <button
         type="submit"

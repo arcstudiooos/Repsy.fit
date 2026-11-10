@@ -230,5 +230,7 @@ and record it here.
 - Prompt 18 asked for `POST /api/ai/auto-assign` (body `{ clientId, type }`, returns the saved plan).
   Built on the existing `POST /api/clients/:clientId/auto-assign` with body `{ type, date? }`,
   returning `Assignment[]` holding the one saved assignment.
+- Prompt 23's example lines arrived as plain "-" and "x"; built with the em dash, multiplication
+  sign and middle dot it names: `1. Back Squat — 4 sets × 6 reps · Rest 120s`.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.
