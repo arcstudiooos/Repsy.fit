@@ -226,6 +226,8 @@ test("the chat auto-scrolls to the newest message", async ({ page }) => {
 test("history survives a reload and each client sees only their own chat", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
+  // Wait for the saved history first, so typing can't race the chat loading.
+  await expect(conversation(page)).toContainText("How is Maya doing?");
   await composer(page).fill("Persist me");
   await composer(page).press("Enter");
   await expect(conversation(page)).toContainText("Answer about c-maya: keep going.");
