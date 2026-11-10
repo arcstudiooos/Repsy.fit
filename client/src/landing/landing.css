@@ -24,3 +24,12 @@
     radial-gradient(circle at 30% 80%, rgba(250, 247, 242, 0.08), transparent 50%),
     #141414;
 }
+/* Hero text scrim: a light left-side shade on desktop, a full dark gradient on phones. */
+.landing-scrim {
+  background: linear-gradient(90deg, rgba(20, 20, 20, 0.75) 0%, rgba(20, 20, 20, 0.35) 45%, transparent 70%);
+}
+@media (max-width: 767px) {
+  .landing-scrim {
+    background: linear-gradient(180deg, rgba(20, 20, 20, 0.55) 0%, rgba(20, 20, 20, 0.85) 100%);
+  }
+}

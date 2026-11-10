@@ -77,7 +77,7 @@ test("/app never loads the landing or 3D code", async ({ page }) => {
   await page.goto("/app");
   await expect(page.getByRole("tab")).toHaveCount(4);
   await page.waitForLoadState("networkidle");
-  expect(scripts.some((s) => /Landing|HeroCanvas|three|gsap/i.test(s))).toBe(false);
+  expect(scripts.some((s) => /Landing|Hero3D|three|gsap/i.test(s))).toBe(false);
 });
 
 test("old links to / go to /app once this tab is inside the app; Back still reaches the landing page", async ({ page }) => {
@@ -108,7 +108,7 @@ test.describe("desktop with motion", () => {
     await expect(hero).toHaveAttribute("data-reduced-motion", "false");
     if ((await hero.getAttribute("data-webgl")) === "true") {
       await expect(hero.locator("canvas")).toBeAttached({ timeout: 15_000 });
-      expect(scripts.some((s) => /HeroCanvas/.test(s))).toBe(true);
+      expect(scripts.some((s) => /Hero3D/.test(s))).toBe(true);
     } else {
       await expect(page.getByTestId("hero-poster")).toBeVisible();
     }
@@ -129,7 +129,7 @@ test.describe("reduced motion", () => {
     await expect(page.getByTestId("hero-poster")).toBeVisible();
     await expect(hero.locator("canvas")).toHaveCount(0);
     await page.waitForLoadState("networkidle");
-    expect(scripts.some((s) => /HeroCanvas/.test(s))).toBe(false);
+    expect(scripts.some((s) => /Hero3D/.test(s))).toBe(false);
   });
 });
 

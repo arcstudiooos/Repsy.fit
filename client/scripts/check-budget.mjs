@@ -36,8 +36,8 @@ if (!appKey) errors.push("no separate chunk for src/App.tsx");
 else for (const k of staticClosure(appKey)) if (HEAVY.test(k) || HEAVY.test(byKey(k).file)) errors.push(`/app includes ${k}`);
 
 // 3. The 3D code must be its own chunk.
-const threeKey = Object.keys(manifest).find((k) => k.endsWith("src/landing/three/HeroCanvas.tsx"));
-if (!threeKey) errors.push("no separate chunk for the 3D hero (src/landing/three/HeroCanvas.tsx)");
+const threeKey = Object.keys(manifest).find((k) => k.endsWith("src/landing/Hero3D.tsx"));
+if (!threeKey) errors.push("no separate chunk for the 3D hero (src/landing/Hero3D.tsx)");
 
 const appKb = appKey ? [...new Set([...first, ...staticClosure(appKey)])].reduce((n, k) => n + gz(byKey(k).file), 0) / 1024 : 0;
 if (appKb > BUDGET_APP_GZ_KB) errors.push(`/app loads ${appKb.toFixed(1)} KB gz > budget ${BUDGET_APP_GZ_KB} KB`);

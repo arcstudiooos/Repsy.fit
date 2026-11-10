@@ -8,7 +8,7 @@ export type LandingEnv = {
   reducedMotion: boolean;
   /** Narrow screen (under 768px): later prompts use this to skip heavy effects. */
   lightMode: boolean;
-  /** The browser can create a WebGL context. */
+  /** The browser can create a hardware-accelerated WebGL context. */
   webgl: boolean;
   /** True when the 3D hero may run: WebGL works, motion is welcome and the screen is wide. */
   canRun3D: boolean;
@@ -17,7 +17,10 @@ export type LandingEnv = {
 function hasWebGL(): boolean {
   try {
     const canvas = document.createElement("canvas");
-    return !!(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+    // failIfMajorPerformanceCaveat: software-only WebGL (no GPU) counts as "no WebGL",
+    // so slow devices get the static poster - the same flag the 3D canvas uses.
+    const opts = { failIfMajorPerformanceCaveat: true };
+    return !!(canvas.getContext("webgl2", opts) ?? canvas.getContext("webgl", opts));
   } catch {
     return false;
   }

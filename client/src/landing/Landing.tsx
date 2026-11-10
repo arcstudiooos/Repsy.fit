@@ -1,11 +1,8 @@
 // Public landing page (Prompt 37 shell). Copy uses shipped v1 facts only: no prices,
 // testimonials, user counts or unreleased features.
-import { Suspense, lazy, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./landing.css";
-import { useLandingEnv } from "./useLandingEnv";
-
-// Three.js and @react-three/* load only here, in their own chunk, and only when 3D can run.
-const HeroCanvas = lazy(() => import("./three/HeroCanvas"));
+import { Hero } from "./Hero";
 
 const NAV = [
   ["Features", "#features"],
@@ -66,46 +63,6 @@ function Header() {
         </a>
       </div>
     </header>
-  );
-}
-
-function Hero() {
-  const env = useLandingEnv();
-  return (
-    <section
-      className="landing-dark relative -mt-16 overflow-hidden pt-16"
-      data-reduced-motion={env.reducedMotion}
-      data-light-mode={env.lightMode}
-      data-webgl={env.webgl}
-      aria-labelledby="hero-title"
-    >
-      <div className="absolute inset-0" aria-hidden={!env.canRun3D}>
-        {env.canRun3D ? (
-          <Suspense fallback={<div className="landing-poster h-full w-full" />}>
-            <HeroCanvas />
-          </Suspense>
-        ) : (
-          <div data-testid="hero-poster" className="landing-poster h-full w-full" />
-        )}
-      </div>
-      <div className="pointer-events-none relative mx-auto flex min-h-[560px] max-w-[1100px] flex-col justify-center px-4 py-20">
-        <h1 id="hero-title" className="max-w-xl text-4xl leading-tight sm:text-5xl">
-          Repsy Coach
-        </h1>
-        <p className="mt-4 max-w-xl text-lg text-white/80">
-          A coaching dashboard for fitness coaches: ask AI about each client, assign plans with the
-          reasoning attached, plan workouts by hand and track progress in charts.
-        </p>
-        <div className="pointer-events-auto mt-8 flex flex-wrap gap-3">
-          <a href="/app" className="btn-primary flex min-h-10 items-center rounded-lg px-5 text-sm">
-            Start free
-          </a>
-          <a href="#features" className="flex min-h-10 items-center rounded-lg border border-white/30 px-5 text-sm font-semibold text-white hover:border-white/60">
-            See the features
-          </a>
-        </div>
-      </div>
-    </section>
   );
 }
 
