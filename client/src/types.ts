@@ -86,8 +86,9 @@ export interface ProgressLog {
 export type NewClient = Pick<Client, "name"> &
   Partial<Pick<Client, "goal" | "age" | "weightKg" | "heightCm" | "level" | "focus" | "notes">>;
 
-export type NewAssignment = Pick<Assignment, "type" | "title" | "details" | "date"> &
-  Partial<Pick<Assignment, "reasoning" | "source" | "status">>;
+/** Server defaults: reasoning "", source "manual", status "Active", date today. */
+export type NewAssignment = Pick<Assignment, "type" | "title" | "details"> &
+  Partial<Pick<Assignment, "reasoning" | "source" | "status" | "date">>;
 
 export type NewProgressLog = Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;

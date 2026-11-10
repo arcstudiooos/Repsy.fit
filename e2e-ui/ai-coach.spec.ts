@@ -179,7 +179,7 @@ test("while waiting, Send is disabled and reads Thinking...", async ({ page }) =
   await expect(panel(page).getByRole("button", { name: "Send" })).toBeVisible();
 });
 
-test("an AI suggestion shows under the answer with a disabled Assign and a working Dismiss", async ({ page }) => {
+test("an AI suggestion shows under the answer with Assign and a working Dismiss", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
   await panel(page).getByRole("button", { name: "Make a workout plan" }).click();
@@ -189,8 +189,7 @@ test("an AI suggestion shows under the answer with a disabled Assign and a worki
   await expect(card.getByText("Workout", { exact: true })).toHaveCSS("background-color", "rgb(255, 74, 31)");
   await expect(card).toContainText("Back squat 4x6");
   await expect(card).toContainText("Why: Builds the lower-body strength Maya is focusing on.");
-  await expect(card.getByRole("button", { name: "Assign to client" })).toBeDisabled();
-  await expect(card).toContainText(/coming next/i);
+  await expect(card.getByRole("button", { name: "Assign to client" })).toBeEnabled();
   expect((await card.boundingBox())!.y).toBeGreaterThan((await answer.boundingBox())!.y);
   await card.getByRole("button", { name: "Dismiss" }).click();
   await expect(card).toHaveCount(0);

@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
+import { assignmentsRouter } from "./routes/assignments.js";
 import { chatRouter } from "./routes/chat.js";
 import { clientsRouter } from "./routes/clients.js";
 import fs from "node:fs";
@@ -20,6 +21,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use("/api/clients/:clientId/assignments", assignmentsRouter);
 app.use("/api/clients/:clientId/chat", chatRouter);
 app.use("/api/clients", clientsRouter);
 

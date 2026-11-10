@@ -166,7 +166,7 @@ client-specific fallback reply with `suggestion: null` (still 201).
 | Type | Required | Optional |
 | --- | --- | --- |
 | `NewClient` | `name` | `goal`, `age`, `weightKg`, `heightCm`, `level`, `focus`, `notes` |
-| `NewAssignment` | `type`, `title`, `details`, `date` | `reasoning`, `source`, `status` |
+| `NewAssignment` | `type`, `title`, `details` | `reasoning` (default ""), `source` (default manual), `status` (default Active), `date` (default today, UTC) |
 | `NewProgressLog` | `date` | `weightKg`, `adherence`, `workoutsDone`, `note` |
 
 Allowed values: `goal` is free text, 1–100 characters (default General fitness); the form
@@ -187,6 +187,11 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   added is the default selected client. Other list endpoints: decide when built.
 - `GET /api/clients/:clientId/chat` lists messages **oldest first** (`createdAt`, then `id`);
   unknown client -> `404 {"error":"Client not found"}`.
+- `GET /api/clients/:clientId/assignments` lists **newest first** (`createdAt`, then `id`);
+  unknown client -> `404 {"error":"Client not found"}`. `title` and `details` at least 1
+  character (trimmed); `date` must be a real `YYYY-MM-DD` date.
+- **Nothing from the AI is auto-saved.** A suggestion becomes an assignment only when the coach
+  taps "Assign to client" (`source: "ai"`, today's local date); "Dismiss" saves nothing.
 - **Chat messages have no public write route.** They are saved only server-side with
   `saveMessage(clientId, role, content)` (`server/src/routes/chat.ts`), which the ask endpoint
   (`askAI`, `POST /api/clients/:clientId/chat`) uses - so fake chat history can't be created.
@@ -212,5 +217,8 @@ and record it here.
   text (Prompt 11 had limited it to the 7 goals). Decided by the user.
 - Chat storage prompt proposed `GET /api/chat?clientId=ID` returning `{ messages: [...] }`. The
   user chose to keep this contract (`GET /api/clients/:clientId/chat` -> `ChatMessage[]`).
+- Prompt 17 asked for `POST /api/assignments` (body `clientId`, returns `{ id }`) and
+  `GET /api/assignments?clientId=`. Built on the existing `/api/clients/:clientId/assignments`
+  routes instead (201 full `Assignment`; list newest first). `date` became optional (default today).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

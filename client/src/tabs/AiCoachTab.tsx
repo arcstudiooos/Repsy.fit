@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { askAI, listChat, queryKeys, type AiSuggestion } from "../api";
+import { askAI, createAssignment, listChat, queryKeys, type AiSuggestion } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { AssignmentType, ChatMessage, Client } from "../types";
 
-type Props = { client: Client | null };
+type Props = { client: Client | null; onOpenPlanner: () => void };
 
 const timeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
@@ -28,10 +28,11 @@ const secondaryButton =
 
 // AI Coach tab: the selected client's summary, saved conversation
 // (GET /api/clients/:clientId/chat) and a composer that asks the AI (POST .../chat).
-export function AiCoachTab({ client }: Props) {
+export function AiCoachTab({ client, onOpenPlanner }: Props) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
   const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null);
+  const [suggestionKey, setSuggestionKey] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
 
   const chatQuery = useQuery({
@@ -46,6 +47,7 @@ export function AiCoachTab({ client }: Props) {
       // Only clear the composer if the coach hasn't typed something else meanwhile.
       setDraft((current) => (current === sent ? "" : current));
       setSuggestion(result.suggestion);
+      setSuggestionKey((k) => k + 1);
       return queryClient.invalidateQueries({ queryKey: queryKeys.chat(client!.id) });
     },
   });
@@ -87,7 +89,16 @@ export function AiCoachTab({ client }: Props) {
                 {plainErrorMessage(ask.error)}
               </div>
             )}
-            {suggestion && <SuggestionCard suggestion={suggestion} onDismiss={() => setSuggestion(null)} />}
+            {client && suggestion && (
+              // A new suggestion object remounts the card, so its Assigned / error state resets.
+              <SuggestionCard
+                key={suggestionKey}
+                clientId={client.id}
+                suggestion={suggestion}
+                onDismiss={() => setSuggestion(null)}
+                onOpenPlanner={onOpenPlanner}
+              />
+            )}
             <div ref={endRef} />
           </div>
         )}
@@ -154,7 +165,36 @@ function ClientSummary({ client }: { client: Client }) {
   );
 }
 
-function SuggestionCard({ suggestion, onDismiss }: { suggestion: AiSuggestion; onDismiss: () => void }) {
+/** Today in the coach's local time, as "YYYY-MM-DD". */
+function localToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+type SuggestionCardProps = {
+  clientId: string;
+  suggestion: AiSuggestion;
+  onDismiss: () => void;
+  onOpenPlanner: () => void;
+};
+
+// RULE: nothing is EVER auto-saved. An AI suggestion becomes an assignment only when the
+// coach taps "Assign to client"; "Dismiss" (or asking again) discards it without saving.
+function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: SuggestionCardProps) {
+  const queryClient = useQueryClient();
+  const assign = useMutation({
+    mutationFn: () =>
+      createAssignment(clientId, {
+        type: suggestion.type,
+        title: suggestion.title,
+        details: suggestion.details,
+        reasoning: suggestion.reasoning,
+        source: "ai",
+        date: localToday(),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.assignments(clientId) }),
+  });
+
   return (
     <section aria-label="AI suggestion" className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -167,15 +207,35 @@ function SuggestionCard({ suggestion, onDismiss }: { suggestion: AiSuggestion; o
       {suggestion.reasoning.trim() !== "" && (
         <p className="mt-2 text-sm text-dim">Why: {suggestion.reasoning}</p>
       )}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" disabled className="btn-primary cursor-not-allowed rounded-lg px-4 py-2 text-sm opacity-60">
-          Assign to client
-        </button>
-        <button type="button" onClick={onDismiss} className={secondaryButton}>
-          Dismiss
-        </button>
-      </div>
-      <p className="mt-1 text-xs text-dim">Assigning to a client is coming next.</p>
+      {assign.isSuccess ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <span className="text-sm font-bold text-accent2">✓ Assigned</span>
+          <button type="button" onClick={onOpenPlanner} className="text-sm font-semibold text-accent2 underline">
+            View in Manual Planner
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={assign.isPending}
+              onClick={() => assign.mutate()}
+              className="btn-primary rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {assign.isPending ? "Assigning..." : "Assign to client"}
+            </button>
+            <button type="button" disabled={assign.isPending} onClick={onDismiss} className={secondaryButton}>
+              Dismiss
+            </button>
+          </div>
+          {assign.isError && (
+            <p role="alert" className="mt-2 rounded-lg bg-surface2 px-3 py-2 text-sm text-text">
+              {plainErrorMessage(assign.error)}
+            </p>
+          )}
+        </>
+      )}
     </section>
   );
 }

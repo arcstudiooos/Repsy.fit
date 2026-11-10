@@ -154,7 +154,11 @@ export default function App() {
         {/* key forces a clean remount when the selected client changes, so no tab can
             keep showing the previous client's data. */}
         {current.id === "ai" ? (
-          <AiCoachTab key={`ai:${selectedClientId ?? "none"}`} client={selectedClient} />
+          <AiCoachTab
+            key={`ai:${selectedClientId ?? "none"}`}
+            client={selectedClient}
+            onOpenPlanner={() => setActiveTab("planner")}
+          />
         ) : (
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
         )}
