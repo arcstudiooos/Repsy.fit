@@ -131,6 +131,10 @@ export default function App() {
           setActiveTab("ai");
         }}
         onClientCreated={setSelectedClientId}
+        onClientDeleted={(deletedId, nextClientId) => {
+          // If the deleted client was selected, select the next remaining one (or none).
+          setSelectedClientId((current) => (current === deletedId ? nextClientId : current));
+        }}
         seedDemo={seedDemo}
       />
     );

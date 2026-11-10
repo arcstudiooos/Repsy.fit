@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ApiError, listAssignments, listClients, queryKeys } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, deleteClient, listAssignments, listClients, queryKeys } from "../api";
 import { initials } from "../ClientStrip";
 import { AddClientForm } from "../components/AddClientForm";
-import { EmptyState, ErrorState, LoadingState } from "../components/States";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { Client } from "../types";
 
 type Props = {
@@ -12,12 +13,37 @@ type Props = {
   onOpenClient: (clientId: string) => void;
   /** Selects a newly added client (stays on the Clients tab). */
   onClientCreated: (clientId: string) => void;
+  /** A client was deleted; nextClientId is the client to select if it was the selected one. */
+  onClientDeleted: (deletedId: string, nextClientId: string | null) => void;
   seedDemo: () => void;
 };
 
 // Clients tab: the add-client form plus the full client list as cards, from GET /api/clients.
-export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, seedDemo }: Props) {
+export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, onClientDeleted, seedDemo }: Props) {
+  const queryClient = useQueryClient();
   const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
+  const [confirmClient, setConfirmClient] = useState<Client | null>(null); // delete confirm box
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
+
+  const deleteMutation = useMutation({
+    mutationFn: (client: Client) => deleteClient(client.id),
+    onSuccess: async (_data, client) => {
+      // Pick the next remaining client (the one after it, else the one before it).
+      const list = queryClient.getQueryData<Client[]>(queryKeys.clients) ?? [];
+      const i = list.findIndex((c) => c.id === client.id);
+      const next = list[i + 1] ?? list[i - 1] ?? null;
+      onClientDeleted(client.id, next?.id ?? null);
+      // Drop the deleted client's cached assignments / chat / progress, then refresh every list.
+      queryClient.removeQueries({ queryKey: ["clients", client.id] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.clients });
+      setConfirmClient(null);
+    },
+    onError: (error, client) => {
+      // Keep the client; show the error inside its card.
+      setDeleteErrors((e) => ({ ...e, [client.id]: `Couldn't delete: ${plainErrorMessage(error)}` }));
+      setConfirmClient(null);
+    },
+  });
   const clientCount = clientsQuery.data?.length;
   const [formOpen, setFormOpen] = useState(false);
   const [focusSignal, setFocusSignal] = useState(0);
@@ -87,9 +113,26 @@ export function ClientsTab({ selectedClientId, onOpenClient, onClientCreated, se
             client={client}
             selected={client.id === selectedClientId}
             onOpen={() => onOpenClient(client.id)}
+            onDelete={() => {
+              setDeleteErrors(({ [client.id]: _, ...rest }) => rest);
+              setConfirmClient(client);
+            }}
+            deleteError={deleteErrors[client.id]}
           />
         ))}
       </div>
+      {confirmClient && (
+        <ConfirmDialog
+          title={`Delete ${confirmClient.name}?`}
+          confirmLabel="Delete"
+          pendingLabel="Deleting..."
+          pending={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate(confirmClient)}
+          onCancel={() => setConfirmClient(null)}
+        >
+          Their assignments, chats and progress will also be deleted. This cannot be undone.
+        </ConfirmDialog>
+      )}
     </>
   );
 }
@@ -103,53 +146,82 @@ function stats(client: Client): string {
   return parts.join(" · ");
 }
 
-function ClientCard({ client, selected, onOpen }: { client: Client; selected: boolean; onOpen: () => void }) {
+type CardProps = {
+  client: Client;
+  selected: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+  deleteError?: string;
+};
+
+function ClientCard({ client, selected, onOpen, onDelete, deleteError }: CardProps) {
   const counts = useAssignmentCounts(client.id);
   const statLine = stats(client);
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-pressed={selected}
-      aria-label={`${client.name} - open in AI Coach`}
+    <div
       className={
-        "card flex flex-col gap-3 p-4 text-left transition-colors " +
-        (selected ? "border-2 border-accent" : "hover:border-dim")
+        "card relative flex flex-col transition-colors " + (selected ? "border-2 border-accent" : "hover:border-dim")
       }
     >
-      <div className="flex items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface2 font-bold text-text"
-        >
-          {initials(client.name)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="break-words font-semibold text-text">{client.name}</div>
-          <div className="break-words text-sm text-dim">{client.goal}</div>
-        </div>
-        <span className="shrink-0 rounded-full bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-text">
-          {client.level}
-        </span>
-      </div>
-
-      {statLine && <div className="text-sm text-text">{statLine}</div>}
-      {client.focus && (
-        <div className="text-sm text-dim">
-          <span className="font-semibold text-text">Focus:</span> {client.focus}
-        </div>
+      {deleteError && (
+        <p role="alert" className="mx-4 mt-4 rounded-lg bg-surface2 px-3 py-2 text-sm font-semibold text-amber-text">
+          {deleteError}
+        </p>
       )}
 
-      <div className="mt-auto flex gap-4 border-t border-border pt-3 text-sm text-dim">
-        <span>
-          <span className="font-semibold text-text">{counts.total}</span> assignments
-        </span>
-        <span>
-          <span className="font-semibold text-text">{counts.active}</span> active
-        </span>
-      </div>
-    </button>
+      {/* Main area: opens the client in AI Coach. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-pressed={selected}
+        aria-label={`${client.name} - open in AI Coach`}
+        className="flex flex-1 flex-col gap-3 rounded-card p-4 text-left"
+      >
+        <div className="flex w-full items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface2 font-bold text-text"
+          >
+            {initials(client.name)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="break-words font-semibold text-text">{client.name}</div>
+            <div className="break-words text-sm text-dim">{client.goal}</div>
+          </div>
+          <span className="shrink-0 rounded-full bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-text">
+            {client.level}
+          </span>
+        </div>
+
+        {statLine && <div className="text-sm text-text">{statLine}</div>}
+        {client.focus && (
+          <div className="text-sm text-dim">
+            <span className="font-semibold text-text">Focus:</span> {client.focus}
+          </div>
+        )}
+
+        {/* pr-16 leaves room for the Delete button in the corner. */}
+        <div className="mt-auto flex w-full gap-4 border-t border-border pr-16 pt-3 text-sm text-dim">
+          <span>
+            <span className="font-semibold text-text">{counts.total}</span> assignments
+          </span>
+          <span>
+            <span className="font-semibold text-text">{counts.active}</span> active
+          </span>
+        </div>
+      </button>
+
+      {/* Calm, small text button - not a loud red block. */}
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label={`Delete ${client.name}`}
+        className="absolute bottom-4 right-4 rounded px-1 text-sm text-dim underline-offset-2 hover:text-text hover:underline"
+      >
+        Delete
+      </button>
+    </div>
   );
 }
 
