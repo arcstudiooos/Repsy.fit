@@ -81,3 +81,6 @@ jobs:
 
       - name: Browser smoke tests
         run: npm run test:e2e
+
+      - name: UI tests (mocked API)
+        run: npm run test:ui
