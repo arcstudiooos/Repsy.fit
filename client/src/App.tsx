@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from "./components/States";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import { PlannerTab } from "./tabs/PlannerTab";
+import { ProgressTab } from "./tabs/ProgressTab";
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -166,6 +167,8 @@ export default function App() {
             client={selectedClient}
             onOpenAiCoach={() => setActiveTab("ai")}
           />
+        ) : current.id === "progress" ? (
+          <ProgressTab key={`progress:${selectedClientId ?? "none"}`} client={selectedClient} />
         ) : (
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
         )}
