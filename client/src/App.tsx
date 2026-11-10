@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listClients, queryKeys } from "./api";
 import { ClientStrip } from "./ClientStrip";
 import { EmptyState, ErrorState, LoadingState } from "./components/States";
+import { ClientsTab } from "./tabs/ClientsTab";
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -118,23 +119,33 @@ export default function App() {
   // TEMP: real seeding arrives in Prompt 29.
   const seedDemo = () => console.log("[TEMP] Load demo clients clicked - real seed arrives in Prompt 29");
 
-  // What the panel shows: loading / error / empty states, or the tab content.
-  // On the Clients tab, zero clients still shows the tab (that is where clients get added).
+  // What the panel shows. The Clients tab handles its own loading / error / empty states.
+  // Other tabs: loading / error / empty states, or the strip + tab content.
   let panelContent: ReactNode;
-  if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {
+  if (current.id === "clients") {
+    panelContent = (
+      <ClientsTab
+        selectedClientId={selectedClientId}
+        onOpenClient={(clientId) => {
+          setSelectedClientId(clientId);
+          setActiveTab("ai");
+        }}
+        onAddClient={() => setActiveTab("clients")}
+        seedDemo={seedDemo}
+      />
+    );
+  } else if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {
     // Also while retrying after an error, so Retry gives visible feedback.
     panelContent = <LoadingState />;
   } else if (clientsQuery.isError) {
     panelContent = <ErrorState error={clientsQuery.error} onRetry={() => void clientsQuery.refetch()} />;
-  } else if (clients.length === 0 && current.id !== "clients") {
+  } else if (clients.length === 0) {
     panelContent = <EmptyState onAddClient={() => setActiveTab("clients")} seedDemo={seedDemo} />;
   } else {
     panelContent = (
       <>
         {/* Client selector strip: every tab except Clients (that tab is the full list). */}
-        {current.id !== "clients" && (
-          <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
-        )}
+        <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
         {/* key forces a clean remount when the selected client changes, so no tab can
             keep showing the previous client's data. */}
         <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
