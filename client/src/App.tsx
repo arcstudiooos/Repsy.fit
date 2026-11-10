@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listClients, queryKeys } from "./api";
+import { ClientStrip } from "./ClientStrip";
+import { TEMP_SAMPLE_CLIENTS, USE_TEMP_SAMPLE_CLIENTS } from "./tempSampleClients"; // TEMP: remove in Prompt 11
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -85,7 +87,7 @@ function PlaceholderTab({ tab, client }: TabProps) {
     <>
       <h2 className="text-2xl">{tab.label}</h2>
       <p className="mt-2 text-dim">Placeholder - {tab.label} content comes in a later prompt.</p>
-      <p className="mt-1 text-sm text-dim">Selected client: {client ? client.name : "none"}</p>
+      <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
     </>
   );
 }
@@ -95,17 +97,23 @@ export default function App() {
   const current = TABS.find((t) => t.id === activeTab)!;
 
   // Shared "selected client" for the whole app.
-  const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
-  const clients = clientsQuery.data ?? [];
+  const clientsQuery = useQuery({
+    queryKey: queryKeys.clients,
+    queryFn: listClients,
+    enabled: !USE_TEMP_SAMPLE_CLIENTS, // TEMP: always on once Prompt 11 removes the sample clients
+  });
+  // TEMP: sample clients until the real API arrives in Prompt 11.
+  const loadedClients: Client[] | undefined = USE_TEMP_SAMPLE_CLIENTS ? TEMP_SAMPLE_CLIENTS : clientsQuery.data;
+  const clients = loadedClients ?? [];
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   // Default to the first client when the list loads, and fall back to the first client
   // if the selected one disappears (e.g. deleted).
   useEffect(() => {
-    if (!clientsQuery.data) return;
-    const stillExists = clientsQuery.data.some((c) => c.id === selectedClientId);
-    if (!stillExists) setSelectedClientId(clientsQuery.data[0]?.id ?? null);
-  }, [clientsQuery.data, selectedClientId]);
+    if (!loadedClients) return;
+    const stillExists = loadedClients.some((c) => c.id === selectedClientId);
+    if (!stillExists) setSelectedClientId(loadedClients[0]?.id ?? null);
+  }, [loadedClients, selectedClientId]);
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
@@ -120,6 +128,10 @@ export default function App() {
           aria-labelledby={`tab-${current.id}`}
           className="card rounded-t-none border-t-0 p-6"
         >
+          {/* Client selector strip: every tab except Clients (that tab is the full list). */}
+          {current.id !== "clients" && (
+            <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
+          )}
           {/* key forces a clean remount when the selected client changes, so no tab can
               keep showing the previous client's data. */}
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
