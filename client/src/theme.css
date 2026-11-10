@@ -15,6 +15,11 @@
   --amber: #d97706;
   --tab-inactive: #e9e3d8;
   --header: #141414;        /* header strip background */
+  --white: #ffffff;
+
+  /* Contrast-safe text colours */
+  --on-accent: #141414;     /* text on orange (--accent) buttons: dark + bold, never white */
+  --amber-text: #92400e;    /* small amber text; keep --amber for icons and large labels only */
 
   /* Assignment type colours (same in light and dark) */
   --type-workout: #ff4a1f;
@@ -39,5 +44,7 @@
     --dim: #a8a29e;
     --border: #333333;
     --tab-inactive: #262626;
+    /* #92400E is unreadable on dark backgrounds; #D97706 passes contrast there. */
+    --amber-text: #d97706;
   }
 }
