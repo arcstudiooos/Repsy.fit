@@ -4,6 +4,7 @@ import { createAssignment, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import { localToday, TYPE_CHIP } from "../tabs/AiCoachTab";
 import { ASSIGNMENT_TYPES, type Assignment, type AssignmentType, type NewAssignment } from "../types";
+import { CUSTOM_GROUP, searchExercises, type Exercise } from "../data/exercises";
 
 // Inputs: --surface2 background, 14px radius (design system).
 const inputClass =
@@ -32,6 +33,18 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
   const [details, setDetails] = useState("");
   const [reasoning, setReasoning] = useState("");
   const [date, setDate] = useState(localToday);
+  const [exerciseQuery, setExerciseQuery] = useState("");
+  // Picked exercises (Workout only). Not saved yet - the next prompt adds sets/reps/rest.
+  const [exercises, setExercises] = useState<(Exercise & { key: number })[]>([]);
+  const [nextExerciseKey, setNextExerciseKey] = useState(1);
+  const exerciseResults = searchExercises(exerciseQuery);
+  const customName = exerciseQuery.trim();
+
+  function addExercise(exercise: Exercise) {
+    setExercises((list) => [...list, { ...exercise, key: nextExerciseKey }]);
+    setNextExerciseKey((k) => k + 1);
+    setExerciseQuery("");
+  }
 
   const mutation = useMutation({
     mutationFn: (input: NewAssignment) => createAssignment(clientId, input),
@@ -100,6 +113,72 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
             aria-required="true"
           />
         </div>
+        {type === "Workout" && (
+          <div>
+            <label htmlFor="exercise-search" className="mb-1 block text-sm font-semibold text-text">
+              Search exercises
+            </label>
+            <div className="relative">
+              <input
+                id="exercise-search"
+                className={inputClass}
+                value={exerciseQuery}
+                onChange={(e) => setExerciseQuery(e.target.value)}
+                placeholder="Search by name or muscle group, e.g. squat or back"
+                autoComplete="off"
+              />
+              {customName !== "" && (
+                <ul
+                  aria-label="Exercise results"
+                  className="absolute left-0 right-0 z-10 mt-1 overflow-hidden rounded-card border border-border bg-surface"
+                >
+                  {exerciseResults.map((ex) => (
+                    <li key={ex.name}>
+                      <button
+                        type="button"
+                        onClick={() => addExercise(ex)}
+                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface2"
+                      >
+                        <span className="font-semibold text-text">{ex.name}</span>
+                        <span className="text-dim">{ex.group}</span>
+                      </button>
+                    </li>
+                  ))}
+                  <li className="border-t border-border">
+                    <button
+                      type="button"
+                      onClick={() => addExercise({ name: customName, group: CUSTOM_GROUP })}
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface2"
+                    >
+                      <span className="font-semibold text-accent2">Add custom exercise "{customName}"</span>
+                      <span className="text-dim">{CUSTOM_GROUP}</span>
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </div>
+            {exercises.length > 0 && (
+              <ul aria-label="Selected exercises" className="mt-2 flex flex-col gap-2">
+                {exercises.map((ex) => (
+                  <li
+                    key={ex.key}
+                    className="flex items-center justify-between rounded-card border border-border bg-surface2 px-3 py-2 text-sm"
+                  >
+                    <span className="font-semibold text-text">{ex.name}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${ex.name}`}
+                      onClick={() => setExercises((list) => list.filter((item) => item.key !== ex.key))}
+                      className="px-2 font-bold text-dim hover:text-accent"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <div>
           <label htmlFor="assignment-details" className="mb-1 block text-sm font-semibold text-text">
             Details
