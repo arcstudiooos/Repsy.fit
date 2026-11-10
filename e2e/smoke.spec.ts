@@ -32,12 +32,14 @@ test.beforeEach(async ({ request }) => {
 });
 
 test.describe("app shell", () => {
-  test("header strip shows the R mark, REPSY and subtitle", async ({ page }) => {
+  test("header strip shows the Repsy logo and subtitle", async ({ page }) => {
     await page.goto("/");
     const header = page.locator("header");
     await expect(header).toHaveCSS("background-color", "rgb(20, 20, 20)");
-    await expect(header.getByText("R", { exact: true })).toBeVisible();
-    await expect(header.getByText("Repsy", { exact: true })).toBeVisible();
+    const logo = header.getByRole("img", { name: "Repsy" });
+    await expect(logo).toBeVisible();
+    // Loaded for real (a broken image has naturalWidth 0).
+    expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
     await expect(header.getByText("Prototype - coach command center")).toBeVisible();
   });
 

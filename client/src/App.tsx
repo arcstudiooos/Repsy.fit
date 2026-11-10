@@ -23,14 +23,9 @@ function Header() {
   return (
     <header className="header-strip bg-header">
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
-        <div
-          aria-hidden="true"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent font-heading text-xl font-bold text-on-accent"
-        >
-          R
-        </div>
+        {/* The Repsy logo: gradient R mark + white wordmark, made for the dark header strip. */}
+        <img src="/repsy-logo.png" alt="Repsy" width={113} height={36} className="h-9 w-auto shrink-0" />
         <div className="leading-tight">
-          <div className="font-heading text-2xl font-bold uppercase tracking-wide text-white">Repsy</div>
           <div className="text-xs text-white/70">Prototype - coach command center</div>
         </div>
       </div>
