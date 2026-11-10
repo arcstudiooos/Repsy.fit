@@ -90,5 +90,8 @@ export type NewClient = Pick<Client, "name"> &
 export type NewAssignment = Pick<Assignment, "type" | "title" | "details"> &
   Partial<Pick<Assignment, "reasoning" | "source" | "status" | "date">>;
 
+/** Auto-assign body: the plan type; date defaults to today (UTC). */
+export type AutoAssignInput = { type: AssignmentType; date?: DateString };
+
 export type NewProgressLog = Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;

@@ -147,7 +147,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `deleteAssignment(clientId, assignmentId)` | DELETE | `/api/clients/:clientId/assignments/:assignmentId` | — | 204, no body |
 | `listChat(clientId)` | GET | `/api/clients/:clientId/chat` | — | `ChatMessage[]` |
 | `askAI(clientId, question)` | POST | `/api/clients/:clientId/chat` | `{ "question": string }` | `{ "question": ChatMessage, "reply": ChatMessage, "suggestion": AiSuggestion \| null }` (201) |
-| `autoAssign(clientId)` | POST | `/api/clients/:clientId/auto-assign` | — *(no body)* | `Assignment[]` (the new assignments) |
+| `autoAssign(clientId, input)` | POST | `/api/clients/:clientId/auto-assign` | `AutoAssignInput` (`{ "type": AssignmentType, "date"?: "YYYY-MM-DD" }`) | `Assignment[]` (201; the ONE new saved assignment) |
 | `listProgress(clientId)` | GET | `/api/clients/:clientId/progress` | — | `ProgressLog[]` |
 | `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
@@ -192,6 +192,13 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   character (trimmed); `date` must be a real `YYYY-MM-DD` date.
 - **Nothing from the AI is auto-saved.** A suggestion becomes an assignment only when the coach
   taps "Assign to client" (`source: "ai"`, today's local date); "Dismiss" saves nothing.
+  The one exception is auto-assign below, which the coach requests explicitly per type.
+- `POST /api/clients/:clientId/auto-assign` (body `{ type, date? }`, `date` default today UTC; the UI
+  sends today's local date): asks the AI for ONE complete plan of that type with the same client
+  context as chat, SAVES it (`source: "ai"`, status Active) and replies 201 `[assignment]`. If the
+  AI is not configured or its call / JSON fails it saves nothing and replies
+  `502 {"error":"The AI couldn't create a plan right now. Nothing was saved - please try again."}`.
+  No chat messages are written.
 - **Chat messages have no public write route.** They are saved only server-side with
   `saveMessage(clientId, role, content)` (`server/src/routes/chat.ts`), which the ask endpoint
   (`askAI`, `POST /api/clients/:clientId/chat`) uses - so fake chat history can't be created.
@@ -220,5 +227,8 @@ and record it here.
 - Prompt 17 asked for `POST /api/assignments` (body `clientId`, returns `{ id }`) and
   `GET /api/assignments?clientId=`. Built on the existing `/api/clients/:clientId/assignments`
   routes instead (201 full `Assignment`; list newest first). `date` became optional (default today).
+- Prompt 18 asked for `POST /api/ai/auto-assign` (body `{ clientId, type }`, returns the saved plan).
+  Built on the existing `POST /api/clients/:clientId/auto-assign` with body `{ type, date? }`,
+  returning `Assignment[]` holding the one saved assignment.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

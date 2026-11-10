@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { askAI, createAssignment, listChat, queryKeys, type AiSuggestion } from "../api";
+import { ApiError, askAI, autoAssign, createAssignment, listChat, queryKeys, type AiSuggestion } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
-import type { AssignmentType, ChatMessage, Client } from "../types";
+import type { Assignment, AssignmentType, ChatMessage, Client } from "../types";
 
 type Props = { client: Client | null; onOpenPlanner: () => void };
 
@@ -75,6 +75,9 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
       <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
 
       {client && <ClientSummary client={client} />}
+
+      {/* Keyed by client so a result or error never shows under another client. */}
+      {client && <AutoAssignPanel key={client.id} client={client} onOpenPlanner={onOpenPlanner} />}
 
       <div className="mt-4">
         {client && (chatQuery.isPending || (chatQuery.isError && chatQuery.isFetching)) ? (
@@ -169,6 +172,90 @@ function ClientSummary({ client }: { client: Client }) {
 function localToday() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const AUTO_ASSIGN_BUTTONS: [AssignmentType, string][] = [
+  ["Workout", "Auto-assign Workout"],
+  ["Nutrition", "Nutrition"],
+  ["Habit", "Habit"],
+  ["Recovery", "Recovery"],
+];
+
+// One-tap generators: the AI writes ONE complete plan of the chosen type and the server
+// SAVES it (the coach asked for it explicitly). If the AI fails, nothing is saved.
+function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlanner: () => void }) {
+  const queryClient = useQueryClient();
+  // Blocks a second request before the disabled state has re-rendered (fast double click).
+  const running = useRef(false);
+  const generate = useMutation({
+    mutationFn: (type: AssignmentType) => autoAssign(client.id, { type, date: localToday() }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.assignments(client.id) }),
+    onSettled: () => {
+      running.current = false;
+    },
+  });
+
+  const run = (type: AssignmentType) => {
+    if (running.current) return;
+    running.current = true;
+    generate.mutate(type);
+  };
+
+  const saved = generate.isSuccess ? generate.data[0] : undefined;
+
+  return (
+    <section className="mt-4">
+      <div role="group" aria-label="Auto-assign" className="flex flex-wrap gap-2">
+        {AUTO_ASSIGN_BUTTONS.map(([type, label]) => (
+          <button
+            key={type}
+            type="button"
+            disabled={generate.isPending}
+            onClick={() => run(type)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60 ${TYPE_CHIP[type]}`}
+          >
+            {generate.isPending && generate.variables === type ? "Generating..." : label}
+          </button>
+        ))}
+      </div>
+      {generate.isError && (
+        <p role="alert" className="mt-3 rounded-card border border-border bg-surface2 px-4 py-2.5 text-text">
+          {/* A failed generation (502) carries the server's own message, which says nothing was saved. */}
+          {generate.error instanceof ApiError && generate.error.status === 502
+            ? generate.error.message
+            : plainErrorMessage(generate.error)}
+        </p>
+      )}
+      {saved && <AutoAssignedCard assignment={saved} clientName={client.name} onOpenPlanner={onOpenPlanner} />}
+    </section>
+  );
+}
+
+function AutoAssignedCard({
+  assignment,
+  clientName,
+  onOpenPlanner,
+}: {
+  assignment: Assignment;
+  clientName: string;
+  onOpenPlanner: () => void;
+}) {
+  return (
+    <section aria-label="Auto-assigned plan" className="card mt-3 p-4">
+      <p className="text-sm font-bold text-accent2">✓ Saved to {clientName}'s plans</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <h3 className="text-lg">{assignment.title}</h3>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[assignment.type]}`}>
+          {assignment.type}
+        </span>
+      </div>
+      <p className="mt-2 whitespace-pre-wrap text-sm text-text">{assignment.details}</p>
+      {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {assignment.reasoning}</p>}
+      <button type="button" onClick={onOpenPlanner} className="mt-3 text-sm font-semibold text-accent2 underline">
+        View in Manual Planner
+      </button>
+    </section>
+  );
 }
 
 type SuggestionCardProps = {

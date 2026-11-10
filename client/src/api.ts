@@ -8,6 +8,7 @@ import type {
   Assignment,
   AssignmentStatus,
   AssignmentType,
+  AutoAssignInput,
   ChatMessage,
   Client,
   NewAssignment,
@@ -101,9 +102,9 @@ export const askAI = (clientId: string, question: string) =>
     `/clients/${enc(clientId)}/chat`,
     { question },
   );
-/** Asks the AI to create plans with reasoning; returns the new assignments. */
-export const autoAssign = (clientId: string) =>
-  request<Assignment[]>("POST", `/clients/${enc(clientId)}/auto-assign`);
+/** Asks the AI for one complete plan of this type, SAVES it (source ai) and returns [the new assignment]. */
+export const autoAssign = (clientId: string, input: AutoAssignInput) =>
+  request<Assignment[]>("POST", `/clients/${enc(clientId)}/auto-assign`, input);
 
 // ----- Progress (per client) -----
 export const listProgress = (clientId: string) =>
