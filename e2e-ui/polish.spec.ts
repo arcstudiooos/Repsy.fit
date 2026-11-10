@@ -186,6 +186,18 @@ test("focus is visible: tabbing to a tab and a button shows an outline", async (
   expect(outline.style !== "none" && outline.width > 0).toBe(true);
 });
 
+test("focused inputs and buttons show the teal focus ring", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Progress" }).click();
+  const weight = page.getByRole("tabpanel").getByLabel("Weight kg", { exact: true });
+  await weight.focus();
+  await expect(weight).toHaveCSS("outline-style", "solid");
+  await expect(weight).toHaveCSS("outline-color", "rgb(14, 124, 107)");
+  await page.keyboard.press("Tab");
+  await expect(page.locator(":focus")).toHaveCSS("outline-color", "rgb(14, 124, 107)");
+});
+
 test.describe("empty-proofing", () => {
   for (const tab of TABS) {
     test(`${tab}: zero clients renders calmly`, async ({ page }) => {

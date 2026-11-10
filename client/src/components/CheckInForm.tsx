@@ -13,7 +13,7 @@ function localToday() {
 }
 
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent focus:outline-none";
+  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 
 /** Weekly check-in for the selected client. Saving refreshes logs, stat cards and charts together. */
 export function CheckInForm({ clientId }: Props) {
@@ -36,17 +36,23 @@ export function CheckInForm({ clientId }: Props) {
 
   const adherenceNumber = Number(adherence);
   const adherenceInvalid =
-    adherence.trim() !== "" && (!Number.isFinite(adherenceNumber) || adherenceNumber < 0 || adherenceNumber > 100);
+    adherence.trim() !== "" && (!Number.isInteger(adherenceNumber) || adherenceNumber < 0 || adherenceNumber > 100);
+  const workoutsNumber = Number(workouts);
+  const workoutsInvalid =
+    workouts.trim() !== "" && (!Number.isInteger(workoutsNumber) || workoutsNumber < 0 || workoutsNumber > 14);
+  const weightNumber = Number(weight);
+  const weightInvalid = weight.trim() !== "" && (!Number.isFinite(weightNumber) || weightNumber <= 0 || weightNumber > 500);
+  const dateMissing = date === "";
   const futureDate = date > localToday();
-  const canSubmit = date !== "" && !adherenceInvalid && !save.isPending;
+  const canSubmit = !dateMissing && !adherenceInvalid && !workoutsInvalid && !weightInvalid && !save.isPending;
 
   function submit(ev: FormEvent) {
     ev.preventDefault();
     if (!canSubmit) return;
     const input: NewProgressLog = { date, note: note.trim() };
-    if (weight.trim() !== "") input.weightKg = Number(weight);
+    if (weight.trim() !== "") input.weightKg = weightNumber;
     if (adherence.trim() !== "") input.adherence = adherenceNumber;
-    if (workouts.trim() !== "") input.workoutsDone = Number(workouts);
+    if (workouts.trim() !== "") input.workoutsDone = workoutsNumber;
     save.mutate(input);
   }
 
@@ -58,8 +64,25 @@ export function CheckInForm({ clientId }: Props) {
           <label htmlFor="checkin-date" className="mb-1 block text-sm font-semibold text-text">
             Date
           </label>
-          <input id="checkin-date" type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
-          {futureDate && <p className="mt-1 text-sm text-amber-text">This date is in the future - is that right?</p>}
+          <input
+            id="checkin-date"
+            type="date"
+            className={inputClass}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            aria-invalid={dateMissing}
+            aria-describedby={dateMissing || futureDate ? "checkin-date-note" : undefined}
+          />
+          {dateMissing && (
+            <p id="checkin-date-note" className="mt-1 text-sm font-semibold text-accent">
+              Pick a date for this check-in
+            </p>
+          )}
+          {futureDate && (
+            <p id="checkin-date-note" role="status" className="mt-1 text-sm text-amber-text">
+              This date is in the future - is that right?
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="checkin-weight" className="mb-1 block text-sm font-semibold text-text">
@@ -74,7 +97,14 @@ export function CheckInForm({ clientId }: Props) {
             className={inputClass}
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
+            aria-invalid={weightInvalid}
+            aria-describedby={weightInvalid ? "checkin-weight-error" : undefined}
           />
+          {weightInvalid && (
+            <p id="checkin-weight-error" className="mt-1 text-sm font-semibold text-accent">
+              Weight must be more than 0 kg
+            </p>
+          )}
         </div>
         <div>
           <label htmlFor="checkin-adherence" className="mb-1 block text-sm font-semibold text-text">
@@ -94,7 +124,7 @@ export function CheckInForm({ clientId }: Props) {
           />
           {adherenceInvalid && (
             <p id="checkin-adherence-error" className="mt-1 text-sm font-semibold text-accent">
-              Adherence must be between 0 and 100
+              Adherence must be a whole number between 0 and 100
             </p>
           )}
         </div>
@@ -111,7 +141,14 @@ export function CheckInForm({ clientId }: Props) {
             className={inputClass}
             value={workouts}
             onChange={(e) => setWorkouts(e.target.value)}
+            aria-invalid={workoutsInvalid}
+            aria-describedby={workoutsInvalid ? "checkin-workouts-error" : undefined}
           />
+          {workoutsInvalid && (
+            <p id="checkin-workouts-error" className="mt-1 text-sm font-semibold text-accent">
+              Workouts must be a whole number between 0 and 14
+            </p>
+          )}
         </div>
         <div className="sm:col-span-2">
           <label htmlFor="checkin-note" className="mb-1 block text-sm font-semibold text-text">

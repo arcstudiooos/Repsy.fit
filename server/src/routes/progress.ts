@@ -78,14 +78,14 @@ progressRouter.delete(
     const client = await clientOr404(req, res);
     if (!client) return;
     const { logId } = req.params as { logId: string };
-    const log = await prisma.progressLog.findFirst({
+    // One scoped delete: a second delete of the same log (double tap, two tabs) gets 404, not 500.
+    const { count } = await prisma.progressLog.deleteMany({
       where: { id: logId, clientId: client.id, coachId: DEFAULT_COACH_ID },
     });
-    if (!log) {
+    if (count === 0) {
       res.status(404).json({ error: "Progress log not found" });
       return;
     }
-    await prisma.progressLog.delete({ where: { id: log.id } });
     res.status(204).end();
   }),
 );

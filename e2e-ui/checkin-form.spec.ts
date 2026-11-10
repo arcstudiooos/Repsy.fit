@@ -127,12 +127,12 @@ test("adherence outside 0-100 shows the plain message and can't be submitted", a
   const mock = await mockApi(page);
   await openProgress(page);
   await field(page, "Adherence %").fill("120");
-  await expect(form(page)).toContainText("Adherence must be between 0 and 100");
+  await expect(form(page)).toContainText("Adherence must be a whole number between 0 and 100");
   await expect(submit(page)).toBeDisabled();
   await field(page, "Adherence %").fill("-5");
-  await expect(form(page)).toContainText("Adherence must be between 0 and 100");
+  await expect(form(page)).toContainText("Adherence must be a whole number between 0 and 100");
   await field(page, "Adherence %").fill("90");
-  await expect(form(page)).not.toContainText("Adherence must be between 0 and 100");
+  await expect(form(page)).not.toContainText("Adherence must be a whole number between 0 and 100");
   await expect(submit(page)).toBeEnabled();
   expect(mock.posts).toHaveLength(0);
 });
@@ -168,4 +168,33 @@ test("with no logs yet, the first check-in replaces the empty card", async ({ pa
   await submit(page).click();
   await expect(weightCard(page)).toContainText("70 kg");
   await expect(panel(page)).not.toContainText("No progress logged yet");
+});
+
+test("decimal adherence, workouts outside 0-14, weight 0 and an empty date are caught in plain words", async ({ page }) => {
+  const mock = await mockApi(page);
+  await openProgress(page);
+  await field(page, "Adherence %").fill("85.5");
+  await expect(form(page)).toContainText("Adherence must be a whole number between 0 and 100");
+  await field(page, "Adherence %").fill("85");
+  await field(page, "Workouts done").fill("15");
+  await expect(form(page)).toContainText("Workouts must be a whole number between 0 and 14");
+  await expect(submit(page)).toBeDisabled();
+  await field(page, "Workouts done").fill("4");
+  await field(page, "Weight kg").fill("0");
+  await expect(form(page)).toContainText("Weight must be more than 0 kg");
+  await expect(submit(page)).toBeDisabled();
+  await field(page, "Weight kg").fill("70");
+  await field(page, "Date").fill("");
+  await expect(form(page)).toContainText("Pick a date for this check-in");
+  await expect(submit(page)).toBeDisabled();
+  expect(mock.posts).toHaveLength(0);
+});
+
+test("the future-date warning is announced and linked to the date field", async ({ page }) => {
+  await mockApi(page);
+  await openProgress(page);
+  await field(page, "Date").fill(localDate(3));
+  const note = form(page).getByRole("status");
+  await expect(note).toHaveText("This date is in the future - is that right?");
+  await expect(field(page, "Date")).toHaveAttribute("aria-describedby", (await note.getAttribute("id"))!);
 });

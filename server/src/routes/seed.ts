@@ -50,6 +50,9 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // Any fixed number works: it only has to be the same for every seed request.
 const SEED_LOCK_KEY = 4_284_018_305;
+// Both seeds share the lock, so one may wait for the other (the six-month seed is ~320 inserts
+// on Render's free Postgres): allow more than Prisma's 5 s / 2 s transaction defaults.
+const SEED_TX_OPTIONS = { timeout: 20_000, maxWait: 10_000 };
 
 export const seedRouter = Router();
 
@@ -105,7 +108,7 @@ seedRouter.post(
         );
       }
       return clients;
-    });
+    }, SEED_TX_OPTIONS);
 
     res.status(created.length ? 201 : 200).json(created);
   }),
@@ -300,7 +303,7 @@ seedRouter.post(
         }
         return clients;
       },
-      { timeout: 20_000 },
+      SEED_TX_OPTIONS,
     );
 
     res.status(created.length ? 201 : 200).json(created);

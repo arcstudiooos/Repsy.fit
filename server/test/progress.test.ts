@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { prisma } = vi.hoisted(() => ({
   prisma: {
     client: { findFirst: vi.fn() },
-    progressLog: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
+    progressLog: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
   },
 }));
 
@@ -31,13 +31,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   prisma.client.findFirst.mockResolvedValue(client);
   prisma.progressLog.findMany.mockResolvedValue([stored]);
-  prisma.progressLog.findFirst.mockResolvedValue(stored);
   prisma.progressLog.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
     id: "log-new",
     createdAt: new Date("2026-11-10T00:00:00.000Z"),
     ...data,
   }));
-  prisma.progressLog.delete.mockResolvedValue(stored);
+  prisma.progressLog.deleteMany.mockResolvedValue({ count: 1 });
 });
 
 describe("GET /api/clients/:clientId/progress", () => {
@@ -129,18 +128,16 @@ describe("DELETE /api/clients/:clientId/progress/:logId", () => {
   it("deletes this client's log and replies 204", async () => {
     const res = await request(app).delete(`${base}/${stored.id}`);
     expect(res.status).toBe(204);
-    expect(prisma.progressLog.findFirst).toHaveBeenCalledWith({
+    expect(prisma.progressLog.deleteMany).toHaveBeenCalledWith({
       where: { id: stored.id, clientId: client.id, coachId: "default-coach" },
     });
-    expect(prisma.progressLog.delete).toHaveBeenCalledWith({ where: { id: stored.id } });
   });
 
   it("returns 404 Progress log not found when the log is not this client's", async () => {
-    prisma.progressLog.findFirst.mockResolvedValue(null);
+    prisma.progressLog.deleteMany.mockResolvedValue({ count: 0 });
     const res = await request(app).delete(`${base}/someone-elses-log`);
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Progress log not found" });
-    expect(prisma.progressLog.delete).not.toHaveBeenCalled();
   });
 
   it("returns 404 Client not found for an unknown client", async () => {
@@ -148,6 +145,6 @@ describe("DELETE /api/clients/:clientId/progress/:logId", () => {
     const res = await request(app).delete(`/api/clients/nobody/progress/${stored.id}`);
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Client not found" });
-    expect(prisma.progressLog.delete).not.toHaveBeenCalled();
+    expect(prisma.progressLog.deleteMany).not.toHaveBeenCalled();
   });
 });

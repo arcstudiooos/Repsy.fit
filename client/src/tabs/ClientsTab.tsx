@@ -275,7 +275,7 @@ function SixMonthDemoControl({ seed }: { seed: DemoSeed }) {
         </button>
       </div>
       <p className="text-xs text-dim">
-        Loading both demo sets gives 13 clients in total, because the names do not overlap.
+        Loading both demo sets gives 13 clients in total, because the names do not overlap. Load the quick demo first: it only loads into an empty client list.
       </p>
       {seed.error && (
         <p role="alert" className="text-sm font-semibold text-accent">

@@ -9,7 +9,7 @@ import { CUSTOM_GROUP, searchExercises, type Exercise } from "../data/exercises"
 // Inputs: --surface2 background, 14px radius (design system).
 const inputClass =
   "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim " +
-  "focus:border-accent focus:outline-none";
+  "focus:border-accent";
 
 const TITLE_PLACEHOLDER: Record<AssignmentType, string> = {
   Workout: "e.g. Push day - chest & shoulders",

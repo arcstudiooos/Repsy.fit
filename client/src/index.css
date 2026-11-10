@@ -68,6 +68,17 @@
   [role="tab"] {
     min-height: 40px;
   }
+
+  /* Keyboard focus is always visible (teal ring, an existing colour). */
+  button:focus-visible,
+  [role="tab"]:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent2);
+    outline-offset: 2px;
+  }
 }
 
 /* Header strip: dark mode only gets a 1px bottom border (light mode unchanged). */
