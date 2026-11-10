@@ -189,7 +189,8 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   unknown client -> `404 {"error":"Client not found"}`.
 - `GET /api/clients/:clientId/assignments` lists **newest first** (`createdAt`, then `id`);
   unknown client -> `404 {"error":"Client not found"}`. `title` and `details` at least 1
-  character (trimmed); `date` must be a real `YYYY-MM-DD` date.
+  character (trimmed); `date` must be a real `YYYY-MM-DD` date. PATCH changes `status` only;
+  an assignment that is not this client's (or does not exist) -> `404 {"error":"Assignment not found"}`.
 - **Nothing from the AI is auto-saved.** A suggestion becomes an assignment only when the coach
   taps "Assign to client" (`source: "ai"`, today's local date); "Dismiss" saves nothing.
   The one exception is auto-assign below, which the coach requests explicitly per type.
@@ -230,6 +231,9 @@ and record it here.
 - Prompt 18 asked for `POST /api/ai/auto-assign` (body `{ clientId, type }`, returns the saved plan).
   Built on the existing `POST /api/clients/:clientId/auto-assign` with body `{ type, date? }`,
   returning `Assignment[]` holding the one saved assignment.
+- Prompt 24 asked for `PATCH /api/assignments/:id/status` and `DELETE /api/assignments/:id`
+  returning `{ ok: true }`. Built on the existing `PATCH|DELETE /api/clients/:clientId/assignments/:assignmentId`
+  (PATCH returns the full `Assignment`; DELETE 204). Unknown id -> `404 {"error":"Assignment not found"}`.
 - Prompt 23's example lines arrived as plain "-" and "x"; built with the em dash, multiplication
   sign and middle dot it names: `1. Back Squat — 4 sets × 6 reps · Rest 120s`.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on

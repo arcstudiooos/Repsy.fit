@@ -1,5 +1,5 @@
 // Assignments API - see "API contract" in CLAUDE.md.
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { DEFAULT_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
@@ -30,6 +30,31 @@ const NewAssignmentSchema = z.object({
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form.")
     .default(today),
 });
+
+const StatusSchema = z.object({
+  status: z.enum(ASSIGNMENT_STATUSES, { required_error: "status is required." }),
+});
+
+/**
+ * This client's assignment with this id, or a 404 already sent (client checked first, then
+ * the assignment must belong to that client and coach).
+ */
+async function findClientAssignment(req: Request, res: Response) {
+  const { clientId, assignmentId } = req.params as { clientId: string; assignmentId: string };
+  const client = await findClient(clientId);
+  if (!client) {
+    res.status(404).json({ error: "Client not found" });
+    return null;
+  }
+  const assignment = await prisma.assignment.findFirst({
+    where: { id: assignmentId, clientId: client.id, coachId: DEFAULT_COACH_ID },
+  });
+  if (!assignment) {
+    res.status(404).json({ error: "Assignment not found" });
+    return null;
+  }
+  return assignment;
+}
 
 // Mounted at /api/clients/:clientId/assignments
 export const assignmentsRouter = Router({ mergeParams: true });
@@ -72,5 +97,36 @@ assignmentsRouter.post(
       data: { ...parsed.data, clientId: client.id, coachId: DEFAULT_COACH_ID },
     });
     res.status(201).json(assignment);
+  }),
+);
+
+// PATCH /api/clients/:clientId/assignments/:assignmentId - change the status only
+// (Active / Done / Paused); returns the full assignment.
+assignmentsRouter.patch(
+  "/:assignmentId",
+  asyncHandler(async (req, res) => {
+    const parsed = StatusSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: validationMessage(parsed.error) });
+      return;
+    }
+    const assignment = await findClientAssignment(req, res);
+    if (!assignment) return;
+    const updated = await prisma.assignment.update({
+      where: { id: assignment.id },
+      data: { status: parsed.data.status },
+    });
+    res.json(updated);
+  }),
+);
+
+// DELETE /api/clients/:clientId/assignments/:assignmentId - 204, no body.
+assignmentsRouter.delete(
+  "/:assignmentId",
+  asyncHandler(async (req, res) => {
+    const assignment = await findClientAssignment(req, res);
+    if (!assignment) return;
+    await prisma.assignment.delete({ where: { id: assignment.id } });
+    res.status(204).end();
   }),
 );

@@ -1,9 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { listAssignments, queryKeys } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { deleteAssignment, listAssignments, queryKeys, updateAssignmentStatus } from "../api";
 import { ManualAssignmentForm } from "../components/ManualAssignmentForm";
-import { ErrorState, LoadingState } from "../components/States";
-import { ASSIGNMENT_TYPES, type Assignment, type AssignmentType, type Client } from "../types";
+import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import {
+  ASSIGNMENT_STATUSES,
+  ASSIGNMENT_TYPES,
+  type Assignment,
+  type AssignmentStatus,
+  type AssignmentType,
+  type Client,
+} from "../types";
 import { TYPE_CHIP } from "./AiCoachTab";
 
 type Props = { client: Client | null; onOpenAiCoach: () => void };
@@ -106,21 +113,81 @@ export function PlannerTab({ client, onOpenAiCoach }: Props) {
 }
 
 function AssignmentCard({ assignment }: { assignment: Assignment }) {
+  const queryClient = useQueryClient();
+  const { clientId } = assignment;
+  // The list, the Clients tab counts (same assignments cache) and Progress completion numbers.
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments(clientId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.progress(clientId) }),
+    ]);
+
+  const statusMutation = useMutation({
+    mutationFn: (status: AssignmentStatus) => updateAssignmentStatus(clientId, assignment.id, status),
+    onSuccess: refresh,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteAssignment(clientId, assignment.id),
+    onSuccess: refresh,
+  });
+  const busy = statusMutation.isPending || deleteMutation.isPending;
+  const error = statusMutation.error ?? deleteMutation.error;
+  const isDone = assignment.status === "Done";
+
   return (
     <li id={`assignment-${assignment.id}`} className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[assignment.type]}`}>
           {assignment.type}
         </span>
-        <h3 className="text-lg">{assignment.title}</h3>
+        <h3 className={"text-lg " + (isDone ? "text-dim" : "")}>{assignment.title}</h3>
         <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">
           {assignment.source === "ai" ? "AI" : "Manual"}
         </span>
       </div>
-      <div className="mt-1 flex flex-wrap gap-3 text-sm text-dim">
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-dim">
         <span>{assignment.date}</span>
-        <span className="font-semibold text-text">{assignment.status}</span>
+        <div role="group" aria-label="Status" className="flex items-center gap-1">
+          {isDone && (
+            <span title="Done" className="mr-1 font-bold text-accent2">
+              ✓
+            </span>
+          )}
+          {ASSIGNMENT_STATUSES.map((s) => {
+            const isCurrent = s === assignment.status;
+            return (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={isCurrent}
+                disabled={busy}
+                onClick={() => !isCurrent && statusMutation.mutate(s)}
+                className={
+                  "rounded-lg border px-2 py-0.5 text-xs font-semibold disabled:cursor-not-allowed " +
+                  (isCurrent ? "border-text bg-surface2 font-bold text-text" : "border-border text-dim hover:border-dim hover:text-text")
+                }
+              >
+                {s}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            if (window.confirm("Delete this assignment?")) deleteMutation.mutate();
+          }}
+          className="ml-auto rounded px-1 text-sm text-dim underline-offset-2 hover:text-text hover:underline disabled:opacity-60"
+        >
+          {deleteMutation.isPending ? "Deleting..." : "Delete"}
+        </button>
       </div>
+      {error && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-accent">
+          {plainErrorMessage(error)}
+        </p>
+      )}
       <p className="mt-2 whitespace-pre-wrap text-sm text-text">{assignment.details}</p>
       {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {assignment.reasoning}</p>}
     </li>
