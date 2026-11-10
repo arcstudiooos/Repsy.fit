@@ -16,7 +16,7 @@ const QUICK_PROMPTS = [
 ];
 
 // Chip background in the type colour; text picked per colour for readable contrast.
-const TYPE_CHIP: Record<AssignmentType, string> = {
+export const TYPE_CHIP: Record<AssignmentType, string> = {
   Workout: "bg-type-workout text-on-accent",
   Nutrition: "bg-type-nutrition text-white",
   Habit: "bg-type-habit text-on-accent",

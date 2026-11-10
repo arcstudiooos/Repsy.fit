@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, deleteClient, listAssignments, listClients, queryKeys } from "../api";
+import { deleteClient, listAssignments, listClients, queryKeys } from "../api";
 import { initials } from "../ClientStrip";
 import { AddClientForm } from "../components/AddClientForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -226,14 +226,12 @@ function ClientCard({ client, selected, onOpen, onDelete, deleteError }: CardPro
 }
 
 /**
- * Total and active assignment counts for one client, from listAssignments.
- * The assignments endpoint arrives in Prompt 19 - until then it is missing, and the
- * counts show 0. Other errors show "-".
+ * Total and active assignment counts for one client, from the real listAssignments data
+ * (same cache as the Manual Planner). Any error shows "-".
  */
 function useAssignmentCounts(clientId: string): { total: number | string; active: number | string } {
   const q = useQuery({ queryKey: queryKeys.assignments(clientId), queryFn: () => listAssignments(clientId) });
   if (q.data) return { total: q.data.length, active: q.data.filter((a) => a.status === "Active").length };
-  if (q.isError && q.error instanceof ApiError && q.error.kind === "endpoint_missing") return { total: 0, active: 0 };
   if (q.isError) return { total: "-", active: "-" };
   return { total: 0, active: 0 };
 }

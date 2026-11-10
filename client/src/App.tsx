@@ -5,6 +5,7 @@ import { ClientStrip } from "./ClientStrip";
 import { EmptyState, ErrorState, LoadingState } from "./components/States";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
+import { PlannerTab } from "./tabs/PlannerTab";
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -158,6 +159,12 @@ export default function App() {
             key={`ai:${selectedClientId ?? "none"}`}
             client={selectedClient}
             onOpenPlanner={() => setActiveTab("planner")}
+          />
+        ) : current.id === "planner" ? (
+          <PlannerTab
+            key={`planner:${selectedClientId ?? "none"}`}
+            client={selectedClient}
+            onOpenAiCoach={() => setActiveTab("ai")}
           />
         ) : (
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
