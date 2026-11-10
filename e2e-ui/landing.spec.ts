@@ -55,9 +55,9 @@ test("/ is the landing page: one h1, sticky header with logo, nav, Start free, c
 test("landing copy sticks to shipped features: no prices, testimonials or user counts", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
-  await expect(page.locator("#features")).toContainText("Manual Planner");
+  await expect(page.locator("#features")).toContainText("Plan by hand");
   const text = (await page.locator("body").textContent()) ?? "";
-  for (const fact of ["AI Coach with reasoning", "Manual Planner", "sets, reps and rest", "Progress charts", "Demo data"]) {
+  for (const fact of ["AI Coach, with the reasoning shown", "Plan by hand", "sets, reps and rest", "Progress you can see", "sample clients"]) {
     expect(text).toContain(fact);
   }
   expect(text).not.toMatch(/\$\s?\d|per month|\/mo\b|testimonial|trusted by|\d[\d,]*\+? (coaches|users|customers)/i);
@@ -77,7 +77,7 @@ test("/app never loads the landing or 3D code", async ({ page }) => {
   await page.goto("/app");
   await expect(page.getByRole("tab")).toHaveCount(4);
   await page.waitForLoadState("networkidle");
-  expect(scripts.some((s) => /Landing|Hero3D|three|gsap/i.test(s))).toBe(false);
+  expect(scripts.some((s) => /Landing|Hero3D|Story|three|gsap/i.test(s))).toBe(false);
 });
 
 test("old links to / go to /app once this tab is inside the app; Back still reaches the landing page", async ({ page }) => {

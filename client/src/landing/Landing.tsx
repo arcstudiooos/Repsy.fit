@@ -1,8 +1,11 @@
 // Public landing page (Prompt 37 shell). Copy uses shipped v1 facts only: no prices,
 // testimonials, user counts or unreleased features.
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import "./landing.css";
 import { Hero } from "./Hero";
+
+// The scroll story (with GSAP) is its own lazy chunk, so it never delays the hero.
+const Story = lazy(() => import("./Story"));
 
 const NAV = [
   ["Features", "#features"],
@@ -10,25 +13,6 @@ const NAV = [
   ["Pricing", "#pricing"],
   ["FAQ", "#faq"],
 ] as const;
-
-const FEATURES = [
-  {
-    title: "AI Coach with reasoning",
-    body: "Ask about a client and get an answer based on their goal, level, progress and plans. Suggested plans come with the reasoning behind them, and nothing is saved until you assign it.",
-  },
-  {
-    title: "Manual Planner",
-    body: "Build a workout from the exercise library with sets, reps and rest for each exercise, saved as a clear numbered plan. Mark plans Active, Done or Paused.",
-  },
-  {
-    title: "Progress charts",
-    body: "Weekly check-ins feed stat cards plus weight, adherence and plans-by-type charts for every client.",
-  },
-  {
-    title: "Demo data",
-    body: "Load 3 sample clients, or 10 clients with six months of history, to explore everything before adding your own.",
-  },
-];
 
 function useScrolledPast(px: number) {
   const [past, setPast] = useState(false);
@@ -88,16 +72,9 @@ export default function Landing() {
       <Header />
       <main>
         <Hero />
-        <Section id="features" title="Features">
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {FEATURES.map((f) => (
-              <article key={f.title} className="landing-card p-5">
-                <h3 className="text-xl">{f.title}</h3>
-                <p className="landing-dim mt-2 text-sm">{f.body}</p>
-              </article>
-            ))}
-          </div>
-        </Section>
+        <Suspense fallback={<div id="features" className="min-h-[60vh]" />}>
+          <Story />
+        </Suspense>
         <Section id="demo" title="Demo">
           <p className="landing-dim mt-3 max-w-2xl">
             Open the app and load the sample clients to try the AI Coach, the planner and the
