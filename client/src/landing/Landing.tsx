@@ -6,6 +6,7 @@ import { Hero } from "./Hero";
 
 // The scroll story (with GSAP) is its own lazy chunk, so it never delays the hero.
 const Story = lazy(() => import("./Story"));
+const DemoWidget = lazy(() => import("./DemoWidget"));
 
 const NAV = [
   ["Features", "#features"],
@@ -75,12 +76,15 @@ export default function Landing() {
         <Suspense fallback={<div id="features" className="min-h-[60vh]" />}>
           <Story />
         </Suspense>
-        <Section id="demo" title="Demo">
+        <Section id="demo" title="Try the idea in 30 seconds">
           <p className="landing-dim mt-3 max-w-2xl">
-            Open the app and load the sample clients to try the AI Coach, the planner and the
-            progress charts with realistic data.
+            Pick a sample client, ask for a plan and watch it get assigned with its reasoning. This
+            demo runs in your browser only - no sign-up, nothing sent or saved.
           </p>
-          <a href="/app" className="mt-4 inline-flex min-h-10 items-center font-semibold underline underline-offset-4">
+          <Suspense fallback={<div className="landing-card mt-6 min-h-80" />}>
+            <DemoWidget />
+          </Suspense>
+          <a href="/app" className="mt-4 inline-flex min-h-10 items-center text-sm font-semibold underline underline-offset-4">
             Try it in the app
           </a>
         </Section>

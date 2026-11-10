@@ -33,3 +33,22 @@
     background: linear-gradient(180deg, rgba(20, 20, 20, 0.55) 0%, rgba(20, 20, 20, 0.85) 100%);
   }
 }
+/* Demo widget: the newest plan card flies into the plan list. */
+@keyframes demo-fly-in {
+  from {
+    opacity: 0;
+    transform: translate(-60%, -40px) rotate(-4deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.demo-fly-in {
+  animation: demo-fly-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-fly-in {
+    animation: none;
+  }
+}

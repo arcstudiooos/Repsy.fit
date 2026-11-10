@@ -57,7 +57,7 @@ test("landing copy sticks to shipped features: no prices, testimonials or user c
   await page.goto("/");
   await expect(page.locator("#features")).toContainText("Plan by hand");
   const text = (await page.locator("body").textContent()) ?? "";
-  for (const fact of ["AI Coach, with the reasoning shown", "Plan by hand", "sets, reps and rest", "Progress you can see", "sample clients"]) {
+  for (const fact of ["AI Coach, with the reasoning shown", "Plan by hand", "sets, reps and rest", "Progress you can see", "sample client"]) {
     expect(text).toContain(fact);
   }
   expect(text).not.toMatch(/\$\s?\d|per month|\/mo\b|testimonial|trusted by|\d[\d,]*\+? (coaches|users|customers)/i);
