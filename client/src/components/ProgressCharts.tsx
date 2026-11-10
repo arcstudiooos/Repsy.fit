@@ -101,7 +101,8 @@ export function ProgressCharts({ logs, assignments }: Props) {
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <BarChart data={byType} margin={{ top: 20, right: 12, bottom: 4, left: 4 }}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="type" stroke="var(--dim)" interval={0} />
+            {/* Smaller ticks so all 4 type names fit side by side on a 375px phone. */}
+            <XAxis dataKey="type" stroke="var(--dim)" interval={0} tick={{ fontSize: 11 }} />
             <YAxis allowDecimals={false} width={32} stroke="var(--dim)" />
             <Bar dataKey="count" isAnimationActive={false}>
               {byType.map((d) => (

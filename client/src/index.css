@@ -62,6 +62,12 @@
   ::after {
     border-color: var(--border);
   }
+
+  /* Touch targets: every button and tab is at least 40px tall (Prompt 35). */
+  button,
+  [role="tab"] {
+    min-height: 40px;
+  }
 }
 
 /* Header strip: dark mode only gets a 1px bottom border (light mode unchanged). */
