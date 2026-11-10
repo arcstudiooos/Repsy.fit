@@ -27,6 +27,9 @@ const route = routeFor(window.location.pathname, {
 });
 if (route === "redirect-to-app") window.location.replace("/app");
 if (route === "app") sessionStorage.setItem(IN_APP_KEY, "1");
+// Start fetching the chunk for this route right away, in parallel with React starting up.
+if (route === "landing") void import("./landing/Landing");
+else if (route === "app") void import("./App");
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

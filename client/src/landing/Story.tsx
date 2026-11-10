@@ -109,7 +109,7 @@ export default function Story() {
             <div data-anim="mock" className="landing-card overflow-hidden shadow-lg" aria-label="AI Coach example" role="img">
               <div className="landing-dark flex items-center gap-2 px-4 py-2">
                 <img src="/favicon.png" alt="" width={20} height={20} className="h-5 w-5" />
-                <span className="text-xs text-white/70">AI Coach · Maya Patel</span>
+                <span className="text-xs text-white/80">AI Coach · Maya Patel</span>
               </div>
               <div className="flex flex-col gap-3 p-4" style={{ background: "#faf7f2" }}>
                 {CHAT.map((m, i) =>

@@ -33,7 +33,7 @@ export function useStoryAnimations(root: RefObject<HTMLElement | null>) {
         // 2. AI Coach: the mock tilts in (rotateX), then the chat bubbles type in one by one.
         const bubbles = q("[data-anim=bubble]") as HTMLElement[];
         const ai = gsap.timeline({ scrollTrigger: once(section("ai"), desktop ? "top 60%" : "top 75%") });
-        ai.from(q("[data-anim=mock]"), desktop ? { rotateX: 28, y: 60, opacity: 0.3, transformOrigin: "50% 100%", duration: 1, ease: "power3.out" } : { opacity: 0, y: 30, duration: 0.6 });
+        ai.from(q("[data-anim=mock]"), desktop ? { rotateX: 28, y: 60, transformOrigin: "50% 100%", duration: 1, ease: "power3.out" } : { opacity: 0, y: 30, duration: 0.6 });
         bubbles.forEach((b) => {
           const full = b.dataset.full ?? "";
           const typed = { n: 0 };

@@ -67,7 +67,14 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
 
 // Production: serve the built client. In dev, Vite serves it instead.
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
+  app.use(
+    express.static(clientDist, {
+      // Hashed build files never change: let browsers cache them for a year.
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      },
+    }),
+  );
   app.get("*", (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
   });

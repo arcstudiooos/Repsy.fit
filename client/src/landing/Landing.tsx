@@ -111,9 +111,12 @@ export default function Landing() {
       </main>
       <footer className="landing-dark">
         <div className="mx-auto max-w-[1100px] px-4 pt-16">
-          <p className="l-display text-white/10 select-none" aria-hidden="true">
-            Repsy
-          </p>
+          {/* Decorative oversized wordmark (SVG, so it isn't read or contrast-checked as text). */}
+          <svg viewBox="0 0 600 120" className="h-auto w-full max-w-3xl" aria-hidden="true" focusable="false">
+            <text x="0" y="104" fill="#262626" style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 132, textTransform: "uppercase" }}>
+              REPSY
+            </text>
+          </svg>
         </div>
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-4 px-4 py-8 text-sm">
           <span className="text-white/70">Repsy Coach</span>

@@ -42,11 +42,37 @@ function useOnScreen<T extends Element>() {
   return [ref, onScreen] as const;
 }
 
+/** True once the page has loaded and the browser is idle, so Three.js never competes with the
+ *  first paint (the poster shows until then). */
+function useAfterLoadIdle(enabled: boolean) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    let idleId: number | undefined;
+    const go = () => {
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      const done = () => !cancelled && setReady(true);
+      if (w.requestIdleCallback) idleId = w.requestIdleCallback(done, { timeout: 1500 });
+      else idleId = window.setTimeout(done, 200);
+    };
+    if (document.readyState === "complete") go();
+    else window.addEventListener("load", go, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", go);
+      if (idleId !== undefined) window.clearTimeout(idleId);
+    };
+  }, [enabled]);
+  return ready;
+}
+
 export function Hero() {
   const env = useLandingEnv();
   const [failed, setFailed] = useState(false);
   const [ref, onScreen] = useOnScreen<HTMLElement>();
-  const show3D = env.canRun3D && !failed;
+  const idle = useAfterLoadIdle(env.canRun3D);
+  const show3D = env.canRun3D && !failed && idle;
 
   return (
     <section
@@ -55,7 +81,7 @@ export function Hero() {
       data-reduced-motion={env.reducedMotion}
       data-light-mode={env.lightMode}
       data-webgl={env.webgl}
-      data-3d={show3D}
+      data-3d={env.canRun3D && !failed}
       data-rendering={show3D && onScreen}
       aria-labelledby="hero-title"
     >
@@ -73,7 +99,7 @@ export function Hero() {
       </div>
       {/* Dark scrim so the text stays readable over the scene (stronger on phones). */}
       <div className="landing-scrim pointer-events-none absolute inset-0" aria-hidden="true" />
-      <div className="relative mx-auto flex min-h-[600px] max-w-[1100px] flex-col justify-center px-4 py-20">
+      <div className="relative mx-auto flex min-h-[600px] max-w-[1100px] flex-col justify-center px-4 py-20 md:h-[720px]">
         <p className="l-kicker">Repsy Coach · for fitness coaches</p>
         <h1 id="hero-title" className="l-display mt-4 max-w-2xl">
           <span className="block">Coach every client.</span>{" "}
@@ -114,7 +140,7 @@ const LOG = [
 export function TrainingLogBand() {
   return (
     <div className="landing-band" aria-hidden="true">
-      <div className="mx-auto flex max-w-[1100px] gap-10 px-4 py-4 text-lg">
+      <div className="mx-auto flex h-14 max-w-[1100px] items-center gap-10 px-4 text-lg">
         {LOG.map((l) => (
           <span key={l}>{l}</span>
         ))}

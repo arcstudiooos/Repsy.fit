@@ -185,17 +185,16 @@ export default function DemoWidget() {
 
       <div>
         <h3 className="text-lg">Plan list · {client.name.split(" ")[0]}</h3>
-        <div className="mt-3 flex flex-col gap-2" aria-label="Demo plan list" role="list">
-          {clientPlans.length === 0 ? (
-            <p className="landing-dim text-sm">Ask for a plan to see it assigned here, with its reasoning.</p>
-          ) : (
-            clientPlans.map((p, i) => (
-              <div role="listitem" key={`${p.title}-${clientPlans.length - i}`}>
-                <PlanCard plan={p} flying={i === 0 && !reducedMotion} />
-              </div>
-            ))
-          )}
-        </div>
+        {clientPlans.length === 0 && (
+          <p className="landing-dim mt-3 text-sm">Ask for a plan to see it assigned here, with its reasoning.</p>
+        )}
+        <ul className="mt-3 flex flex-col gap-2" aria-label="Demo plan list">
+          {clientPlans.map((p, i) => (
+            <li key={`${p.title}-${clientPlans.length - i}`}>
+              <PlanCard plan={p} flying={i === 0 && !reducedMotion} />
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

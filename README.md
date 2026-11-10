@@ -18,6 +18,42 @@ https://repsy-coach.onrender.com/app
 
 A client selector strip above every tab except Clients chooses whose data you see.
 
+## Landing page
+
+`/` is the public landing page and `/app` is the dashboard. The landing page has:
+
+- an interactive 3D hero (Three.js, built from code, with no model files)
+- scroll animations (GSAP)
+- a front-end-only demo, which makes no API calls
+- pricing, an FAQ, and a "Start free" form that posts to `POST /api/leads`
+
+The landing code lives in `client/src/landing/`, and its design rules are in
+`client/src/landing/DESIGN.md`.
+
+**Speed:**
+
+- Three.js, GSAP and the demo each load in their own lazy chunk.
+- The 3D scene only starts after the page has loaded and the browser is idle.
+- Fonts don't block the first paint.
+- `client/scripts/check-budget.mjs` fails the build if the first load goes over 90 KB gz, if
+  `/app` goes over 220 KB gz, or if any 3D or animation code gets into either one.
+
+**Fallbacks:** phones under 768px, reduced motion, missing WebGL, software-only WebGL and
+WebGL errors all get a static poster instead of the 3D scene. Rendering also pauses when the
+hero is scrolled off-screen.
+
+**Lighthouse** (Lighthouse 12, landing page `/`):
+
+| Run | Performance | Accessibility | Best practices | SEO |
+|---|---|---|---|---|
+| Desktop, 3D on (local build, no compression) | 97 | 100 | 100 | 100 |
+| Mobile, poster mode (local build, no compression) | 86 | 100 | 100 | 100 |
+
+Phones always get the poster, by design, so there is no separate mobile score with 3D on.
+The mobile run is the same fallback mode that reduced-motion and no-WebGL visitors get. It
+scores 86, below the 90 target. First paint waits for the JavaScript bundle, because the
+landing page is rendered by React.
+
 ## Stack
 
 - **Client:** React + TypeScript (Vite), Tailwind CSS, TanStack React Query, Recharts
