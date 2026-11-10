@@ -117,8 +117,9 @@ export const deleteProgressLog = (clientId: string, logId: string) =>
 // ----- Demo data -----
 /** Creates demo clients with assignments and progress; returns the created clients. */
 export const seedDemo = () => request<Client[]>("POST", "/seed/demo");
-/** Creates a demo client with six months of progress history; returns that client. */
-export const seedSixMonthDemo = () => request<Client>("POST", "/seed/six-month-demo");
+/** Adds the 10 six-month demo clients (26 weekly check-ins each), skipping names that already
+ *  exist; returns the clients it created ([] when all 10 were already there). */
+export const seedSixMonthDemo = () => request<Client[]>("POST", "/seed/six-month-demo");
 
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.
