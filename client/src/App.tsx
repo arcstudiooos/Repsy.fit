@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listClients, queryKeys } from "./api";
 import { ClientStrip } from "./ClientStrip";
-import { TEMP_SAMPLE_CLIENTS, USE_TEMP_SAMPLE_CLIENTS } from "./tempSampleClients"; // TEMP: remove in Prompt 11
+import { EmptyState, ErrorState, LoadingState } from "./components/States";
+import { tempListClients, USE_TEMP_SAMPLE_CLIENTS } from "./tempSampleClients"; // TEMP: remove in Prompt 11
 import type { Client } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
@@ -99,11 +100,11 @@ export default function App() {
   // Shared "selected client" for the whole app.
   const clientsQuery = useQuery({
     queryKey: queryKeys.clients,
-    queryFn: listClients,
-    enabled: !USE_TEMP_SAMPLE_CLIENTS, // TEMP: always on once Prompt 11 removes the sample clients
+    // TEMP: sample clients / state scenarios until the real API arrives in Prompt 11.
+    queryFn: USE_TEMP_SAMPLE_CLIENTS ? tempListClients : listClients,
+    retry: USE_TEMP_SAMPLE_CLIENTS ? false : undefined, // TEMP: show the simulated error straight away
   });
-  // TEMP: sample clients until the real API arrives in Prompt 11.
-  const loadedClients: Client[] | undefined = USE_TEMP_SAMPLE_CLIENTS ? TEMP_SAMPLE_CLIENTS : clientsQuery.data;
+  const loadedClients: Client[] | undefined = clientsQuery.data;
   const clients = loadedClients ?? [];
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
@@ -117,6 +118,33 @@ export default function App() {
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
+  // TEMP: real seeding arrives in Prompt 29.
+  const seedDemo = () => console.log("[TEMP] Load demo clients clicked - real seed arrives in Prompt 29");
+
+  // What the panel shows: loading / error / empty states, or the tab content.
+  // On the Clients tab, zero clients still shows the tab (that is where clients get added).
+  let panelContent: ReactNode;
+  if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {
+    // Also while retrying after an error, so Retry gives visible feedback.
+    panelContent = <LoadingState />;
+  } else if (clientsQuery.isError) {
+    panelContent = <ErrorState error={clientsQuery.error} onRetry={() => void clientsQuery.refetch()} />;
+  } else if (clients.length === 0 && current.id !== "clients") {
+    panelContent = <EmptyState onAddClient={() => setActiveTab("clients")} seedDemo={seedDemo} />;
+  } else {
+    panelContent = (
+      <>
+        {/* Client selector strip: every tab except Clients (that tab is the full list). */}
+        {current.id !== "clients" && (
+          <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
+        )}
+        {/* key forces a clean remount when the selected client changes, so no tab can
+            keep showing the previous client's data. */}
+        <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -128,13 +156,7 @@ export default function App() {
           aria-labelledby={`tab-${current.id}`}
           className="card rounded-t-none border-t-0 p-6"
         >
-          {/* Client selector strip: every tab except Clients (that tab is the full list). */}
-          {current.id !== "clients" && (
-            <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
-          )}
-          {/* key forces a clean remount when the selected client changes, so no tab can
-              keep showing the previous client's data. */}
-          <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
+          {panelContent}
         </section>
       </main>
     </div>
