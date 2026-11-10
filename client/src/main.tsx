@@ -28,7 +28,16 @@ const route = routeFor(window.location.pathname, {
 if (route === "redirect-to-app") window.location.replace("/app");
 if (route === "app") sessionStorage.setItem(IN_APP_KEY, "1");
 // Start fetching the chunk for this route right away, in parallel with React starting up.
-if (route === "landing") void import("./landing/Landing");
+if (route === "landing") {
+  void import("./landing/Landing");
+  // Landing-only fonts (design A1). /app never requests them.
+  const fonts = document.createElement("link");
+  fonts.rel = "stylesheet";
+  fonts.href =
+    "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Caveat:wght@600&display=swap";
+  fonts.dataset.landingFonts = "";
+  document.head.appendChild(fonts);
+}
 else if (route === "app") void import("./App");
 
 createRoot(document.getElementById("root")!).render(

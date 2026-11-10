@@ -22,7 +22,8 @@ A client selector strip above every tab except Clients chooses whose data you se
 
 `/` is the public landing page and `/app` is the dashboard. The landing page has:
 
-- an interactive 3D hero (Three.js, built from code, with no model files)
+- a clipboard hero built in HTML and CSS (design A1, see `DESIGN.md`); the interactive 3D
+  hero (Three.js, built from code) is kept at `/?hero=3d`
 - scroll animations (GSAP)
 - a front-end-only demo, which makes no API calls
 - pricing, an FAQ, and a "Start free" form that posts to `POST /api/leads`

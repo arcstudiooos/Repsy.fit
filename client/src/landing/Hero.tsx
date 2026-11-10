@@ -77,7 +77,7 @@ export function Hero() {
   return (
     <section
       ref={ref}
-      className="landing-dark relative -mt-16 overflow-hidden pt-16"
+      className="landing-dark relative -mt-[72px] overflow-hidden pt-[72px]"
       data-reduced-motion={env.reducedMotion}
       data-light-mode={env.lightMode}
       data-webgl={env.webgl}
@@ -140,7 +140,7 @@ const LOG = [
 export function TrainingLogBand() {
   return (
     <div className="landing-band" aria-hidden="true">
-      <div className="mx-auto flex h-14 max-w-[1100px] items-center gap-10 px-4 text-lg">
+      <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-10 px-5 md:px-8 text-lg">
         {LOG.map((l) => (
           <span key={l}>{l}</span>
         ))}

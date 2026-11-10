@@ -80,6 +80,15 @@ below exist. Use the values exactly; do not invent colours.
 - Headings: **"Barlow Condensed"**, weight 600/700, UPPERCASE (`font-heading`; `h1`–`h6` get it
   by default).
 - Body: Inter, falling back to system-ui (`font-body`; set on `body`).
+- **Landing page only** (`client/src/landing/`, design "A1 · Clipboard", approved by the user
+  in Nov 2026): Instrument Serif for headlines (`--font-serif`), Geist for text
+  (`--font-sans`), Geist Mono for sets, reps and numbers (`--font-mono`), and Caveat only for
+  small pen notes (`--font-hand`). They load from Google Fonts, injected by `client/src/main.tsx` on the landing
+  route only (no npm packages), so `/app` never requests them. The dashboard keeps Barlow
+  Condensed + Inter.
+- **Landing colours:** the tokens above, plus tints and mixes of them made with `rgba()` /
+  `color-mix()` (graph-paper lines from `--border`, the sticky note and clipboard mixed from
+  `--amber` and `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
 
 ### Cards and buttons
 

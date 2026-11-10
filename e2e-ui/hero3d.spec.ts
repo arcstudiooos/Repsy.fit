@@ -1,11 +1,12 @@
-// Interactive 3D hero (Prompt 38). Every /api call is mocked.
+// Interactive 3D hero (Prompt 38). Since design A1 the default hero is the clipboard; the 3D
+// hero is kept and opens at /?hero=3d. Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
 
 const hero = (page: Page) => page.locator("section[aria-labelledby=hero-title]");
 
 async function open(page: Page) {
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
-  await page.goto("/");
+  await page.goto("/?hero=3d");
   await expect(hero(page).getByRole("heading", { level: 1 })).toBeVisible();
 }
 

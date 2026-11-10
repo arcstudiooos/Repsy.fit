@@ -40,7 +40,7 @@ export default function LeadForm() {
   if (result) {
     return (
       <div role="status" className="landing-card mt-8 max-w-xl p-6" data-testid="lead-result">
-        <p className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading)", textTransform: "uppercase" }}>
+        <p className="text-3xl" style={{ fontFamily: "var(--font-serif)", letterSpacing: "-0.02em" }}>
           {result.kind === "saved" ? `You're on the list, ${result.name}.` : "You are already on the list."}
         </p>
         <p className="landing-dim mt-2">

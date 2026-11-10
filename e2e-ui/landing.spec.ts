@@ -40,10 +40,13 @@ test("/ is the landing page: one h1, sticky header with logo, nav, Start free, c
   }
   const start = header.getByRole("link", { name: "Start free" });
   await expect(start).toHaveAttribute("href", "/app");
-  await expect(start).toHaveCSS("background-color", "rgb(255, 74, 31)");
-  await expect(start).toHaveCSS("color", "rgb(20, 20, 20)");
+  // Design A1: dark pill in the header (white text on #141414), orange button in the hero.
+  await expect(start).toHaveCSS("background-color", "rgb(20, 20, 20)");
+  await expect(start).toHaveCSS("color", "rgb(255, 255, 255)");
 
-  await expect(page.locator("section[aria-labelledby=hero-title]")).toHaveCSS("background-color", "rgb(20, 20, 20)");
+  const hero = page.locator("section[aria-labelledby=hero-title]");
+  await expect(hero).toHaveCSS("background-color", "rgb(250, 247, 242)");
+  await expect(hero.getByRole("link", { name: "Start free" })).toHaveCSS("background-color", "rgb(255, 74, 31)");
   await expect(page.locator("#features")).toHaveCSS("background-color", "rgb(250, 247, 242)");
 
   const legal = page.getByRole("navigation", { name: "Legal" });
@@ -104,7 +107,7 @@ test.describe("desktop with motion", () => {
   test("the 3D chunk loads lazily, after the page, and the hero is never blank", async ({ page }) => {
     await mockApi(page);
     const scripts = trackScripts(page);
-    await page.goto("/");
+    await page.goto("/?hero=3d");
     const hero = page.locator("section[aria-labelledby=hero-title]");
     await expect(hero).toHaveAttribute("data-light-mode", "false");
     await expect(hero).toHaveAttribute("data-reduced-motion", "false");
@@ -125,7 +128,7 @@ test.describe("reduced motion", () => {
   test("the flag is on and the static poster shows instead of the 3D canvas", async ({ page }) => {
     await mockApi(page);
     const scripts = trackScripts(page);
-    await page.goto("/");
+    await page.goto("/?hero=3d");
     const hero = page.locator("section[aria-labelledby=hero-title]");
     await expect(hero).toHaveAttribute("data-reduced-motion", "true");
     await expect(page.getByTestId("hero-poster")).toBeVisible();
@@ -139,7 +142,7 @@ test.describe("phone (375px)", () => {
   test.use({ viewport: { width: 375, height: 800 } });
   test("light-mode flag is on, poster instead of 3D, no sideways scroll, Start free reachable", async ({ page }) => {
     await mockApi(page);
-    await page.goto("/");
+    await page.goto("/?hero=3d");
     const hero = page.locator("section[aria-labelledby=hero-title]");
     await expect(hero).toHaveAttribute("data-light-mode", "true");
     await expect(page.getByTestId("hero-poster")).toBeVisible();

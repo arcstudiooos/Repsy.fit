@@ -105,7 +105,7 @@ test.describe("WebGL disabled", () => {
         ? route.fulfill({ status: 201, json: { id: "x", name: "Ana", email: "ana@example.com", createdAt: "2026-11-10T00:00:00Z" } })
         : route.fulfill({ json: [] }),
     );
-    await page.goto("/");
+    await page.goto("/?hero=3d");
     await expect(page.getByTestId("hero-poster")).toBeVisible();
     const form = page.getByRole("form", { name: "Start free" });
     await form.getByLabel("Name").fill("Ana");

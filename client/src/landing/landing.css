@@ -105,3 +105,482 @@
   white-space: nowrap;
   overflow: hidden;
 }
+
+
+/* =====================================================================================
+   Design A1 · "Clipboard" (user-approved). Editorial serif headlines (Instrument Serif),
+   Geist text, Geist Mono for sets / numbers, Caveat only for small pen notes.
+   Colours: the existing tokens, plus tints / mixes of them (graph-paper lines from the
+   border token, the sticky note and clipboard mixed from amber). See DESIGN.md.
+   These rules are unlayered on purpose, so they win over the app's base heading styles.
+   ===================================================================================== */
+.a1 {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.a1 h1,
+.a1 h2,
+.a1 h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: -0.02em;
+}
+.a1 .l-display {
+  /* the classic 3D hero (/?hero=3d) keeps its condensed caps */
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+.a1 .l-h2 {
+  font-size: clamp(2.6rem, 5.2vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+.a1 .l-h2 em,
+.a1-orange {
+  color: #ff4a1f;
+}
+.a1 .l-kicker {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+}
+.a1 .l-num {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: clamp(3.5rem, 6vw, 5rem);
+}
+.a1 .l-link {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.a1 .btn-primary {
+  border-radius: 999px;
+}
+.a1-serif {
+  font-family: var(--font-serif);
+}
+.a1-mono {
+  font-family: var(--font-mono);
+}
+.a1-hand {
+  font-family: var(--font-hand);
+  font-weight: 600;
+  color: #ff4a1f;
+}
+
+/* Header: cream and see-through at the top, solid with a hairline once scrolled. */
+.a1-header {
+  color: #141414;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+.a1-header[data-solid="true"] {
+  background-color: rgba(250, 247, 242, 0.94);
+  box-shadow: 0 1px 0 #e6e0d6;
+  backdrop-filter: blur(8px);
+}
+.a1-header-dark {
+  color: #ffffff;
+}
+.a1-header-dark[data-solid="true"] {
+  background-color: #141414;
+  box-shadow: none;
+}
+.a1-wordmark {
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+}
+.a1-navlink {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b6560;
+}
+.a1-navlink:hover {
+  color: #141414;
+}
+.a1-header-dark .a1-navlink {
+  color: rgba(255, 255, 255, 0.8);
+}
+.a1-header-dark .a1-navlink:hover {
+  color: #ffffff;
+}
+.a1-navcta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0 1.15rem;
+  border-radius: 999px;
+  background: #141414;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.a1-navcta span {
+  color: #ff4a1f;
+  transition: transform 0.2s;
+}
+.a1-navcta:hover span {
+  transform: translateX(3px);
+}
+.a1-header-dark .a1-navcta {
+  background: #ff4a1f;
+  color: #141414;
+  font-weight: 700;
+}
+.a1-header-dark .a1-navcta span {
+  color: #141414;
+}
+
+/* Hero: graph paper. */
+.a1-hero {
+  background-color: #faf7f2;
+  background-image: linear-gradient(rgba(230, 224, 214, 0.75) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 224, 214, 0.75) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: #141414;
+  overflow-x: clip;
+}
+.a1-stamp {
+  display: inline-block;
+  border: 2px solid #ff4a1f;
+  color: color-mix(in srgb, #ff4a1f 70%, #141414);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.65rem;
+  transform: rotate(-3deg);
+}
+.a1-display {
+  font-size: clamp(3.4rem, 8.2vw, 7.25rem);
+  line-height: 0.88;
+  letter-spacing: -0.04em !important;
+  color: #141414;
+}
+.a1-underlined {
+  position: relative;
+  font-style: italic;
+  white-space: nowrap;
+}
+.a1-underlined svg {
+  position: absolute;
+  left: -2%;
+  bottom: -0.08em;
+  width: 104%;
+  height: 0.18em;
+  overflow: visible;
+}
+.a1-underlined path {
+  fill: none;
+  stroke: #ff4a1f;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 220;
+  stroke-dashoffset: 0;
+  animation: a1-draw 0.9s 0.3s ease-out both;
+}
+.a1-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3.25rem;
+  padding: 0 1.75rem;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 0 #141414;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.a1-btn:hover {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #141414;
+}
+.a1-textlink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+/* The clipboard (board mixed from amber + ink, clip from the grey tokens). */
+.a1-board {
+  position: relative;
+  border-radius: 22px;
+  padding: 64px 22px 22px;
+  background: color-mix(in srgb, #d97706 42%, #141414);
+  background-image: linear-gradient(135deg, color-mix(in srgb, #d97706 48%, #141414), color-mix(in srgb, #d97706 34%, #141414));
+  box-shadow: 0 40px 70px -35px rgba(20, 20, 20, 0.55);
+  transform: rotate(-2deg);
+}
+.a1-clip {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 190px;
+  height: 74px;
+  border-radius: 12px 12px 22px 22px;
+  background: linear-gradient(#e6e0d6, #a8a29e);
+  box-shadow: inset 0 2px 0 #ffffff, 0 6px 10px rgba(0, 0, 0, 0.35);
+}
+.a1-clip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  width: 62px;
+  height: 16px;
+  border-radius: 999px;
+  background: #6b6560;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.a1-sheet {
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 26px 26px 30px;
+  color: #1a1a1a;
+}
+.a1-sheet-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  border-bottom: 2px solid #141414;
+  padding-bottom: 10px;
+}
+.a1-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+  font-size: 14px;
+}
+.a1-table th {
+  text-align: left;
+  font: 500 10.5px var(--font-mono);
+  color: #6b6560;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 6px 0;
+  border-bottom: 1px solid #e6e0d6;
+}
+.a1-table td {
+  padding: 11px 0;
+  border-bottom: 1px solid #e6e0d6;
+}
+.a1-table td.a1-mono {
+  color: rgba(26, 26, 26, 0.82);
+  white-space: nowrap;
+}
+.a1-tick {
+  display: inline-block;
+  color: #0e7c6b;
+  font-weight: 700;
+  animation: a1-pop 0.35s ease-out both;
+}
+.a1-note {
+  position: relative;
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, #d97706 16%, #faf7f2);
+  transform: rotate(1.5deg);
+  box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.35);
+  animation: a1-drop 0.6s 1.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.a1-pill {
+  display: inline-block;
+  cursor: default;
+  background: #141414;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 13px;
+  border-radius: 999px;
+}
+.a1-scribble {
+  position: absolute;
+  right: -64px;
+  top: 190px;
+  font-size: 30px;
+  transform: rotate(8deg);
+}
+
+/* Roster: index cards on the dark board. */
+.a1-cards {
+  position: relative;
+  height: 380px;
+  width: 100%;
+  max-width: 600px;
+}
+.a1-index {
+  position: absolute;
+  width: min(330px, 58%);
+  padding: 18px 20px;
+  border-radius: 6px;
+  color: #1a1a1a;
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 27px, #e6e0d6 27px 28px);
+  background-position: 0 52px;
+  box-shadow: 0 30px 40px -24px rgba(0, 0, 0, 0.7);
+  font: 13px/28px var(--font-mono);
+}
+.a1-index::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46px;
+  height: 2px;
+  background: rgba(255, 74, 31, 0.6);
+}
+.a1-index-name {
+  font-size: 26px;
+  line-height: 1;
+  height: 34px;
+}
+.a1-card-1 {
+  left: 0;
+  top: 150px;
+  transform: rotate(-5deg);
+}
+.a1-card-2 {
+  left: 38%;
+  top: 0;
+  transform: rotate(4deg);
+}
+.a1-card-3 {
+  left: 42%;
+  top: 190px;
+  transform: rotate(-2deg);
+}
+
+/* Story sections in the A1 voice. */
+.a1 [data-story="planner"] ol {
+  background-color: #ffffff;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 43px, #e6e0d6 43px 44px);
+  padding-left: 3.25rem;
+  position: relative;
+}
+.a1 [data-story="planner"] ol::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2.25rem;
+  width: 1px;
+  background: rgba(255, 74, 31, 0.45);
+}
+.a1 [data-story="planner"] li {
+  background: transparent !important;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.a1 [data-story] .landing-card,
+.a1 #demo .landing-card,
+.a1 #start .landing-card {
+  border-radius: 8px;
+}
+.a1 [data-anim="count"] {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+
+.a1 [data-story="problem"] h3 {
+  font-size: 1.85rem;
+  line-height: 1.05;
+}
+/* Signature band: real set notation, typed like a training log. */
+.a1 .landing-band {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.95rem;
+}
+
+@keyframes a1-draw {
+  from {
+    stroke-dashoffset: 220;
+  }
+}
+@keyframes a1-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes a1-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-28px) rotate(-4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .a1-underlined path,
+  .a1-tick,
+  .a1-note {
+    animation: none;
+  }
+  .a1-btn,
+  .a1-btn:hover,
+  .a1-navcta span,
+  .a1-navcta:hover span,
+  .a1-header {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 1279px) {
+  .a1-scribble {
+    display: none;
+  }
+}
+@media (max-width: 1023px) {
+  .a1-board {
+    max-width: 560px;
+  }
+}
+@media (max-width: 640px) {
+  .a1-board {
+    padding: 54px 12px 12px;
+    transform: rotate(-1deg);
+  }
+  .a1-sheet {
+    padding: 18px 14px 20px;
+  }
+  .a1-table {
+    font-size: 13px;
+  }
+  .a1-table th {
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+  }
+  .a1-cards {
+    height: auto;
+    display: grid;
+    gap: 16px;
+  }
+  .a1-index {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    left: 0 !important;
+    top: 0 !important;
+  }
+}

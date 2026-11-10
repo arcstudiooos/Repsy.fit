@@ -70,7 +70,7 @@ export default function Story() {
     <div ref={root} id="features" className="landing-cream scroll-mt-16 overflow-x-clip">
       {/* 1. Problem strip: numbered, ruled columns - no cards. */}
       <section aria-labelledby="problem-title" className="landing-cream py-20 md:py-28" data-story="problem">
-        <div className="mx-auto max-w-[1100px] px-4">
+        <div className="mx-auto max-w-[1200px] px-5 md:px-8">
           <Kicker n="01" label="The problem" />
           <h2 id="problem-title" className="l-h2 mt-3 max-w-3xl">
             Coaching is the job. Admin isn't.
@@ -92,7 +92,7 @@ export default function Story() {
 
       {/* 2. AI Coach */}
       <section aria-labelledby="ai-title" className="landing-cream py-20 md:py-28" data-story="ai">
-        <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 md:grid-cols-2">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 md:px-8 md:grid-cols-2">
           <div>
             <Kicker n="02" label="AI Coach" />
             <h2 id="ai-title" className="l-h2 mt-3">
@@ -141,7 +141,7 @@ export default function Story() {
 
       {/* 3. Manual Planner */}
       <section aria-labelledby="planner-title" className="landing-cream py-20 md:py-28" data-story="planner">
-        <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 md:grid-cols-2">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 md:px-8 md:grid-cols-2">
           <div className="md:order-2">
             <Kicker n="03" label="Manual Planner" />
             <h2 id="planner-title" className="l-h2 mt-3">
@@ -165,7 +165,7 @@ export default function Story() {
 
       {/* 4. Progress */}
       <section aria-labelledby="progress-title" className="landing-cream py-20 md:py-28" data-story="progress">
-        <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 md:grid-cols-2">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-5 md:px-8 md:grid-cols-2">
           <div>
             <Kicker n="04" label="Progress" />
             <h2 id="progress-title" className="l-h2 mt-3">
