@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listClients, queryKeys } from "./api";
 import { ClientStrip } from "./ClientStrip";
 import { EmptyState, ErrorState, LoadingState } from "./components/States";
+import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import type { Client } from "./types";
 
@@ -152,7 +153,11 @@ export default function App() {
         <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
         {/* key forces a clean remount when the selected client changes, so no tab can
             keep showing the previous client's data. */}
-        <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
+        {current.id === "ai" ? (
+          <AiCoachTab key={`ai:${selectedClientId ?? "none"}`} client={selectedClient} />
+        ) : (
+          <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
+        )}
       </>
     );
   }

@@ -181,6 +181,11 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
 
 - `GET /api/clients` lists **oldest first** (`createdAt`, then `id`), so the first client
   added is the default selected client. Other list endpoints: decide when built.
+- `GET /api/clients/:clientId/chat` lists messages **oldest first** (`createdAt`, then `id`);
+  unknown client -> `404 {"error":"Client not found"}`.
+- **Chat messages have no public write route.** They are saved only server-side with
+  `saveMessage(clientId, role, content)` (`server/src/routes/chat.ts`), which the ask endpoint
+  (`askAI`, `POST /api/clients/:clientId/chat`) will use - so fake chat history can't be created.
 - Creates reply **201 Created** with the full record.
 - A client that does not exist, or belongs to another coach, returns
   `404 {"error":"Client not found"}`.
@@ -201,5 +206,7 @@ and record it here.
   `getClient()` / `GET /api/clients/:clientId` was added to `api.ts` and here.
 - Prompt 13: the prototype's goal list allows free text too, so the server accepts any goal
   text (Prompt 11 had limited it to the 7 goals). Decided by the user.
+- Chat storage prompt proposed `GET /api/chat?clientId=ID` returning `{ messages: [...] }`. The
+  user chose to keep this contract (`GET /api/clients/:clientId/chat` -> `ChatMessage[]`).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

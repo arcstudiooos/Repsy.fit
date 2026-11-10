@@ -27,9 +27,14 @@ function validationMessage(error: z.ZodError): string {
 }
 
 // Express 4 does not catch errors from async handlers; pass them to the error handler.
-const asyncHandler =
+export const asyncHandler =
   (fn: (req: Request, res: Response) => Promise<unknown>) => (req: Request, res: Response, next: NextFunction) =>
     fn(req, res).catch(next);
+
+/** This coach's client with this id, or null (other coaches' clients are never returned). */
+export function findClient(clientId: string) {
+  return prisma.client.findFirst({ where: { id: clientId, coachId: DEFAULT_COACH_ID } });
+}
 
 export const clientsRouter = Router();
 

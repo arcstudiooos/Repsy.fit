@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
+import { chatRouter } from "./routes/chat.js";
 import { clientsRouter } from "./routes/clients.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,6 +20,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use("/api/clients/:clientId/chat", chatRouter);
 app.use("/api/clients", clientsRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
