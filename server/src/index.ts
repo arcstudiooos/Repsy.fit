@@ -3,7 +3,7 @@ import cors from "cors";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { connectDb } from "./db.js";
+import { connectDb, disconnectDb } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Built client lives at client/dist (two levels up from server/dist or server/src).
@@ -32,6 +32,23 @@ if (fs.existsSync(clientDist)) {
 
 const port = Number(process.env.PORT) || 3001;
 await connectDb();
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Repsy Coach server listening on port ${port}`);
 });
+
+// Clean shutdown: Render sends SIGTERM on restart/redeploy; Ctrl+C sends SIGINT.
+// Stop accepting requests, let in-flight ones finish, then close the DB connection.
+let shuttingDown = false;
+function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received, shutting down`);
+  // Force exit if open connections keep the server from closing in time.
+  setTimeout(() => process.exit(1), 10_000).unref();
+  server.close(async () => {
+    await disconnectDb();
+    process.exit(0);
+  });
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

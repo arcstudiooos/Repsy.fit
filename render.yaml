@@ -1,0 +1,33 @@
+# Render Blueprint: 1 Web Service (frontend + backend) + 1 PostgreSQL database.
+# Secrets (AI_API_KEY etc.) are set in the Render dashboard only — never in this file.
+services:
+  - type: web
+    name: repsy-coach
+    runtime: node
+    plan: free
+    region: virginia
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    # `npm start` runs `prisma migrate deploy` first, then starts the server.
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: repsy-db
+          property: connectionString
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_MODEL
+        sync: false
+      # PORT is set by Render automatically.
+
+databases:
+  - name: repsy-db
+    databaseName: repsy
+    plan: free
+    region: virginia

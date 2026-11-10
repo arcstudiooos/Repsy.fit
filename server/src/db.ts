@@ -17,3 +17,9 @@ export async function connectDb(): Promise<void> {
     process.exit(1);
   }
 }
+
+// Closes the database connection cleanly (used on shutdown).
+export async function disconnectDb(): Promise<void> {
+  await prisma.$disconnect();
+  console.log("DB disconnected");
+}
