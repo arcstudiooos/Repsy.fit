@@ -148,7 +148,7 @@ function Particles() {
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, PARTICLES]}>
       <sphereGeometry args={[1, 8, 8]} />
-      <meshBasicMaterial color={new Color(CREAM)} transparent opacity={0.5} />
+      <meshBasicMaterial color={new Color(CREAM)} transparent opacity={0.28} />
     </instancedMesh>
   );
 }
@@ -167,7 +167,7 @@ function Scene() {
     camera.lookAt(0, drift, 0);
   });
   return (
-    <group ref={root} position={[2.1, 0, 0]}>
+    <group ref={root} position={[2.6, 0.1, 0]} scale={0.8}>
       <Dumbbell />
       <ProgressRing />
       <ChartBars />

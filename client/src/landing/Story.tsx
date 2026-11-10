@@ -48,9 +48,17 @@ function linePoints(values: number[], min: number, max: number, w = 300, h = 110
 
 function TryLink() {
   return (
-    <a href="/app" className="mt-6 inline-flex min-h-10 items-center text-sm font-semibold underline underline-offset-4">
+    <a href="/app" className="l-link mt-8 inline-flex min-h-10 items-center text-sm font-bold uppercase tracking-wider underline decoration-2 underline-offset-[6px]">
       Try it in the app
     </a>
+  );
+}
+
+function Kicker({ n, label }: { n: string; label: string }) {
+  return (
+    <p className="l-kicker">
+      {n} — {label}
+    </p>
   );
 }
 
@@ -60,17 +68,21 @@ export default function Story() {
 
   return (
     <div ref={root} id="features" className="landing-cream scroll-mt-16 overflow-x-clip">
-      {/* 1. Problem strip */}
-      <section aria-labelledby="problem-title" className="landing-cream py-16" data-story="problem">
+      {/* 1. Problem strip: numbered, ruled columns - no cards. */}
+      <section aria-labelledby="problem-title" className="landing-cream py-20 md:py-28" data-story="problem">
         <div className="mx-auto max-w-[1100px] px-4">
-          <h2 id="problem-title" className="text-3xl">
+          <Kicker n="01" label="The problem" />
+          <h2 id="problem-title" className="l-h2 mt-3 max-w-3xl">
             Coaching is the job. Admin isn't.
           </h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {PAINS.map((p) => (
-              <article key={p.title} className="landing-card p-5" data-anim="pain">
-                <h3 className="text-xl">{p.title}</h3>
-                <p className="landing-dim mt-2 text-sm">{p.body}</p>
+          <div className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+            {PAINS.map((p, i) => (
+              <article key={p.title} className="l-rule pt-5" data-anim="pain">
+                <p className="l-num" aria-hidden="true">
+                  {String(i + 1).padStart(2, "0")}
+                </p>
+                <h3 className="mt-4 text-2xl">{p.title}</h3>
+                <p className="landing-dim mt-2">{p.body}</p>
               </article>
             ))}
           </div>
@@ -79,13 +91,14 @@ export default function Story() {
       </section>
 
       {/* 2. AI Coach */}
-      <section aria-labelledby="ai-title" className="landing-cream py-16" data-story="ai">
+      <section aria-labelledby="ai-title" className="landing-cream py-20 md:py-28" data-story="ai">
         <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 md:grid-cols-2">
           <div>
-            <h2 id="ai-title" className="text-3xl">
+            <Kicker n="02" label="AI Coach" />
+            <h2 id="ai-title" className="l-h2 mt-3">
               AI Coach, with the reasoning shown
             </h2>
-            <p className="landing-dim mt-3">
+            <p className="landing-dim mt-4 text-lg">
               Ask about any client. The answer uses their goal, level, recent plans and check-ins,
               and a suggested plan comes with the reason behind it. Nothing is saved until you tap
               Assign.
@@ -127,13 +140,14 @@ export default function Story() {
       </section>
 
       {/* 3. Manual Planner */}
-      <section aria-labelledby="planner-title" className="landing-cream py-16" data-story="planner">
+      <section aria-labelledby="planner-title" className="landing-cream py-20 md:py-28" data-story="planner">
         <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 md:grid-cols-2">
           <div className="md:order-2">
-            <h2 id="planner-title" className="text-3xl">
+            <Kicker n="03" label="Manual Planner" />
+            <h2 id="planner-title" className="l-h2 mt-3">
               Plan by hand when you want to
             </h2>
-            <p className="landing-dim mt-3">
+            <p className="landing-dim mt-4 text-lg">
               Search the exercise library, set sets, reps and rest for each exercise, and save it
               as one clear numbered workout. Mark plans Active, Done or Paused.
             </p>
@@ -150,13 +164,14 @@ export default function Story() {
       </section>
 
       {/* 4. Progress */}
-      <section aria-labelledby="progress-title" className="landing-cream py-16" data-story="progress">
+      <section aria-labelledby="progress-title" className="landing-cream py-20 md:py-28" data-story="progress">
         <div className="mx-auto grid max-w-[1100px] items-center gap-10 px-4 md:grid-cols-2">
           <div>
-            <h2 id="progress-title" className="text-3xl">
+            <Kicker n="04" label="Progress" />
+            <h2 id="progress-title" className="l-h2 mt-3">
               Progress you can see
             </h2>
-            <p className="landing-dim mt-3">
+            <p className="landing-dim mt-4 text-lg">
               Weekly check-ins feed stat cards and weight, adherence and plans-by-type charts for
               each client. Shown here: sample data from the 6-month demo.
             </p>

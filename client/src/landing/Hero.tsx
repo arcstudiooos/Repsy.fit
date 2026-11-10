@@ -23,7 +23,7 @@ class Fallback extends Component<{ children: ReactNode; fallback: ReactNode; onE
 function Poster() {
   return (
     <div data-testid="hero-poster" className="landing-poster flex h-full w-full items-center justify-end">
-      <img src={posterRing} alt="" width={200} height={200} className="mr-[8%] hidden h-64 w-64 opacity-90 md:block" />
+      <img src={posterRing} alt="" width={200} height={200} className="mr-[6%] hidden h-72 w-72 md:block" />
     </div>
   );
 }
@@ -74,10 +74,14 @@ export function Hero() {
       {/* Dark scrim so the text stays readable over the scene (stronger on phones). */}
       <div className="landing-scrim pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="relative mx-auto flex min-h-[600px] max-w-[1100px] flex-col justify-center px-4 py-20">
-        <h1 id="hero-title" className="max-w-xl text-4xl leading-tight sm:text-5xl">
-          Coach every client. Let AI do the planning busywork.
+        <p className="l-kicker">Repsy Coach · for fitness coaches</p>
+        <h1 id="hero-title" className="l-display mt-4 max-w-2xl">
+          <span className="block">Coach every client.</span>{" "}
+          <span className="block" style={{ color: "#ff4a1f" }}>
+            Let AI do the planning busywork.
+          </span>
         </h1>
-        <p className="mt-4 max-w-lg text-lg text-white/85">
+        <p className="mt-6 max-w-lg text-lg text-white/85">
           Repsy suggests plans for each client with the reasoning shown, and nothing is saved until
           you assign it. Prefer to plan yourself? Build workouts with sets, reps and rest by hand.
         </p>
@@ -94,5 +98,27 @@ export function Hero() {
         </div>
       </div>
     </section>
+  );
+}
+
+// Signature band: real set notation, the way the Manual Planner writes it. Decorative.
+const LOG = [
+  "Back Squat 4 × 6 · Rest 120s",
+  "Romanian Deadlift 3 × 8 · Rest 90s",
+  "Bench Press 4 × 6 · Rest 120s",
+  "Barbell Row 3 × 10 · Rest 60s",
+  "Walking Lunge 3 × 10 · Rest 60s",
+  "Hip Thrust 3 × 12 · Rest 60s",
+];
+
+export function TrainingLogBand() {
+  return (
+    <div className="landing-band" aria-hidden="true">
+      <div className="mx-auto flex max-w-[1100px] gap-10 px-4 py-4 text-lg">
+        {LOG.map((l) => (
+          <span key={l}>{l}</span>
+        ))}
+      </div>
+    </div>
   );
 }

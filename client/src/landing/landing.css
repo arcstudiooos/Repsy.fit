@@ -19,10 +19,7 @@
 }
 /* Static hero poster: used when the 3D scene can't or shouldn't run. */
 .landing-poster {
-  background:
-    radial-gradient(circle at 70% 40%, rgba(255, 74, 31, 0.35), transparent 55%),
-    radial-gradient(circle at 30% 80%, rgba(250, 247, 242, 0.08), transparent 50%),
-    #141414;
+  background: #141414;
 }
 /* Hero text scrim: a light left-side shade on desktop, a full dark gradient on phones. */
 .landing-scrim {
@@ -51,4 +48,60 @@
   .demo-fly-in {
     animation: none;
   }
+}
+
+/* ---- Editorial type system (design pass, ui-ux-pro-max "exaggerated minimalism" + editorial
+   grid, kept inside the Repsy palette): oversized condensed headlines, numbered kickers,
+   hard rules instead of decoration, one accent (orange); teal only for data. ---- */
+.l-display {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: clamp(2.5rem, 6vw, 5.25rem);
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+}
+.l-h2 {
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+.l-kicker {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b6560;
+}
+.landing-dark .l-kicker {
+  color: rgba(255, 255, 255, 0.72);
+}
+.l-rule {
+  border-top: 2px solid #141414;
+}
+.l-num {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(3.5rem, 7vw, 5.5rem);
+  line-height: 1;
+  color: #ff4a1f;
+}
+.l-link::after {
+  content: "\2192";
+  margin-left: 0.4em;
+  transition: transform 0.2s;
+}
+.l-link:hover::after {
+  transform: translateX(3px);
+}
+/* Signature element: a "training log" band of real set notation under the hero. */
+.landing-band {
+  background: #141414;
+  border-top: 4px solid #ff4a1f;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
 }
