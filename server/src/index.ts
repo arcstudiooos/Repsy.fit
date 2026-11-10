@@ -3,6 +3,7 @@ import cors from "cors";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { connectDb } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Built client lives at client/dist (two levels up from server/dist or server/src).
@@ -30,6 +31,7 @@ if (fs.existsSync(clientDist)) {
 }
 
 const port = Number(process.env.PORT) || 3001;
+await connectDb();
 app.listen(port, () => {
   console.log(`Repsy Coach server listening on port ${port}`);
 });

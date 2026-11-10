@@ -1,4 +1,3 @@
-// Prisma setup only. Tables are added in a later prompt.
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,4 +5,78 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  goal      String   @default("General fitness")
+  age       Int?
+  weightKg  Float?
+  heightCm  Float?
+  /// One of: Beginner, Intermediate, Advanced
+  level     String   @default("Beginner")
+  focus     String   @default("")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+
+  assignments  Assignment[]
+  chatMessages ChatMessage[]
+  progressLogs ProgressLog[]
+
+  @@map("clients")
+}
+
+model Assignment {
+  id        String   @id @default(cuid())
+  clientId  String
+  /// One of: Workout, Nutrition, Habit, Recovery
+  type      String
+  title     String
+  details   String
+  reasoning String   @default("")
+  /// One of: ai, manual
+  source    String   @default("manual")
+  /// One of: Active, Done, Paused
+  status    String   @default("Active")
+  /// YYYY-MM-DD
+  date      String
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("assignments")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  clientId  String
+  /// One of: coach, ai
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("chat_messages")
+}
+
+model ProgressLog {
+  id           String   @id @default(cuid())
+  clientId     String
+  /// YYYY-MM-DD
+  date         String
+  weightKg     Float?
+  /// 0-100
+  adherence    Int?
+  workoutsDone Int?
+  note         String   @default("")
+  createdAt    DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("progress_logs")
 }
