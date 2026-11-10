@@ -88,11 +88,11 @@ export function ProgressTab({ client }: Props) {
   );
 }
 
-/** Big number in Barlow Condensed with a small uppercase label under it; "-" when missing. */
+/** Big number in the serif heading font with a small uppercase label under it; "-" when missing. */
 function StatCard({ label, value, detail = null }: { label: string; value: string | null; detail?: string | null }) {
   return (
     <div role="group" aria-label={label} className="card flex flex-col p-4">
-      <span className="font-heading text-4xl font-bold leading-none text-text">{value ?? "-"}</span>
+      <span className="font-heading text-[2.6rem] leading-none tracking-tight text-text">{value ?? "-"}</span>
       <span className="mt-2 text-xs font-semibold uppercase tracking-wide text-dim">{label}</span>
       {detail && <span className="mt-1 text-sm text-text">{detail}</span>}
     </div>

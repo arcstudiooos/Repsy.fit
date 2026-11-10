@@ -7,7 +7,7 @@
   colours exist: bg-bg, bg-surface, bg-surface2, text-text, text-dim,
   border-border, text-accent, bg-accent2, text-amber, bg-tab-inactive, bg-header,
   bg-white, text-on-accent, text-amber-text,
-  bg-type-workout / -nutrition / -habit / -recovery, font-heading, font-body,
+  bg-type-workout / -nutrition / -habit / -recovery, font-heading, font-body, font-mono,
   rounded-card.
 */
 @theme inline {
@@ -35,6 +35,7 @@
 
   --font-heading: var(--font-heading);
   --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 
   --radius-card: var(--radius-card);
 }
@@ -46,15 +47,20 @@
     font-family: var(--font-body);
   }
 
+  /* Big headings: Instrument Serif (one weight, so never bold). Small headings: Geist semibold. */
   h1,
-  h2,
+  h2 {
+    font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
   h3,
   h4,
   h5,
   h6 {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    text-transform: uppercase;
+    font-family: var(--font-body);
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   *,

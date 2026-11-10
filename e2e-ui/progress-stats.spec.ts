@@ -100,14 +100,14 @@ test("the four cards match a hand check of the Prompt 25 logs", async ({ page })
   await expect(panel(page)).not.toContainText("No progress logged yet");
 });
 
-test("cards show the label in small uppercase under a big Barlow Condensed number, in a 14px card", async ({ page }) => {
+test("cards show the label in small uppercase under a big serif number, in a 14px card", async ({ page }) => {
   await mockApi(page, { logs: { "c-maya": PROMPT_25_LOGS }, statuses: {} });
   await openProgress(page);
   const card = stat(page, "Total workouts");
   await expect(card).toHaveCSS("border-top-left-radius", "14px");
   await expect(card).toHaveCSS("background-color", "rgb(255, 255, 255)");
   const value = card.getByText("11", { exact: true });
-  await expect(value).toHaveCSS("font-family", /Barlow Condensed/);
+  await expect(value).toHaveCSS("font-family", /Instrument Serif/);
   const label = card.getByText("Total workouts", { exact: true });
   await expect(label).toHaveCSS("text-transform", "uppercase");
   expect((await label.boundingBox())!.y).toBeGreaterThan((await value.boundingBox())!.y);

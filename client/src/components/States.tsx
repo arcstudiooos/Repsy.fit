@@ -55,7 +55,7 @@ export function DemoSeedError({ seed }: { seed: DemoSeed }) {
 export function LoadingState() {
   return (
     <div role="status" aria-live="polite" className="card flex min-h-40 items-center justify-center p-6">
-      <p className="font-heading text-xl font-semibold uppercase tracking-wide text-dim">Loading...</p>
+      <p className="font-heading text-2xl text-dim">Loading...</p>
     </div>
   );
 }

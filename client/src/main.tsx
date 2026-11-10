@@ -30,11 +30,12 @@ if (route === "app") sessionStorage.setItem(IN_APP_KEY, "1");
 // Start fetching the chunk for this route right away, in parallel with React starting up.
 if (route === "landing") {
   void import("./landing/Landing");
-  // Landing-only fonts (design A1). /app never requests them.
+  // Landing-only fonts: Caveat pen notes, and Barlow Condensed for the classic 3D hero. /app
+  // never requests them.
   const fonts = document.createElement("link");
   fonts.rel = "stylesheet";
   fonts.href =
-    "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Caveat:wght@600&display=swap";
+    "https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Barlow+Condensed:wght@700&display=swap";
   fonts.dataset.landingFonts = "";
   document.head.appendChild(fonts);
 }

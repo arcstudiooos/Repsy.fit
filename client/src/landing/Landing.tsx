@@ -3,7 +3,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import "./landing.css";
 import Faq from "./Faq";
-import { ClipboardHero } from "./ClipboardHero";
+import { LiveSheetHero } from "./LiveSheetHero";
 import { Hero, TrainingLogBand } from "./Hero";
 import LeadForm from "./LeadForm";
 import Pricing from "./Pricing";
@@ -122,7 +122,7 @@ export default function Landing() {
     <div className="landing-cream a1 min-h-screen">
       <Header dark={classic} />
       <main>
-        {classic ? <Hero /> : <ClipboardHero />}
+        {classic ? <Hero /> : <LiveSheetHero />}
         <TrainingLogBand />
         <Suspense fallback={<div id="features" className="min-h-[60vh]" />}>
           <Story />

@@ -185,7 +185,7 @@ export default function Story() {
                 ["26", 0, "", "Check-ins"],
               ].map(([value, decimals, suffix, label]) => (
                 <div key={label as string} className="rounded-lg p-2" style={{ background: "#f1ede6" }}>
-                  <div className="font-heading text-2xl font-bold" data-anim="count" data-to={value} data-decimals={decimals} data-suffix={suffix}>
+                  <div className="font-heading text-2xl" data-anim="count" data-to={value} data-decimals={decimals} data-suffix={suffix}>
                     {value}
                     {suffix}
                   </div>

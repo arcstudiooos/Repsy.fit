@@ -1,4 +1,4 @@
-// Interactive 3D hero (Prompt 38). Since design A1 the default hero is the clipboard; the 3D
+// Interactive 3D hero (Prompt 38). Since design A1 the default hero is the live sheet; the 3D
 // hero is kept and opens at /?hero=3d. Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
 

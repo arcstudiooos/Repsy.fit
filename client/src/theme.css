@@ -28,13 +28,13 @@
   --type-recovery: #7c5cfc;
 
   /* Fonts */
-  --font-heading: "Barlow Condensed", system-ui, sans-serif;
-  --font-body: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* Landing page type (design A1 "Clipboard", user-approved) */
+  /* Fonts (design A1, user-approved Nov 2026): serif headings, Geist text, Geist Mono numbers */
   --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
-  --font-sans: Geist, Inter, system-ui, sans-serif;
+  --font-sans: Geist, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
-  --font-hand: Caveat, "Segoe Print", cursive;
+  --font-hand: Caveat, "Segoe Print", cursive; /* landing pen notes only */
+  --font-heading: var(--font-serif);
+  --font-body: var(--font-sans);
 
   /* Shape */
   --radius-card: 14px;

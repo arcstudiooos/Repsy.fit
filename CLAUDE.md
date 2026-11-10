@@ -77,18 +77,20 @@ below exist. Use the values exactly; do not invent colours.
 
 ### Fonts
 
-- Headings: **"Barlow Condensed"**, weight 600/700, UPPERCASE (`font-heading`; `h1`–`h6` get it
-  by default).
-- Body: Inter, falling back to system-ui (`font-body`; set on `body`).
-- **Landing page only** (`client/src/landing/`, design "A1 · Clipboard", approved by the user
-  in Nov 2026): Instrument Serif for headlines (`--font-serif`), Geist for text
-  (`--font-sans`), Geist Mono for sets, reps and numbers (`--font-mono`), and Caveat only for
-  small pen notes (`--font-hand`). They load from Google Fonts, injected by `client/src/main.tsx` on the landing
-  route only (no npm packages), so `/app` never requests them. The dashboard keeps Barlow
-  Condensed + Inter.
+Design A1, approved by the user in Nov 2026 for the whole product (landing page and `/app`).
+All load from Google Fonts in `client/index.html`; no npm packages.
+
+- Big headings (`h1`, `h2`, `font-heading`): **Instrument Serif**, weight 400 only (never
+  bold), sentence case, slight negative tracking. Also used for big stat numbers.
+- Small headings (`h3`–`h6`): Geist, weight 600.
+- Body (`font-body`, set on `body`): **Geist**.
+- Numbers, sets / reps / rest, kickers (`font-mono`): **Geist Mono**.
+- Landing only, injected by `client/src/main.tsx` on the landing route: Caveat for small
+  decorative pen notes (`--font-hand`), and Barlow Condensed for the classic 3D hero at
+  `/?hero=3d`.
 - **Landing colours:** the tokens above, plus tints and mixes of them made with `rgba()` /
-  `color-mix()` (graph-paper lines from `--border`, the sticky note and clipboard mixed from
-  `--amber` and `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
+  `color-mix()` (graph-paper lines from `--border`, paper tones mixed from `--amber` and
+  `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
 
 ### Cards and buttons
 
