@@ -236,5 +236,11 @@ and record it here.
   (PATCH returns the full `Assignment`; DELETE 204). Unknown id -> `404 {"error":"Assignment not found"}`.
 - Prompt 23's example lines arrived as plain "-" and "x"; built with the em dash, multiplication
   sign and middle dot it names: `1. Back Squat — 4 sets × 6 reps · Rest 120s`.
+- Prompt 25 asked for `GET /api/progress?clientId=` (returns `{ logs: [...] }`), `POST /api/progress`
+  (body `clientId`, returns `{ id }`) and `DELETE /api/progress/:id` (returns `{ ok: true }`). Built
+  on the existing `/api/clients/:clientId/progress` routes: list oldest first (`date`, then
+  `createdAt`, `id`), create 201 full `ProgressLog`, DELETE 204. Limits: `adherence` whole number
+  0–100, `workoutsDone` whole number 0–14, `weightKg` above 0 up to 500, `date` a real
+  `YYYY-MM-DD` date, `note` default "". Unknown log -> `404 {"error":"Progress log not found"}`.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.
