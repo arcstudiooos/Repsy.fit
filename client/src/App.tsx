@@ -201,6 +201,7 @@ export default function App() {
           {panelContent}
         </section>
       </main>
+      <footer className="mx-auto max-w-[1100px] px-4 pb-6 text-center text-xs text-dim">Repsy Coach - v1</footer>
     </div>
   );
 }
