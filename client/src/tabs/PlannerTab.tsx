@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listAssignments, queryKeys } from "../api";
+import { ManualAssignmentForm } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState } from "../components/States";
 import { ASSIGNMENT_TYPES, type Assignment, type AssignmentType, type Client } from "../types";
 import { TYPE_CHIP } from "./AiCoachTab";
@@ -24,6 +25,22 @@ export function PlannerTab({ client, onOpenAiCoach }: Props) {
   const all = assignmentsQuery.data ?? [];
   // Client-side only: the list is already loaded, so filtering never refetches.
   const shown = filter === "All" ? all : all.filter((a) => a.type === filter);
+
+  // After a manual create: scroll to the new card once the refreshed list has rendered it.
+  const [scrollToId, setScrollToId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!scrollToId) return;
+    const card = document.getElementById(`assignment-${scrollToId}`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    setScrollToId(null);
+  }, [scrollToId, shown]);
+
+  const onCreated = (saved: Assignment) => {
+    // A filter that hides the new plan's type would hide the card too.
+    if (filter !== "All" && filter !== saved.type) setFilter("All");
+    setScrollToId(saved.id);
+  };
 
   let body: ReactNode;
   if (!client) {
@@ -83,13 +100,14 @@ export function PlannerTab({ client, onOpenAiCoach }: Props) {
       <h2 className="text-2xl">Manual Planner</h2>
       <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
       <div className="mt-4">{body}</div>
+      {client && <ManualAssignmentForm key={client.id} clientId={client.id} onCreated={onCreated} />}
     </>
   );
 }
 
 function AssignmentCard({ assignment }: { assignment: Assignment }) {
   return (
-    <li className="card p-4">
+    <li id={`assignment-${assignment.id}`} className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[assignment.type]}`}>
           {assignment.type}
