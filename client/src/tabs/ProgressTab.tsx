@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listAssignments, listProgress, queryKeys } from "../api";
+import { getHabitWeek, listAssignments, listProgress, queryKeys } from "../api";
+import { localToday } from "./AiCoachTab";
 import { ErrorState, LoadingState } from "../components/States";
 import { CheckInForm } from "../components/CheckInForm";
 import { CheckInList } from "../components/CheckInList";
@@ -22,6 +23,15 @@ export function ProgressTab({ client }: Props) {
     queryKey: queryKeys.assignments(client?.id ?? "none"),
     queryFn: () => listAssignments(client!.id),
     enabled: !!client,
+  });
+
+  // Habits feed Plan completion (Prompt 54). They only refine that one number, so a failed habit
+  // load must not break the tab: it falls back to assignments alone.
+  const habitsQuery = useQuery({
+    queryKey: queryKeys.habits(client?.id ?? "none"),
+    queryFn: () => getHabitWeek(client!.id, localToday()),
+    enabled: !!client,
+    retry: false,
   });
 
   const failed = progressQuery.isError ? progressQuery : assignmentsQuery.isError ? assignmentsQuery : null;
@@ -48,7 +58,7 @@ export function ProgressTab({ client }: Props) {
     );
   } else {
     const logs = progressQuery.data ?? [];
-    const stats = progressStats(logs, assignmentsQuery.data ?? []);
+    const stats = progressStats(logs, assignmentsQuery.data ?? [], habitsQuery.data?.habits ?? []);
     body = (
       <>
         {logs.length === 0 && (

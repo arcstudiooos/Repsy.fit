@@ -27,6 +27,7 @@ model Coach {
   weeklySummaries WeeklySummary[]
   reviewItems  ReviewItem[]
   dailyCheckIns DailyCheckIn[]
+  habits       Habit[]
 
   @@map("coaches")
 }
@@ -67,6 +68,7 @@ model Client {
   progressLogs ProgressLog[]
   reviewItems  ReviewItem[]
   dailyCheckIns DailyCheckIn[]
+  habits       Habit[]
 
   @@index([coachId])
   @@map("clients")
@@ -166,6 +168,38 @@ model DailyCheckIn {
   @@unique([clientId, date])
   @@index([coachId])
   @@map("daily_checkins")
+}
+
+/// A daily habit the coach tracks for one client (Prompt 54), up to 8 active per client.
+/// Archiving sets `active` to false - the habit and its logs are kept as history.
+model Habit {
+  id        String     @id @default(cuid())
+  coachId   String
+  coach     Coach      @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  logs HabitLog[]
+
+  @@index([clientId, active])
+  @@index([coachId])
+  @@map("habits")
+}
+
+/// One day of one habit (Prompt 54). One row per habit per day; `done` false = ticked off again.
+model HabitLog {
+  id      String  @id @default(cuid())
+  habitId String
+  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  /// YYYY-MM-DD
+  date    String
+  done    Boolean @default(true)
+
+  @@unique([habitId, date])
+  @@map("habit_logs")
 }
 
 /// One thing waiting for the coach's decision (Prompt 52): an AI suggestion the coach parked, or a

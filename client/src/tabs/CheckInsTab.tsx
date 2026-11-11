@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { listDailyCheckIns, queryKeys, saveDailyCheckIn } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import { HabitTracker } from "../components/HabitTracker";
 import type { Client, DailyCheckIn, NewDailyCheckIn } from "../types";
 import { localToday } from "./AiCoachTab";
 
@@ -123,6 +124,8 @@ function ClientCheckIns({ client }: { client: Client }) {
           )}
         </div>
       </form>
+
+      <HabitTracker clientId={client.id} today={today} />
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">

@@ -126,6 +126,27 @@ export interface DailyCheckIn {
 export type NewDailyCheckIn = Pick<DailyCheckIn, "date"> &
   Partial<Pick<DailyCheckIn, "energy" | "mood" | "sleepHours" | "recoveryScore" | "waterLiters" | "steps" | "foodNote">>;
 
+/** A habit the coach tracks for one client (Prompt 54), with its this-week ticks and streaks. */
+export interface Habit {
+  id: string;
+  coachId: string;
+  clientId: string;
+  name: string;
+  /** false = archived (hidden from the grid, history kept) */
+  active: boolean;
+  createdAt: string;
+  /** Done flags for `HabitWeek.days`, same order. */
+  week: boolean[];
+  currentStreak: number;
+  bestStreak: number;
+}
+/** The this-week grid: `days` are the last 7 dates (oldest first, ending `date`), one row per active habit. */
+export type HabitWeek = { date: DateString; days: DateString[]; habits: Habit[] };
+/** What add / rename / archive return: the habit row without the week data. */
+export type HabitRecord = Omit<Habit, "week" | "currentStreak" | "bestStreak">;
+export type HabitUpdate = Partial<Pick<HabitRecord, "name" | "active">>;
+export type HabitTick = { habitId: string; date: DateString; done: boolean };
+
 /** One row of the Home "New check-ins" card: a progress log or a daily check-in (Prompt 53). */
 export type RecentCheckIn =
   | {

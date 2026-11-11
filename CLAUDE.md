@@ -104,6 +104,18 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Habit tracker (Prompt 54).** `Habit` = `{ id, coachId, clientId, name, active, createdAt }` and
+  `HabitLog` = `{ id, habitId, date ("YYYY-MM-DD"), done }`, unique per `(habitId, date)`. A client
+  has at most **8 active habits**. Archive sets `active: false`: the habit and its logs are **never
+  deleted** (history). The streak rules live in ONE server function, `habitStreaks(doneDates, today)`
+  in `server/src/habits.ts`: a missed day breaks the streak; today not yet logged does NOT (the current
+  streak then counts back from yesterday); best = longest run ever. Coach-side in v2, shown as a
+  section of the Check-ins tab. **Progress "Plan completion" changed:** it used to be Done assignments /
+  all assignments; it is now the average of that % and this week's habit % (done ticks / (active
+  habits x 7 days), `habitCompletion` in `client/src/lib/progressStats.ts`). With only one of the two
+  it is that one; with neither it stays "-". If the habit load fails the card falls back to assignments
+  alone. No reminders, notifications or points (streak leaderboard is Prompt 71).
+
 - **Daily check-ins (Prompt 53).** `DailyCheckIn` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
   energy 1-5, mood 1-5, sleepHours 0-16 (Prompt 55), recoveryScore 1-5 (Prompt 55), waterLiters,
   steps, foodNote, createdAt, updatedAt }`, unique per `(clientId, date)`. Saving a date that
@@ -215,6 +227,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
 | `listDailyCheckIns(clientId, days)` | GET | `/api/clients/:clientId/checkins?days=14` | — | `DailyCheckIn[]`, newest first (`days` 1-90, default 14) |
 | `saveDailyCheckIn(clientId, input)` | POST | `/api/clients/:clientId/checkins` | `NewDailyCheckIn` | `DailyCheckIn` — **201** for a new day, **200** when it updated that day (one row per client per day) |
+| `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
+| `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
+| `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |
+| `setHabitDone(clientId, habitId, date, done)` | PUT | `/api/clients/:clientId/habits/:habitId/logs/:date` | `{ done: boolean }` | `{ habitId, date, done }` (one row per habit per day, upserted); 400 bad date; 404 `Habit not found` |
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
@@ -383,5 +399,7 @@ and record it here.
   Buttons: a due task opens Manual Planner, an idle client opens AI Coach, each with that client selected.
 - Prompt 49: "New check-ins" card on Home, built on the new `GET /api/checkins/recent` (progress logs only until Prompt 53). The time shown is when the log was saved (`createdAt`), not its `date` field. Clicking a row selects that client and opens Progress.
 - Prompt 50: "Needs attention" card on Home, built on the new `GET /api/at-risk` (rules in `server/src/atRisk.ts`). The prompt's "3 straight logs" is read as 3 consecutive wrong-way moves (4 weights); "last 2 logged weeks" as the 14 days up to the client's latest adherence log. Each row lists every rule that fired.
+- Prompt 54: habits are built on `/api/clients/:clientId/habits` (the prompt named no routes). The prompt's
+  "plan-completion stat" had no habit input, so it became the average of the assignment % and the habit % (see Data notes).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

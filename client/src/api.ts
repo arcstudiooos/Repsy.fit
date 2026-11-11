@@ -15,6 +15,10 @@ import type {
   Client,
   Coach,
   DailyCheckIn,
+  HabitRecord,
+  HabitTick,
+  HabitUpdate,
+  HabitWeek,
   Lead,
   LoginInput,
   NewAssignment,
@@ -47,7 +51,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   const endpoint = `${method} /api${path}`;
@@ -138,6 +142,20 @@ export const listDailyCheckIns = (clientId: string, days = 14) =>
 export const saveDailyCheckIn = (clientId: string, input: NewDailyCheckIn) =>
   request<DailyCheckIn>("POST", `/clients/${enc(clientId)}/checkins`, input);
 
+// ----- Habit tracker (per client, Prompt 54) -----
+/** The this-week grid: the last 7 days ending `date` (the coach's local "YYYY-MM-DD"), active habits only. */
+export const getHabitWeek = (clientId: string, date: string) =>
+  request<HabitWeek>("GET", `/clients/${enc(clientId)}/habits?date=${enc(date)}`);
+/** Adds a habit. 400 when the client already has 8 active ones. */
+export const addHabit = (clientId: string, name: string) =>
+  request<HabitRecord>("POST", `/clients/${enc(clientId)}/habits`, { name });
+/** Renames and / or archives (`active: false`) a habit. Archiving keeps its history. */
+export const updateHabit = (clientId: string, habitId: string, input: HabitUpdate) =>
+  request<HabitRecord>("PATCH", `/clients/${enc(clientId)}/habits/${enc(habitId)}`, input);
+/** Ticks one day of one habit done / not done. */
+export const setHabitDone = (clientId: string, habitId: string, date: string, done: boolean) =>
+  request<HabitTick>("PUT", `/clients/${enc(clientId)}/habits/${enc(habitId)}/logs/${enc(date)}`, { done });
+
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
@@ -198,6 +216,7 @@ export const queryKeys = {
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
+  habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   todayTasks: (date: string) => ["tasks", "today", date] as const,
   recentCheckIns: ["checkins", "recent"] as const,
   atRisk: (date: string) => ["at-risk", date] as const,

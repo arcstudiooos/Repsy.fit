@@ -175,6 +175,45 @@ test("each client sees only their own numbers", async ({ page }) => {
   await expect(stat(page, "Plan completion")).toContainText("0%");
 });
 
+// Prompt 54: habit completion feeds Plan completion (average of assignments % and this week's habit %).
+test("habit completion feeds Plan completion", async ({ page }) => {
+  await mockApi(page, { logs: { "c-maya": PROMPT_25_LOGS }, statuses: { "c-maya": ["Done", "Active", "Active", "Paused"] } });
+  const days = ["2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11"];
+  const habit = (id: string, week: boolean[]) => ({
+    id,
+    coachId: "coach-1",
+    clientId: "c-maya",
+    name: id,
+    active: true,
+    createdAt: "2026-11-01T00:00:00.000Z",
+    week,
+    currentStreak: 0,
+    bestStreak: 0,
+  });
+  await page.route("**/api/clients/c-maya/habits**", (route) =>
+    route.fulfill({ json: { date: "2026-11-11", days, habits: [habit("h1", days.map(() => true)), habit("h2", days.map(() => true))] } }),
+  );
+  await openProgress(page);
+  // Assignments: 1 Done / 4 = 25%. Habits: 14 ticks / 14 possible = 100%. Average 62.5 -> 63%.
+  await expect(stat(page, "Plan completion")).toContainText("63%");
+});
+
+test("with habits but no assignments, Plan completion is the habit %", async ({ page }) => {
+  await mockApi(page, { logs: {}, statuses: {} });
+  const days = ["2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11"];
+  await page.route("**/api/clients/c-maya/habits**", (route) =>
+    route.fulfill({
+      json: {
+        date: "2026-11-11",
+        days,
+        habits: [{ id: "h1", coachId: "coach-1", clientId: "c-maya", name: "Walk", active: true, createdAt: "2026-11-01T00:00:00.000Z", week: [true, true, true, false, false, false, false], currentStreak: 0, bestStreak: 3 }],
+      },
+    }),
+  );
+  await openProgress(page);
+  await expect(stat(page, "Plan completion")).toContainText("43%"); // 3 of 7
+});
+
 test("a failed load shows an error with Retry", async ({ page }) => {
   await mockApi(page, { logs: {}, statuses: {} }, true);
   await openProgress(page);
