@@ -48,7 +48,10 @@ const fail = (msg) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "mig-"));
   fs.copyFileSync(path.join(server, "prisma/schema.prisma"), path.join(tmp, "schema.prisma"));
   fs.cpSync(path.join(server, "prisma/migrations"), path.join(tmp, "migrations"), { recursive: true });
-  fs.rmSync(path.join(tmp, "migrations", NEW), { recursive: true });
+  // Drop the coach migration AND every later one (they depend on it), keeping the v1 state.
+  for (const dir of fs.readdirSync(path.join(tmp, "migrations"))) {
+    if (/^\d{14}_/.test(dir) && dir >= NEW) fs.rmSync(path.join(tmp, "migrations", dir), { recursive: true });
+  }
   deploy(path.join(tmp, "schema.prisma"), url);
 
   const q = (sql) => p.$executeRawUnsafe(sql);
@@ -70,7 +73,7 @@ const fail = (msg) => {
   const placeholder = Number((await p.$queryRawUnsafe(`SELECT count(*)::int AS n FROM "mig_demo"."clients" WHERE "coachId" = 'default-coach'`))[0].n);
   if (placeholder !== 3) fail(`demo: expected 3 'default-coach' clients before, got ${placeholder}`);
 
-  deploy("prisma/schema.prisma", url); // applies only the new migration
+  deploy("prisma/schema.prisma", url); // applies the coach migration and every later one
   const after = await count();
   if (JSON.stringify(before) !== JSON.stringify(after)) fail(`demo: counts changed ${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
   for (const t of ["clients", "assignments", "progress_logs", "chat_messages"]) {
