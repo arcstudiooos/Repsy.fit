@@ -11,7 +11,8 @@ const dist = path.resolve(import.meta.dirname, "../dist");
 const manifest = JSON.parse(fs.readFileSync(path.join(dist, ".vite/manifest.json"), "utf8"));
 
 const BUDGET_FIRST_LOAD_GZ_KB = 90; // entry chunk + static imports, gzipped
-const BUDGET_APP_GZ_KB = 220; // everything /app loads (entry + App chunk), gzipped; v1 was ~209 KB
+const BUDGET_APP_GZ_KB = 130; // everything /app loads (entry + App chunk), gzipped. Was 220 while the
+// chart tabs were part of this chunk; they are lazy now (~99 KB), so the budget is tightened to match.
 const HEAVY = /three|react-three|gsap/i;
 
 const entryKey = Object.keys(manifest).find((k) => manifest[k].isEntry);

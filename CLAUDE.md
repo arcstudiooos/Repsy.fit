@@ -104,6 +104,11 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Lazy tabs and the bundle guard.** `/app` loads Home, AI Coach, Clients and Manual Planner
+  eagerly; **Progress, Check-ins and Library load on first open**, each wrapped in `<Suspense>`.
+  That keeps Recharts out of the dashboard's first download (`/app` ~99 KB gz, budget 130 KB in
+  `client/scripts/check-budget.mjs`; first load 90 KB). A new chart-heavy tab should be lazy too.
+
 - **Workout templates (Prompt 58).** `WorkoutTemplate` = `{ id, coachId, name, focus, exercises, notes,
   createdAt }`; `exercises` is JSON in the Manual Planner's shape, in order: `[{ name, sets (1-10 whole),
   reps (text, 1-30 chars: "AMRAP" works), rest (whole seconds, 6-3600) }]`, 1 to 50 of them. `name` 1-100

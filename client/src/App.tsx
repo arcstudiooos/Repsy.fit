@@ -6,11 +6,9 @@ import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./compo
 import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
-import { CheckInsTab } from "./tabs/CheckInsTab";
 import { HomeTab, useReviewQueueCount } from "./tabs/HomeTab";
 import type { TemplatePrefill } from "./components/ManualAssignmentForm";
 import { PlannerTab } from "./tabs/PlannerTab";
-import { ProgressTab } from "./tabs/ProgressTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
 import type { Client, Coach } from "./types";
 
@@ -18,6 +16,10 @@ import type { Client, Coach } from "./types";
 const AccountPage = lazy(() => import("./auth/AccountPage"));
 // The Library tab (Prompt 58) loads on first open, which keeps the /app first load inside its size budget.
 const LibraryTab = lazy(() => import("./tabs/LibraryTab").then((m) => ({ default: m.LibraryTab })));
+// Progress and Check-ins draw charts, so Recharts loads with the tab the coach opens rather than
+// with the whole dashboard. Home is the first screen and draws no charts, so nothing waits on it.
+const ProgressTab = lazy(() => import("./tabs/ProgressTab").then((m) => ({ default: m.ProgressTab })));
+const CheckInsTab = lazy(() => import("./tabs/CheckInsTab").then((m) => ({ default: m.CheckInsTab })));
 
 type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library";
 
@@ -312,9 +314,13 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             onPrefillUsed={clearPlannerPrefill}
           />
         ) : current.id === "progress" ? (
-          <ProgressTab key={`progress:${selectedClientId ?? "none"}`} client={selectedClient} />
+          <Suspense fallback={<LoadingState />}>
+            <ProgressTab key={`progress:${selectedClientId ?? "none"}`} client={selectedClient} />
+          </Suspense>
         ) : current.id === "checkins" ? (
-          <CheckInsTab key={`checkins:${selectedClientId ?? "none"}`} client={selectedClient} />
+          <Suspense fallback={<LoadingState />}>
+            <CheckInsTab key={`checkins:${selectedClientId ?? "none"}`} client={selectedClient} />
+          </Suspense>
         ) : (
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
         )}

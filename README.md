@@ -37,7 +37,9 @@ The landing code lives in `client/src/landing/`, and its design rules are in
 - The 3D scene only starts after the page has loaded and the browser is idle.
 - Fonts don't block the first paint.
 - `client/scripts/check-budget.mjs` fails the build if the first load goes over 90 KB gz, if
-  `/app` goes over 220 KB gz, or if any 3D or animation code gets into either one.
+  `/app` goes over 130 KB gz, or if any 3D or animation code gets into either one.
+  The chart tabs (Progress, Check-ins) and the Library tab load on first open, so Recharts is not
+  part of the dashboard's first download.
 
 **Fallbacks:** phones under 768px, reduced motion, missing WebGL, software-only WebGL and
 WebGL errors all get a static poster instead of the 3D scene. Rendering also pauses when the
