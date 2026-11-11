@@ -4,6 +4,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
+import { Schedule } from "../components/Schedule";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
 import {
@@ -53,7 +54,38 @@ export function money(amount: number, currency: string): string {
 
 const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
 
+const VIEWS = ["Payments", "Schedule"] as const;
+type View = (typeof VIEWS)[number];
+
+// Prompt 69: the Business tab has a view switch (Payments / Schedule; Reports comes later). It stays one
+// tab: the switch is inside the tab, so there is no 10th tab.
 export function BusinessTab({ clients }: { clients: Client[] }) {
+  const [view, setView] = useState<View>("Payments");
+  return (
+    <>
+      <h2 className="text-2xl">Business</h2>
+      <div role="group" aria-label="Business view" className="mt-3 flex gap-2">
+        {VIEWS.map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={view === v}
+            onClick={() => setView(v)}
+            className={
+              "min-h-10 rounded-full border px-4 text-sm font-semibold " +
+              (view === v ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+            }
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+      {view === "Payments" ? <PaymentsView clients={clients} /> : <Schedule clients={clients} />}
+    </>
+  );
+}
+
+function PaymentsView({ clients }: { clients: Client[] }) {
   const today = localToday();
   const query = useQuery({ queryKey: queryKeys.businessPlans, queryFn: getBusinessPlans });
   const [filter, setFilter] = useState<Filter>("All");
@@ -75,8 +107,7 @@ export function BusinessTab({ clients }: { clients: Client[] }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="text-2xl">Business</h2>
+      <div className="mt-3 flex flex-wrap items-baseline justify-end gap-3">
         {!adding && withoutPlan.length > 0 && query.data && (
           <button type="button" onClick={() => setAdding(true)} className="btn-primary min-h-11 rounded-lg px-4 text-sm">
             Add a plan

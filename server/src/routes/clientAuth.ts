@@ -125,6 +125,23 @@ clientAuthRouter.get(
   }),
 );
 
+// GET /api/client-auth/my-sessions (Prompt 69) -> { sessions: [{ id, title, type, startsAt, endsAt, location }] }
+// The signed-in client's OWN upcoming Booked appointments (not yet ended), soonest first, read-only.
+// The coach's private note, status and coach id are never selected; nothing about other clients.
+clientAuthRouter.get(
+  "/my-sessions",
+  requireClient,
+  asyncHandler(async (req, res) => {
+    const sessions = await prisma.appointment.findMany({
+      where: { clientId: clientAccountIdOf(req), status: "Booked", endsAt: { gte: new Date() } },
+      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      take: 50,
+      select: { id: true, title: true, type: true, startsAt: true, endsAt: true, location: true },
+    });
+    res.json({ sessions });
+  }),
+);
+
 // GET /api/client-auth/me -> 200 own account, or 401 when no CLIENT session (a coach session does not count).
 clientAuthRouter.get(
   "/me",

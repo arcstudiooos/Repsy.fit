@@ -36,6 +36,7 @@ model Coach {
   clientInvites ClientInvite[]
   clientPlans  ClientPlan[]
   payments     Payment[]
+  appointments Appointment[]
   workoutTemplates WorkoutTemplate[]
   meals        Meal[]
 
@@ -167,9 +168,37 @@ model Client {
   invites      ClientInvite[]
   plan         ClientPlan?
   payments     Payment[]
+  appointments Appointment[]
 
   @@index([coachId])
   @@map("clients")
+}
+
+/// A scheduled session, call or review the coach books for a client (Prompt 69). startsAt / endsAt are
+/// UTC instants (timestamptz-style: the client converts to and from the viewer's local time).
+/// No reminders, no video-call integration, no calendar sync.
+model Appointment {
+  id        String   @id @default(cuid())
+  coachId   String
+  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title     String
+  /// One of: Session, Call, Check-in review, Other
+  type      String
+  startsAt  DateTime
+  endsAt    DateTime
+  /// Optional place or link (text only; nothing is fetched or joined).
+  location  String   @default("")
+  /// One of: Booked, Done, Cancelled, No-show
+  status    String   @default("Booked")
+  /// The coach's private note. Never sent to the client.
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([coachId, startsAt])
+  @@index([clientId, startsAt])
+  @@map("appointments")
 }
 
 model Assignment {

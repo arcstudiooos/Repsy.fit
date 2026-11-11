@@ -18,6 +18,7 @@ import { messagesRouter, threadsRouter } from "./routes/messages.js";
 import { clientAuthRouter } from "./routes/clientAuth.js";
 import { clientInviteRouter } from "./routes/clientInvite.js";
 import { businessRouter, clientPlanRouter } from "./routes/business.js";
+import { appointmentsRouter } from "./routes/appointments.js";
 import { clientSessionMiddleware } from "./auth/clientSession.js";
 import { templatesRouter } from "./routes/templates.js";
 import { mealsRouter } from "./routes/meals.js";
@@ -77,7 +78,9 @@ app.use("/api/meals", requireCoach);
 app.use("/api/macros", requireCoach);
 app.use("/api/messages", requireCoach);
 app.use("/api/business", requireCoach);
+app.use("/api/appointments", requireCoach);
 
+app.use("/api/appointments", appointmentsRouter);
 app.use("/api/macros", macrosRouter);
 app.use("/api/messages", threadsRouter);
 app.use("/api/business", businessRouter);

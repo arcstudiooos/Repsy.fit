@@ -5,6 +5,7 @@
 // ApiError ("Endpoint not available yet: ...").
 
 import type {
+  Appointment,
   Assignment,
   AssignmentStatus,
   AssignmentType,
@@ -33,6 +34,8 @@ import type {
   Measurement,
   MessageThread,
   MyPlan,
+  MySession,
+  NewAppointment,
   NewAssignment,
   NewClient,
   NewClientPlan,
@@ -221,6 +224,17 @@ export const updateCurrency = (currency: Currency) => request<Coach>("PATCH", "/
 /** The signed-in CLIENT's own plan (name, status, next due) and last payment date. */
 export const getMyPlan = () => request<MyPlan>("GET", "/client-auth/my-plan");
 
+// ----- Schedule (Prompt 69): times are UTC ISO strings; the UI converts to / from local time -----
+/** Appointments starting in [from, to) (UTC ISO), oldest first. */
+export const listAppointments = (from: string, to: string) =>
+  request<Appointment[]>("GET", `/appointments?from=${enc(from)}&to=${enc(to)}`);
+export const createAppointment = (input: NewAppointment) => request<Appointment>("POST", "/appointments", input);
+export const updateAppointment = (appointmentId: string, input: Partial<NewAppointment>) =>
+  request<Appointment>("PATCH", `/appointments/${enc(appointmentId)}`, input);
+export const deleteAppointment = (appointmentId: string) => request<void>("DELETE", `/appointments/${enc(appointmentId)}`);
+/** The signed-in CLIENT's own upcoming Booked sessions, soonest first (read-only). */
+export const getMySessions = () => request<{ sessions: MySession[] }>("GET", "/client-auth/my-sessions");
+
 // ----- Client access (Prompt 65): the coach invites; the CLIENT signs in on /client/login -----
 export const getClientAccess = (clientId: string) => request<ClientAccess>("GET", `/clients/${enc(clientId)}/invite`);
 export const inviteClient = (clientId: string, email: string) =>
@@ -250,7 +264,20 @@ export const deleteMessage = (clientId: string, messageId: string) =>
 
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
-export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
+/**
+ * The browser's timezone offsets at the start and end of the local day `date`: "tz=..&tzEnd=..".
+ * Taken for that date (not "now"), and at both midnights so a daylight-saving change day is exact.
+ */
+function dayOffsets(date: string): string {
+  const start = new Date(`${date}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return `tz=${start.getTimezoneOffset()}&tzEnd=${end.getTimezoneOffset()}`;
+}
+
+export const getTodayTasks = (date: string) =>
+  // `tz` (the browser's offset in minutes) lets the server find today's appointments in the coach's local day.
+  request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}&${dayOffsets(date)}`);
 /** Latest check-ins (last 48 hours, newest first, max 8) across the signed-in coach's clients. */
 export const getRecentCheckIns = () => request<RecentCheckIns>("GET", "/checkins/recent");
 /** Clients that need attention (rules only, worst first); `date` is the coach's local "YYYY-MM-DD". */
@@ -314,6 +341,8 @@ export const queryKeys = {
   clientAccount: ["client-account", "me"] as const,
   myPlan: ["client-account", "my-plan"] as const,
   businessPlans: ["business", "plans"] as const,
+  appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,
+  mySessions: ["client-account", "my-sessions"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
   meals: ["meals"] as const,

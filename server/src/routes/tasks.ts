@@ -5,6 +5,7 @@ import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler } from "./clients.js";
 import { isDateString, today } from "./assignments.js";
+import { localDayRange } from "../appointments.js";
 
 /** A client with no assignment dated in the last IDLE_DAYS days (or ahead) needs a new plan. */
 const IDLE_DAYS = 7;
@@ -18,6 +19,17 @@ type DueTask = {
   clientName: string;
   assignmentId: string;
   assignmentType: string;
+  text: string;
+};
+type AppointmentTask = {
+  kind: "appointment";
+  clientId: string;
+  clientName: string;
+  appointmentId: string;
+  appointmentType: string;
+  /** UTC instants (ISO); the UI shows them in the viewer's local time. */
+  startsAt: string;
+  endsAt: string;
   text: string;
 };
 type IdleTask = { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
@@ -34,7 +46,36 @@ tasksRouter.get(
       res.status(400).json({ error: "date must be a real date in YYYY-MM-DD form." });
       return;
     }
+    // `tz` = the viewer's Date.getTimezoneOffset() (minutes, UTC minus local), so "today" means the
+    // coach's local day. Default 0 (UTC), like `date`.
+    // `tzEnd` = the offset at the next local midnight (differs from `tz` only on a daylight-saving
+    // change day, which is 23 or 25 hours long). Defaults to `tz`.
+    const offset = (raw: unknown, fallback: number) =>
+      raw === undefined ? fallback : typeof raw === "string" && /^-?\d{1,4}$/.test(raw) ? Number(raw) : NaN;
+    const tz = offset(req.query.tz, 0);
+    const tzEnd = offset(req.query.tzEnd, tz);
+    if (![tz, tzEnd].every((m) => Number.isInteger(m) && Math.abs(m) <= 14 * 60)) {
+      res.status(400).json({ error: "tz must be a whole number of minutes (the browser's timezone offset)." });
+      return;
+    }
     const coachId = coachIdOf(req);
+    // Prompt 69: today's Booked appointments come first, soonest first.
+    const [dayStart, dayEnd] = localDayRange(date, tz, tzEnd);
+    const todays = await prisma.appointment.findMany({
+      where: { coachId, status: "Booked", startsAt: { gte: dayStart, lt: dayEnd } },
+      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      include: { client: { select: { name: true } } },
+    });
+    const appointments: AppointmentTask[] = todays.map((a) => ({
+      kind: "appointment",
+      clientId: a.clientId,
+      clientName: a.client.name,
+      appointmentId: a.id,
+      appointmentType: a.type,
+      startsAt: a.startsAt.toISOString(),
+      endsAt: a.endsAt.toISOString(),
+      text: `${a.type}: ${a.title}`,
+    }));
     const clients = await prisma.client.findMany({
       where: { coachId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -79,6 +120,6 @@ tasksRouter.get(
         }
       }
     }
-    res.json({ date, tasks: [...due, ...idle] });
+    res.json({ date, tasks: [...appointments, ...due, ...idle] });
   }),
 );

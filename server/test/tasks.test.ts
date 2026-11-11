@@ -7,6 +7,8 @@ const { prisma } = vi.hoisted(() => ({
   prisma: {
     client: { findMany: vi.fn() },
     assignment: { findMany: vi.fn() },
+    // Prompt 69: today's appointments are the first rows.
+    appointment: { findMany: vi.fn() },
   },
 }));
 
@@ -32,6 +34,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   prisma.client.findMany.mockResolvedValue([maya, leo, sam]);
   prisma.assignment.findMany.mockResolvedValue([]);
+  prisma.appointment.findMany.mockResolvedValue([]);
 });
 
 describe("GET /api/tasks/today", () => {

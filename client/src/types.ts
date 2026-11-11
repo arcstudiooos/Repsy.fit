@@ -101,8 +101,52 @@ export type AutoAssignInput = { type: AssignmentType; date?: DateString };
 /** One row of Today's Tasks (Home tab): a plan due today, or a client with no plan in 7+ days. */
 export type TodayTask =
   | { kind: "due"; clientId: string; clientName: string; assignmentId: string; assignmentType: AssignmentType; text: string }
-  | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
+  | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string }
+  /** Prompt 69: today's Booked appointment (UTC instants; shown in the viewer's local time). */
+  | {
+      kind: "appointment";
+      clientId: string;
+      clientName: string;
+      appointmentId: string;
+      appointmentType: AppointmentType;
+      startsAt: string;
+      endsAt: string;
+      text: string;
+    };
 export type TodayTasks = { date: DateString; tasks: TodayTask[] };
+
+// ----- Schedule (Prompt 69). startsAt / endsAt are UTC ISO timestamps. -----
+export const APPOINTMENT_TYPES = ["Session", "Call", "Check-in review", "Other"] as const;
+export type AppointmentType = (typeof APPOINTMENT_TYPES)[number];
+export const APPOINTMENT_STATUSES = ["Booked", "Done", "Cancelled", "No-show"] as const;
+export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
+export interface Appointment {
+  id: string;
+  coachId: string;
+  clientId: string;
+  clientName: string;
+  title: string;
+  type: AppointmentType;
+  startsAt: string;
+  endsAt: string;
+  /** Optional place or link, plain text. */
+  location: string;
+  status: AppointmentStatus;
+  /** The coach's private note; never sent to the client. */
+  note: string;
+  createdAt: string;
+}
+export type NewAppointment = Pick<Appointment, "clientId" | "title" | "type" | "startsAt" | "endsAt"> &
+  Partial<Pick<Appointment, "location" | "status" | "note">>;
+/** What a signed-in CLIENT sees of their own upcoming session: no note, no status. */
+export interface MySession {
+  id: string;
+  title: string;
+  type: AppointmentType;
+  startsAt: string;
+  endsAt: string;
+  location: string;
+}
 
 // ----- Business: plans and recorded payments (Prompt 68). Record-keeping only. -----
 export const CURRENCIES = ["INR", "USD"] as const;

@@ -4,7 +4,8 @@
 // only exists after the coach sends an invite, so these pages never link to registration.
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, clientLogin, clientLogout, clientSetPassword, getClientAccount, getMyPlan, queryKeys } from "../api";
+import { ApiError, clientLogin, clientLogout, clientSetPassword, getClientAccount, getMyPlan, getMySessions, queryKeys } from "../api";
+import { dayHeading, timeRangeText, viewerTimeZone } from "../lib/schedule";
 import { ClientLoginSchema, ClientSetPasswordSchema } from "../authSchemas";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
@@ -186,6 +187,43 @@ function MyPlanSection() {
   );
 }
 
+/**
+ * "My sessions" (Prompt 69): the client's OWN upcoming booked sessions, read-only (no booking, no
+ * calendar sync, no coach notes). Times arrive as UTC and are shown in this browser's timezone.
+ */
+function MySessionsSection() {
+  const sessions = useQuery({ queryKey: queryKeys.mySessions, queryFn: getMySessions, retry: false });
+  return (
+    <section aria-label="My sessions" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
+      <h2 className="text-base">My sessions</h2>
+      {sessions.isPending ? (
+        <p className="mt-2 text-sm text-dim">Loading...</p>
+      ) : sessions.isError ? (
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          {plainErrorMessage(sessions.error)}
+        </p>
+      ) : sessions.data.sessions.length === 0 ? (
+        <p className="mt-2 text-sm text-dim">No upcoming sessions.</p>
+      ) : (
+        <>
+          <ul className="mt-2 divide-y divide-border">
+            {sessions.data.sessions.map((s) => (
+              <li key={s.id} className="py-2 text-sm">
+                <p className="font-semibold text-text">{s.title}</p>
+                <p className="text-dim">
+                  {dayHeading(new Date(s.startsAt))} · <span className="font-mono text-text">{timeRangeText(s.startsAt, s.endsAt)}</span> · {s.type}
+                </p>
+                {s.location && <p className="break-words text-dim">{s.location}</p>}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-dim">Times are shown in your timezone ({viewerTimeZone()}).</p>
+        </>
+      )}
+    </section>
+  );
+}
+
 /** /client: the signed-in client's own page. Signed out -> /client/login (never the coach /login). */
 function ClientHomePage() {
   const queryClient = useQueryClient();
@@ -225,6 +263,7 @@ function ClientHomePage() {
   return (
     <Shell title={`Hi, ${me.data.name}`} intro={`Signed in as ${me.data.loginEmail ?? "you"}.`}>
       <MyPlanSection />
+      <MySessionsSection />
       <div className="mt-6 flex justify-center">
         <button
           type="button"

@@ -15,6 +15,7 @@ import {
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
+import { timeRangeText } from "../lib/schedule";
 import { localToday } from "./AiCoachTab";
 
 export type TaskTarget = "planner" | "ai";
@@ -27,7 +28,8 @@ type Props = {
 };
 
 // Home tab (Prompt 48): the Today's Tasks card. Every row comes from the server's real records
-// (GET /api/tasks/today): plans due today, and clients with no plan in 7+ days.
+// (GET /api/tasks/today): today's appointments first (Prompt 69), then plans due today, then clients
+// with no plan in 7+ days.
 export function HomeTab({ onOpenTask, onOpenCheckIn }: Props) {
   const date = localToday();
   const query = useQuery({ queryKey: queryKeys.todayTasks(date), queryFn: () => getTodayTasks(date) });
@@ -182,9 +184,22 @@ function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: Pr
   );
 }
 
-const taskKey = (task: TodayTask) => (task.kind === "due" ? `due:${task.assignmentId}` : `idle:${task.clientId}`);
+const taskKey = (task: TodayTask) =>
+  task.kind === "appointment" ? `appointment:${task.appointmentId}` : task.kind === "due" ? `due:${task.assignmentId}` : `idle:${task.clientId}`;
 
 function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"] }) {
+  if (task.kind === "appointment") {
+    // Prompt 69: times arrive as UTC instants and are shown in this browser's timezone.
+    return (
+      <li className="flex flex-wrap items-center justify-between gap-3 py-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-text">{task.clientName}</p>
+          <p className="text-sm text-dim">{task.text}</p>
+        </div>
+        <p className="shrink-0 font-mono text-sm text-text">{timeRangeText(task.startsAt, task.endsAt)}</p>
+      </li>
+    );
+  }
   const target: TaskTarget = task.kind === "due" ? "planner" : "ai";
   const label = target === "planner" ? "Open in Manual Planner" : "Plan with AI Coach";
   return (
