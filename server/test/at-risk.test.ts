@@ -166,6 +166,7 @@ describe("GET /api/at-risk", () => {
     vi.clearAllMocks();
     prisma.client.findMany.mockResolvedValue([]);
     prisma.progressLog.findMany.mockResolvedValue([]);
+    prisma.dailyCheckIn.findMany.mockResolvedValue([]); // Prompt 55: sleep nights for the added reason line
   });
 
   it("needs a signed-in coach", async () => {

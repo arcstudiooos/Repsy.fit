@@ -6,6 +6,8 @@
 import type { Client } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db.js";
+import { sleepWeek } from "../sleep.js";
+import { today } from "./assignments.js";
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 
@@ -24,7 +26,9 @@ type ClientContext = {
   assignments: { type: string; title: string; status: string }[];
   progressLogs: { date: string; weightKg: number | null; adherence: number | null; workoutsDone: number | null }[];
   /** Prompt 53: the client's latest daily check-ins, so the AI can mention recent energy / mood. */
-  dailyCheckIns: { date: string; energy: number | null; mood: number | null; sleepHours: number | null; waterLiters: number | null; steps: number | null; foodNote: string }[];
+  dailyCheckIns: { date: string; energy: number | null; mood: number | null; sleepHours: number | null; recoveryScore?: number | null; waterLiters: number | null; steps: number | null; foodNote: string }[];
+  /** Prompt 55: average of the sleep hours typed in over the last 7 days (null when none). */
+  sleepWeek?: { average: number | null; nights: number };
 };
 
 const PROVIDER_TIMEOUT_MS = 30_000;
@@ -49,10 +53,10 @@ export async function loadClientContext(client: Client): Promise<ClientContext> 
       where: { clientId: client.id },
       orderBy: [{ date: "desc" }, { id: "desc" }],
       take: 7,
-      select: { date: true, energy: true, mood: true, sleepHours: true, waterLiters: true, steps: true, foodNote: true },
+      select: { date: true, energy: true, mood: true, sleepHours: true, recoveryScore: true, waterLiters: true, steps: true, foodNote: true },
     }),
   ]);
-  return { client, assignments, progressLogs, dailyCheckIns };
+  return { client, assignments, progressLogs, dailyCheckIns, sleepWeek: sleepWeek(dailyCheckIns, today()) };
 }
 
 const SYSTEM_PROMPT = [
@@ -73,7 +77,7 @@ const orNone = (value: string | number | null | undefined, unit = "") =>
   value === null || value === undefined || value === "" ? "not set" : `${value}${unit}`;
 
 function buildUserMessage(
-  { client, assignments, progressLogs, dailyCheckIns }: ClientContext,
+  { client, assignments, progressLogs, dailyCheckIns, sleepWeek: sleep }: ClientContext,
   question: string,
   heading = "Coach's question:",
 ): string {
@@ -90,7 +94,7 @@ function buildUserMessage(
   const checkInLines = dailyCheckIns.length
     ? dailyCheckIns.map(
         (c) =>
-          `- ${c.date}: energy ${orNone(c.energy, "/5")}, mood ${orNone(c.mood, "/5")}, sleep ${orNone(c.sleepHours, " h")}, ` +
+          `- ${c.date}: energy ${orNone(c.energy, "/5")}, mood ${orNone(c.mood, "/5")}, sleep ${orNone(c.sleepHours, " h")}, recovery ${orNone(c.recoveryScore, "/5")}, ` +
           `water ${orNone(c.waterLiters, " L")}, steps ${orNone(c.steps)}${c.foodNote ? `, food note: ${c.foodNote}` : ""}`,
       )
     : ["- none yet"];
@@ -113,6 +117,7 @@ function buildUserMessage(
     "",
     "Latest daily check-ins (newest first):",
     ...checkInLines,
+    `- 7-day sleep average: ${sleep && sleep.average !== null ? `${sleep.average} h (${sleep.nights} nights logged)` : "not set"} (typed in by hand)`,
     "",
     heading,
     question,

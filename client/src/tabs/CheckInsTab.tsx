@@ -3,7 +3,8 @@
 // energy / mood bars. One check-in per client per day: saving today again updates today's row.
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Cell, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { sleepSeries, sleepSummary } from "../lib/sleepStats";
 import { listDailyCheckIns, queryKeys, saveDailyCheckIn } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { HabitTracker } from "../components/HabitTracker";
@@ -14,14 +15,24 @@ const SCALE = [1, 2, 3, 4, 5] as const;
 const CHART_HEIGHT = 110;
 
 /** "" when the field is empty; the form keeps every value as text so a cleared box saves as null. */
-type FormState = { energy: string; mood: string; waterLiters: string; steps: string; foodNote: string };
-const EMPTY: FormState = { energy: "", mood: "", waterLiters: "", steps: "", foodNote: "" };
+type FormState = {
+  energy: string;
+  mood: string;
+  sleepHours: string;
+  recoveryScore: string;
+  waterLiters: string;
+  steps: string;
+  foodNote: string;
+};
+const EMPTY: FormState = { energy: "", mood: "", sleepHours: "", recoveryScore: "", waterLiters: "", steps: "", foodNote: "" };
 
 const toForm = (c: DailyCheckIn | undefined): FormState =>
   c
     ? {
         energy: c.energy === null ? "" : String(c.energy),
         mood: c.mood === null ? "" : String(c.mood),
+        sleepHours: c.sleepHours === null ? "" : String(c.sleepHours),
+        recoveryScore: c.recoveryScore === null ? "" : String(c.recoveryScore),
         waterLiters: c.waterLiters === null ? "" : String(c.waterLiters),
         steps: c.steps === null ? "" : String(c.steps),
         foodNote: c.foodNote,
@@ -29,6 +40,8 @@ const toForm = (c: DailyCheckIn | undefined): FormState =>
     : EMPTY;
 
 const numberOrNull = (text: string) => (text.trim() === "" ? null : Number(text));
+/** Left out of the body when empty (the server clears any field that is not sent). */
+const numberOrUndefined = (text: string) => numberOrNull(text) ?? undefined;
 
 export function CheckInsTab({ client }: { client: Client | null }) {
   if (!client) {
@@ -69,6 +82,8 @@ function ClientCheckIns({ client }: { client: Client }) {
       date: today,
       energy: numberOrNull(form.energy),
       mood: numberOrNull(form.mood),
+      sleepHours: numberOrUndefined(form.sleepHours),
+      recoveryScore: numberOrUndefined(form.recoveryScore),
       waterLiters: numberOrNull(form.waterLiters),
       steps: numberOrNull(form.steps),
       foodNote: form.foodNote.trim(),
@@ -93,6 +108,8 @@ function ClientCheckIns({ client }: { client: Client }) {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Scale label="Energy" name="energy" value={form.energy} onChange={set("energy")} />
           <Scale label="Mood" name="mood" value={form.mood} onChange={set("mood")} />
+          <Field label="Sleep (hours)" name="sleepHours" value={form.sleepHours} onChange={set("sleepHours")} step="0.1" min="0" max="16" />
+          <Scale label="Recovery" name="recoveryScore" value={form.recoveryScore} onChange={set("recoveryScore")} />
           <Field label="Water (litres)" name="waterLiters" value={form.waterLiters} onChange={set("waterLiters")} step="0.1" min="0" max="20" />
           <Field label="Steps" name="steps" value={form.steps} onChange={set("steps")} step="1" min="0" max="100000" />
         </div>
@@ -138,6 +155,7 @@ function ClientCheckIns({ client }: { client: Client }) {
       ) : (
         <>
           <Sparklines checkIns={query.data} />
+          <SleepRecoveryCard checkIns={query.data} today={today} />
           <History checkIns={query.data} />
         </>
       )}
@@ -248,6 +266,65 @@ function Sparklines({ checkIns }: { checkIns: DailyCheckIn[] }) {
   );
 }
 
+/** Sleep & Recovery: bars = sleep hours, line = recovery score (1-5), last 14 days, plus 7-day averages. */
+function SleepRecoveryCard({ checkIns, today }: { checkIns: DailyCheckIn[]; today: string }) {
+  const points = sleepSeries(checkIns, today);
+  const summary = sleepSummary(points);
+  const anyData = points.some((p) => p.sleepHours !== null || p.recoveryScore !== null);
+  return (
+    <section aria-label="Sleep & Recovery" className="card mt-4 p-5">
+      <h3 className="text-base">Sleep &amp; Recovery</h3>
+      {!anyData ? (
+        <p className="mt-3 text-dim">No sleep or recovery logged in the last 14 days. Add them in today's check-in above.</p>
+      ) : (
+        <>
+          <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
+            <div>
+              <dt className="text-sm text-dim">Sleep, 7-day average</dt>
+              <dd className="font-mono text-lg">
+                {summary.sleepAverage === null ? "-" : `${summary.sleepAverage} h`}
+                <span className="ml-2 text-xs text-dim">{summary.sleepNights} of 7 nights logged</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-sm text-dim">Recovery, 7-day average</dt>
+              <dd className="font-mono text-lg">
+                {summary.recoveryAverage === null ? "-" : `${summary.recoveryAverage}/5`}
+                <span className="ml-2 text-xs text-dim">{summary.recoveryDays} of 7 days logged</span>
+              </dd>
+            </div>
+          </dl>
+          {summary.ruleLine && <p className="mt-3 text-sm font-semibold text-amber-text">{summary.ruleLine}</p>}
+          <div aria-label="Sleep hours and recovery score by day" role="img" className="mt-3">
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT + 60}>
+              <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis yAxisId="hours" domain={[0, 12]} ticks={[0, 6, 12]} width={24} tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="score" orientation="right" domain={[0, 5]} ticks={[0, 5]} width={18} tick={{ fontSize: 10 }} />
+                <Tooltip
+                  formatter={(v: number, name: string) => (name === "Sleep (hours)" ? `${v} h` : `${v} / 5`)}
+                />
+                <Bar yAxisId="hours" dataKey="sleepHours" name="Sleep (hours)" fill="#0e7c6b" radius={[3, 3, 0, 0]} />
+                <Line
+                  yAxisId="score"
+                  dataKey="recoveryScore"
+                  name="Recovery (1-5)"
+                  stroke="#ff4a1f"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  connectNulls
+                  type="monotone"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-1 text-xs text-dim">Bars: hours slept. Line: recovery score. Every value is typed in by hand.</p>
+        </>
+      )}
+    </section>
+  );
+}
+
 const scaleText = (n: number | null) => (n === null ? "-" : `${n}/5`);
 
 /** The last 14 days, newest first. */
@@ -266,6 +343,8 @@ function History({ checkIns }: { checkIns: DailyCheckIn[] }) {
                 Energy {scaleText(c.energy)} · Mood {scaleText(c.mood)}
                 {c.waterLiters !== null && ` · ${c.waterLiters} L`}
                 {c.steps !== null && ` · ${c.steps} steps`}
+                {c.sleepHours !== null && ` · Sleep ${c.sleepHours} h`}
+                {c.recoveryScore !== null && ` · Recovery ${c.recoveryScore}/5`}
               </span>
               {c.foodNote && <span className="w-full text-sm text-text">{c.foodNote}</span>}
             </li>

@@ -401,5 +401,14 @@ and record it here.
 - Prompt 50: "Needs attention" card on Home, built on the new `GET /api/at-risk` (rules in `server/src/atRisk.ts`). The prompt's "3 straight logs" is read as 3 consecutive wrong-way moves (4 weights); "last 2 logged weeks" as the 14 days up to the client's latest adherence log. Each row lists every rule that fired.
 - Prompt 54: habits are built on `/api/clients/:clientId/habits` (the prompt named no routes). The prompt's
   "plan-completion stat" had no habit input, so it became the average of the assignment % and the habit % (see Data notes).
+- Prompt 55: no new model or route. `sleepHours` is now 0-16 with at most one decimal (error text changed to
+  "...from 0 to 16, with at most one decimal."); `recoveryScore` stays a whole number 1-5. The Check-ins tab got both
+  form fields, a "Sleep & Recovery" card (Recharts composed chart, last 14 days: bars = sleep hours, line = recovery) with
+  7-day averages and the rule line "Averaged under 6 hours this week", and both values in the day list. The rules live in
+  `server/src/sleep.ts` (`SLEEP_LOW_HOURS` 6, 7-day window ending today, nights with no value ignored, one logged night is
+  enough). `GET /api/at-risk` may now add ONE extra reason `{ rule: "sleep", text: "Sleep under 6h average this week" }`, but
+  only to a client the 3 original rules already picked (low sleep alone never lists a client; scoring and order unchanged).
+  The AI Coach context gained each check-in's recovery score and a "7-day sleep average" line. All values are typed in by
+  hand: no wearable, no automatic tracking, no medical or sleep-diagnosis wording.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

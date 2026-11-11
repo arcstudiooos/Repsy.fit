@@ -4,6 +4,8 @@ import { Router } from "express";
 import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { findAtRiskClients } from "../atRisk.js";
+import { SLEEP_WINDOW_DAYS } from "../sleep.js";
+import { addDays } from "../habits.js";
 import { asyncHandler } from "./clients.js";
 import { isDateString, today } from "./assignments.js";
 
@@ -29,8 +31,18 @@ atRiskRouter.get(
       where: { coachId },
       select: { clientId: true, date: true, weightKg: true, adherence: true },
     });
+    // Only the week the sleep rule can use, so this does not grow with the coach's whole history.
+    const sleepFrom = addDays(date, -(SLEEP_WINDOW_DAYS - 1));
+    const nights = await prisma.dailyCheckIn.findMany({
+      where: { coachId, sleepHours: { not: null }, date: { gte: sleepFrom, lte: date } },
+      select: { clientId: true, date: true, sleepHours: true },
+    });
     const clientsOut = findAtRiskClients(
-      clients.map((client) => ({ client, logs: logs.filter((l) => l.clientId === client.id) })),
+      clients.map((client) => ({
+        client,
+        logs: logs.filter((l) => l.clientId === client.id),
+        sleep: nights.filter((n) => n.clientId === client.id),
+      })),
       date,
     );
     res.json({ date, clients: clientsOut });

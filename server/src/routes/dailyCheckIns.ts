@@ -21,6 +21,8 @@ const oneToFive = (field: string) =>
     .max(5, `${field} must be a whole number from 1 to 5.`)
     .nullish();
 
+const SLEEP_MESSAGE = "sleepHours must be a number of hours from 0 to 16, with at most one decimal.";
+
 const CheckInSchema = z.object({
   date: z
     .string({ required_error: "date is required." })
@@ -28,9 +30,10 @@ const CheckInSchema = z.object({
   energy: oneToFive("energy"),
   mood: oneToFive("mood"),
   sleepHours: z
-    .number({ invalid_type_error: "sleepHours must be a number of hours from 0 to 16." })
-    .min(0, "sleepHours must be a number of hours from 0 to 16.")
-    .max(16, "sleepHours must be a number of hours from 0 to 16.")
+    .number({ invalid_type_error: SLEEP_MESSAGE })
+    .min(0, SLEEP_MESSAGE)
+    .max(16, SLEEP_MESSAGE)
+    .refine((v) => Math.abs(v * 10 - Math.round(v * 10)) < 1e-9, SLEEP_MESSAGE) // one decimal at most
     .nullish(),
   recoveryScore: oneToFive("recoveryScore"),
   waterLiters: z

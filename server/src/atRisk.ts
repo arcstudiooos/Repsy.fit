@@ -1,6 +1,7 @@
 // "Needs attention" rules for the Home tab (Prompt 50) - see "API contract" in CLAUDE.md.
 // ALL the rules live here, as one pure function with named thresholds. No AI: every reason is a
 // plain-words sentence built from the client's own progress logs, so the coach can check it by hand.
+import { SLEEP_LOW_TEXT, isLowSleep, sleepWeek, type SleepNight } from "./sleep.js";
 
 /** Rule 1: average adherence below this percent... */
 export const ADHERENCE_MIN_PERCENT = 60;
@@ -16,7 +17,7 @@ const dayNumber = (date: string) => Math.round(new Date(`${date}T00:00:00.000Z`)
 
 export type AtRiskClientInput = { id: string; name: string; goal: string; createdAt: Date };
 export type AtRiskLogInput = { date: string; weightKg: number | null; adherence: number | null };
-export type AtRiskReason = { rule: "adherence" | "inactive" | "weight"; text: string };
+export type AtRiskReason = { rule: "adherence" | "inactive" | "weight" | "sleep"; text: string };
 export type AtRiskClient = { clientId: string; clientName: string; reasons: AtRiskReason[] };
 
 /** Which way weight should move for a goal; null when the goal has no weight direction. */
@@ -79,18 +80,21 @@ function weightHit(client: AtRiskClientInput, logs: AtRiskLogInput[]): Hit | nul
  * first, then the bigger gaps, then name. `logs` may come in any order.
  */
 export function findAtRiskClients(
-  entries: { client: AtRiskClientInput; logs: AtRiskLogInput[] }[],
+  entries: { client: AtRiskClientInput; logs: AtRiskLogInput[]; sleep?: SleepNight[] }[],
   today: string,
 ): AtRiskClient[] {
   const found: { result: AtRiskClient; score: number }[] = [];
-  for (const { client, logs: unsorted } of entries) {
+  for (const { client, logs: unsorted, sleep } of entries) {
     const logs = [...unsorted].sort((a, b) => a.date.localeCompare(b.date));
     const hits = [adherenceHit(logs), inactiveHit(client, logs, today), weightHit(client, logs)].filter(
       (h): h is Hit => h !== null,
     );
     if (hits.length === 0) continue;
+    const reasons: AtRiskReason[] = hits.map(({ rule, text }) => ({ rule, text }));
+    // Prompt 55: low sleep is only an added line on a client the three rules above already picked.
+    if (sleep && isLowSleep(sleepWeek(sleep, today).average)) reasons.push({ rule: "sleep", text: SLEEP_LOW_TEXT });
     found.push({
-      result: { clientId: client.id, clientName: client.name, reasons: hits.map(({ rule, text }) => ({ rule, text })) },
+      result: { clientId: client.id, clientName: client.name, reasons },
       score: hits.length + hits.reduce((sum, h) => sum + Math.min(h.severity, 1) * 0.3, 0),
     });
   }

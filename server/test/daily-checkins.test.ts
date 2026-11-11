@@ -105,7 +105,7 @@ describe("POST /api/clients/:clientId/checkins", () => {
     [{ date: "2026-11-11", energy: 0 }, "energy: energy must be a whole number from 1 to 5."],
     [{ date: "2026-11-11", mood: 6 }, "mood: mood must be a whole number from 1 to 5."],
     [{ date: "2026-11-11", energy: 2.5 }, "energy: energy must be a whole number from 1 to 5."],
-    [{ date: "2026-11-11", sleepHours: 20 }, "sleepHours: sleepHours must be a number of hours from 0 to 16."],
+    [{ date: "2026-11-11", sleepHours: 20 }, "sleepHours: sleepHours must be a number of hours from 0 to 16, with at most one decimal."],
     [{ date: "2026-11-11", waterLiters: -1 }, "waterLiters: waterLiters must be a number from 0 to 20."],
     [{ date: "2026-11-11", steps: 200000 }, "steps: steps must be a whole number from 0 to 100000."],
   ])("rejects bad input in plain words: %j", async (body, message) => {
