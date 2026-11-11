@@ -9,6 +9,9 @@ import "./index.css";
 // Each side is its own lazy chunk, so the landing page's 3D / animation code never loads in /app.
 const App = lazy(() => import("./App"));
 const Landing = lazy(() => import("./landing/Landing"));
+// The "Studio" landing (Nov 2026), previewed at /?design=studio. Its own lazy chunk.
+const StudioLanding = lazy(() => import("./landing-new/StudioLanding"));
+const studio = new URLSearchParams(window.location.search).get("design") === "studio";
 // Privacy / Terms (Prompt 73): drafts for legal review, their own lazy chunk.
 const PrivacyPage = lazy(() => import("./legal/LegalPages").then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import("./legal/LegalPages").then((m) => ({ default: m.TermsPage })));
@@ -38,7 +41,7 @@ if (route === "redirect-to-app") window.location.replace("/app");
 if (route === "app") sessionStorage.setItem(IN_APP_KEY, "1");
 // Start fetching the chunk for this route right away, in parallel with React starting up.
 if (route === "landing") {
-  void import("./landing/Landing");
+  void (studio ? import("./landing-new/StudioLanding") : import("./landing/Landing"));
   // Landing-only fonts: Caveat pen notes, and Barlow Condensed for the classic 3D hero. /app
   // never requests them.
   const fonts = document.createElement("link");
@@ -72,7 +75,7 @@ function Root() {
       {current === "app" ? (
         <App />
       ) : current === "landing" ? (
-        <Landing />
+        studio ? <StudioLanding /> : <Landing />
       ) : current === "login" || current === "register" ? (
         <AuthPages mode={current} />
       ) : current === "forgot" || current === "reset" ? (

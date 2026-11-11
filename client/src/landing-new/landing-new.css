@@ -1,0 +1,550 @@
+/*
+ * Repsy landing, "Studio" design (bharpai.app-style, Nov 2026). Monochrome, type-led, scroll scenes.
+ * Colours: ONLY the existing tokens #141414 (ink) and #ffffff (white), with greys made by mixing them
+ * (color-mix). No new hex values - see CLAUDE.md "Landing colours".
+ * Fonts: Geist and Geist Mono (the product's fonts, already loaded by index.html), plus the
+ * landing-only Caveat (pen notes) and Barlow Condensed (condensed card headings) from main.tsx.
+ */
+.ln {
+  --ink: #141414;
+  --paper: #ffffff;
+  --bg: color-mix(in srgb, var(--ink) 7.5%, var(--paper));
+  --card: color-mix(in srgb, var(--ink) 13%, var(--paper));
+  --line: color-mix(in srgb, var(--ink) 16%, var(--paper));
+  --mute: color-mix(in srgb, var(--ink) 68%, var(--paper)); /* >= 4.5:1 on --bg, --card and white */
+  --mute-2: color-mix(in srgb, var(--ink) 55%, var(--paper)); /* large text only: >= 3:1 on --bg and white */
+  --soft: color-mix(in srgb, var(--ink) 30%, var(--paper));
+  --dark-2: color-mix(in srgb, var(--paper) 9%, var(--ink));
+  --dark-3: color-mix(in srgb, var(--paper) 18%, var(--ink));
+  /* The product's approved fonts (CLAUDE.md, design A1), set tight and bold for this page. */
+  --display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --body: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --cond: "Barlow Condensed", "Geist", ui-sans-serif, sans-serif;
+  --hand: "Caveat", cursive;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+.ln ::selection {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ln a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ---------- type ---------- */
+.ln-display {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.9;
+}
+.ln-h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  font-size: clamp(2.4rem, 5.2vw, 3.75rem);
+}
+.ln-h2 .ln-dim,
+.ln-dim {
+  color: var(--mute-2);
+}
+.ln-lead {
+  color: var(--mute);
+  font-size: 1.125rem;
+  line-height: 1.62;
+}
+.ln-cond {
+  font-family: var(--cond);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  line-height: 0.92;
+}
+.ln-hand {
+  font-family: var(--hand);
+  font-weight: 600;
+  line-height: 1;
+}
+.ln-mono {
+  font-family: var(--mono);
+}
+
+/* ---------- layout ---------- */
+.ln-wrap {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+@media (min-width: 768px) {
+  .ln-wrap {
+    padding-inline: 32px;
+  }
+}
+
+/* ---------- nav ---------- */
+.ln-nav {
+  position: fixed;
+  inset: 16px 16px auto 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.ln-nav > * {
+  pointer-events: auto;
+}
+.ln-logo {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.04em;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.ln-links {
+  display: none;
+  gap: 6px;
+}
+@media (min-width: 860px) {
+  .ln-links {
+    display: flex;
+  }
+}
+.ln-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background-color 0.2s, color 0.2s;
+}
+.ln-links a:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ln-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 4px 18px 4px 4px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper) !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: transform 0.2s;
+}
+.ln-cta:hover {
+  transform: translateY(-1px);
+}
+.ln-cta .ln-cta-dot {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  transition: transform 0.3s;
+}
+.ln-cta:hover .ln-cta-dot {
+  transform: rotate(45deg);
+}
+.ln-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: underline !important;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+.ln-focus:focus-visible,
+.ln a:focus-visible,
+.ln button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.ln-dark a:focus-visible,
+.ln-dark button:focus-visible {
+  outline-color: var(--paper);
+}
+
+/* ---------- paper objects ---------- */
+.ln-sheet {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  box-shadow:
+    0 30px 60px -24px color-mix(in srgb, var(--ink) 35%, transparent),
+    0 2px 6px color-mix(in srgb, var(--ink) 8%, transparent);
+  /* Zig-zag torn top and bottom edges. A mask only reads alpha, so ink stands for "opaque". */
+  --zig: 18px;
+  -webkit-mask:
+    conic-gradient(from 135deg at top, transparent, var(--ink) 1deg 89deg, transparent 90deg) top / var(--zig) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, transparent, var(--ink) 1deg 89deg, transparent 90deg) bottom / var(--zig) 51% repeat-x;
+  mask:
+    conic-gradient(from 135deg at top, transparent, var(--ink) 1deg 89deg, transparent 90deg) top / var(--zig) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, transparent, var(--ink) 1deg 89deg, transparent 90deg) bottom / var(--zig) 51% repeat-x;
+}
+.ln-card {
+  background: var(--card);
+  border-radius: 22px;
+}
+.ln-white {
+  background: var(--paper);
+  border-radius: 22px;
+  box-shadow: 0 20px 50px -30px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.ln-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+.ln-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ln-tag-dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ln-tag-light {
+  border: 1px solid var(--line);
+  color: var(--mute);
+}
+.ln-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* "DONE" stamp on the torn strips */
+.ln-stamp {
+  display: inline-block;
+  padding: 2px 10px 0;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+  box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 4px var(--ink);
+}
+
+/* ---------- curved ribbon ---------- */
+.ln-ribbon text {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 46px;
+  letter-spacing: 0.02em;
+  fill: var(--paper);
+  text-transform: uppercase;
+}
+
+/* ---------- road ---------- */
+.ln-road path {
+  fill: none;
+  stroke: var(--paper);
+  stroke-linecap: round;
+}
+
+/* ---------- marquee chips (dark section) ---------- */
+.ln-dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ln-dark-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 270px;
+  padding: 12px 16px;
+  border: 1px solid var(--dark-3);
+  border-radius: 14px;
+  background: var(--dark-2);
+}
+.ln-marquee {
+  display: flex;
+  width: max-content;
+  gap: 14px;
+  animation: ln-marquee 38s linear infinite;
+}
+@keyframes ln-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ln-spin {
+  animation: ln-spin 24s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes ln-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- notebook ---------- */
+.ln-notebook {
+  position: relative;
+  background:
+    linear-gradient(90deg, transparent 46px, color-mix(in srgb, var(--ink) 30%, var(--paper)) 46px 47px, transparent 47px),
+    repeating-linear-gradient(to bottom, transparent 0 31px, color-mix(in srgb, var(--ink) 11%, var(--paper)) 31px 32px),
+    color-mix(in srgb, var(--ink) 2.5%, var(--paper));
+  background-position: 0 0, 0 42px, 0 0;
+  box-shadow: 0 34px 60px -26px color-mix(in srgb, var(--ink) 40%, transparent);
+  font-family: var(--hand);
+  color: var(--ink);
+}
+.ln-ring {
+  position: absolute;
+  right: 26px;
+  top: 18px;
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  border: 5px solid color-mix(in srgb, var(--ink) 10%, var(--paper));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 6%, var(--paper));
+}
+
+/* ---------- notebook scene ----------
+ * Still frame by default: beat 0, then the Repsy beat and the app card. Under .ln-anim (motion
+ * running) the beats and the two pages stack in one grid cell and start hidden; GSAP reveals them.
+ */
+.ln-beat-mid,
+.ln-nb-book {
+  display: none;
+}
+.ln-anim .ln-beats {
+  display: grid;
+  align-items: center;
+  min-height: 320px;
+}
+.ln-anim .ln-beats > * {
+  grid-area: 1 / 1;
+  margin-top: 0;
+}
+.ln-anim .ln-beat-mid,
+.ln-anim .ln-nb-book {
+  display: block;
+}
+.ln-anim .ln-nb-stage {
+  display: grid;
+  place-items: center;
+}
+.ln-anim .ln-nb-stage > * {
+  grid-area: 1 / 1;
+}
+.ln-anim [data-beat]:not([data-beat="0"]),
+.ln-anim [data-nb-app],
+.ln-anim [data-nb-layer] {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* ---------- chat (compare + FAQ) ---------- */
+.ln-bubble {
+  max-width: 82%;
+  padding: 8px 12px 6px;
+  border-radius: 14px;
+  background: var(--paper);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.ln-bubble-dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ln-who {
+  font-size: 0.68rem;
+  color: var(--mute);
+}
+.ln-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* ---------- toggle ---------- */
+.ln-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--paper);
+}
+.ln-toggle button {
+  min-height: 40px;
+  min-width: 76px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ink);
+  transition: background-color 0.25s, color 0.25s;
+}
+.ln-toggle button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ---------- phone ---------- */
+.ln-phone {
+  position: relative;
+  width: 300px;
+  padding: 14px;
+  border-radius: 46px;
+  background: var(--ink);
+  box-shadow: 0 40px 80px -30px color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.ln-phone-screen {
+  overflow: hidden;
+  border-radius: 34px;
+  background: var(--paper);
+  min-height: 520px;
+}
+.ln-notch {
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  width: 92px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--ink);
+  transform: translateX(-50%);
+}
+
+/* ---------- the shared lead form, restyled for this page ---------- */
+.ln-form input {
+  min-height: 48px;
+  border-radius: 14px !important;
+  border-color: var(--line) !important;
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+}
+.ln-form input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.ln-form .btn-primary {
+  min-height: 52px;
+  border-radius: 999px !important;
+  background: var(--ink) !important;
+  color: var(--paper) !important;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.ln-form .landing-dim {
+  color: var(--mute);
+}
+.ln-form .landing-card {
+  border-radius: 22px;
+  background: var(--bg);
+}
+.ln-form [role="status"] p:first-child {
+  font-family: var(--display) !important;
+  font-weight: 700;
+  letter-spacing: -0.035em !important;
+}
+
+/* ---------- dot cursor (fine pointers only) ---------- */
+.ln-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 999px;
+  background: var(--paper);
+  mix-blend-mode: difference;
+  pointer-events: none;
+  transition: width 0.25s, height 0.25s, margin 0.25s, opacity 0.25s;
+}
+.ln-cursor.is-big {
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+}
+
+/* ---------- pause control (WCAG 2.2.2: moving content can be paused) ---------- */
+.ln-pause {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: 0 6px 20px -8px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.ln.is-paused .ln-marquee,
+.ln.is-paused .ln-spin {
+  animation-play-state: paused;
+}
+
+/* Reduced motion: everything rests on its final, readable frame. */
+@media (prefers-reduced-motion: reduce) {
+  .ln-marquee,
+  .ln-spin {
+    animation: none;
+  }
+  .ln-cursor {
+    display: none;
+  }
+}

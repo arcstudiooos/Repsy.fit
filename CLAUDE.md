@@ -10,7 +10,7 @@ Progress in charts. Built one feature at a time, across many separate prompts.
 2. **The stack is fixed.** Do not add other frameworks or services.
    - Frontend (`client/`): React + Vite + TypeScript, Tailwind CSS, Recharts (progress charts),
      React Query (loading / saving data)
-   - Landing page only (`client/src/landing/`, from Prompt 37): three, @react-three/fiber,
+   - Landing page only (`client/src/landing/` and `client/src/landing-new/`, from Prompt 37): three, @react-three/fiber,
      @react-three/drei and gsap. They load lazily on the landing page and must never be imported
      by `/app` code (`client/scripts/check-budget.mjs` fails the build if they are).
    - Routes: `/` = public landing page, `/app` (and `/app/...`) = the coach dashboard.
@@ -91,6 +91,15 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - **Landing colours:** the tokens above, plus tints and mixes of them made with `rgba()` /
   `color-mix()` (graph-paper lines from `--border`, paper tones mixed from `--amber` and
   `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
+- **Studio landing** (`client/src/landing-new/`, Nov 2026, preview at `/?design=studio`): the
+  owner asked for a page in the style of a reference site (bharpai.app): monochrome, bold
+  tight sans, pinned scroll scenes. It copies the look and motion only, never the reference's
+  words, logo, story or art; every claim is a shipped Repsy feature. Colours are ONLY `#141414`
+  and `#ffffff` plus `color-mix()` greys (a UI test enforces this). Fonts: Geist / Geist Mono
+  (bold, tight) plus the landing-only Caveat and Barlow Condensed. GSAP is a lazy `motion-*`
+  chunk that loads only on wide screens without reduced motion; without it the page is a
+  complete still page. A "Pause motion" button stops the marquee and badge. Tests:
+  `e2e-ui/studio-landing.spec.ts`.
 
 ### Cards and buttons
 
