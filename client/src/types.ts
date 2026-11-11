@@ -116,6 +116,11 @@ export type RecentCheckIn = {
 };
 export type RecentCheckIns = { items: RecentCheckIn[] };
 
+/** One row of the Home "Needs attention" card: a client and every rule that fired, in plain words. */
+export type AtRiskReason = { rule: "adherence" | "inactive" | "weight"; text: string };
+export type AtRiskClient = { clientId: string; clientName: string; reasons: AtRiskReason[] };
+export type AtRiskClients = { date: DateString; clients: AtRiskClient[] };
+
 export type NewProgressLog =Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;
 

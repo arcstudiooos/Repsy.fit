@@ -37,6 +37,7 @@ async function mockApi(page: Page, tasks: Tasks | "missing") {
       return route.fulfill({ json: tasks });
     }
     if (req.method() === "GET" && url.pathname === "/api/checkins/recent") return route.fulfill({ json: { items: [] } });
+    if (req.method() === "GET" && url.pathname === "/api/at-risk") return route.fulfill({ json: { date: "2026-11-11", clients: [] } });
     if (req.method() === "GET" && /\/(assignments|chat|progress)$/.test(url.pathname)) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });

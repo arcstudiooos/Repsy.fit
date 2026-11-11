@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getRecentCheckIns, getTodayTasks, queryKeys } from "../api";
+import { getAtRiskClients, getRecentCheckIns, getTodayTasks, queryKeys } from "../api";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, TodayTask } from "../types";
 import { localToday } from "./AiCoachTab";
@@ -44,6 +44,7 @@ export function HomeTab({ onOpenTask, onOpenCheckIn }: Props) {
         <div className="mt-3">{body}</div>
       </section>
       <NewCheckIns onOpenCheckIn={onOpenCheckIn} />
+      <NeedsAttention date={date} onOpenClient={onOpenCheckIn} />
     </>
   );
 }
@@ -108,6 +109,50 @@ function NewCheckIns({ onOpenCheckIn }: { onOpenCheckIn: Props["onOpenCheckIn"] 
   return (
     <section aria-label="New check-ins" className="card mt-4 p-5">
       <h3 className="text-base">New check-ins</h3>
+      <div className="mt-3">{body}</div>
+    </section>
+  );
+}
+
+// Needs attention card (Prompt 50): clients any of the server's 3 rules picked, worst first, each with
+// its exact reasons. Rules only, no AI. Clicking a row selects the client and opens Progress.
+function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: Props["onOpenCheckIn"] }) {
+  const query = useQuery({ queryKey: queryKeys.atRisk(date), queryFn: () => getAtRiskClients(date) });
+
+  let body;
+  if (query.isPending || (query.isError && query.isFetching)) {
+    body = <LoadingState />;
+  } else if (query.isError) {
+    body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  } else if (query.data.clients.length === 0) {
+    body = <p className="text-dim">Everyone is on track right now.</p>;
+  } else {
+    body = (
+      <ul aria-label="Needs attention" className="divide-y divide-border">
+        {query.data.clients.map((item) => (
+          <li key={item.clientId}>
+            <button
+              type="button"
+              aria-label={`Open progress: ${item.clientName}`}
+              onClick={() => onOpenClient(item.clientId)}
+              className="block w-full py-3 text-left"
+            >
+              <span className="block font-semibold text-text">{item.clientName}</span>
+              {item.reasons.map((reason) => (
+                <span key={reason.rule} className="block text-sm text-dim">
+                  {reason.text}
+                </span>
+              ))}
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <section aria-label="Needs attention" className="card mt-4 p-5">
+      <h3 className="text-base">Needs attention</h3>
       <div className="mt-3">{body}</div>
     </section>
   );
