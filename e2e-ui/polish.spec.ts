@@ -62,7 +62,7 @@ async function mockApi(page: Page, setup: Setup = {}) {
   });
 }
 
-const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress"];
+const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins"];
 const panel = (page: Page) => page.getByRole("tabpanel");
 
 async function openTab(page: Page, tab: string) {
