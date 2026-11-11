@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createTemplate, deleteTemplate, listClients, listTemplates, queryKeys, updateTemplate } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MealLibrary } from "../components/MealLibrary";
+import { MacroCalculator } from "../components/MacroCalculator";
 import { ExercisePicker, rowsFromTemplate, templateFromRows, type DoseRow, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
@@ -20,9 +21,12 @@ const smallButton = "rounded-lg border border-border px-3 py-1.5 text-sm font-se
 type Props = {
   /** Open the Manual Planner for `clientId`, starting a new assignment from the template. */
   onAssign: (clientId: string, prefill: TemplatePrefill) => void;
+  /** Prompt 61: a client whose details should pre-fill the macro calculator (used once). */
+  macroClientId?: string | null;
+  onMacroPrefillUsed?: () => void;
 };
 
-export function LibraryTab({ onAssign }: Props) {
+export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed }: Props) {
   const query = useQuery({ queryKey: queryKeys.templates, queryFn: listTemplates });
   const [search, setSearch] = useState("");
   // null = no form; "new" = creating; a template = editing it.
@@ -157,6 +161,7 @@ export function LibraryTab({ onAssign }: Props) {
       )}
 
       <MealLibrary />
+      <MacroCalculator initialClientId={macroClientId} onPrefillUsed={onMacroPrefillUsed} />
     </>
   );
 }

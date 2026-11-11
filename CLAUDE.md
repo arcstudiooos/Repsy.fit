@@ -133,6 +133,20 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   a `Nutrition` assignment (`source: "manual"`) through the existing assignments route: title = meal name, details = name, then
   `450 kcal · Protein 30g · Carbs 45.5g · Fat 15g`, then the steps; reasoning `From meal library: <name>`.
 
+- **Macro calculator (Prompt 61).** Nothing is stored: no model, no migration. One pure function,
+  `calculateMacros` in `server/src/macros.ts` (unit-tested with 3 hand-checked people in `server/test/macros.test.ts`):
+  Mifflin-St Jeor BMR (`10*kg + 6.25*cm - 5*age + 5` male / `- 161` female), TDEE = BMR x activity (Sedentary 1.2, Light 1.375,
+  Moderate 1.55, Active 1.725, Athlete 1.9), goal adjustment (goal text containing "fat loss" -20%, containing "muscle gain" +10%,
+  any other goal 0%; named constants at the top of the function), calories rounded to whole kcal, protein 2 g/kg, fat 25% of
+  calories (9 kcal/g), carbs = the remainder (4 kcal/g); grams are rounded first, carbs take what is left of the rounded calories.
+  **Under 18 is refused** (`400 "Macros are only calculated for adults aged 18 or older."`, also stopped in the form before any
+  request). Sex (Female / Male) is required by the formula. The result card always shows the exact line `Starting estimate for
+  coaching only - not medical advice. Adjust from the client's real progress.`, and "Save as Nutrition assignment" saves a
+  `Nutrition` assignment (`source: "manual"`, title `Macro targets: N kcal`) with that line in the reasoning. No diagnosis or
+  prescription wording. UI: a "Macro calculator" section at the bottom of the Library tab
+  (`client/src/components/MacroCalculator.tsx`); the Check-ins and Progress tabs have a "Macro calculator for <name>" link that
+  opens it pre-filled (weight, height, age, goal) from that client; the pre-fill is used once.
+
 - **Body measurements (Prompt 56).** `Measurement` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
   waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; everything except `date` is
   optional (`null` / `""`). Ranges: each tape value above 0 and at most 300 cm, `bodyFatPercent` above 0
@@ -280,6 +294,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `createMeal(input)` | POST | `/api/meals` | `NewMeal`: `{ name, mealType, calories, proteinG, carbsG, fatG, ingredients?, steps? }` | `Meal` 201 `{ id, coachId, name, mealType, calories, proteinG, carbsG, fatG, ingredients, steps, createdAt }`; 400 `{ error }` for a missing name, a mealType outside the four, a missing / negative / too-big number, calories not whole, or a too-long text |
 | `updateMeal(mealId, input)` | PUT | `/api/meals/:mealId` | `NewMeal` (replaces every field) | `Meal`; 400 as above; 404 `{ "error": "Meal not found" }` (also for another coach's row) |
 | `deleteMeal(mealId)` | DELETE | `/api/meals/:mealId` | — | 204, no body; 404 `{ "error": "Meal not found" }` |
+| `calculateMacros(input)` | POST | `/api/macros` | `MacroInput`: `{ weightKg (>0, max 500), heightCm (>0, max 300), age (whole 1-120), sex ("Female" \| "Male"), activity ("Sedentary" \| "Light" \| "Moderate" \| "Active" \| "Athlete"), goal (1-100 chars) }` | `MacroResult` 200 `{ bmr, tdee, calories, proteinG, carbsG, fatG }` (whole numbers). Stateless, nothing saved. 400 `{ error }` for bad input and, with `"Macros are only calculated for adults aged 18 or older."`, for an age under 18. Needs `requireCoach`. (Prompt 61) |
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
@@ -470,5 +485,8 @@ and record it here.
 - Prompt 60: the prompt named no routes; meals are coach-level, so they live at `/api/meals`. Unlike templates, "Assign to client"
   saves the Nutrition assignment straight away (the prompt says "creates"), with the success line shown in the panel. Calories,
   protein, carbs and fat are all required (the prompt did not say); ingredients and steps are optional.
+- Prompt 61: the prompt named no route; the calculation is `POST /api/macros` (coach-level, stateless). "Goal from the existing goal
+  list" is a text box with the list as suggestions (goal is free text everywhere else); "Fat loss + strength" counts as fat loss, like
+  the at-risk rule. Saving reuses the existing `POST /api/clients/:clientId/assignments`.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

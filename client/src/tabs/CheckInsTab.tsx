@@ -44,7 +44,13 @@ const numberOrNull = (text: string) => (text.trim() === "" ? null : Number(text)
 /** Left out of the body when empty (the server clears any field that is not sent). */
 const numberOrUndefined = (text: string) => numberOrNull(text) ?? undefined;
 
-export function CheckInsTab({ client }: { client: Client | null }) {
+type TabProps = {
+  client: Client | null;
+  /** Prompt 61: opens the Library's macro calculator pre-filled with this client. */
+  onOpenMacroCalculator?: (clientId: string) => void;
+};
+
+export function CheckInsTab({ client, onOpenMacroCalculator }: TabProps) {
   if (!client) {
     return (
       <>
@@ -53,10 +59,10 @@ export function CheckInsTab({ client }: { client: Client | null }) {
       </>
     );
   }
-  return <ClientCheckIns key={client.id} client={client} />;
+  return <ClientCheckIns key={client.id} client={client} onOpenMacroCalculator={onOpenMacroCalculator} />;
 }
 
-function ClientCheckIns({ client }: { client: Client }) {
+function ClientCheckIns({ client, onOpenMacroCalculator }: { client: Client; onOpenMacroCalculator?: (clientId: string) => void }) {
   const queryClient = useQueryClient();
   const today = localToday();
   const query = useQuery({ queryKey: queryKeys.dailyCheckIns(client.id), queryFn: () => listDailyCheckIns(client.id) });
@@ -97,6 +103,15 @@ function ClientCheckIns({ client }: { client: Client }) {
     <>
       <h2 className="text-2xl">Check-ins</h2>
       <p className="mt-1 text-dim">Selected: {client.name}</p>
+      {onOpenMacroCalculator && (
+        <button
+          type="button"
+          onClick={() => onOpenMacroCalculator(client.id)}
+          className="mt-2 text-sm font-semibold text-accent2 underline underline-offset-2"
+        >
+          Macro calculator for {client.name}
+        </button>
+      )}
 
       <form onSubmit={submit} noValidate aria-label="Today's check-in" className="card mt-4 p-5">
         <h3 className="text-base">

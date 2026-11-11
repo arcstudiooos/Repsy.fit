@@ -186,6 +186,31 @@ export interface Meal {
 export type NewMeal = Pick<Meal, "name" | "mealType" | "calories" | "proteinG" | "carbsG" | "fatG"> &
   Partial<Pick<Meal, "ingredients" | "steps">>;
 
+export const SEXES = ["Female", "Male"] as const;
+export type Sex = (typeof SEXES)[number];
+export const ACTIVITY_LEVELS = ["Sedentary", "Light", "Moderate", "Active", "Athlete"] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+
+/** Macro calculator input (Prompt 61). Adults only: the server refuses an age under 18. */
+export interface MacroInput {
+  weightKg: number;
+  heightCm: number;
+  age: number;
+  sex: Sex;
+  activity: ActivityLevel;
+  /** Free text; the goal list is suggested. */
+  goal: string;
+}
+/** A starting estimate for coaching only (whole numbers). Nothing is stored. */
+export interface MacroResult {
+  bmr: number;
+  tdee: number;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
 /** A habit the coach tracks for one client (Prompt 54), with its this-week ticks and streaks. */
 export interface Habit {
   id: string;

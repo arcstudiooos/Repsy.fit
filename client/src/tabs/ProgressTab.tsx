@@ -9,11 +9,15 @@ import { ProgressCharts } from "../components/ProgressCharts";
 import { formatWeightChange, progressStats } from "../lib/progressStats";
 import type { Client } from "../types";
 
-type Props = { client: Client | null };
+type Props = {
+  client: Client | null;
+  /** Prompt 61: opens the Library's macro calculator pre-filled with this client. */
+  onOpenMacroCalculator?: (clientId: string) => void;
+};
 
 // Progress tab: the selected client's stat cards from ALL their progress logs
 // (GET /api/clients/:clientId/progress, oldest first) and assignments.
-export function ProgressTab({ client }: Props) {
+export function ProgressTab({ client, onOpenMacroCalculator }: Props) {
   const progressQuery = useQuery({
     queryKey: queryKeys.progress(client?.id ?? "none"),
     queryFn: () => listProgress(client!.id),
@@ -93,6 +97,15 @@ export function ProgressTab({ client }: Props) {
     <>
       <h2 className="text-2xl">Progress</h2>
       <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
+      {client && onOpenMacroCalculator && (
+        <button
+          type="button"
+          onClick={() => onOpenMacroCalculator(client.id)}
+          className="mt-2 text-sm font-semibold text-accent2 underline underline-offset-2"
+        >
+          Macro calculator for {client.name}
+        </button>
+      )}
       {body}
     </>
   );

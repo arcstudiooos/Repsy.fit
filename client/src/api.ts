@@ -21,6 +21,8 @@ import type {
   HabitWeek,
   Lead,
   LoginInput,
+  MacroInput,
+  MacroResult,
   Measurement,
   NewAssignment,
   NewClient,
@@ -188,6 +190,10 @@ export const createMeal = (input: NewMeal) => request<Meal>("POST", "/meals", in
 /** Replaces every field. */
 export const updateMeal = (mealId: string, input: NewMeal) => request<Meal>("PUT", `/meals/${enc(mealId)}`, input);
 export const deleteMeal = (mealId: string) => request<void>("DELETE", `/meals/${enc(mealId)}`);
+
+// ----- Library: macro calculator (stateless, Prompt 61) -----
+/** Starting-estimate calories and macros. Rejects with ApiError 400 for bad input or an age under 18. */
+export const calculateMacros = (input: MacroInput) => request<MacroResult>("POST", "/macros", input);
 
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */

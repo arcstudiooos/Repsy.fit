@@ -214,6 +214,13 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   // Prompt 58: a Library template waiting to fill the Manual Planner's new-assignment form.
   const [plannerPrefill, setPlannerPrefill] = useState<TemplatePrefill | null>(null);
   const clearPlannerPrefill = useCallback(() => setPlannerPrefill(null), []);
+  // Prompt 61: the client whose details should pre-fill the Library's macro calculator (used once).
+  const [macroClientId, setMacroClientId] = useState<string | null>(null);
+  const clearMacroClientId = useCallback(() => setMacroClientId(null), []);
+  const openMacroCalculator = useCallback((clientId: string) => {
+    setMacroClientId(clientId);
+    setActiveTab("library");
+  }, []);
 
   // Shared "selected client" for the whole app.
   const clientsQuery = useQuery({
@@ -271,6 +278,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             setPlannerPrefill(prefill);
             setActiveTab("planner");
           }}
+          macroClientId={macroClientId}
+          onMacroPrefillUsed={clearMacroClientId}
         />
       </Suspense>
     );
@@ -315,11 +324,19 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           />
         ) : current.id === "progress" ? (
           <Suspense fallback={<LoadingState />}>
-            <ProgressTab key={`progress:${selectedClientId ?? "none"}`} client={selectedClient} />
+            <ProgressTab
+              key={`progress:${selectedClientId ?? "none"}`}
+              client={selectedClient}
+              onOpenMacroCalculator={openMacroCalculator}
+            />
           </Suspense>
         ) : current.id === "checkins" ? (
           <Suspense fallback={<LoadingState />}>
-            <CheckInsTab key={`checkins:${selectedClientId ?? "none"}`} client={selectedClient} />
+            <CheckInsTab
+              key={`checkins:${selectedClientId ?? "none"}`}
+              client={selectedClient}
+              onOpenMacroCalculator={openMacroCalculator}
+            />
           </Suspense>
         ) : (
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
