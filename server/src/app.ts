@@ -15,6 +15,9 @@ import { dailyCheckInsRouter } from "./routes/dailyCheckIns.js";
 import { habitsRouter } from "./routes/habits.js";
 import { measurementsRouter } from "./routes/measurements.js";
 import { messagesRouter, threadsRouter } from "./routes/messages.js";
+import { clientAuthRouter } from "./routes/clientAuth.js";
+import { clientInviteRouter } from "./routes/clientInvite.js";
+import { clientSessionMiddleware } from "./auth/clientSession.js";
 import { templatesRouter } from "./routes/templates.js";
 import { mealsRouter } from "./routes/meals.js";
 import { macrosRouter } from "./routes/macros.js";
@@ -39,6 +42,8 @@ app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 app.use(sessionMiddleware);
+// Client sessions (Prompt 65): reads only the client cookie, sets only req.clientAccountId.
+app.use(clientSessionMiddleware);
 
 // Health check for Render and the coach: also checks the database answers (within 3 s).
 // 503 when it doesn't, so Render never switches traffic to an instance without a database.
@@ -89,10 +94,13 @@ app.use("/api/clients/:clientId/habits", habitsRouter);
 app.use("/api/clients/:clientId/measurements", measurementsRouter);
 // Coach <-> client messages (Prompt 63). Separate from the AI Coach chat route above.
 app.use("/api/clients/:clientId/messages", messagesRouter);
+app.use("/api/clients/:clientId/invite", clientInviteRouter);
 app.use("/api/clients", clientsRouter);
 app.use("/api/seed", seedRouter);
 app.use("/api/leads", leadsRouter);
 app.use("/api/auth", authRouter);
+// Client sign-in (Prompt 65): separate from coach auth above.
+app.use("/api/client-auth", clientAuthRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
 // "Not found" is reserved for missing routes (see API contract in CLAUDE.md).
@@ -121,7 +129,9 @@ if (fs.existsSync(clientDist)) {
       },
     }),
   );
-  app.get("*", (_req, res) => {
+  app.get("*", (req, res) => {
+    // Pages whose URL carries a one-time token (invite, password reset) never send it on as a Referer.
+    if (req.path === "/client/set-password" || req.path === "/reset-password") res.setHeader("Referrer-Policy", "no-referrer");
     res.sendFile(path.join(clientDist, "index.html"));
   });
 }

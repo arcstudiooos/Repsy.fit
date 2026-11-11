@@ -45,7 +45,18 @@ export const ChangePasswordSchema = z.object({
   newPassword,
 });
 
+// Client invite and client sign-in (Prompt 65). Same email and password rules as coaches.
+export const BAD_INVITE = "This invite link is not valid any more. Please ask your coach for a new one.";
+export const InviteSchema = z.object({ email });
+export const ClientSetPasswordSchema = z.object({
+  token: z.string({ required_error: BAD_INVITE }).min(1, BAD_INVITE).max(200),
+  password: newPassword,
+});
+export const ClientLoginSchema = LoginSchema;
+
 export type RegisterInput = z.infer<typeof RegisterSchema>;
+export type InviteInput = z.infer<typeof InviteSchema>;
+export type ClientSetPasswordInput = z.infer<typeof ClientSetPasswordSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ForgotInput = z.infer<typeof ForgotSchema>;
 export type ResetInput = z.infer<typeof ResetSchema>;

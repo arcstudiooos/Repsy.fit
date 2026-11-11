@@ -2,13 +2,14 @@
 // is stored, so a database leak can't be used to reset anyone's password. A token lives 1 hour and
 // is single-use (see the reset route, which spends it atomically).
 import crypto from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import type { prisma, Tx } from "../db.js";
 
 export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export const hashToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
 
-type Db = Pick<Prisma.TransactionClient, "passwordResetToken">;
+/** The shared client or a transaction: both work. */
+type Db = Pick<Tx, "passwordResetToken"> | Pick<typeof prisma, "passwordResetToken">;
 
 /**
  * Creates a reset token for the coach and returns the raw value (the only copy that ever exists).

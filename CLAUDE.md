@@ -104,6 +104,33 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Client sign-in (Prompt 65) is a separate auth system from the coach's.** `Client` gained
+  `loginEmail` (unique when set), `passwordHash` (NULL until the client sets a password) and
+  `clientSessionVersion`; invites live in `client_invites` (`ClientInvite`: the invited `email`, SHA-256 `tokenHash`
+  only, 48-hour `expiresAt`, single-use `usedAt`; a new invite removes the client's older unused
+  ones). Separation is enforced three ways in `server/src/auth/clientSession.ts`: its own cookie
+  (`repsy_client_session`, never `repsy_session`), its own signing key (HMAC of SESSION_SECRET
+  with a fixed label, so a client token never verifies as a coach token or the reverse), and an
+  `aud: "client"` claim that the coach verifier refuses. The client middleware only ever sets
+  `req.clientAccountId`; `requireCoach` reads only `req.coachId`, so a client session gets 401 on
+  every coach route (and `/app` sends them to the coach login), and `requireClient` gives coaches
+  401 on `/api/client-auth/me`. A signed-in client can read exactly one record: their own
+  (`{ id, name, loginEmail }`). There is no client registration route and the login page
+  (`/client/login`, labelled "Client sign-in - Repsy Coach") has no sign-up link.
+  **`passwordHash` is omitted from every Prisma query globally** (`src/db.ts`), so no coach route
+  can return it, including `include: { client: true }`; only the client login opts back in per
+  query. Invites are emailed with the Prompt 47 SMTP setup; without SMTP (or if sending fails) the
+  coach gets the link to copy plus "Email is not configured - share this link with your client."
+  Setting a password from an invite raises `clientSessionVersion`, ending older client sessions;
+  re-inviting an active client is how a client resets a forgotten password in v2. **An invite never
+  changes how a client signs in until it is used**: the invited address becomes `loginEmail` only in
+  `set-password`, so a mistyped or expired re-invite cannot lock an active client out, and an email
+  is only ever claimed by someone holding a link sent to it. Issuing an invite locks the client row
+  (`SELECT ... FOR UPDATE`), so two invites at once leave one live link. Invites are limited per coach
+  (30 per 15 minutes); the invite email has a fixed subject. Pages with a token in the URL
+  (`/client/set-password`, `/reset-password`) are served with `Referrer-Policy: no-referrer`. Same password
+  rules and the same 10-per-15-minutes rate limit as coaches.
+
 - **Client messages (Prompt 63) are NOT the AI Coach chat.** `ThreadMessage` (table
   `thread_messages`) = `{ id, coachId, clientId, sender ("coach" | "client"), body, createdAt,
   readAt }`. The AI Coach keeps `ChatMessage` / `chat_messages` and `/api/clients/:clientId/chat`;
@@ -309,6 +336,12 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `sendMessage(clientId, body)` | POST | `/api/clients/:clientId/messages` | `{ body }` (1-2000 chars, plain text) | `ThreadMessage` 201 (`sender: "coach"`); 400 `{ "error": "Write a message first." }` |
 | `deleteMessage(clientId, messageId)` | DELETE | `/api/clients/:clientId/messages/:messageId` | — | 204; 403 `{ "error": "Messages can only be deleted within 15 minutes of sending." }` or `"You can only delete messages you sent."`; 404 `"Message not found"` |
 | `listThreads()` | GET | `/api/messages/threads` | — | `{ threads: [{ clientId, lastMessage: { sender, body, createdAt } \| null, unreadCount }] }` — one row per client of this coach; read-only, never marks anything read (Prompt 64) |
+| `getClientAccess(clientId)` | GET | `/api/clients/:clientId/invite` | — | `{ loginEmail, pendingEmail, status: "none" \| "invited" \| "active", inviteExpiresAt, emailConfigured }` (coach) |
+| `inviteClient(clientId, email)` | POST | `/api/clients/:clientId/invite` | `{ email }` | 201 `{ sent: true, loginEmail, inviteExpiresAt }` when emailed (link never returned), or `{ sent: false, loginEmail, inviteExpiresAt, inviteLink, note }` when email is not configured / failed; 409 `"That email can't be used for a client sign-in. Please use a different one."` (generic on purpose); 503 when APP_URL is unknown (coach) |
+| `clientSetPassword(token, password)` | POST | `/api/client-auth/set-password` | `{ token, password }` | 204; 400 `"This invite link is not valid any more. Please ask your coach for a new one."`; 409 if the invited email became another client's login meanwhile (client, no session needed) |
+| `clientLogin(email, password)` | POST | `/api/client-auth/login` | `{ email, password }` | 200 `ClientAccount` + **client** cookie; 401 `"That email or password is not right."` |
+| `clientLogout()` | POST | `/api/client-auth/logout` | — | 204, clears the client cookie only |
+| `getClientAccount()` | GET | `/api/client-auth/me` | — | 200 `{ id, name, loginEmail }` (their own client only); 401 without a **client** session |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
 | `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |

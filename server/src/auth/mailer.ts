@@ -48,7 +48,29 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
 }
 
-/** Emails the reset link to the account's own address (the only recipient this app ever mails). */
+/** True when an SMTP provider is configured, i.e. an invite email can actually be sent. */
+export const emailConfigured = (): boolean => smtpConfig() !== null;
+
+/**
+ * Emails a client their invite (Prompt 65). Only called when email is configured; otherwise the
+ * coach is shown the link to share themselves. Throws if sending fails.
+ */
+export async function deliverInviteEmail(to: string, coachName: string, link: string): Promise<void> {
+  const cfg = smtpConfig();
+  if (!cfg) throw new Error("No email provider is configured");
+  const text = [
+    "Hello,",
+    "",
+    `${coachName} invited you to Repsy Coach. Open this link to choose your password:`,
+    link,
+    "",
+    "The link works once and expires in 48 hours. If you were not expecting this, you can ignore this email.",
+  ].join("\n");
+  // Fixed subject: a coach-chosen name never goes in the subject line.
+  await withTimeout(smtpSend(cfg, to, "You're invited to Repsy Coach", text), 20_000);
+}
+
+/** Emails the reset link to the account's own address. */
 export async function deliverResetEmail(to: string, link: string): Promise<void> {
   const cfg = smtpConfig();
   if (!cfg) {

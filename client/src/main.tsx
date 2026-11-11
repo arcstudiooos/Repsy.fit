@@ -13,6 +13,8 @@ const Landing = lazy(() => import("./landing/Landing"));
 const AuthPages = lazy(() => import("./auth/AuthPages"));
 // Forgot / reset password screens (Prompt 47).
 const PasswordPages = lazy(() => import("./auth/PasswordPages"));
+// Client sign-in pages (Prompt 65): their own lazy chunk, apart from the coach screens.
+const ClientPages = lazy(() => import("./auth/ClientPages"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +48,7 @@ if (route === "landing") {
 else if (route === "app") void import("./App");
 else if (route === "login" || route === "register") void import("./auth/AuthPages");
 else if (route === "forgot" || route === "reset") void import("./auth/PasswordPages");
+else if (route.startsWith("client-")) void import("./auth/ClientPages");
 
 // In-page navigation (guard redirect, login -> app, logout -> login) fires "popstate"; a history
 // step is treated like Back/Forward so "/" still shows the landing page.
@@ -70,6 +73,8 @@ function Root() {
         <AuthPages mode={current} />
       ) : current === "forgot" || current === "reset" ? (
         <PasswordPages mode={current} />
+      ) : current === "client-login" || current === "client-set-password" || current === "client-home" ? (
+        <ClientPages mode={current} />
       ) : null}
     </Suspense>
   );

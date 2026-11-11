@@ -13,12 +13,15 @@ import type {
   ChangePasswordInput,
   ChatMessage,
   Client,
+  ClientAccess,
+  ClientAccount,
   Coach,
   DailyCheckIn,
   HabitRecord,
   HabitTick,
   HabitUpdate,
   HabitWeek,
+  InviteResult,
   Lead,
   LoginInput,
   MacroInput,
@@ -198,6 +201,18 @@ export const deleteMeal = (mealId: string) => request<void>("DELETE", `/meals/${
 /** Starting-estimate calories and macros. Rejects with ApiError 400 for bad input or an age under 18. */
 export const calculateMacros = (input: MacroInput) => request<MacroResult>("POST", "/macros", input);
 
+// ----- Client access (Prompt 65): the coach invites; the CLIENT signs in on /client/login -----
+export const getClientAccess = (clientId: string) => request<ClientAccess>("GET", `/clients/${enc(clientId)}/invite`);
+export const inviteClient = (clientId: string, email: string) =>
+  request<InviteResult>("POST", `/clients/${enc(clientId)}/invite`, { email });
+/** Client-side auth: separate routes and a separate cookie from the coach's /auth. */
+export const clientSetPassword = (token: string, password: string) =>
+  request<void>("POST", "/client-auth/set-password", { token, password });
+export const clientLogin = (email: string, password: string) =>
+  request<ClientAccount>("POST", "/client-auth/login", { email, password });
+export const clientLogout = () => request<void>("POST", "/client-auth/logout");
+export const getClientAccount = () => request<ClientAccount>("GET", "/client-auth/me");
+
 // ----- Client messages (Prompt 63) - NOT the AI Coach chat above -----
 /** Newest page of 50 (or the page before `before`), oldest -> newest. Opening marks client messages read. */
 export const getMessageThread = (clientId: string, before?: string) =>
@@ -275,6 +290,8 @@ export const queryKeys = {
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   messages: (clientId: string) => ["clients", clientId, "messages"] as const,
   threads: ["messages", "threads"] as const,
+  clientAccess: (clientId: string) => ["clients", clientId, "access"] as const,
+  clientAccount: ["client-account", "me"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
   meals: ["meals"] as const,

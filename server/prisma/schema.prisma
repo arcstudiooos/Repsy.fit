@@ -30,6 +30,7 @@ model Coach {
   habits       Habit[]
   measurements Measurement[]
   threadMessages ThreadMessage[]
+  clientInvites ClientInvite[]
   workoutTemplates WorkoutTemplate[]
   meals        Meal[]
 
@@ -38,6 +39,27 @@ model Coach {
 
 /// A password-reset link (Prompt 47). Only the SHA-256 hash of the token is stored; it expires after
 /// 1 hour and works once (usedAt is set when it is spent).
+/// A single-use invite for a client to set their password (Prompt 65). Only the SHA-256 hash of the
+/// token is stored; the raw token exists only in the emailed / copied link. Lives 48 hours.
+model ClientInvite {
+  id        String    @id @default(cuid())
+  coachId   String
+  coach     Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// The address this invite was sent to. It becomes Client.loginEmail only when the client sets a
+  /// password from this link, so an unused invite never changes how anyone signs in.
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([clientId])
+  @@index([coachId])
+  @@map("client_invites")
+}
+
 model PasswordResetToken {
   id        String    @id @default(cuid())
   coachId   String
@@ -66,6 +88,14 @@ model Client {
   focus     String   @default("")
   notes     String   @default("")
   createdAt DateTime @default(now())
+  /// Client sign-in (Prompt 65): the email the client signs in with. Set only when the client sets
+  /// a password from an invite sent to that address. Unique when set.
+  loginEmail    String?  @unique
+  /// NULL until the client sets a password from their invite link. Never returned by any API
+  /// (the Prisma client omits it globally - see src/db.ts).
+  passwordHash  String?
+  /// Raised when the client's password is (re)set, ending every older client session.
+  clientSessionVersion Int @default(0)
 
   assignments  Assignment[]
   chatMessages ChatMessage[]
@@ -75,6 +105,7 @@ model Client {
   habits       Habit[]
   measurements Measurement[]
   threadMessages ThreadMessage[]
+  invites      ClientInvite[]
 
   @@index([coachId])
   @@map("clients")

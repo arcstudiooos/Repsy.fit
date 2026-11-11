@@ -3,7 +3,9 @@
 // endpoint (AI_BASE_URL, AI_API_KEY, AI_MODEL - server-side only) and validates the
 // structured JSON reply. If the provider call or its JSON fails, a client-specific
 // fallback reply is returned instead (suggestion null).
-import type { Client } from "@prisma/client";
+import type { Client as ClientRow } from "@prisma/client";
+/** A client as every route sees it: the password hash is never loaded (see src/db.ts). */
+type Client = Omit<ClientRow, "passwordHash">;
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { sleepWeek } from "../sleep.js";

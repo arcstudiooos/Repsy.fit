@@ -23,13 +23,13 @@ export const NOT_SIGNED_IN = "You are not signed in.";
 const AUTH_DOWN = "Sign-in is not available right now. Please try again later.";
 
 // A real bcrypt hash of a random string, so an unknown email costs the same time as a wrong password.
-const DUMMY_HASH = "$2b$12$CwTycUXWue0Thq9StjUM0uJ8.gIEG9mP2LzvQe4gGSx0Q1l5hQ8se";
+export const DUMMY_HASH = "$2b$12$CwTycUXWue0Thq9StjUM0uJ8.gIEG9mP2LzvQe4gGSx0Q1l5hQ8se";
 
 type PublicCoach = { id: string; name: string; email: string; createdAt: Date };
 const publicCoach = (c: PublicCoach): PublicCoach => ({ id: c.id, name: c.name, email: c.email, createdAt: c.createdAt });
 
 /** In production without SESSION_SECRET: log once per request and refuse with a plain message. */
-function secretMissing(res: Response): boolean {
+export function secretMissing(res: Response): boolean {
   if (sessionSecret()) return false;
   console.error("Auth disabled: SESSION_SECRET is not set (or shorter than 16 characters).");
   res.status(503).json({ error: AUTH_DOWN });

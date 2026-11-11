@@ -56,7 +56,10 @@ export function verifySessionClaims(token: string): { coachId: string; version: 
   const given = Buffer.from(parts[2]);
   if (expected.length !== given.length || !crypto.timingSafeEqual(expected, given)) return null;
   try {
-    const p = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")) as { sub?: unknown; exp?: unknown; v?: unknown };
+    const p = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")) as { sub?: unknown; exp?: unknown; v?: unknown; aud?: unknown };
+    // Coach tokens carry no audience. Client tokens (Prompt 65) carry aud "client" and are signed
+    // with a different key anyway; refusing any audience here is a second, independent wall.
+    if (p.aud !== undefined) return null;
     if (typeof p.sub !== "string" || typeof p.exp !== "number" || p.exp * 1000 <= Date.now()) return null;
     // Tokens issued before Prompt 47 have no "v": they count as version 0.
     return { coachId: p.sub, version: typeof p.v === "number" ? p.v : 0 };

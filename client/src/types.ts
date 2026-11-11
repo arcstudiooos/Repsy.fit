@@ -45,6 +45,8 @@ export interface Client {
   /** Notes for AI */
   notes: string;
   createdAt: string;
+  /** Client sign-in email once invited (Prompt 65). The password hash is never sent. */
+  loginEmail?: string | null;
 }
 
 export interface Assignment {
@@ -101,6 +103,29 @@ export type TodayTask =
   | { kind: "due"; clientId: string; clientName: string; assignmentId: string; assignmentType: AssignmentType; text: string }
   | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
 export type TodayTasks = { date: DateString; tasks: TodayTask[] };
+
+/** A client's sign-in status as the coach sees it (Prompt 65). */
+export type ClientAccessStatus = "none" | "invited" | "active";
+export interface ClientAccess {
+  /** The email the client signs in with (set when they used an invite). */
+  loginEmail: string | null;
+  /** Where the live, unused invite went; it becomes the login email once used. */
+  pendingEmail: string | null;
+  status: ClientAccessStatus;
+  inviteExpiresAt: string | null;
+  /** False when the server has no email provider: invites come back as a link to share. */
+  emailConfigured: boolean;
+}
+/** Result of inviting a client: emailed, or a link for the coach to share. */
+export type InviteResult =
+  | { sent: true; loginEmail: string; inviteExpiresAt: string }
+  | { sent: false; loginEmail: string; inviteExpiresAt: string; inviteLink: string; note: string };
+/** What a signed-in CLIENT sees about themselves (Prompt 65). */
+export interface ClientAccount {
+  id: string;
+  name: string;
+  loginEmail: string | null;
+}
 
 /** Who wrote a coach <-> client message (Prompt 63). */
 export const MESSAGE_SENDERS = ["coach", "client"] as const;

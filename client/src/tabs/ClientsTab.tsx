@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteClient, listAssignments, listClients, queryKeys } from "../api";
 import { initials } from "../ClientStrip";
@@ -7,6 +7,9 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DemoSeedError, EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
+
+// The invite panel (Prompt 65) loads on first open, so its form validation (zod) stays out of /app.
+const ClientInvitePanel = lazy(() => import("../components/ClientInvite").then((m) => ({ default: m.ClientInvitePanel })));
 
 type Props = {
   selectedClientId: string | null;
@@ -31,6 +34,7 @@ export function ClientsTab({
 }: Props) {
   const queryClient = useQueryClient();
   const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
+  const [inviteFor, setInviteFor] = useState<Client | null>(null);
   const [confirmClient, setConfirmClient] = useState<Client | null>(null); // delete confirm box
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
@@ -130,6 +134,11 @@ export function ClientsTab({
       </div>
       <SixMonthDemoControl seed={seedSixMonth} />
       {form}
+      {inviteFor && (
+        <Suspense fallback={<LoadingState />}>
+          <ClientInvitePanel key={inviteFor.id} client={inviteFor} onClose={() => setInviteFor(null)} />
+        </Suspense>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {clients.map((client) => (
           <ClientCard
@@ -137,6 +146,10 @@ export function ClientsTab({
             client={client}
             selected={client.id === selectedClientId}
             onOpen={() => onOpenClient(client.id)}
+            onInvite={() => {
+              setInviteFor(client);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             onDelete={() => {
               setDeleteErrors(({ [client.id]: _, ...rest }) => rest);
               setConfirmClient(client);
@@ -174,11 +187,13 @@ type CardProps = {
   client: Client;
   selected: boolean;
   onOpen: () => void;
+  /** Opens the client sign-in invite panel (Prompt 65). */
+  onInvite: () => void;
   onDelete: () => void;
   deleteError?: string;
 };
 
-function ClientCard({ client, selected, onOpen, onDelete, deleteError }: CardProps) {
+function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError }: CardProps) {
   const counts = useAssignmentCounts(client.id);
   const statLine = stats(client);
 
@@ -225,8 +240,8 @@ function ClientCard({ client, selected, onOpen, onDelete, deleteError }: CardPro
           </div>
         )}
 
-        {/* pr-16 leaves room for the Delete button in the corner. */}
-        <div className="mt-auto flex w-full gap-4 border-t border-border pr-16 pt-3 text-sm text-dim">
+        {/* pr-36 leaves room for the Sign-in and Delete buttons in the corner. */}
+        <div className="mt-auto flex w-full gap-4 border-t border-border pr-36 pt-3 text-sm text-dim">
           <span>
             <span className="font-semibold text-text">{counts.total}</span> assignments
           </span>
@@ -236,6 +251,14 @@ function ClientCard({ client, selected, onOpen, onDelete, deleteError }: CardPro
         </div>
       </button>
 
+      <button
+        type="button"
+        onClick={onInvite}
+        aria-label={`Client sign-in for ${client.name}`}
+        className="absolute bottom-4 right-20 rounded px-1 text-sm text-dim underline-offset-2 hover:text-text hover:underline"
+      >
+        Sign-in
+      </button>
       {/* Calm, small text button - not a loud red block. */}
       <button
         type="button"

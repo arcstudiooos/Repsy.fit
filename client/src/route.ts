@@ -1,5 +1,16 @@
 // Which side of the site a path opens (Prompt 37, login screens added in Prompt 46).
-export type Route = "app" | "landing" | "redirect-to-app" | "login" | "register" | "forgot" | "reset";
+export type Route =
+  | "app"
+  | "landing"
+  | "redirect-to-app"
+  | "login"
+  | "register"
+  | "forgot"
+  | "reset"
+  // Client sign-in (Prompt 65): separate pages for invited clients.
+  | "client-login"
+  | "client-set-password"
+  | "client-home";
 
 /** sessionStorage key: set once the visitor has opened /app in this tab. */
 export const IN_APP_KEY = "repsy:in-app";
@@ -17,6 +28,9 @@ export function routeFor(pathname: string, opts: { inAppFlow: boolean; backForwa
   if (pathname === "/register") return "register";
   if (pathname === "/forgot-password") return "forgot";
   if (pathname === "/reset-password") return "reset";
+  if (pathname === "/client/login") return "client-login";
+  if (pathname === "/client/set-password") return "client-set-password";
+  if (pathname === "/client" || pathname === "/client/") return "client-home";
   if (pathname === "/" && opts.inAppFlow && !opts.backForward) return "redirect-to-app";
   return "landing";
 }
