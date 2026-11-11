@@ -29,7 +29,7 @@ const NOT_ENOUGH = "Add one more check-in to see the trend.";
 const CHART_HEIGHT = 220;
 const shortDate = (date: string) => date.slice(5); // "2026-11-02" -> "11-02"
 
-type Props = { logs: ProgressLog[]; assignments: Assignment[] };
+type Props = { logs: Pick<ProgressLog, "date" | "weightKg" | "adherence">[]; assignments: Pick<Assignment, "type">[] };
 
 /** Weight, adherence and assignments-by-type charts, fed only by real data. logs: oldest first. */
 export function ProgressCharts({ logs, assignments }: Props) {

@@ -293,6 +293,30 @@ export interface Measurement {
 export type NewMeasurement = Pick<Measurement, "date"> &
   Partial<Pick<Measurement, "waistCm" | "chestCm" | "armCm" | "hipCm" | "bodyFatPercent" | "note">>;
 
+/** Reports and export (Prompt 70). Inclusive YYYY-MM-DD range; either end may be left out. */
+export interface ReportRange {
+  from?: DateString;
+  to?: DateString;
+}
+export type ClientExportType = "progress" | "measurements" | "payments" | "assignments";
+/** The data behind the printable progress report: never notes, focus, reasoning or chat. */
+export interface ProgressReport {
+  client: { name: string; goal: string; age: number | null; weightKg: number | null; heightCm: number | null; level: Level };
+  range: { from: DateString | null; to: DateString | null };
+  logs: Pick<ProgressLog, "date" | "weightKg" | "adherence" | "workoutsDone">[];
+  measurements: Pick<Measurement, "date" | "waistCm" | "chestCm" | "armCm" | "hipCm" | "bodyFatPercent">[];
+  assignments: { total: number; done: number; byType: { type: AssignmentType; count: number }[] };
+  checkIns: {
+    count: number;
+    energy: number | null;
+    mood: number | null;
+    sleepHours: number | null;
+    recoveryScore: number | null;
+    waterLiters: number | null;
+    steps: number | null;
+  };
+}
+
 /** One exercise of a template, in the Manual Planner's shape (Prompt 58). `rest` is seconds. */
 export interface TemplateExercise {
   name: string;

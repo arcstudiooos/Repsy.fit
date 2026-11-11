@@ -142,6 +142,25 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   side-by-side layout). **Read-only for clients:** `/client` "My sessions" shows only their own upcoming Booked sessions (not ended yet,
   max 50) with title, type, time and location - never the note, status or coach id. **No** booking links, client self-booking, reminders,
   video-call integration or calendar sync (Google Calendar sync stays a v3 idea).
+- **Reports and export (Prompt 70).** Nothing is stored: no model, no migration. The Business tab's switch is now Payments /
+  Schedule / **Reports** (still 9 tabs; the Reports chunk is lazy because it holds Recharts). **Progress report:** pick a client and an
+  optional From / To (inclusive `YYYY-MM-DD`), "Generate progress report" shows a clean page - client details (goal, level, age, starting
+  weight, height), measurements summary (first / latest / change per tape value and body fat), the existing `ProgressCharts` (weight +
+  adherence + assignments by type), assignments marked Done of the total, daily check-in averages (energy, mood, sleep, recovery, water,
+  steps; blank values ignored). **The PDF method in v2 is the browser's print dialog ("Print or save as PDF" -> choose "Save as PDF"); no
+  PDF library or server-side PDF.** `@media print` in `index.css` hides the header, tabs, footer and `.no-print` controls and always prints on
+  the light palette. The report data comes from `GET /api/reports/clients/:clientId/progress-report` and **never includes** the client's
+  `notes` / `focus`, progress-log or measurement notes, assignment details / reasoning, or AI chat; no reports are emailed or scheduled.
+  **CSV exports** are generated on the server (`server/src/csv.ts`, `server/src/routes/reports.ts`) from the same coach-scoped queries
+  (`clientId` AND `coachId`), one file per type, UTF-8 **with a BOM**, CRLF line ends, header row always present (even with no rows), dates as
+  `YYYY-MM-DD`, empty cell for no value, text cells starting with `=` `+` `-` `@` get a leading `'` (spreadsheet formula safety). **Photos
+  are never exported (Prompt 57).** The optional range filters `date` (`paidOn` for payments). Columns (these are the export shape, do not rename):
+  - `progress`: `date, weightKg, adherence, workoutsDone, note`
+  - `measurements`: `date, waistCm, chestCm, armCm, hipCm, bodyFatPercent, note`
+  - `payments`: `paidOn, amount, method, note` (amount is a plain number in the coach's currency)
+  - `assignments`: `date, type, title, details, reasoning, source, status`
+  - `roster` (all of the coach's clients, A-Z): `name, goal, level, planName, planStatus, billingCycle, priceAmount, nextDueDate` - a client
+    with no plan has `planStatus` "No plan" and the other plan columns empty. The button "Download roster CSV" is on the Business Payments view.
 - **Client sign-in (Prompt 65) is a separate auth system from the coach's.** `Client` gained
   `loginEmail` (unique when set), `passwordHash` (NULL until the client sets a password) and
   `clientSessionVersion`; invites live in `client_invites` (`ClientInvite`: the invited `email`, SHA-256 `tokenHash`
@@ -391,6 +410,9 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `updateAppointment(id, input)` | PATCH | `/api/appointments/:appointmentId` | any of the create fields (at least one) | `Appointment`; the new end is checked against the stored start; 404 `{ "error": "Appointment not found" }` (also another coach's row) or `"Client not found"` |
 | `deleteAppointment(id)` | DELETE | `/api/appointments/:appointmentId` | — | 204; 404 `{ "error": "Appointment not found" }` |
 | `getMySessions()` | GET | `/api/client-auth/my-sessions` | — | `{ sessions: [{ id, title, type, startsAt, endsAt, location }] }` — the signed-in CLIENT's own upcoming Booked sessions (not yet ended), soonest first, max 50; no note, no status; 401 without a **client** session (Prompt 69) |
+| `getProgressReport(clientId, range)` | GET | `/api/reports/clients/:clientId/progress-report?from=YYYY-MM-DD&to=YYYY-MM-DD` | — (`from` / `to` optional, inclusive) | `ProgressReport` `{ client: { name, goal, age, weightKg, heightCm, level }, range: { from, to }, logs: { date, weightKg, adherence, workoutsDone }[] (oldest first), measurements: { date, waistCm, chestCm, armCm, hipCm, bodyFatPercent }[], assignments: { total, done, byType: { type, count }[] }, checkIns: { count, energy, mood, sleepHours, recoveryScore, waterLiters, steps (averages or null) } }`. No notes, focus, reasoning or chat. 400 `{ error }` for a bad date or `from` after `to`; 404 `Client not found` (also another coach's client). Needs `requireCoach`. (Prompt 70) |
+| `downloadClientCsv(clientId, type, range)` | GET | `/api/reports/clients/:clientId/export/:type?from&to` | — (`type` = `progress` \| `measurements` \| `payments` \| `assignments`) | `text/csv; charset=utf-8` attachment, columns in "Reports and export" above; 400 for another type or a bad range; 404 `Client not found`. Needs `requireCoach`. (Prompt 70) |
+| `downloadRosterCsv()` | GET | `/api/reports/roster` | — | `text/csv` attachment of all the signed-in coach's clients with plan status and next due date. Needs `requireCoach`. (Prompt 70) |
 | `getMyPlan()` | GET | `/api/client-auth/my-plan` | — | `{ plan: { planName, status, nextDueDate } \| null, lastPaymentDate }` — the signed-in CLIENT's own plan only; no amounts |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
@@ -606,5 +628,8 @@ and record it here.
   `tz` parameter and a new `kind: "appointment"` row (an existing route extended, as the prompt asked). The Business switch has
   Payments / Schedule only: "Reports" does not exist yet. A today's-appointment row on Home has no button (there is no tab to open for it).
   Appointment ids and the UTC range come from the browser; the server never guesses a coach's timezone.
+- Prompt 70: the prompt named no routes; reports are coach-level, so they live at `/api/reports` (`roster`, and per client `export/:type` and
+  `progress-report`). The report is a JSON endpoint plus a React page printed by the browser (no PDF library). "Check-in averages" use the daily
+  check-ins; the CSV files add a UTF-8 BOM and a formula guard (the prompt did not say). Invoices stay out (the Business note still says so).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

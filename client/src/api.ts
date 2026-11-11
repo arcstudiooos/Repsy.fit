@@ -49,6 +49,9 @@ import type {
   NewWorkoutTemplate,
   Payment,
   ProgressLog,
+  ProgressReport,
+  ReportRange,
+  ClientExportType,
   RecentCheckIns,
   RegisterInput,
   ResetPasswordInput,
@@ -299,6 +302,50 @@ export const approveReviewItem = (itemId: string, date: string) =>
 /** Dismisses one item. It leaves the queue but stays in the client's history. */
 export const dismissReviewItem = (itemId: string) =>
   request<{ item: ReviewItem; assignment: null }>("POST", `/review-queue/${enc(itemId)}/dismiss`);
+
+// ----- Reports and export (Prompt 70) -----
+const rangeQuery = ({ from, to }: ReportRange) => {
+  const q = new URLSearchParams();
+  if (from) q.set("from", from);
+  if (to) q.set("to", to);
+  const s = q.toString();
+  return s ? `?${s}` : "";
+};
+export const getProgressReport = (clientId: string, range: ReportRange) =>
+  request<ProgressReport>("GET", `/reports/clients/${enc(clientId)}/progress-report${rangeQuery(range)}`);
+
+/** Fetches a CSV from the server and saves it through the browser's download. */
+async function downloadCsv(path: string): Promise<void> {
+  const endpoint = `GET /api${path}`;
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`);
+  } catch {
+    throw new ApiError(`Can't reach the server (${endpoint}).`, "network", null, endpoint);
+  }
+  if (!res.ok) {
+    const data: unknown = await res.json().catch(() => null);
+    const message = data && typeof data === "object" && "error" in data ? String((data as { error: unknown }).error) : null;
+    if (res.status === 404 && (!message || message === "Not found")) {
+      throw new ApiError(`Endpoint not available yet: ${endpoint}`, "endpoint_missing", 404, endpoint);
+    }
+    throw new ApiError(message ?? `Request failed: ${endpoint} (HTTP ${res.status})`, "http", res.status, endpoint);
+  }
+  const filename = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "export.csv";
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+/** One client's progress logs / measurements / payments / assignments as a CSV file. */
+export const downloadClientCsv = (clientId: string, type: ClientExportType, range: ReportRange) =>
+  downloadCsv(`/reports/clients/${enc(clientId)}/export/${type}${rangeQuery(range)}`);
+/** All of the coach's clients with plan status and next due date as a CSV file. */
+export const downloadRosterCsv = () => downloadCsv("/reports/roster");
 
 // ----- Demo data -----
 /** Creates demo clients with assignments and progress; returns the created clients. */

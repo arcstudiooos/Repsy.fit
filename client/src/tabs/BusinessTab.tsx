@@ -1,9 +1,9 @@
 // Business tab (Prompt 68): client plans and payments the coach records by hand.
 // RECORD-KEEPING ONLY: nothing here charges a card, sends a payment link or a reminder, or makes an
 // invoice. The help line under the heading says so.
-import { useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
+import { downloadRosterCsv, getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Schedule } from "../components/Schedule";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
@@ -54,17 +54,21 @@ export function money(amount: number, currency: string): string {
 
 const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
 
-const VIEWS = ["Payments", "Schedule"] as const;
+const VIEWS = ["Payments", "Schedule", "Reports"] as const;
 type View = (typeof VIEWS)[number];
 
-// Prompt 69: the Business tab has a view switch (Payments / Schedule; Reports comes later). It stays one
+// Reports (Prompt 70) holds Recharts, so it loads on first open like the other chart tabs.
+const Reports = lazy(() => import("../components/Reports").then((m) => ({ default: m.Reports })));
+
+// Prompt 69: the Business tab has a view switch (Payments / Schedule / Reports). It stays one
 // tab: the switch is inside the tab, so there is no 10th tab.
 export function BusinessTab({ clients }: { clients: Client[] }) {
   const [view, setView] = useState<View>("Payments");
   return (
     <>
-      <h2 className="text-2xl">Business</h2>
-      <div role="group" aria-label="Business view" className="mt-3 flex gap-2">
+      {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
+      <h2 className="no-print text-2xl">Business</h2>
+      <div role="group" aria-label="Business view" className="no-print mt-3 flex gap-2">
         {VIEWS.map((v) => (
           <button
             key={v}
@@ -80,7 +84,15 @@ export function BusinessTab({ clients }: { clients: Client[] }) {
           </button>
         ))}
       </div>
-      {view === "Payments" ? <PaymentsView clients={clients} /> : <Schedule clients={clients} />}
+      {view === "Payments" ? (
+        <PaymentsView clients={clients} />
+      ) : view === "Schedule" ? (
+        <Schedule clients={clients} />
+      ) : (
+        <Suspense fallback={<LoadingState />}>
+          <Reports clients={clients} />
+        </Suspense>
+      )}
     </>
   );
 }
@@ -105,9 +117,19 @@ function PaymentsView({ clients }: { clients: Client[] }) {
     [rows, today],
   );
 
+  const roster = useMutation({ mutationFn: downloadRosterCsv });
+
   return (
     <>
       <div className="mt-3 flex flex-wrap items-baseline justify-end gap-3">
+        <button
+          type="button"
+          disabled={roster.isPending}
+          onClick={() => roster.mutate()}
+          className="min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+        >
+          Download roster CSV
+        </button>
         {!adding && withoutPlan.length > 0 && query.data && (
           <button type="button" onClick={() => setAdding(true)} className="btn-primary min-h-11 rounded-lg px-4 text-sm">
             Add a plan
@@ -116,8 +138,13 @@ function PaymentsView({ clients }: { clients: Client[] }) {
       </div>
       <p className="mt-1 text-sm text-dim">
         Record-keeping only: log the payments your clients make you. Nothing here charges anyone, sends payment links or
-        reminders, or makes invoices (invoices and export come with reports).
+        reminders, or makes invoices. Export a client's data from Reports.
       </p>
+      {roster.isError && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          {plainErrorMessage(roster.error)}
+        </p>
+      )}
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">

@@ -94,6 +94,38 @@
   }
 }
 
+/* Printing the progress report (Prompt 70): only the report page, on white, without the app chrome. */
+@media print {
+  header.header-strip,
+  footer,
+  [role="tablist"],
+  .no-print {
+    display: none !important;
+  }
+  /* Paper is always the light palette, even when the screen is in dark mode (same values as theme.css). */
+  :root {
+    --bg: #faf7f2;
+    --surface: #ffffff;
+    --surface2: #f1ede6;
+    --text: #1a1a1a;
+    --dim: #6b6560;
+    --border: #e6e0d6;
+  }
+  body,
+  main,
+  [role="tabpanel"] {
+    background: var(--white) !important;
+    border: 0 !important;
+  }
+  .report {
+    break-inside: auto;
+  }
+  .report figure,
+  .report tr {
+    break-inside: avoid;
+  }
+}
+
 /* Card: surface background, 1px border, 14px radius, no heavy shadow. */
 @utility card {
   background-color: var(--surface);

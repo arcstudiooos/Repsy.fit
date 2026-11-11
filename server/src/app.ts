@@ -19,6 +19,7 @@ import { clientAuthRouter } from "./routes/clientAuth.js";
 import { clientInviteRouter } from "./routes/clientInvite.js";
 import { businessRouter, clientPlanRouter } from "./routes/business.js";
 import { appointmentsRouter } from "./routes/appointments.js";
+import { reportsRouter } from "./routes/reports.js";
 import { clientSessionMiddleware } from "./auth/clientSession.js";
 import { templatesRouter } from "./routes/templates.js";
 import { mealsRouter } from "./routes/meals.js";
@@ -79,7 +80,9 @@ app.use("/api/macros", requireCoach);
 app.use("/api/messages", requireCoach);
 app.use("/api/business", requireCoach);
 app.use("/api/appointments", requireCoach);
+app.use("/api/reports", requireCoach);
 
+app.use("/api/reports", reportsRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/macros", macrosRouter);
 app.use("/api/messages", threadsRouter);
