@@ -4,6 +4,7 @@
 import { lazy, Suspense, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { downloadRosterCsv, getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
+import { Engagement } from "../components/Engagement";
 import { Schedule } from "../components/Schedule";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
@@ -54,7 +55,7 @@ export function money(amount: number, currency: string): string {
 
 const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
 
-const VIEWS = ["Payments", "Schedule", "Reports"] as const;
+const VIEWS = ["Payments", "Schedule", "Engagement", "Reports"] as const;
 type View = (typeof VIEWS)[number];
 
 // Reports (Prompt 70) holds Recharts, so it loads on first open like the other chart tabs.
@@ -68,7 +69,7 @@ export function BusinessTab({ clients }: { clients: Client[] }) {
     <>
       {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
       <h2 className="no-print text-2xl">Business</h2>
-      <div role="group" aria-label="Business view" className="no-print mt-3 flex gap-2">
+      <div role="group" aria-label="Business view" className="no-print mt-3 flex flex-wrap gap-2">
         {VIEWS.map((v) => (
           <button
             key={v}
@@ -88,6 +89,8 @@ export function BusinessTab({ clients }: { clients: Client[] }) {
         <PaymentsView clients={clients} />
       ) : view === "Schedule" ? (
         <Schedule clients={clients} />
+      ) : view === "Engagement" ? (
+        <Engagement />
       ) : (
         <Suspense fallback={<LoadingState />}>
           <Reports clients={clients} />

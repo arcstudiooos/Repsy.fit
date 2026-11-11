@@ -161,6 +161,19 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   - `assignments`: `date, type, title, details, reasoning, source, status`
   - `roster` (all of the coach's clients, A-Z): `name, goal, level, planName, planStatus, billingCycle, priceAmount, nextDueDate` - a client
     with no plan has `planStatus` "No plan" and the other plan columns empty. The button "Download roster CSV" is on the Business Payments view.
+- **Streaks and leaderboard (Prompt 71).** Nothing is stored: no model, no migration. **Place: the Business tab's "Engagement" view**
+  (switch Payments / Schedule / Engagement / Reports; still 9 tabs; no Home card). Rules live in `server/src/engagement.ts`, per client:
+  **check-in streak** = consecutive days with a `DailyCheckIn` up to today (today not yet logged does not break it, counting back from
+  yesterday) computed by the existing `habitStreaks` (Prompt 54, reused, not copied); **habit %** = done ticks in the last 7 days /
+  (active habits x 7), rounded, `null` with no active habits - the denominator is always the full 7 days, so a habit added today starts low and climbs; **workouts this week** = Workout assignments with status Done dated Monday-Sunday
+  of the week containing the viewer's date. **The coach's ranking is those numbers in that order, nothing else:** check-in streak (high first),
+  then habit % (high first, none last), then name; clients with equal numbers share a rank; workouts are shown but never change the order. Each row shows
+  the three numbers beside its rank. A client with no check-in ever and no habit tick in the last 7 days has `enoughData: false`, rank `null`
+  and reads "Not enough data yet" (never rank 0); they are listed after the ranked clients. **Coach-only ranking:** a client sees only
+  their OWN three numbers in a "My streaks" line on `/client` (`GET /api/client-auth/my-streaks`), never a rank, the roster or another client.
+  No points currency, prizes, sharing, notifications or ranking inside the client app. **Demo data counts exactly like real entries** (same
+  records, same rules): seeded clients with a long run of check-ins or ticked habits will rank high, and the six-month demo's old dates only
+  matter if they reach today or yesterday.
 - **Client sign-in (Prompt 65) is a separate auth system from the coach's.** `Client` gained
   `loginEmail` (unique when set), `passwordHash` (NULL until the client sets a password) and
   `clientSessionVersion`; invites live in `client_invites` (`ClientInvite`: the invited `email`, SHA-256 `tokenHash`
@@ -413,6 +426,8 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getProgressReport(clientId, range)` | GET | `/api/reports/clients/:clientId/progress-report?from=YYYY-MM-DD&to=YYYY-MM-DD` | — (`from` / `to` optional, inclusive) | `ProgressReport` `{ client: { name, goal, age, weightKg, heightCm, level }, range: { from, to }, logs: { date, weightKg, adherence, workoutsDone }[] (oldest first), measurements: { date, waistCm, chestCm, armCm, hipCm, bodyFatPercent }[], assignments: { total, done, byType: { type, count }[] }, checkIns: { count, energy, mood, sleepHours, recoveryScore, waterLiters, steps (averages or null) } }`. No notes, focus, reasoning or chat. 400 `{ error }` for a bad date or `from` after `to`; 404 `Client not found` (also another coach's client). Needs `requireCoach`. (Prompt 70) |
 | `downloadClientCsv(clientId, type, range)` | GET | `/api/reports/clients/:clientId/export/:type?from&to` | — (`type` = `progress` \| `measurements` \| `payments` \| `assignments`) | `text/csv; charset=utf-8` attachment, columns in "Reports and export" above; 400 for another type or a bad range; 404 `Client not found`. Needs `requireCoach`. (Prompt 70) |
 | `downloadRosterCsv()` | GET | `/api/reports/roster` | — | `text/csv` attachment of all the signed-in coach's clients with plan status and next due date. Needs `requireCoach`. (Prompt 70) |
+| `getEngagement(date)` | GET | `/api/business/engagement?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: { clientId, clientName, rank (1-based, ties share; null = not enough data), checkInStreak, habitPercent (null = no active habits), workoutsThisWeek, enoughData }[] }` — ranked clients first, then unranked A-Z. 400 bad date; 401 signed out. Needs `requireCoach`. Business > Engagement only. (Prompt 71) |
+| `getMyStreaks(date)` | GET | `/api/client-auth/my-streaks?date=YYYY-MM-DD` | — | `{ date, checkInStreak, habitPercent, workoutsThisWeek, enoughData }` — the signed-in CLIENT's own numbers only, no rank; 400 bad date; 401 without a **client** session (Prompt 71); 404 if the coach deleted the client record (Prompt 71) |
 | `getMyPlan()` | GET | `/api/client-auth/my-plan` | — | `{ plan: { planName, status, nextDueDate } \| null, lastPaymentDate }` — the signed-in CLIENT's own plan only; no amounts |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
@@ -631,5 +646,10 @@ and record it here.
 - Prompt 70: the prompt named no routes; reports are coach-level, so they live at `/api/reports` (`roster`, and per client `export/:type` and
   `progress-report`). The report is a JSON endpoint plus a React page printed by the browser (no PDF library). "Check-in averages" use the daily
   check-ins; the CSV files add a UTF-8 BOM and a formula guard (the prompt did not say). Invoices stay out (the Business note still says so).
+- Prompt 71: the prompt named no routes; the leaderboard is `GET /api/business/engagement` (coach) and the client's line is `GET /api/client-auth/my-streaks`.
+  Chosen place: Business > Engagement (the Business switch got a 4th button, so it now wraps on phones). "Habit completion %" uses the Prompt 54 definition
+  (a rolling last 7 days), "this week" for workouts is Monday-Sunday, and "not enough data" means no check-in ever and no habit tick in the last 7 days.
+  Check-in, habit-log and assignment dates are all `YYYY-MM-DD` day strings, so the viewer's local
+  date in `?date=` is the whole timezone story here: do NOT add the `tz`/`tzEnd` offsets appointments need.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

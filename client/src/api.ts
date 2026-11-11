@@ -35,6 +35,8 @@ import type {
   MessageThread,
   MyPlan,
   MySession,
+  MyStreaks,
+  EngagementBoard,
   NewAppointment,
   NewAssignment,
   NewClient,
@@ -238,6 +240,12 @@ export const deleteAppointment = (appointmentId: string) => request<void>("DELET
 /** The signed-in CLIENT's own upcoming Booked sessions, soonest first (read-only). */
 export const getMySessions = () => request<{ sessions: MySession[] }>("GET", "/client-auth/my-sessions");
 
+// ----- Engagement (Prompt 71): streaks and the coach's leaderboard; `date` is the viewer's local day -----
+/** The coach's roster, ranked by check-in streak then habit % (clients with nothing logged have rank null). */
+export const getEngagement = (date: string) => request<EngagementBoard>("GET", `/business/engagement?date=${enc(date)}`);
+/** The signed-in CLIENT's own three numbers (never a rank or other clients). */
+export const getMyStreaks = (date: string) => request<MyStreaks>("GET", `/client-auth/my-streaks?date=${enc(date)}`);
+
 // ----- Client access (Prompt 65): the coach invites; the CLIENT signs in on /client/login -----
 export const getClientAccess = (clientId: string) => request<ClientAccess>("GET", `/clients/${enc(clientId)}/invite`);
 export const inviteClient = (clientId: string, email: string) =>
@@ -390,6 +398,8 @@ export const queryKeys = {
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,
   mySessions: ["client-account", "my-sessions"] as const,
+  myStreaks: (date: string) => ["client-account", "my-streaks", date] as const,
+  engagement: (date: string) => ["business", "engagement", date] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
   meals: ["meals"] as const,

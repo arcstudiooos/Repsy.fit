@@ -6,6 +6,7 @@ import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { BILLING_CYCLES, PAYMENT_METHODS, PLAN_STATUSES, advanceDueDate, dayOf, type BillingCycle } from "../billing.js";
 import { Prisma } from "@prisma/client";
+import { loadEngagement, rankEngagement } from "../engagement.js";
 import { asyncHandler, findClient } from "./clients.js";
 import { isDateString } from "./assignments.js";
 
@@ -85,6 +86,22 @@ businessRouter.get(
       currency: coach?.currency ?? "INR",
       plans: plans.map(({ client, payments, ...plan }) => ({ client, plan, lastPayment: payments[0] ?? null })),
     });
+  }),
+);
+
+// GET /api/business/engagement?date=YYYY-MM-DD (Prompt 71) -> { date, clients: [{ clientId, clientName, rank,
+// checkInStreak, habitPercent, workoutsThisWeek, enoughData }] }. Coach roster, ranked by check-in streak and
+// then habit %; `rank` is null ("Not enough data yet") for a client with nothing logged.
+businessRouter.get(
+  "/engagement",
+  asyncHandler(async (req, res) => {
+    const raw = req.query.date;
+    const date = raw === undefined ? new Date().toISOString().slice(0, 10) : typeof raw === "string" && isDateString(raw) ? raw : null;
+    if (!date) {
+      res.status(400).json({ error: "date must be a real date in YYYY-MM-DD form." });
+      return;
+    }
+    res.json({ date, clients: rankEngagement(await loadEngagement({ coachId: coachIdOf(req) }, date)) });
   }),
 );
 

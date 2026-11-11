@@ -148,6 +148,31 @@ export interface MySession {
   location: string;
 }
 
+// ----- Engagement: streaks and leaderboard (Prompt 71). No points, no prizes. -----
+/** The three numbers behind every ranking. `habitPercent` is null when the client has no active habits. */
+export interface MyStreaks {
+  date: string;
+  checkInStreak: number;
+  habitPercent: number | null;
+  workoutsThisWeek: number;
+  /** false = nothing logged yet ("Not enough data yet"). */
+  enoughData: boolean;
+}
+export interface EngagementRow {
+  clientId: string;
+  clientName: string;
+  /** 1-based, ties share a rank; null when there is not enough data. */
+  rank: number | null;
+  checkInStreak: number;
+  habitPercent: number | null;
+  workoutsThisWeek: number;
+  enoughData: boolean;
+}
+export interface EngagementBoard {
+  date: string;
+  clients: EngagementRow[];
+}
+
 // ----- Business: plans and recorded payments (Prompt 68). Record-keeping only. -----
 export const CURRENCIES = ["INR", "USD"] as const;
 export type Currency = (typeof CURRENCIES)[number];

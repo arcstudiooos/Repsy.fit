@@ -16,7 +16,9 @@ import {
   setClientSessionCookie,
 } from "../auth/clientSession.js";
 import { BAD_LOGIN, DUMMY_HASH, secretMissing } from "./auth.js";
+import { loadEngagement } from "../engagement.js";
 import { asyncHandler } from "./clients.js";
+import { isDateString } from "./assignments.js";
 
 class InvalidInvite extends Error {}
 export const INVITE_EMAIL_TAKEN = "That email is already used for another client sign-in. Please ask your coach for a new invite.";
@@ -139,6 +141,29 @@ clientAuthRouter.get(
       select: { id: true, title: true, type: true, startsAt: true, endsAt: true, location: true },
     });
     res.json({ sessions });
+  }),
+);
+
+// GET /api/client-auth/my-streaks?date=YYYY-MM-DD (Prompt 71) -> { date, checkInStreak, habitPercent, workoutsThisWeek, enoughData }
+// The signed-in client's OWN three numbers only: no rank, no roster, nothing about any other client.
+clientAuthRouter.get(
+  "/my-streaks",
+  requireClient,
+  asyncHandler(async (req, res) => {
+    const raw = req.query.date;
+    const date = raw === undefined ? new Date().toISOString().slice(0, 10) : typeof raw === "string" && isDateString(raw) ? raw : null;
+    if (!date) {
+      res.status(400).json({ error: "date must be a real date in YYYY-MM-DD form." });
+      return;
+    }
+    const [mine] = await loadEngagement({ clientId: clientAccountIdOf(req) }, date);
+    if (!mine) {
+      // The session is valid but the coach deleted the client record.
+      res.status(404).json({ error: "Your account was not found. Please ask your coach." });
+      return;
+    }
+    const { checkInStreak, habitPercent, workoutsThisWeek, enoughData } = mine;
+    res.json({ date, checkInStreak, habitPercent, workoutsThisWeek, enoughData });
   }),
 );
 

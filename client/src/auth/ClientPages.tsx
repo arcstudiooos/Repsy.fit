@@ -4,8 +4,8 @@
 // only exists after the coach sends an invite, so these pages never link to registration.
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, clientLogin, clientLogout, clientSetPassword, getClientAccount, getMyPlan, getMySessions, queryKeys } from "../api";
-import { dayHeading, timeRangeText, viewerTimeZone } from "../lib/schedule";
+import { ApiError, clientLogin, clientLogout, clientSetPassword, getClientAccount, getMyPlan, getMySessions, getMyStreaks, queryKeys } from "../api";
+import { dayHeading, localDateKey, timeRangeText, viewerTimeZone } from "../lib/schedule";
 import { ClientLoginSchema, ClientSetPasswordSchema } from "../authSchemas";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
@@ -224,6 +224,36 @@ function MySessionsSection() {
   );
 }
 
+/**
+ * "My streaks" (Prompt 71): a small line with the client's OWN numbers only. No rank, no other
+ * clients, no points. Nothing logged yet reads "Not enough data yet".
+ */
+function MyStreaksSection() {
+  const date = localDateKey(new Date());
+  const streaks = useQuery({ queryKey: queryKeys.myStreaks(date), queryFn: () => getMyStreaks(date), retry: false });
+  const d = streaks.data;
+  return (
+    <section aria-label="My streaks" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
+      <h2 className="text-base">My streaks</h2>
+      {streaks.isPending ? (
+        <p className="mt-2 text-sm text-dim">Loading...</p>
+      ) : streaks.isError ? (
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          {plainErrorMessage(streaks.error)}
+        </p>
+      ) : !d || !d.enoughData ? (
+        <p className="mt-2 text-sm text-dim">Not enough data yet</p>
+      ) : (
+        <p className="mt-2 text-sm text-text">
+          Check-in streak <span className="font-mono">{d.checkInStreak === 1 ? "1 day" : `${d.checkInStreak} days`}</span> · Habits, last 7 days{" "}
+          <span className="font-mono">{d.habitPercent === null ? "none yet" : `${d.habitPercent}%`}</span> · Workouts this week{" "}
+          <span className="font-mono">{d.workoutsThisWeek}</span>
+        </p>
+      )}
+    </section>
+  );
+}
+
 /** /client: the signed-in client's own page. Signed out -> /client/login (never the coach /login). */
 function ClientHomePage() {
   const queryClient = useQueryClient();
@@ -264,6 +294,7 @@ function ClientHomePage() {
     <Shell title={`Hi, ${me.data.name}`} intro={`Signed in as ${me.data.loginEmail ?? "you"}.`}>
       <MyPlanSection />
       <MySessionsSection />
+      <MyStreaksSection />
       <div className="mt-6 flex justify-center">
         <button
           type="button"
