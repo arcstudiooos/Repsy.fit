@@ -1,5 +1,5 @@
 // Assignment status change + delete (Prompt 24). Prisma is mocked, so these run without a database.
-import request from "supertest";
+import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma } = vi.hoisted(() => ({
@@ -13,11 +13,11 @@ vi.mock("../src/db.js", () => ({ prisma }));
 
 import { app } from "../src/app.js";
 
-const client = { id: "client-1", coachId: null, name: "Maya Patel" };
+const client = { id: "client-1", coachId: TEST_COACH_ID, name: "Maya Patel" };
 const stored = {
   id: "assignment-1",
   clientId: client.id,
-  coachId: null,
+  coachId: TEST_COACH_ID,
   type: "Workout",
   title: "Squat day",
   details: "Back squat 4x6",
@@ -44,7 +44,7 @@ describe("PATCH /api/clients/:clientId/assignments/:assignmentId", () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: stored.id, clientId: client.id, status });
     expect(prisma.assignment.findFirst).toHaveBeenCalledWith({
-      where: { id: stored.id, clientId: client.id, coachId: null },
+      where: { id: stored.id, clientId: client.id, coachId: TEST_COACH_ID },
     });
     expect(prisma.assignment.update).toHaveBeenCalledWith({ where: { id: stored.id }, data: { status } });
   });
@@ -89,7 +89,7 @@ describe("DELETE /api/clients/:clientId/assignments/:assignmentId", () => {
     expect(res.status).toBe(204);
     expect(res.text).toBe("");
     expect(prisma.assignment.findFirst).toHaveBeenCalledWith({
-      where: { id: stored.id, clientId: client.id, coachId: null },
+      where: { id: stored.id, clientId: client.id, coachId: TEST_COACH_ID },
     });
     expect(prisma.assignment.delete).toHaveBeenCalledWith({ where: { id: stored.id } });
   });

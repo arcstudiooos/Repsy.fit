@@ -1,5 +1,5 @@
 // Quick demo seed (Prompt 29). Prisma is mocked, so these run without a database.
-import request from "supertest";
+import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma, tx } = vi.hoisted(() => {
@@ -42,7 +42,7 @@ describe("POST /api/seed/demo", () => {
     expect(res.status).toBe(201);
     expect(res.body.map((c: { name: string }) => c.name)).toEqual(["Maya Patel", "Arjun Mehta", "Casey Jordan"]);
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1); // advisory lock: two seeds can't interleave
-    expect(tx.client.count).toHaveBeenCalledWith({ where: { coachId: null } });
+    expect(tx.client.count).toHaveBeenCalledWith({ where: { coachId: TEST_COACH_ID } });
 
     const [maya, arjun, casey] = createdData();
     expect(maya).toMatchObject({
@@ -54,7 +54,7 @@ describe("POST /api/seed/demo", () => {
       level: "Intermediate",
       focus: "Lower body strength, protein intake",
       notes: "Vegetarian. Trains 4x/week. Sleep inconsistent on weekdays.",
-      coachId: null,
+      coachId: TEST_COACH_ID,
     });
     expect(arjun).toMatchObject({
       name: "Arjun Mehta",
@@ -96,7 +96,7 @@ describe("POST /api/seed/demo", () => {
       const dates = logs.map((l) => new Date(`${String(l.date)}T00:00:00Z`).getTime());
       expect(dates[1] - dates[0]).toBe(7 * 86_400_000);
       expect(dates[2] - dates[1]).toBe(7 * 86_400_000);
-      expect(logs.every((l) => l.coachId === null)).toBe(true);
+      expect(logs.every((l) => l.coachId === TEST_COACH_ID)).toBe(true);
 
       expect(data.assignments.create).toEqual([
         expect.objectContaining({
@@ -106,7 +106,7 @@ describe("POST /api/seed/demo", () => {
           reasoning: "Starter plan to establish baseline.",
           source: "manual",
           status: "Active",
-          coachId: null,
+          coachId: TEST_COACH_ID,
         }),
       ]);
     }

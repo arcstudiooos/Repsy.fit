@@ -3,7 +3,8 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { isDateString } from "./assignments.js";
-import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
+import { coachIdOf } from "../auth/requireCoach.js";
+import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 const NewProgressLogSchema = z.object({
   date: z
@@ -30,7 +31,7 @@ const NewProgressLogSchema = z.object({
 /** The client from the path, or null with a 404 already sent. */
 async function clientOr404(req: Request, res: Response) {
   const { clientId } = req.params as { clientId: string };
-  const client = await findClient(clientId);
+  const client = await findClient(clientId, coachIdOf(req));
   if (!client) res.status(404).json({ error: "Client not found" });
   return client;
 }
@@ -45,7 +46,7 @@ progressRouter.get(
     const client = await clientOr404(req, res);
     if (!client) return;
     const logs = await prisma.progressLog.findMany({
-      where: { clientId: client.id, coachId: DEMO_COACH_ID },
+      where: { clientId: client.id, coachId: coachIdOf(req) },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
     res.json(logs);
@@ -65,7 +66,7 @@ progressRouter.post(
     const client = await clientOr404(req, res);
     if (!client) return;
     const log = await prisma.progressLog.create({
-      data: { ...parsed.data, clientId: client.id, coachId: DEMO_COACH_ID },
+      data: { ...parsed.data, clientId: client.id, coachId: coachIdOf(req) },
     });
     res.status(201).json(log);
   }),
@@ -80,7 +81,7 @@ progressRouter.delete(
     const { logId } = req.params as { logId: string };
     // One scoped delete: a second delete of the same log (double tap, two tabs) gets 404, not 500.
     const { count } = await prisma.progressLog.deleteMany({
-      where: { id: logId, clientId: client.id, coachId: DEMO_COACH_ID },
+      where: { id: logId, clientId: client.id, coachId: coachIdOf(req) },
     });
     if (count === 0) {
       res.status(404).json({ error: "Progress log not found" });

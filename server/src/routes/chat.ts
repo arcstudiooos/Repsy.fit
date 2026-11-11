@@ -6,17 +6,18 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { answerQuestion, loadClientContext } from "./ai.js";
-import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
+import { coachIdOf } from "../auth/requireCoach.js";
+import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 export const CHAT_ROLES = ["coach", "ai"] as const;
 export type ChatRole = (typeof CHAT_ROLES)[number];
 
 /** Saves one chat message for a client. Server-side only (no public route). */
-export async function saveMessage(clientId: string, role: ChatRole, content: string) {
+export async function saveMessage(clientId: string, role: ChatRole, content: string, coachId: string) {
   if (!CHAT_ROLES.includes(role)) throw new Error(`Invalid chat role: ${role}`);
   const text = content.trim();
   if (!text) throw new Error("Chat message content can't be empty");
-  return prisma.chatMessage.create({ data: { clientId, role, content: text, coachId: DEMO_COACH_ID } });
+  return prisma.chatMessage.create({ data: { clientId, role, content: text, coachId } });
 }
 
 // Mounted at /api/clients/:clientId/chat
@@ -27,13 +28,14 @@ chatRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const { clientId } = req.params as { clientId: string };
-    const client = await findClient(clientId);
+    const coachId = coachIdOf(req);
+    const client = await findClient(clientId, coachId);
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
     }
     const messages = await prisma.chatMessage.findMany({
-      where: { clientId: client.id },
+      where: { clientId: client.id, coachId },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: { id: true, clientId: true, role: true, content: true, createdAt: true },
     });
@@ -59,15 +61,16 @@ chatRouter.post(
       return;
     }
     const { clientId } = req.params as { clientId: string };
-    const client = await findClient(clientId);
+    const coachId = coachIdOf(req);
+    const client = await findClient(clientId, coachId);
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
     }
     const context = await loadClientContext(client);
-    const question = await saveMessage(client.id, "coach", parsed.data.question);
+    const question = await saveMessage(client.id, "coach", parsed.data.question, coachId);
     const { answer, suggestion } = await answerQuestion(context, parsed.data.question);
-    const reply = await saveMessage(client.id, "ai", answer);
+    const reply = await saveMessage(client.id, "ai", answer, coachId);
     res.status(201).json({ question, reply, suggestion });
   }),
 );

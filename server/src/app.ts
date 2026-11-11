@@ -9,6 +9,7 @@ import { seedRouter } from "./routes/seed.js";
 import { leadsRouter } from "./routes/leads.js";
 import { authRouter } from "./routes/auth.js";
 import { sessionMiddleware } from "./auth/session.js";
+import { requireCoach } from "./auth/requireCoach.js";
 import { prisma } from "./db.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -44,6 +45,10 @@ app.get("/api/health", async (_req, res) => {
     clearTimeout(timer);
   }
 });
+
+// Every v1 data route needs a signed-in coach (Prompt 45). Public: /api/health, /api/leads, /api/auth/*.
+app.use("/api/clients", requireCoach);
+app.use("/api/seed", requireCoach);
 
 app.use("/api/clients/:clientId/assignments", assignmentsRouter);
 app.use("/api/clients/:clientId/auto-assign", autoAssignRouter);

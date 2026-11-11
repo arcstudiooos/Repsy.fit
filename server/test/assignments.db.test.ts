@@ -1,21 +1,33 @@
 // Prompt 17 "Test:" line against a real database: ask "Make a workout plan", assign the
 // suggestion, then the client's list holds exactly one assignment with source "ai" and
 // reasoning filled. Skipped when DATABASE_URL is not set (runs in CI).
-import request from "supertest";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+process.env.SESSION_SECRET ??= "test-secret-test-secret-test-secret";
+
 import { app } from "../src/app.js";
 import { prisma } from "../src/db.js";
+import { asCoach } from "./helpers/authedRequest.js";
 
-const createdIds: string[] = [];
+const tag = `assignments-${Date.now()}`;
 
 describe.skipIf(!process.env.DATABASE_URL)("assign from AI suggestion (database)", () => {
+  let coachId = "";
+  let api: ReturnType<typeof asCoach>;
+
+  beforeAll(async () => {
+    coachId = (await prisma.coach.create({ data: { name: "Test", email: `${tag}@example.com`, passwordHash: "x" } })).id;
+    api = asCoach(app, coachId);
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 
   afterAll(async () => {
-    await prisma.client.deleteMany({ where: { id: { in: createdIds } } });
+    // Deleting the coach cascades to its clients and everything under them.
+    await prisma.coach.deleteMany({ where: { id: coachId } });
     await prisma.$disconnect();
   });
 
@@ -46,32 +58,31 @@ describe.skipIf(!process.env.DATABASE_URL)("assign from AI suggestion (database)
       })),
     );
 
-    const created = await request(app).post("/api/clients").send({ name: "Assign Test Client" });
+    const created = await api.post("/api/clients").send({ name: "Assign Test Client" });
     expect(created.status).toBe(201);
     const clientId: string = created.body.id;
-    createdIds.push(clientId);
 
-    const asked = await request(app).post(`/api/clients/${clientId}/chat`).send({ question: "Make a workout plan" });
+    const asked = await api.post(`/api/clients/${clientId}/chat`).send({ question: "Make a workout plan" });
     expect(asked.status).toBe(201);
     const suggestion = asked.body.suggestion;
     expect(suggestion).not.toBeNull();
 
     // Nothing is saved until the coach taps Assign (a dismissed suggestion saves nothing).
-    const before = await request(app).get(`/api/clients/${clientId}/assignments`);
+    const before = await api.get(`/api/clients/${clientId}/assignments`);
     expect(before.body).toEqual([]);
 
-    const assigned = await request(app)
+    const assigned = await api
       .post(`/api/clients/${clientId}/assignments`)
       .send({ ...suggestion, source: "ai", date: "2026-11-10" });
     expect(assigned.status).toBe(201);
 
-    const list = await request(app).get(`/api/clients/${clientId}/assignments`);
+    const list = await api.get(`/api/clients/${clientId}/assignments`);
     expect(list.status).toBe(200);
     expect(list.body).toHaveLength(1);
     expect(list.body[0]).toMatchObject({
       id: assigned.body.id,
       clientId,
-      coachId: null,
+      coachId,
       type: "Workout",
       source: "ai",
       status: "Active",

@@ -1,5 +1,5 @@
 // Six-month demo seed (Prompt 30). Prisma is mocked, so these run without a database.
-import request from "supertest";
+import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma, tx } = vi.hoisted(() => {
@@ -153,10 +153,10 @@ describe("POST /api/seed/six-month-demo", () => {
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
     const data = tx.client.create.mock.calls.map(([a]) => (a as CreateArg).data);
     for (const d of data) {
-      expect(d.coachId).toBeNull();
+      expect(d.coachId).toBe(TEST_COACH_ID);
       expect(d.progressLogs.create).toHaveLength(26);
       expect(d.assignments.create).toHaveLength(5);
-      expect(d.assignments.create.every((a) => a.coachId === null)).toBe(true);
+      expect(d.assignments.create.every((a) => a.coachId === TEST_COACH_ID)).toBe(true);
       expect(d.weightKg).toBe(SIX_MONTH_ROSTER.find((c) => c.name === d.name)!.endKg);
       expect(d).not.toHaveProperty("startKg");
       expect(d).not.toHaveProperty("baseAdherence");
@@ -170,7 +170,7 @@ describe("POST /api/seed/six-month-demo", () => {
     expect(res.body).toHaveLength(8);
     expect(res.body.map((c: { name: string }) => c.name)).not.toContain("Sarah Mitchell");
     expect(tx.client.findMany).toHaveBeenCalledWith({
-      where: { coachId: null, name: { in: NAMES } },
+      where: { coachId: TEST_COACH_ID, name: { in: NAMES } },
       select: { name: true },
     });
   });

@@ -1,22 +1,34 @@
 // Prompt 18 "Test:" line against a real database: generate one of each type for one
 // client - 4 distinct, client-specific ai assignments exist. Skipped when DATABASE_URL is
 // not set (runs in CI).
-import request from "supertest";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+process.env.SESSION_SECRET ??= "test-secret-test-secret-test-secret";
+
 import { app } from "../src/app.js";
 import { prisma } from "../src/db.js";
+import { asCoach } from "./helpers/authedRequest.js";
 
-const createdIds: string[] = [];
+const tag = `auto-assign-${Date.now()}`;
 const TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 
 describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
+  let coachId = "";
+  let api: ReturnType<typeof asCoach>;
+
+  beforeAll(async () => {
+    coachId = (await prisma.coach.create({ data: { name: "Test", email: `${tag}@example.com`, passwordHash: "x" } })).id;
+    api = asCoach(app, coachId);
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 
   afterAll(async () => {
-    await prisma.client.deleteMany({ where: { id: { in: createdIds } } });
+    // Deleting the coach cascades to its clients and everything under them.
+    await prisma.coach.deleteMany({ where: { id: coachId } });
     await prisma.$disconnect();
   });
 
@@ -51,25 +63,24 @@ describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
       }),
     );
 
-    const created = await request(app)
+    const created = await api
       .post("/api/clients")
       .send({ name: "Auto Assign Test Client", goal: "Muscle gain", notes: "Old knee injury" });
     expect(created.status).toBe(201);
     const clientId: string = created.body.id;
-    createdIds.push(clientId);
 
     for (const type of TYPES) {
-      const res = await request(app).post(`/api/clients/${clientId}/auto-assign`).send({ type });
+      const res = await api.post(`/api/clients/${clientId}/auto-assign`).send({ type });
       expect(res.status).toBe(201);
       expect(res.body).toHaveLength(1);
     }
 
-    const list = await request(app).get(`/api/clients/${clientId}/assignments`);
+    const list = await api.get(`/api/clients/${clientId}/assignments`);
     expect(list.body).toHaveLength(4);
     expect(new Set(list.body.map((a: { type: string }) => a.type))).toEqual(new Set(TYPES));
     expect(new Set(list.body.map((a: { title: string }) => a.title)).size).toBe(4);
     for (const a of list.body) {
-      expect(a).toMatchObject({ clientId, coachId: null, source: "ai", status: "Active" });
+      expect(a).toMatchObject({ clientId, coachId, source: "ai", status: "Active" });
       expect(a.reasoning).toContain("Muscle gain");
     }
   });
@@ -77,13 +88,12 @@ describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
   it("saves nothing when the AI fails", async () => {
     vi.stubEnv("AI_API_KEY", "");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const created = await request(app).post("/api/clients").send({ name: "Auto Assign Fail Client" });
+    const created = await api.post("/api/clients").send({ name: "Auto Assign Fail Client" });
     const clientId: string = created.body.id;
-    createdIds.push(clientId);
 
-    const res = await request(app).post(`/api/clients/${clientId}/auto-assign`).send({ type: "Workout" });
+    const res = await api.post(`/api/clients/${clientId}/auto-assign`).send({ type: "Workout" });
     expect(res.status).toBe(502);
-    const list = await request(app).get(`/api/clients/${clientId}/assignments`);
+    const list = await api.get(`/api/clients/${clientId}/assignments`);
     expect(list.body).toEqual([]);
   });
 });

@@ -7,7 +7,8 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { ASSIGNMENT_TYPES, PlanGenerationError, generatePlan, loadClientContext } from "./ai.js";
 import { isDateString, today } from "./assignments.js";
-import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
+import { coachIdOf } from "../auth/requireCoach.js";
+import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 const AutoAssignSchema = z.object({
   type: z.enum(ASSIGNMENT_TYPES, { required_error: "type is required." }),
@@ -31,7 +32,8 @@ autoAssignRouter.post(
       return;
     }
     const { clientId } = req.params as { clientId: string };
-    const client = await findClient(clientId);
+    const coachId = coachIdOf(req);
+    const client = await findClient(clientId, coachId);
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
@@ -50,7 +52,7 @@ autoAssignRouter.post(
     const assignment = await prisma.assignment.create({
       data: {
         clientId: client.id,
-        coachId: DEMO_COACH_ID,
+        coachId,
         type,
         title: plan.title,
         details: plan.details,

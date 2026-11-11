@@ -2,7 +2,8 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
-import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
+import { coachIdOf } from "../auth/requireCoach.js";
+import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 export const ASSIGNMENT_SOURCES = ["ai", "manual"] as const;
@@ -41,13 +42,14 @@ const StatusSchema = z.object({
  */
 async function findClientAssignment(req: Request, res: Response) {
   const { clientId, assignmentId } = req.params as { clientId: string; assignmentId: string };
-  const client = await findClient(clientId);
+  const coachId = coachIdOf(req);
+  const client = await findClient(clientId, coachId);
   if (!client) {
     res.status(404).json({ error: "Client not found" });
     return null;
   }
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, clientId: client.id, coachId: DEMO_COACH_ID },
+    where: { id: assignmentId, clientId: client.id, coachId },
   });
   if (!assignment) {
     res.status(404).json({ error: "Assignment not found" });
@@ -64,13 +66,14 @@ assignmentsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const { clientId } = req.params as { clientId: string };
-    const client = await findClient(clientId);
+    const coachId = coachIdOf(req);
+    const client = await findClient(clientId, coachId);
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
     }
     const assignments = await prisma.assignment.findMany({
-      where: { clientId: client.id, coachId: DEMO_COACH_ID },
+      where: { clientId: client.id, coachId },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
     res.json(assignments);
@@ -88,13 +91,14 @@ assignmentsRouter.post(
       return;
     }
     const { clientId } = req.params as { clientId: string };
-    const client = await findClient(clientId);
+    const coachId = coachIdOf(req);
+    const client = await findClient(clientId, coachId);
     if (!client) {
       res.status(404).json({ error: "Client not found" });
       return;
     }
     const assignment = await prisma.assignment.create({
-      data: { ...parsed.data, clientId: client.id, coachId: DEMO_COACH_ID },
+      data: { ...parsed.data, clientId: client.id, coachId },
     });
     res.status(201).json(assignment);
   }),

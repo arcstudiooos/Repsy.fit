@@ -1,5 +1,5 @@
 // Progress logs API (Prompt 25). Prisma is mocked, so these run without a database.
-import request from "supertest";
+import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma } = vi.hoisted(() => ({
@@ -13,11 +13,11 @@ vi.mock("../src/db.js", () => ({ prisma }));
 
 import { app } from "../src/app.js";
 
-const client = { id: "client-1", coachId: null, name: "Maya Patel" };
+const client = { id: "client-1", coachId: TEST_COACH_ID, name: "Maya Patel" };
 const base = `/api/clients/${client.id}/progress`;
 const stored = {
   id: "log-1",
-  coachId: null,
+  coachId: TEST_COACH_ID,
   clientId: client.id,
   date: "2026-11-02",
   weightKg: 68,
@@ -45,9 +45,9 @@ describe("GET /api/clients/:clientId/progress", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: client.id, coachId: null } });
+    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: client.id, coachId: TEST_COACH_ID } });
     expect(prisma.progressLog.findMany).toHaveBeenCalledWith({
-      where: { clientId: client.id, coachId: null },
+      where: { clientId: client.id, coachId: TEST_COACH_ID },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
   });
@@ -75,7 +75,7 @@ describe("POST /api/clients/:clientId/progress", () => {
         workoutsDone: 4,
         note: "",
         clientId: client.id,
-        coachId: null,
+        coachId: TEST_COACH_ID,
       },
     });
   });
@@ -87,13 +87,13 @@ describe("POST /api/clients/:clientId/progress", () => {
       date: "2026-11-09",
       note: "",
       clientId: client.id,
-      coachId: null,
+      coachId: TEST_COACH_ID,
     });
   });
 
   it("ignores clientId and coachId sent in the body", async () => {
     await request(app).post(base).send({ date: "2026-11-09", clientId: "other", coachId: "other" });
-    expect(prisma.progressLog.create.mock.calls[0][0].data).toMatchObject({ clientId: client.id, coachId: null });
+    expect(prisma.progressLog.create.mock.calls[0][0].data).toMatchObject({ clientId: client.id, coachId: TEST_COACH_ID });
   });
 
   it.each([
@@ -129,7 +129,7 @@ describe("DELETE /api/clients/:clientId/progress/:logId", () => {
     const res = await request(app).delete(`${base}/${stored.id}`);
     expect(res.status).toBe(204);
     expect(prisma.progressLog.deleteMany).toHaveBeenCalledWith({
-      where: { id: stored.id, clientId: client.id, coachId: null },
+      where: { id: stored.id, clientId: client.id, coachId: TEST_COACH_ID },
     });
   });
 

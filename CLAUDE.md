@@ -111,9 +111,9 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - Every Client, Assignment, ProgressLog and ChatMessage has `coachId`, a real foreign key to
   `Coach` (delete cascades). **`coachId` NULL means demo data not yet claimed by a coach.** The
   old `"default-coach"` placeholder string was turned into NULL by migration
-  `20261111090000_add_coaches`; no fake coach row exists. Until login (Prompt 44-45) the API
-  keeps working in demo mode on the NULL rows (`DEMO_COACH_ID = null` in
-  `server/src/routes/clients.ts`).
+  `20261111090000_add_coaches`; no fake coach row exists. Since Prompt 45 every data route needs a
+  signed-in coach and filters by that coach's id, so NULL rows are invisible to the API until the first
+  coach registers and claims them (the old `DEMO_COACH_ID` constant is gone).
 - **One-time claim:** `claimDemoData(tx, coachId)` (`server/src/auth/claimDemoData.ts`) moves
   every NULL row to a coach, but only when that coach is the first and only coach. Registration
   (Prompt 44) calls it in the same transaction that creates the coach; later coaches start empty.
@@ -135,8 +135,8 @@ rename or reshape routes without updating `api.ts` in the same prompt.
 - **Every per-client route is scoped to one client.** The server must check that the
   assignment / progress log in the path belongs to `:clientId` and never return or change
   another client's data.
-- **`coachId` is never sent by the client.** The server sets it (`null` = unclaimed demo data
-  until login exists; the signed-in coach's id from Prompt 45).
+- **`coachId` is never sent by the client.** The server sets it from the session (the signed-in
+  coach's id, Prompt 45).
 - Fields omitted from create bodies get the database defaults (see Prisma schema).
 - Any 2xx means success. A route that returns nothing replies **204 No Content**
   (`api.ts` returns `undefined` for 204).
@@ -193,7 +193,16 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 **Sessions (Prompt 44):** a signed stateless JWT (HS256, `node:crypto`, secret from env `SESSION_SECRET`)
 in the `repsy_session` cookie: httpOnly, `Secure` in production, `SameSite=Lax`, 7-day expiry, path `/`.
 `sessionMiddleware` (`server/src/auth/session.ts`) runs on every request and sets `req.coachId` when the
-cookie is valid; it never blocks. **Other routes are not protected yet (Prompt 45).** Register and login are
+cookie is valid; it never blocks. **Protected routes (Prompt 45):** everything under `/api/clients` (clients,
+assignments, auto-assign, chat, progress) and `/api/seed` passes through `requireCoach`
+(`server/src/auth/requireCoach.ts`): signed out, invalid or expired session -> `401 { "error": "You are not
+signed in." }` before any query. Their queries all filter by the signed-in coach's id, so another coach's
+client / assignment / log id gives the normal `404 Client not found` (or `Assignment not found` /
+`Progress log not found`), never the record. Demo seeds load into the signed-in coach's own account only
+(quick seed: skipped when THAT coach already has any client). **Public routes:** `GET /api/health`,
+`POST /api/leads`, `/api/auth/*` (`me` answers its own 401), and the landing page `/`; `/app` is the
+coach dashboard (its login screen comes in a later prompt). Unknown `/api` routes stay `404 Not found`.
+Register and login are
 rate-limited to 10 attempts per 15 minutes per IP each (in memory, `server/src/auth/rateLimit.ts`; the 11th
 gets `429 { "error": "Too many attempts. Please wait 15 minutes and try again." }` with `Retry-After`).
 `passwordHash` is never in a response.
@@ -245,7 +254,7 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   `502 {"error":"The AI couldn't create a plan right now. Nothing was saved - please try again."}`.
   No chat messages are written.
 - **Chat messages have no public write route.** They are saved only server-side with
-  `saveMessage(clientId, role, content)` (`server/src/routes/chat.ts`), which the ask endpoint
+  `saveMessage(clientId, role, content, coachId)` (`server/src/routes/chat.ts`), which the ask endpoint
   (`askAI`, `POST /api/clients/:clientId/chat`) uses - so fake chat history can't be created.
 - Creates reply **201 Created** with the full record.
 - A client that does not exist, or belongs to another coach, returns
@@ -297,5 +306,8 @@ and record it here.
   database doesn't answer within 3 s.
 - Prompt 44 said `sameSite=ax` (typo): built as `SameSite=Lax`. Chose a stateless JWT over a server
   session table (no migration), and no new dependency (own HS256 + in-memory limiter on `node:crypto`).
+- Prompt 45 said "auth middleware"; built as `requireCoach` on `/api/clients` and `/api/seed` (401 JSON
+  `{ error }`). The `/app` UI has no login screen yet, so until the login prompt the dashboard shows
+  API errors when signed out; browser tests register a throwaway coach in `e2e/global-setup.ts`.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

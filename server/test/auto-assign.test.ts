@@ -1,7 +1,7 @@
 // Prompt 18: one-tap auto-assign (POST /api/clients/:clientId/auto-assign, body { type }).
 // The AI writes ONE complete plan of the chosen type, the server SAVES it (source ai,
 // status Active) and returns it. If the AI fails, nothing is saved.
-import request from "supertest";
+import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma } = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ import { app } from "../src/app.js";
 
 const client = {
   id: "client-1",
-  coachId: null,
+  coachId: TEST_COACH_ID,
   name: "Maya Patel",
   goal: "Fat loss + strength",
   age: 29,
@@ -96,7 +96,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     const response = await post({ type: "Workout" }, "missing");
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Client not found" });
-    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: "missing", coachId: null } });
+    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: "missing", coachId: TEST_COACH_ID } });
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(prisma.assignment.create).not.toHaveBeenCalled();
   });
@@ -111,7 +111,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
       expect.objectContaining({
         id: "assignment-new",
         clientId: client.id,
-        coachId: null,
+        coachId: TEST_COACH_ID,
         type: "Workout",
         title: plan.title,
         details: plan.details,
@@ -125,7 +125,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     expect(prisma.assignment.create).toHaveBeenCalledWith({
       data: {
         clientId: client.id,
-        coachId: null,
+        coachId: TEST_COACH_ID,
         type: "Workout",
         title: plan.title,
         details: plan.details,

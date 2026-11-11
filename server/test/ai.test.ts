@@ -1,4 +1,4 @@
-import request from "supertest";
+import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma } = vi.hoisted(() => ({
@@ -16,7 +16,7 @@ import { app } from "../src/app.js";
 
 const client = {
   id: "client-1",
-  coachId: null,
+  coachId: TEST_COACH_ID,
   name: "Maya Patel",
   goal: "Fat loss + strength",
   age: 29,
@@ -114,16 +114,16 @@ describe("POST /api/clients/:clientId/chat", () => {
     });
 
     expect(prisma.client.findFirst).toHaveBeenCalledWith({
-      where: { id: client.id, coachId: null },
+      where: { id: client.id, coachId: TEST_COACH_ID },
     });
     expect(prisma.assignment.findMany).toHaveBeenCalledWith({
-      where: { clientId: client.id, coachId: null },
+      where: { clientId: client.id, coachId: TEST_COACH_ID },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 8,
       select: { type: true, title: true, status: true },
     });
     expect(prisma.progressLog.findMany).toHaveBeenCalledWith({
-      where: { clientId: client.id, coachId: null },
+      where: { clientId: client.id, coachId: TEST_COACH_ID },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       take: 6,
       select: { date: true, weightKg: true, adherence: true, workoutsDone: true },
