@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, request, type FullConfig } from "@playwright/test";
 
-export const STORAGE_STATE = path.resolve(import.meta.dirname, ".auth/coach.json");
+// Relative to the repo root (Playwright runs from there; the root package is CommonJS, so no import.meta).
+export const STORAGE_STATE = path.resolve(process.cwd(), "e2e/.auth/coach.json");
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0].use.baseURL;
