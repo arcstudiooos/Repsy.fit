@@ -42,6 +42,68 @@ those commit messages don't name the prompt number.
 | 35 | `f7a8cba` | style: mobile accessibility and error polish |
 | 36 | `(this commit)` | docs: final v1 check, readme and changelog |
 
+## v2
+
+v2 turns the single-coach prototype into a multi-coach product with a public site and a client area.
+
+- **Public landing page** at `/` (Prompts 37-42): the animated live-sheet hero (the 3D hero stays at
+  `/?hero=3d`), scroll animations, an in-page demo, pricing, FAQ and a lead form. Privacy and Terms
+  drafts at `/privacy` and `/terms` (Prompt 73).
+- **Login** (Prompts 43-47): coach accounts, register / log in / log out, every route scoped to the
+  signed-in coach, password reset and account settings. The first coach to register claims the
+  unclaimed demo data.
+- **5 new tabs, 9 in total** - Home, AI Coach, Clients, Manual Planner, Progress, **Check-ins**,
+  **Library**, **Messages**, **Business** - plus Home rebuilt as the coach's daily view:
+  - **Home** (48-52): today's tasks, new check-ins, needs-attention alerts, AI weekly summary,
+    review queue.
+  - **Check-ins** (53-56): daily check-ins, habit tracker, sleep and recovery, body measurements.
+  - **Library** (58-61): workout templates, meal library, macro calculator.
+  - **Messages** (63-64): a thread with each client.
+  - **Business** (68-71): plans and recorded payments, the schedule, the engagement leaderboard and
+    reports with CSV export.
+- **Client app** (Prompts 65, 68, 69, 71): invited clients sign in at `/client` and see their own
+  plan, sessions and streaks (read-only).
+- **Security and privacy pass** (73), the **full v2 end-to-end journey** in CI (74), and the
+  **live deploy and smoke test** (75).
+
+Prompts 57, 59, 62, 66, 67 and 72 were dropped by the owner and have no commit.
+
+| Prompt | Commit | Message |
+|---|---|---|
+| 37 | `2da8d3e` | Prompt 37: Landing route, shell and 3D foundation |
+| 38 | `8f26c3f` | Prompt 38: Interactive 3D hero |
+| 39 | `eaa767f` | Prompt 39: Scroll animations and feature story |
+| 40 | `380cada` | Prompt 40: Interactive landing page demo |
+| 41 | `af230e9` | Prompt 41: Pricing, FAQ and lead capture |
+| 42 | `cce392e` | Prompt 42: Landing speed, SEO and accessibility |
+| 43 | `dc314ad` | Prompt 43: Coach model and coachId migration |
+| 44 | `be82fe8` | Prompt 44: Register, login and session API |
+| 45 | `6b4006c` | Prompt 45: Protect all routes by coach |
+| 46 | `b8f51c9` | Prompt 46: Login screens and app guard |
+| 47 | `00a9a9c` | Prompt 47: Password reset and account settings |
+| 48 | `c6fa5c6` | Prompt 48: Home tab and today's tasks |
+| 49 | `501d983` | Prompt 49: Home new check-ins card |
+| 50 | `438e21d` | Prompt 50: At-risk clients card |
+| 51 | `5cb3fbe` | Prompt 51: AI weekly summary |
+| 52 | `6599fb8` | Prompt 52: Review queue |
+| 53 | `909cae5` | Prompt 53: Check-ins tab and daily check-ins |
+| 54 | `8cb2180` | Prompt 54: Habit tracker |
+| 55 | `cdc2180` | Prompt 55: Sleep and recovery |
+| 56 | `c375333` | Prompt 56: Body measurements |
+| 58 | `9d8dd13` | Prompt 58: Library tab and workout templates |
+| 60 | `06a0354` | Prompt 60: Meal library |
+| 61 | `e1d691f` | Prompt 61: Macro calculator |
+| 63 | `f6ec998` | Prompt 63: Messages tab and chat data |
+| 64 | `d1da50b` | Prompt 64: Coach chat UI |
+| 65 | `b7e9c10` | Prompt 65: Client invite and client sign-in |
+| 68 | `4770c2e` | Prompt 68: Business tab - client plans and recorded payments (record-keeping only), due-date advance on a stored due day, currency setting, client My plan |
+| 69 | `392629c` | Prompt 69: Scheduling - appointments (UTC stored, local shown), Business Schedule week view, client My sessions, today's appointments first on Home |
+| 70 | `ec69f98` | Prompt 70: Reports - printable client progress report (browser print to PDF), coach-scoped CSV exports and roster CSV |
+| 71 | `c9e4d34` | Prompt 71: Engagement - check-in streaks, habit % and weekly workouts, coach-only leaderboard in Business, client My streaks |
+| 73 | `0cf365e` | Prompt 73: security and privacy pass - drop wildcard CORS, hand-written security headers + CSP, rate-limit leads, delete-account with type-to-confirm, Privacy/Terms drafts, bundle secret guard |
+| 74 | `f439038` | Prompt 74: full v2 end-to-end journey (13 named checks), trim duplicated v1 smoke checks, keep the real-server suite at 30 |
+| 75 | `(this commit)` | Prompt 75: deploy v2 and live smoke test, CHANGELOG and README for v2 |
+
 Other commits (not one prompt each):
 
 | Commit | Message |

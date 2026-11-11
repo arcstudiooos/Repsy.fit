@@ -5,7 +5,12 @@ its suggestions into plans (or plan by hand), track their progress, habits and c
 them, schedule sessions and record what they pay - and invite them to see their own plan.
 
 Live: https://repsy-coach.onrender.com (public landing page) - the dashboard is at
-https://repsy-coach.onrender.com/app
+https://repsy-coach.onrender.com/app, sign in at `/login`, and invited clients use `/client`.
+
+**v2 is live.** A live smoke test on 2026-11-12 passed every step: the landing page, the lead form,
+register, log in, create a client, the invite link, the client sign-in and plan page, a chat round
+trip, recording a payment, a CSV export, log out, and signed-out `/app` going to the login page.
+Read the database note under *Known limits of v2* before adding real clients.
 
 ## The 9 tabs
 
@@ -167,12 +172,21 @@ Load the quick demo first, then the 6-month demo, to get all 13 clients.
 
 ## Known limits of v2
 
+- **The free database expires.** `repsy-db` is on Render's free Postgres plan. Render deletes free
+  databases 30 days after creation, plus a 14-day grace period, along with all of their data, and
+  free databases have no backups. Upgrade `repsy-db` to a paid plan in the Render dashboard (check
+  its expiry date there) **before** storing real client data.
+- **No payment gateway.** Payments are records only: nothing charges a card, sends a payment link
+  or reminder, or makes an invoice.
+- **No push or email alerts.** Alerts (Needs attention, new check-ins, the review queue) show only
+  when the coach opens Home; nothing is pushed or emailed.
+- **Chat by polling.** The Messages tab checks for new messages every 20 seconds while it is open;
+  there is no live socket.
+- **Sleep is entered by hand** in daily check-ins; nothing syncs from a watch or phone.
 - **AI is general-wellness only and can be wrong.** It doesn't diagnose; the coach reviews every
   plan before it reaches a client. Without a working AI key you get the fallback answer.
 - **The client area is read-only.** Clients can see their plan, sessions and streaks, but cannot
   mark work done, file a check-in or reply in chat themselves yet.
-- **Payments are record-keeping only.** Nothing charges a card, sends a payment link or reminder,
-  or makes an invoice.
 - **No progress photos.** The app does not store photos.
 - **Password-reset and invite emails need SMTP.** Until the `SMTP_*` variables are set, reset
   emails are not sent and invite links are shown to the coach to pass on by hand.
