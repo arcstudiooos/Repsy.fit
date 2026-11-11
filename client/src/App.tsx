@@ -22,6 +22,8 @@ const ProgressTab = lazy(() => import("./tabs/ProgressTab").then((m) => ({ defau
 const CheckInsTab = lazy(() => import("./tabs/CheckInsTab").then((m) => ({ default: m.CheckInsTab })));
 // Coach <-> client messages (Prompt 63) - a separate conversation from the AI Coach tab.
 const MessagesTab = lazy(() => import("./tabs/MessagesTab").then((m) => ({ default: m.MessagesTab })));
+// Type-only: erased at build time, so the Messages code stays in its own lazy chunk.
+import type { ChatState } from "./tabs/MessagesTab";
 
 type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library" | "messages";
 
@@ -216,6 +218,9 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   const current = TABS.find((t) => t.id === activeTab)!;
   // Prompt 58: a Library template waiting to fill the Manual Planner's new-assignment form.
   const [plannerPrefill, setPlannerPrefill] = useState<TemplatePrefill | null>(null);
+  // Unsent chat messages and drafts live here, above the tabs, so leaving the Messages tab
+  // mid-send never loses one (Prompt 64).
+  const [chat, setChat] = useState<ChatState>({ pendingBy: {}, drafts: {} });
   const clearPlannerPrefill = useCallback(() => setPlannerPrefill(null), []);
   // Prompt 61: the client whose details should pre-fill the Library's macro calculator (used once).
   const [macroClientId, setMacroClientId] = useState<string | null>(null);
@@ -297,7 +302,10 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     panelContent = (
       <>
         {/* Client selector strip: every tab except Clients (that tab is the full list). */}
-        <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
+        {/* Messages has its own client column (with previews and unread dots) instead of the strip. */}
+        {current.id !== "messages" && (
+          <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
+        )}
         {/* key forces a clean remount when the selected client changes, so no tab can
             keep showing the previous client's data. */}
         {current.id === "home" ? (
@@ -344,7 +352,13 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
         ) : (
           current.id === "messages" ? (
             <Suspense fallback={<LoadingState />}>
-              <MessagesTab key={`messages:${selectedClientId ?? "none"}`} client={selectedClient} />
+              <MessagesTab
+                clients={clients}
+                selectedClientId={selectedClientId}
+                onSelect={setSelectedClientId}
+                chat={chat}
+                setChat={setChat}
+              />
             </Suspense>
           ) : (
             <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />

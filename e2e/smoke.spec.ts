@@ -111,6 +111,27 @@ test.describe("client strip (real clients from the API)", () => {
   });
 });
 
+test.describe("messages (real server)", () => {
+  test("send a message, see it after a reload, and the list preview shows it", async ({ page }) => {
+    await page.goto("/app");
+    await page.getByRole("tab", { name: "Messages" }).click();
+    const clientsList = page.getByRole("list", { name: "Clients" });
+    await clientsList.getByRole("button", { name: /Maya Patel/ }).click();
+    const pane = page.getByRole("region", { name: "Conversation with Maya Patel" });
+    await expect(pane).toContainText("Start the conversation - your client sees this in their app view.");
+    const box = page.getByLabel("Message to Maya Patel");
+    await box.fill("Smoke test hello");
+    await box.press("Enter");
+    await expect(pane.locator('li[data-sender="coach"]')).toContainText("Smoke test hello");
+    await expect(clientsList.getByRole("button", { name: /Maya Patel/ })).toContainText("You: Smoke test hello");
+
+    await page.reload();
+    await page.getByRole("tab", { name: "Messages" }).click();
+    await page.getByRole("list", { name: "Clients" }).getByRole("button", { name: /Maya Patel/ }).click();
+    await expect(page.getByRole("region", { name: "Conversation with Maya Patel" }).getByRole("listitem")).toHaveCount(1);
+  });
+});
+
 test.describe("states", () => {
   test("loading: shows the Loading... card until the clients arrive", async ({ page }) => {
     // Hold the real /api/clients request so the loading state stays visible.

@@ -112,6 +112,23 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   (the newest page) marks the client's messages read; an older page marks nothing. **No
   real-time in v2**: no WebSockets or push - the Messages tab (8th tab, after Library, lazy-loaded)
   fetches on open and polls every 20 seconds while the browser tab is visible.
+- **Messages UI (Prompt 64).** The Messages tab has its own client column (search by name, last
+  message preview, unread dot), so the top client strip is hidden on that tab; picking a
+  conversation still sets the app-wide selected client. `GET /api/messages/threads` was added
+  for that column (the prompt listed UI files only): without it the list would have to open every
+  thread, which marks it read. Coach bubbles sit right in teal (`bg-accent2`, white text), client
+  bubbles left in `bg-surface2`. Enter sends, Shift+Enter adds a line. A send gets a temporary id
+  on the device; on success the bubble becomes the saved message and stays until a thread
+  fetched from the server contains that id (it is never appended to the cache by hand), so a
+  refresh that read the database before the INSERT cannot make it vanish and it is never shown
+  twice. On failure it stays with Retry / Discard; Retry works only on a failed bubble, so a
+  double-click sends once. Unsent bubbles and drafts are kept per client above the conversation
+  pane, so switching client mid-send loses nothing: a later failure waits in that conversation and
+  the list shows "Not sent - open to retry". `/api/messages/threads` picks one row per client with
+  `DISTINCT ON` and returns at most 200 characters of the body (it runs on every poll). Duplicates are
+  prevented in the UI only: if the server saved a message but the response was lost, Retry can
+  save it a second time (no idempotency key in v2). Chat never touches the Home review-queue
+  count.
 
 - **Lazy tabs and the bundle guard.** `/app` loads Home, AI Coach, Clients and Manual Planner
   eagerly; **Progress, Check-ins and Library load on first open**, each wrapped in `<Suspense>`.
@@ -291,6 +308,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getMessageThread(clientId, before?)` | GET | `/api/clients/:clientId/messages?before=<ISO>` | — | `{ messages: ThreadMessage[], hasMore }` — newest page of 50, oldest → newest; opening the newest page marks the client's messages read (`readAt`) |
 | `sendMessage(clientId, body)` | POST | `/api/clients/:clientId/messages` | `{ body }` (1-2000 chars, plain text) | `ThreadMessage` 201 (`sender: "coach"`); 400 `{ "error": "Write a message first." }` |
 | `deleteMessage(clientId, messageId)` | DELETE | `/api/clients/:clientId/messages/:messageId` | — | 204; 403 `{ "error": "Messages can only be deleted within 15 minutes of sending." }` or `"You can only delete messages you sent."`; 404 `"Message not found"` |
+| `listThreads()` | GET | `/api/messages/threads` | — | `{ threads: [{ clientId, lastMessage: { sender, body, createdAt } \| null, unreadCount }] }` — one row per client of this coach; read-only, never marks anything read (Prompt 64) |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
 | `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |

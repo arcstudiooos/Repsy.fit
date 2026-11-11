@@ -122,3 +122,46 @@ messagesRouter.delete(
     res.status(204).end();
   }),
 );
+
+// GET /api/messages/threads (Prompt 64) -> { threads: [{ clientId, lastMessage, unreadCount }] }
+// One row per client of the signed-in coach, for the Messages conversation list: the latest
+// message (or null) and how many client messages the coach has not opened yet. Read-only: it
+// never marks anything read - only opening a thread does that.
+export const threadsRouter = Router();
+/** The list only shows a one-line preview; the full text is in the thread. */
+export const PREVIEW_MAX_CHARS = 200;
+
+threadsRouter.get(
+  "/threads",
+  asyncHandler(async (req, res) => {
+    const coachId = coachIdOf(req);
+    const [clients, latest, unread] = await Promise.all([
+      prisma.client.findMany({ where: { coachId }, select: { id: true } }),
+      // One row per client, picked by Postgres (DISTINCT ON), with only the start of the body:
+      // this runs on every 20-second poll, so it must not load whole conversations.
+      // `::int` matters: Prisma binds JS numbers as bigint, and Postgres has only left(text, int).
+      prisma.$queryRaw<{ clientId: string; sender: string; body: string; createdAt: Date }[]>`
+        SELECT DISTINCT ON ("clientId") "clientId", "sender", LEFT("body", ${PREVIEW_MAX_CHARS}::int) AS "body", "createdAt"
+        FROM "thread_messages"
+        WHERE "coachId" = ${coachId}
+        ORDER BY "clientId", "createdAt" DESC, "id" DESC`,
+      prisma.threadMessage.groupBy({
+        by: ["clientId"],
+        where: { coachId, sender: "client", readAt: null },
+        _count: { _all: true },
+      }),
+    ]);
+    const latestBy = new Map(latest.map((m) => [m.clientId, m]));
+    const unreadBy = new Map(unread.map((u) => [u.clientId, u._count._all]));
+    res.json({
+      threads: clients.map((c) => {
+        const last = latestBy.get(c.id);
+        return {
+          clientId: c.id,
+          lastMessage: last ? { sender: last.sender, body: last.body, createdAt: last.createdAt.toISOString() } : null,
+          unreadCount: unreadBy.get(c.id) ?? 0,
+        };
+      }),
+    });
+  }),
+);

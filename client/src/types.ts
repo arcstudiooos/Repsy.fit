@@ -120,6 +120,14 @@ export interface ThreadMessage {
   /** When the other side read it; for client messages, when the coach opened the thread. */
   readAt: string | null;
 }
+/** One row of the Messages conversation list (Prompt 64). */
+export interface ThreadSummary {
+  clientId: string;
+  lastMessage: { sender: MessageSender; body: string; createdAt: string } | null;
+  /** Client messages the coach has not opened yet. */
+  unreadCount: number;
+}
+
 /** One page of a thread, oldest -> newest. */
 export interface MessageThread {
   messages: ThreadMessage[];

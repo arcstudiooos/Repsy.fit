@@ -42,6 +42,7 @@ import type {
   ReviewItem,
   ReviewQueue,
   ThreadMessage,
+  ThreadSummary,
   TodayTasks,
   WeeklySummaryResponse,
   WorkoutTemplate,
@@ -206,6 +207,8 @@ export const getMessageThread = (clientId: string, before?: string) =>
   );
 export const sendMessage = (clientId: string, body: string) =>
   request<ThreadMessage>("POST", `/clients/${enc(clientId)}/messages`, { body });
+/** The conversation list: latest message and unread count per client. Never marks anything read. */
+export const listThreads = () => request<{ threads: ThreadSummary[] }>("GET", "/messages/threads");
 /** Own messages only, within 15 minutes of sending. */
 export const deleteMessage = (clientId: string, messageId: string) =>
   request<void>("DELETE", `/clients/${enc(clientId)}/messages/${enc(messageId)}`);
@@ -271,6 +274,7 @@ export const queryKeys = {
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   messages: (clientId: string) => ["clients", clientId, "messages"] as const,
+  threads: ["messages", "threads"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
   meals: ["meals"] as const,

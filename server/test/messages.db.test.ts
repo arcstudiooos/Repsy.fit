@@ -82,6 +82,28 @@ describe.skipIf(!process.env.DATABASE_URL)("coach <-> client messages (database)
     expect(await prisma.threadMessage.count({ where: { id: old.id } })).toBe(1);
   });
 
+  it("the conversation list shows the latest message and unread count, per coach", async () => {
+    await prisma.threadMessage.create({ data: { coachId: coachIds[0], clientId: clientA, sender: "client", body: "New from A" } });
+    const list = await api.get("/api/messages/threads");
+    expect(list.status).toBe(200);
+    const a = list.body.threads.find((t: { clientId: string }) => t.clientId === clientA);
+    expect(a.lastMessage.body).toBe("New from A");
+    expect(a.unreadCount).toBeGreaterThanOrEqual(1);
+    // Listing does not mark it read; opening the thread does.
+    expect((await api.get("/api/messages/threads")).body.threads.find((t: { clientId: string }) => t.clientId === clientA).unreadCount).toBe(a.unreadCount);
+    await api.get(`/api/clients/${clientA}/messages`);
+    expect((await api.get("/api/messages/threads")).body.threads.find((t: { clientId: string }) => t.clientId === clientA).unreadCount).toBe(0);
+    // A long message is cut to a short preview in the list; the thread keeps the full text.
+    const long = "x".repeat(500);
+    await api.post(`/api/clients/${clientA}/messages`).send({ body: long });
+    const preview = (await api.get("/api/messages/threads")).body.threads.find((t: { clientId: string }) => t.clientId === clientA);
+    expect(preview.lastMessage).toMatchObject({ sender: "coach", body: "x".repeat(200) });
+    const full = (await api.get(`/api/clients/${clientA}/messages`)).body.messages.at(-1);
+    expect(full.body).toBe(long);
+    // Another coach sees none of these clients.
+    expect((await otherApi.get("/api/messages/threads")).body.threads).toEqual([]);
+  });
+
   it("is a separate store from the AI Coach chat", async () => {
     const ai = await api.get(`/api/clients/${clientA}/chat`);
     expect(ai.status).toBe(200);

@@ -2,8 +2,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMock = vi.hoisted(() => ({
-  client: { findFirst: vi.fn() },
-  threadMessage: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
+  client: { findFirst: vi.fn(), findMany: vi.fn() },
+  $queryRaw: vi.fn(),
+  threadMessage: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn(), delete: vi.fn(), groupBy: vi.fn() },
 }));
 vi.mock("../src/db.js", () => ({ prisma: prismaMock }));
 
@@ -157,3 +158,37 @@ describe("DELETE /api/clients/:clientId/messages/:messageId", () => {
     expect(res.body).toEqual({ error: "Message not found" });
   });
 });
+
+describe("GET /api/messages/threads (Prompt 64 conversation list)", () => {
+  it("one row per client: latest message and unread count, scoped to the coach, and marks nothing read", async () => {
+    prismaMock.client.findMany.mockResolvedValue([{ id: "c1" }, { id: "c2" }]);
+    prismaMock.$queryRaw.mockResolvedValue([
+      { clientId: "c1", sender: "client", body: "Legs are sore", createdAt: new Date("2026-11-11T10:00:00Z") },
+    ]);
+    prismaMock.threadMessage.groupBy.mockResolvedValue([{ clientId: "c1", _count: { _all: 2 } }]);
+
+    const res = await request(app).get("/api/messages/threads");
+    expect(res.status).toBe(200);
+    expect(res.body.threads).toEqual([
+      { clientId: "c1", lastMessage: { sender: "client", body: "Legs are sore", createdAt: "2026-11-11T10:00:00.000Z" }, unreadCount: 2 },
+      { clientId: "c2", lastMessage: null, unreadCount: 0 },
+    ]);
+    expect(prismaMock.client.findMany).toHaveBeenCalledWith({ where: { coachId: "coach-1" }, select: { id: true } });
+    // The latest-message query is scoped to this coach (the coach id is a bound parameter).
+    const [sql, ...params] = prismaMock.$queryRaw.mock.calls[0] as [TemplateStringsArray, ...unknown[]];
+    expect(sql.join("?")).toMatch(/DISTINCT ON \("clientId"\)/);
+    expect(sql.join("?")).toMatch(/WHERE "coachId" = \?/);
+    // Prisma sends numbers as bigint; Postgres only has left(text, int), so the cast is required.
+    expect(sql.join("?")).toMatch(/LEFT\("body", \?::int\)/);
+    expect(params).toContain("coach-1");
+    expect(prismaMock.threadMessage.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { coachId: "coach-1", sender: "client", readAt: null } }),
+    );
+    expect(prismaMock.threadMessage.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("needs a session", async () => {
+    expect((await supertest(app).get("/api/messages/threads")).status).toBe(401);
+  });
+});
+
