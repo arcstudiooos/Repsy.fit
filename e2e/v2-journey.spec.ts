@@ -5,12 +5,26 @@
 // take the fallback path (that is deliberate: the journey must work without a paid key).
 // Everything it makes belongs to its own coach, and the last step deletes that coach, so the
 // database is left exactly as it was found.
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
-// This journey signs itself in: it must NOT start from global-setup's saved coach session.
-test.use({ storageState: { cookies: [], origins: [] } });
+
+// One browser context for the whole journey, created here rather than taken from the `page`
+// fixture: every Playwright test gets a FRESH context, which would throw away the session this
+// journey registers in step 2. It also must not start from global-setup's saved coach session,
+// because step 2 proves a brand-new coach starts with nothing.
+let context: BrowserContext;
+let page: Page;
+
+test.beforeAll(async ({ browser }) => {
+  context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  page = await context.newPage();
+});
+
+test.afterAll(async () => {
+  await context?.close();
+});
 
 const stamp = Date.now().toString(36);
 const COACH_EMAIL = `v2-journey-${stamp}@example.com`;
@@ -25,7 +39,7 @@ let inviteLink = "";
 const panel = (page: Page) => page.getByRole("tabpanel");
 const tab = (page: Page, name: string) => page.getByRole("tab", { name });
 
-test("1. the landing page loads (3D or fallback) and the lead form saves", async ({ page }) => {
+test("1. the landing page loads (3D or fallback) and the lead form saves", async () => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   // Either the real 3D canvas or the poster fallback - both are a pass, neither may be missing.
@@ -42,7 +56,7 @@ test("1. the landing page loads (3D or fallback) and the lead form saves", async
   await expect(page.getByTestId("lead-result")).toContainText(/You're on the list|already on the list/, { timeout: 15_000 });
 });
 
-test("2. signed out, /app redirects to login; a new coach registers and lands in the app", async ({ page }) => {
+test("2. signed out, /app redirects to login; a new coach registers and lands in the app", async () => {
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login$/);
 
@@ -59,7 +73,7 @@ test("2. signed out, /app redirects to login; a new coach registers and lands in
   await expect(panel(page)).toContainText(/Add your first client|No clients yet/);
 });
 
-test("3. the coach adds a client", async ({ page }) => {
+test("3. the coach adds a client", async () => {
   await page.goto("/app");
   await tab(page, "Clients").click();
   const add = panel(page).getByRole("button", { name: "Add client", exact: true });
@@ -72,7 +86,7 @@ test("3. the coach adds a client", async ({ page }) => {
   await expect(panel(page)).toContainText(CLIENT_NAME);
 });
 
-test("4. the coach builds a workout template in the Library", async ({ page }) => {
+test("4. the coach builds a workout template in the Library", async () => {
   await page.goto("/app");
   await tab(page, "Library").click();
   await panel(page).getByRole("button", { name: "New template" }).click();
@@ -87,7 +101,7 @@ test("4. the coach builds a workout template in the Library", async ({ page }) =
   await expect(panel(page)).toContainText(TEMPLATE);
 });
 
-test("5. the coach assigns a program to the client", async ({ page }) => {
+test("5. the coach assigns a program to the client", async () => {
   await page.goto("/app");
   await tab(page, "Manual Planner").click();
   await expect(panel(page)).toContainText(`Selected: ${CLIENT_NAME}`);
@@ -100,7 +114,7 @@ test("5. the coach assigns a program to the client", async ({ page }) => {
   await expect(panel(page).getByRole("list", { name: "Assignments" })).toContainText("Journey leg day", { timeout: 30_000 });
 });
 
-test("6. the coach records a plan and a payment in Business", async ({ page }) => {
+test("6. the coach records a plan and a payment in Business", async () => {
   await page.goto("/app");
   await tab(page, "Business").click();
   await page.getByRole("button", { name: "Add a plan" }).click();
@@ -120,7 +134,7 @@ test("6. the coach records a plan and a payment in Business", async ({ page }) =
   await expect(row).toContainText("Last payment");
 });
 
-test("7. the coach invites the client and gets a working invite link", async ({ page }) => {
+test("7. the coach invites the client and gets a working invite link", async () => {
   await page.goto("/app");
   await tab(page, "Clients").click();
   await panel(page).getByRole("button", { name: `Client sign-in for ${CLIENT_NAME}` }).click();
@@ -136,8 +150,8 @@ test("7. the coach invites the client and gets a working invite link", async ({ 
 
 test("8. the client sets a password, signs in, and sees ONLY their own plan", async ({ browser }) => {
   // A separate browser context: the client must never ride on the coach's session.
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
-  const page = await context.newPage();
+  const clientContext = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await clientContext.newPage();
   const path = new URL(inviteLink).pathname + new URL(inviteLink).search;
 
   await page.goto(path);
@@ -159,10 +173,10 @@ test("8. the client sets a password, signs in, and sees ONLY their own plan", as
   // The client session cannot reach coach data.
   expect((await page.request.get("/api/clients")).status()).toBe(401);
   expect((await page.request.get("/api/reports/roster")).status()).toBe(401);
-  await context.close();
+  await clientContext.close();
 });
 
-test("9. the coach marks the workout Done and files a weekly check-in", async ({ page }) => {
+test("9. the coach marks the workout Done and files a weekly check-in", async () => {
   await page.goto("/app");
   await tab(page, "Manual Planner").click();
   const card = panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem").filter({ hasText: "Journey leg day" });
@@ -180,7 +194,7 @@ test("9. the coach marks the workout Done and files a weekly check-in", async ({
   await expect(panel(page)).toContainText("70", { timeout: 30_000 });
 });
 
-test("10. the coach messages the client and the thread survives a reload", async ({ page }) => {
+test("10. the coach messages the client and the thread survives a reload", async () => {
   await page.goto("/app");
   await tab(page, "Messages").click();
   await page.getByRole("list", { name: "Clients" }).getByRole("button", { name: new RegExp(CLIENT_NAME.split(" ")[0]) }).click();
@@ -196,7 +210,7 @@ test("10. the coach messages the client and the thread survives a reload", async
   await expect(page.getByRole("region", { name: `Conversation with ${CLIENT_NAME}` })).toContainText("Welcome aboard");
 });
 
-test("11. Home shows the work: today's tasks, the review queue and the alerts count", async ({ page }) => {
+test("11. Home shows the work: today's tasks, the review queue and the alerts count", async () => {
   await page.goto("/app");
   await tab(page, "Home").click();
   // Today's Tasks lists the client whose plan is dated today.
@@ -207,7 +221,7 @@ test("11. Home shows the work: today's tasks, the review queue and the alerts co
   await expect(panel(page).getByRole("region", { name: "Review queue" })).toBeVisible();
 });
 
-test("12. the weekly summary generates (AI fallback) and a CSV really downloads", async ({ page }) => {
+test("12. the weekly summary generates (AI fallback) and a CSV really downloads", async () => {
   await page.goto("/app");
   await tab(page, "Home").click();
   const summary = panel(page).getByRole("region", { name: "AI weekly summary" });
@@ -224,7 +238,7 @@ test("12. the weekly summary generates (AI fallback) and a CSV really downloads"
   expect(download.suggestedFilename()).toMatch(/\.csv$/);
 });
 
-test("13. deleting the account removes the coach and everything they made", async ({ page }) => {
+test("13. deleting the account removes the coach and everything they made", async () => {
   await page.goto("/app/account");
   await page.getByRole("button", { name: "Delete my account" }).click();
   const form = page.getByRole("form", { name: "Delete account" });
