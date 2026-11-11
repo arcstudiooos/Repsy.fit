@@ -24,6 +24,7 @@ model Coach {
   assignments  Assignment[]
   progressLogs ProgressLog[]
   chatMessages ChatMessage[]
+  weeklySummaries WeeklySummary[]
 
   @@map("coaches")
 }
@@ -131,6 +132,22 @@ model ProgressLog {
   @@index([clientId])
   @@index([coachId])
   @@map("progress_logs")
+}
+
+/// One saved AI weekly summary per coach per week (Prompt 51). `facts` is the exact numbers the
+/// summary was written from, kept so every number in `text` can be checked later.
+model WeeklySummary {
+  id        String   @id @default(cuid())
+  coachId   String
+  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  /// Monday of the summarised week, "YYYY-MM-DD" (UTC).
+  weekStart String
+  text      String
+  facts     Json
+  createdAt DateTime @default(now())
+
+  @@unique([coachId, weekStart])
+  @@map("weekly_summaries")
 }
 
 /// Landing page "Start free" sign-ups (Prompt 41). No password, no payment. Not coach-owned.

@@ -122,10 +122,10 @@ const AiReplySchema = z
   });
 
 /** A provider failure with a fixed, safe reason (never secrets, prompts or model output). */
-class AiProviderError extends Error {}
+export class AiProviderError extends Error {}
 
 /** Sends one system + user message and returns the model's reply parsed as JSON. */
-async function requestModelJson(systemPrompt: string, userMessage: string): Promise<unknown> {
+export async function requestModelJson(systemPrompt: string, userMessage: string): Promise<unknown> {
   const baseUrl = process.env.AI_BASE_URL;
   const apiKey = process.env.AI_API_KEY;
   const model = process.env.AI_MODEL;

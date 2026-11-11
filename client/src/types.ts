@@ -121,6 +121,21 @@ export type AtRiskReason = { rule: "adherence" | "inactive" | "weight"; text: st
 export type AtRiskClient = { clientId: string; clientName: string; reasons: AtRiskReason[] };
 export type AtRiskClients = { date: DateString; clients: AtRiskClient[] };
 
+/** The numbers the Home weekly summary is written from (Prompt 51). Saved with the summary. */
+export type WeeklyFacts = {
+  weekStart: DateString;
+  weekEnd: DateString;
+  activeClients: number;
+  checkIns: number;
+  avgAdherence: number | null;
+  avgAdherenceChange: number | null;
+  assignmentsCompleted: number;
+  atRiskClients: number;
+};
+/** `source` is "ai" for a written summary, "facts" when the AI was unavailable and the facts are listed. */
+export type WeeklySummary = { weekStart: DateString; text: string; facts: WeeklyFacts; createdAt: string; source: "ai" | "facts" };
+export type WeeklySummaryResponse = { weekStart: DateString; summary: WeeklySummary | null };
+
 export type NewProgressLog =Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;
 

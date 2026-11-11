@@ -104,6 +104,16 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **AI weekly summary (Prompt 51).** `WeeklySummary` = `{ id, coachId, weekStart ("YYYY-MM-DD",
+  the Monday, UTC), text, facts (Json), createdAt }`, unique per `(coachId, weekStart)`. The
+  server counts the week's facts from its own records (`server/src/weeklySummary.ts`) and sends
+  **only that facts object** to the existing AI setup - no client names, notes or chat. Every
+  number in the summary must appear in the facts (`numbersAreGrounded`); if the AI fails, is not
+  configured, or cites a number that is not in the facts, the plain fact list is saved instead
+  (`source: "facts"`), never an error. The facts are saved with the text so any number can be
+  checked later. Manual button only: nothing runs on a schedule, and replacing an existing
+  summary needs `replace: true` (the UI confirms first).
+
 - **Coach accounts (Prompt 43).** `Coach` = `{ id, name, email (unique, lower-case),
   passwordHash, createdAt }`. Passwords are hashed with bcrypt (`bcryptjs`, cost 12,
   `server/src/auth/password.ts`); a plain-text password is never stored, returned or logged,
@@ -185,6 +195,8 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
+| `getWeeklySummary(date)` | GET | `/api/weekly-summary?date=YYYY-MM-DD` | — | `{ weekStart, summary: WeeklySummary \| null }` (that week's saved summary) |
+| `generateWeeklySummary(date, replace)` | POST | `/api/weekly-summary` | `{ date?, replace? }` | `{ weekStart, summary }` 201; 409 `{ "error": "This week's summary is already saved. Confirm to replace it." }` unless `replace` is true |
 | `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
 | `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client[]` (the six-month clients it created; `[]` when all 10 exist) |
 | `createLead(input)` | POST | `/api/leads` | `{ name, email }` | `Lead` 201 `{ id, name, email, createdAt }`; 400 `{ error }` (missing name / bad email); 409 `{ "error": "You are already on the list." }` for a known email (case-insensitive, stored lower-case). Landing page only; no password or payment. |

@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { getAtRiskClients, getRecentCheckIns, getTodayTasks, queryKeys } from "../api";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, generateWeeklySummary, getAtRiskClients, getRecentCheckIns, getTodayTasks, getWeeklySummary, queryKeys } from "../api";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, TodayTask } from "../types";
 import { localToday } from "./AiCoachTab";
@@ -45,6 +47,7 @@ export function HomeTab({ onOpenTask, onOpenCheckIn }: Props) {
       </section>
       <NewCheckIns onOpenCheckIn={onOpenCheckIn} />
       <NeedsAttention date={date} onOpenClient={onOpenCheckIn} />
+      <WeeklySummaryCard date={date} />
     </>
   );
 }
@@ -178,5 +181,89 @@ function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"
         {label}
       </button>
     </li>
+  );
+}
+
+// AI weekly summary card (Prompt 51). The coach presses the button; nothing runs on a schedule.
+// The saved summary survives a refresh, and replacing it needs a confirm. When the AI is
+// unavailable the server saves the plain fact list instead, so this card never shows an error page.
+function WeeklySummaryCard({ date }: { date: string }) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const query = useQuery({ queryKey: queryKeys.weeklySummary(date), queryFn: () => getWeeklySummary(date) });
+
+  const generate = useMutation({
+    mutationFn: (replace: boolean) => generateWeeklySummary(date, replace),
+    onSuccess: (data) => {
+      setFailed(false);
+      setConfirming(false);
+      queryClient.setQueryData(queryKeys.weeklySummary(date), data);
+    },
+    onError: (error) => {
+      // 409 = one already exists: ask before replacing it.
+      if (error instanceof ApiError && error.status === 409) setConfirming(true);
+      else setFailed(true);
+    },
+  });
+
+  const summary = query.data?.summary ?? null;
+  const busy = generate.isPending;
+
+  let body;
+  if (query.isPending || (query.isError && query.isFetching)) {
+    body = <LoadingState />;
+  } else if (query.isError) {
+    body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
+  } else if (!summary) {
+    body = <p className="text-dim">No summary yet for this week. Generate one from your own records.</p>;
+  } else {
+    body = (
+      <>
+        {summary.source === "facts" && (
+          <p className="mb-2 text-sm font-semibold text-amber-text">
+            The AI was unavailable, so here are this week's facts.
+          </p>
+        )}
+        <p className="whitespace-pre-line text-text">{summary.text}</p>
+        <p className="mt-3 font-mono text-xs text-dim">
+          Week of {summary.weekStart} · saved {new Date(summary.createdAt).toLocaleString()}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <section aria-label="AI weekly summary" className="card mt-4 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base">AI weekly summary</h3>
+        <button
+          type="button"
+          onClick={() => generate.mutate(false)}
+          disabled={busy}
+          className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60"
+        >
+          {busy ? "Generating..." : "Generate this week's summary"}
+        </button>
+      </div>
+      {failed && (
+        <p role="alert" className="mt-3 text-sm font-semibold text-amber-text">
+          We couldn't generate the summary just now. Please try again in a moment.
+        </p>
+      )}
+      <div className="mt-3">{body}</div>
+      {confirming && (
+        <ConfirmDialog
+          title="Replace this week's summary?"
+          confirmLabel="Replace summary"
+          pendingLabel="Replacing..."
+          pending={busy}
+          onConfirm={() => generate.mutate(true)}
+          onCancel={() => setConfirming(false)}
+        >
+          <p>This week's summary is already saved. Generating again replaces it.</p>
+        </ConfirmDialog>
+      )}
+    </section>
   );
 }

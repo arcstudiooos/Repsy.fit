@@ -10,8 +10,8 @@ import type {
   AssignmentType,
   AtRiskClients,
   AutoAssignInput,
-  ChatMessage,
   ChangePasswordInput,
+  ChatMessage,
   Client,
   Coach,
   Lead,
@@ -25,6 +25,7 @@ import type {
   RegisterInput,
   ResetPasswordInput,
   TodayTasks,
+  WeeklySummaryResponse,
 } from "./types";
 
 export type ApiErrorKind = "endpoint_missing" | "network" | "http";
@@ -131,6 +132,12 @@ export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/task
 export const getRecentCheckIns = () => request<RecentCheckIns>("GET", "/checkins/recent");
 /** Clients that need attention (rules only, worst first); `date` is the coach's local "YYYY-MM-DD". */
 export const getAtRiskClients = (date: string) => request<AtRiskClients>("GET", `/at-risk?date=${enc(date)}`);
+/** This week's saved AI summary (`summary` is null when none has been generated yet). */
+export const getWeeklySummary = (date: string) =>
+  request<WeeklySummaryResponse>("GET", `/weekly-summary?date=${enc(date)}`);
+/** Generates and saves this week's summary. Rejects with ApiError 409 unless `replace` is true. */
+export const generateWeeklySummary = (date: string, replace = false) =>
+  request<WeeklySummaryResponse>("POST", "/weekly-summary", { date, replace });
 
 // ----- Demo data -----
 /** Creates demo clients with assignments and progress; returns the created clients. */
@@ -169,4 +176,5 @@ export const queryKeys = {
   todayTasks: (date: string) => ["tasks", "today", date] as const,
   recentCheckIns: ["checkins", "recent"] as const,
   atRisk: (date: string) => ["at-risk", date] as const,
+  weeklySummary: (date: string) => ["weekly-summary", date] as const,
 };
