@@ -1,22 +1,41 @@
 # Repsy Coach
 
-Repsy Coach is a web dashboard for a fitness coach. Pick a client, ask an AI assistant about
-them, turn its suggestions into plans (or plan by hand), and track the client's weekly progress
-in cards and charts.
+Repsy Coach is a web app for a fitness coach. Pick a client, ask an AI assistant about them, turn
+its suggestions into plans (or plan by hand), track their progress, habits and check-ins, message
+them, schedule sessions and record what they pay - and invite them to see their own plan.
 
 Live: https://repsy-coach.onrender.com (public landing page) - the dashboard is at
 https://repsy-coach.onrender.com/app
 
-## The 4 tabs
+## The 9 tabs
+
+Sign in at `/login` (or create an account at `/register`). Each coach sees only their own clients.
 
 | Tab | What it does |
 |---|---|
-| **AI Coach** | Chat with the AI about the selected client. Their profile (goal, level, weight, focus, notes) plus recent plans and check-ins are sent as context. Quick prompts ("Summarise this client", "Make a workout plan", ...), a suggestion card you can assign in one tap, and one-tap auto-assign for a Workout, Nutrition, Habit or Recovery plan. |
-| **Clients** | All clients as cards: add a client, open one in the AI Coach, delete one (with a confirmation; their plans, check-ins and chat are deleted too). Also the demo data buttons. |
-| **Manual Planner** | The client's plans, newest first, filterable by type. Create a plan by hand; for a Workout, search the exercise library and set sets, reps and rest per exercise (saved as `1. Back Squat — 4 sets × 6 reps · Rest 120s`). Mark plans Active, Done or Paused, or delete them. |
-| **Progress** | Stat cards (current weight and change, average adherence, total workouts, plan completion), weight and adherence line charts, an assignments-by-type bar chart, a weekly check-in form and the check-in history. |
+| **Home** | Today's Tasks (today's appointments first, then plans due today), new check-ins, **Needs attention** (the smart alerts, each with its reason: low adherence, no recent check-in, weight moving against the goal, or poor sleep), the AI weekly summary, and the review queue of parked AI suggestions and new check-ins. |
+| **AI Coach** | Chat with the AI about the selected client, with their profile, recent plans and check-ins as context. A suggestion card you can assign in one tap, or park in the review queue, and one-tap auto-assign for a Workout, Nutrition, Habit or Recovery plan. |
+| **Clients** | All clients as cards: add, open in the AI Coach, delete (everything that belongs to them goes too), and invite a client to sign in. Demo data buttons. |
+| **Manual Planner** | The client's plans, newest first, filterable by type. Build a plan by hand or from a Library template; for a Workout, search the exercise library and set sets, reps and rest. Mark plans Active, Done or Paused. |
+| **Progress** | Stat cards, weight and adherence charts, assignments by type, a weekly check-in form and the history. |
+| **Check-ins** | Daily check-ins (energy, mood, sleep hours, recovery) with a sleep and recovery card, the habit tracker with streaks, and body measurements. |
+| **Library** | Workout templates and the meal library, plus the macro calculator. Coach-level, shared across your clients. |
+| **Messages** | A message thread with each client. |
+| **Business** | Four views: **Payments** (client plans and payments you record by hand - no charging, no payment links), **Schedule** (a week of appointments, stored in UTC and shown in your timezone), **Engagement** (a leaderboard ranked by check-in streak, then habit %, with all three numbers shown) and **Reports** (a printable progress report and CSV exports). |
 
-A client selector strip above every tab except Clients chooses whose data you see.
+A client selector strip above most tabs chooses whose data you see.
+
+## The client area
+
+A coach invites a client from the Clients tab. The client opens the link, sets a password at
+`/client/set-password`, and signs in at `/client/login`. `/client` then shows, read-only:
+
+- **My plan** - their plan name, status, next due date and last payment date (no amounts);
+- **My sessions** - their upcoming appointments;
+- **My streaks** - their own check-in streak, habit % and workouts this week (never a ranking).
+
+A client session is separate from a coach session: it gets `401` on every coach route, and a
+client never sees another client's data or the coach's notes. The client area is read-only in v2.
 
 ## Landing page
 
@@ -95,6 +114,7 @@ built client and the API, and applies migrations on start).
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | For password-reset emails | Your email provider's SMTP settings (port 587 with STARTTLS by default; `SMTP_SECURE=true` for port 465). `SMTP_HOST` and `SMTP_FROM` are the minimum. Without them, no reset email is sent: development prints the reset link in the server console only, production logs that email is not set up. Set them in `.env` locally or the Render dashboard. |
 | `APP_URL` | For password-reset emails | The public address of the app (e.g. `https://repsy-coach.onrender.com`), used to build the link in the email. On Render it falls back to `RENDER_EXTERNAL_URL`; locally to `http://localhost:5173`. |
 | `PORT` | No | Port to listen on. Render sets it; the local default is 3001. |
+| `NODE_ENV` | Recommended in production | Set it to `production` in the Render dashboard. Session cookies are marked `Secure` when `NODE_ENV=production` **or** Render's own `RENDER` variable is set, so they are secure on Render either way. |
 
 Without the AI values the app still works: the AI Coach gives a fallback answer built from the
 client's data, and auto-assign says "Nothing was saved".
@@ -105,10 +125,11 @@ client's data, and auto-assign says "Nothing was saved".
 |---|---|
 | `npm test` | Server tests (Vitest + Supertest). Database tests run when `DATABASE_URL` is set and skip otherwise. |
 | `npm run test:ui` | Browser tests with a faked API — no database or AI key needed. Run `npm run build` first. |
-| `npm run test:e2e` | Browser tests against the production server and a real database, including the full coach journey (`e2e/journey.spec.ts`). Run `npm run build` first. They **delete all clients**, so use a test database; they refuse to run against a Render database. |
+| `npm run test:e2e` | 30 browser checks against the production server and a real database: the v1 coach journey (`e2e/journey.spec.ts`), the **full v2 journey** (`e2e/v2-journey.spec.ts`: landing and lead form -> register -> client -> template -> plan -> payment -> invite -> the client signs in -> mark done, check-in, message -> Home, weekly summary, CSV -> delete the account), sign-in isolation and a production smoke set. Run `npm run build` first. They **delete all clients**, so use a test database; they refuse to run against a Render database. |
 
 CI (`.github/workflows/ci.yml`) runs on every push to `main`: install, build, migrate a fresh
-Postgres 16, then all three test suites.
+Postgres 16, then all three test suites. A full run takes about 8 minutes (npm and Playwright browser caches
+apply); the two v1 AI-assign checks skip in CI because it has no AI key, by design.
 
 ## Deploy on Render
 
@@ -144,15 +165,23 @@ On the Clients tab:
 
 Load the quick demo first, then the 6-month demo, to get all 13 clients.
 
-## Known limits of v1
+## Known limits of v2
 
-- **No login yet.** Anyone with the URL can use the app, including the demo buttons.
-- **No login yet.** Coach accounts exist in the database (Prompt 43), but until login ships
-  (Prompts 44-46) the app runs in demo mode on unclaimed data. The first coach to register
-  claims it.
 - **AI is general-wellness only and can be wrong.** It doesn't diagnose; the coach reviews every
-  plan before using it. Without a working AI key you get the fallback answer.
-- **Demo data is sample data.** Names and numbers are made up; delete any client at any time.
+  plan before it reaches a client. Without a working AI key you get the fallback answer.
+- **The client area is read-only.** Clients can see their plan, sessions and streaks, but cannot
+  mark work done, file a check-in or reply in chat themselves yet.
+- **Payments are record-keeping only.** Nothing charges a card, sends a payment link or reminder,
+  or makes an invoice.
+- **No progress photos.** The app does not store photos.
+- **Password-reset and invite emails need SMTP.** Until the `SMTP_*` variables are set, reset
+  emails are not sent and invite links are shown to the coach to pass on by hand.
+- **Rate limits are per server process.** They reset when the server restarts, which is fine for
+  one Render instance but would need a shared store to scale out.
+- **Privacy and Terms are drafts** at `/privacy` and `/terms`, pending the owner's legal review.
+- **CI takes about 8 minutes**, above the 5-minute target.
+- **Demo data is sample data.** Names and numbers are made up; delete any client at any time. It
+  counts exactly like real entries, so a seeded client can top the Engagement leaderboard.
 
 Project rules for contributors and AI coding agents are in `CLAUDE.md`; the change history is in
 `CHANGELOG.md`.
