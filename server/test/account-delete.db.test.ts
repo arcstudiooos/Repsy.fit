@@ -33,7 +33,9 @@ async function fullClient(api: ReturnType<typeof asCoach>, name: string): Promis
     startsAt: "2026-11-20T04:30:00.000Z",
     endsAt: "2026-11-20T05:30:00.000Z",
   });
-  await api.post(`/api/clients/${clientId}/invite`).send({ loginEmail: `${tag}-${name.replace(/\W/g, "")}@example.com` });
+  const invited = await api.post(`/api/clients/${clientId}/invite`).send({ email: `${tag}-${name.replace(/\W/g, "").toLowerCase()}@example.com` });
+  // Fail loudly here rather than letting a silent 400 make the cascade assertions vacuous.
+  if (invited.status !== 200 && invited.status !== 201) throw new Error(`invite failed: ${invited.status} ${JSON.stringify(invited.body)}`);
   return clientId;
 }
 

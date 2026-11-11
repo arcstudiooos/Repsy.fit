@@ -8,6 +8,8 @@ const prismaMock = vi.hoisted(() => {
   const mock: Record<string, any> = {
     coach: { findUnique: vi.fn(), delete: vi.fn() },
     client: { findFirst: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
+    // The lead form is a real write: mock it so the rate-limit test does not log server errors.
+    lead: { create: vi.fn().mockResolvedValue({ id: "lead-1", name: "A", email: "a@b.com", createdAt: new Date() }) },
     $queryRaw: vi.fn().mockResolvedValue([{ "1": 1 }]),
   };
   mock.$transaction = vi.fn((fn: (tx: unknown) => unknown) => Promise.resolve(fn(mock)));
