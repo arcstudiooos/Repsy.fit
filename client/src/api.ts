@@ -21,10 +21,12 @@ import type {
   HabitWeek,
   Lead,
   LoginInput,
+  Measurement,
   NewAssignment,
   NewClient,
   NewDailyCheckIn,
   NewLead,
+  NewMeasurement,
   NewProgressLog,
   NewReviewItem,
   ProgressLog,
@@ -156,6 +158,16 @@ export const updateHabit = (clientId: string, habitId: string, input: HabitUpdat
 export const setHabitDone = (clientId: string, habitId: string, date: string, done: boolean) =>
   request<HabitTick>("PUT", `/clients/${enc(clientId)}/habits/${enc(habitId)}/logs/${enc(date)}`, { done });
 
+// ----- Body measurements (per client, Prompt 56) -----
+/** That client's measurements, newest first. */
+export const listMeasurements = (clientId: string) =>
+  request<Measurement[]>("GET", `/clients/${enc(clientId)}/measurements`);
+/** Adds one set of measurements (only `date` is required). */
+export const addMeasurement = (clientId: string, input: NewMeasurement) =>
+  request<Measurement>("POST", `/clients/${enc(clientId)}/measurements`, input);
+export const deleteMeasurement = (clientId: string, measurementId: string) =>
+  request<void>("DELETE", `/clients/${enc(clientId)}/measurements/${enc(measurementId)}`);
+
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
@@ -217,6 +229,7 @@ export const queryKeys = {
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
+  measurements: (clientId: string) => ["clients", clientId, "measurements"] as const,
   todayTasks: (date: string) => ["tasks", "today", date] as const,
   recentCheckIns: ["checkins", "recent"] as const,
   atRisk: (date: string) => ["at-risk", date] as const,

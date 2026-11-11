@@ -8,6 +8,7 @@ import { sleepSeries, sleepSummary } from "../lib/sleepStats";
 import { listDailyCheckIns, queryKeys, saveDailyCheckIn } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { HabitTracker } from "../components/HabitTracker";
+import { Measurements } from "../components/Measurements";
 import type { Client, DailyCheckIn, NewDailyCheckIn } from "../types";
 import { localToday } from "./AiCoachTab";
 
@@ -143,6 +144,7 @@ function ClientCheckIns({ client }: { client: Client }) {
       </form>
 
       <HabitTracker clientId={client.id} today={today} />
+      <Measurements clientId={client.id} today={today} />
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">

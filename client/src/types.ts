@@ -126,6 +126,26 @@ export interface DailyCheckIn {
 export type NewDailyCheckIn = Pick<DailyCheckIn, "date"> &
   Partial<Pick<DailyCheckIn, "energy" | "mood" | "sleepHours" | "recoveryScore" | "waterLiters" | "steps" | "foodNote">>;
 
+/** One set of body measurements on one date (Prompt 56). Only `date` is required. Field names are
+ *  the API contract (Prompt 70's CSV export reuses them). Weight is not stored here: it is read from ProgressLog. */
+export interface Measurement {
+  id: string;
+  coachId: string | null;
+  clientId: string;
+  date: DateString;
+  /** above 0, up to 300 */
+  waistCm: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  hipCm: number | null;
+  /** above 0, up to 75 */
+  bodyFatPercent: number | null;
+  note: string;
+  createdAt: string;
+}
+export type NewMeasurement = Pick<Measurement, "date"> &
+  Partial<Pick<Measurement, "waistCm" | "chestCm" | "armCm" | "hipCm" | "bodyFatPercent" | "note">>;
+
 /** A habit the coach tracks for one client (Prompt 54), with its this-week ticks and streaks. */
 export interface Habit {
   id: string;

@@ -28,6 +28,7 @@ model Coach {
   reviewItems  ReviewItem[]
   dailyCheckIns DailyCheckIn[]
   habits       Habit[]
+  measurements Measurement[]
 
   @@map("coaches")
 }
@@ -69,6 +70,7 @@ model Client {
   reviewItems  ReviewItem[]
   dailyCheckIns DailyCheckIn[]
   habits       Habit[]
+  measurements Measurement[]
 
   @@index([coachId])
   @@map("clients")
@@ -200,6 +202,30 @@ model HabitLog {
 
   @@unique([habitId, date])
   @@map("habit_logs")
+}
+
+/// One set of body measurements for a client on one date (Prompt 56). Everything except `date` is
+/// optional. Weight is NOT stored here: the chart reads it from ProgressLog. Field names are part of
+/// the API contract (the CSV export of Prompt 70 reuses them).
+model Measurement {
+  id             String   @id @default(cuid())
+  coachId        String
+  coach          Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// YYYY-MM-DD
+  date           String
+  waistCm        Float?
+  chestCm        Float?
+  armCm          Float?
+  hipCm          Float?
+  bodyFatPercent Float?
+  note           String   @default("")
+  createdAt      DateTime @default(now())
+
+  @@index([clientId, date])
+  @@index([coachId])
+  @@map("measurements")
 }
 
 /// One thing waiting for the coach's decision (Prompt 52): an AI suggestion the coach parked, or a

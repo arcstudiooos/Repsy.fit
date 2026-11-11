@@ -104,6 +104,15 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Body measurements (Prompt 56).** `Measurement` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
+  waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; everything except `date` is
+  optional (`null` / `""`). Ranges: each tape value above 0 and at most 300 cm, `bodyFatPercent` above 0
+  and at most 75 (so never 3 digits), `note` up to 500 characters. Several rows may share a date. **Weight
+  is not stored here:** the chart's "Weight (kg)" choice is read from `ProgressLog.weightKg` and is only
+  offered when the client has at least one logged weight. **These field names are the export shape:**
+  Prompt 70's CSV export reuses them exactly, so do not rename them. Coach-side in v2, a section of the
+  Check-ins tab (`client/src/components/Measurements.tsx`). No photos, BMI or health judgments.
+
 - **Habit tracker (Prompt 54).** `Habit` = `{ id, coachId, clientId, name, active, createdAt }` and
   `HabitLog` = `{ id, habitId, date ("YYYY-MM-DD"), done }`, unique per `(habitId, date)`. A client
   has at most **8 active habits**. Archive sets `active: false`: the habit and its logs are **never
@@ -231,6 +240,9 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
 | `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |
 | `setHabitDone(clientId, habitId, date, done)` | PUT | `/api/clients/:clientId/habits/:habitId/logs/:date` | `{ done: boolean }` | `{ habitId, date, done }` (one row per habit per day, upserted); 400 bad date; 404 `Habit not found` |
+| `listMeasurements(clientId)` | GET | `/api/clients/:clientId/measurements` | — | `Measurement[]`, newest first (`date`, then `createdAt`, `id`); 404 `Client not found`. (Prompt 56) |
+| `addMeasurement(clientId, input)` | POST | `/api/clients/:clientId/measurements` | `NewMeasurement`: `{ date, waistCm?, chestCm?, armCm?, hipCm?, bodyFatPercent?, note? }` | `Measurement` 201 `{ id, coachId, clientId, date, waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; 400 `{ error }` for a bad date, a value that is not above 0, a tape value over 300, `bodyFatPercent` over 75 or a note over 500 characters |
+| `deleteMeasurement(clientId, measurementId)` | DELETE | `/api/clients/:clientId/measurements/:measurementId` | — | 204, no body; 404 `{ "error": "Measurement not found" }` (also for another client's / coach's row) |
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
@@ -410,5 +422,8 @@ and record it here.
   only to a client the 3 original rules already picked (low sleep alone never lists a client; scoring and order unchanged).
   The AI Coach context gained each check-in's recovery score and a "7-day sleep average" line. All values are typed in by
   hand: no wearable, no automatic tracking, no medical or sleep-diagnosis wording.
+- Prompt 56: measurements are built on `/api/clients/:clientId/measurements` (the prompt named no routes). The prompt's
+  "sensible ranges" became above 0 / at most 300 cm and body fat above 0 / at most 75 %. Delete uses the shared
+  `ConfirmDialog` (the Progress check-in list itself deletes without asking).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.
