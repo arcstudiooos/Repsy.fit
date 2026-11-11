@@ -89,7 +89,7 @@ test("4. auto-assign a Nutrition plan", async ({ page, request }) => {
   await expect.poll(async () => (await counts(request, idA)).assignments, { timeout: 30_000 }).toBe(before + 1);
 });
 
-test("5. manual Workout with exercise search, sets, reps, rest", async ({ page }) => {
+test("5. manual Workout with exercise search, sets, reps and rest, then mark it Done", async ({ page, request }) => {
   await page.goto("/app");
   await page.getByRole("tab", { name: "Manual Planner" }).click();
   await selectClient(page, A);
@@ -103,12 +103,8 @@ test("5. manual Workout with exercise search, sets, reps, rest", async ({ page }
   await form.getByLabel("Rest seconds for Back Squat").fill("120");
   await form.getByRole("button", { name: "Assign plan" }).click();
   await expect(panel(page)).toContainText("1. Back Squat — 4 sets × 6 reps · Rest 120s", { timeout: 30_000 });
-});
 
-test("6. mark it Done", async ({ page, request }) => {
-  await page.goto("/app");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
-  await selectClient(page, A);
+  // ...and mark it Done, on the same card.
   const card = panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem").filter({ hasText: "Journey leg day" });
   await card.getByRole("group", { name: "Status" }).getByRole("button", { name: "Done" }).click();
   await expect(card.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "true");
@@ -116,7 +112,7 @@ test("6. mark it Done", async ({ page, request }) => {
   expect(list.find((a) => a.title === "Journey leg day")!.status).toBe("Done");
 });
 
-test("7. add a progress check-in", async ({ page, request }) => {
+test("6. add two progress check-ins; the cards and all 3 charts update", async ({ page, request }) => {
   await page.goto("/app");
   await page.getByRole("tab", { name: "Progress" }).click();
   await selectClient(page, A);
@@ -130,12 +126,8 @@ test("7. add a progress check-in", async ({ page, request }) => {
   await form.getByRole("button", { name: "Add check-in" }).click();
   await expect(panel(page).getByRole("list", { name: "Check-ins" }).getByRole("listitem")).toHaveCount(2, { timeout: 30_000 });
   expect((await counts(request, idA)).progress).toBe(2);
-});
 
-test("8. Progress cards and all 3 charts update", async ({ page }) => {
-  await page.goto("/app");
-  await page.getByRole("tab", { name: "Progress" }).click();
-  await selectClient(page, A);
+  // The stat cards and all three charts follow the same two check-ins.
   await expect(panel(page).getByRole("group", { name: "Current weight" })).toContainText("67.6 kg");
   await expect(panel(page).getByRole("group", { name: "Current weight" })).toContainText("-0.8 kg overall");
   await expect(panel(page).getByRole("group", { name: "Average adherence" })).toContainText("85%");
@@ -150,7 +142,7 @@ test("8. Progress cards and all 3 charts update", async ({ page }) => {
   expect(Number(labels[0])).toBeGreaterThanOrEqual(1);
 });
 
-test("9. switch client: zero data leakage", async ({ page, request }) => {
+test("7. switch client: zero data leakage", async ({ page, request }) => {
   expect(await counts(request, idB)).toEqual({ assignments: 0, progress: 0, chat: 0 });
   await page.goto("/app");
   await selectClient(page, B);
@@ -163,7 +155,7 @@ test("9. switch client: zero data leakage", async ({ page, request }) => {
   await expect(panel(page).getByRole("group", { name: "Current weight" })).not.toContainText("67.6");
 });
 
-test("10. delete the test client and confirm cascade", async ({ page, request }) => {
+test("8. delete the test client and confirm cascade", async ({ page, request }) => {
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await panel(page).getByRole("button", { name: `Delete ${A}` }).click();
