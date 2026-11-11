@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteAssignment, listAssignments, queryKeys, updateAssignmentStatus } from "../api";
-import { ManualAssignmentForm } from "../components/ManualAssignmentForm";
+import { ManualAssignmentForm, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import {
   ASSIGNMENT_STATUSES,
@@ -13,15 +13,27 @@ import {
 } from "../types";
 import { TYPE_CHIP } from "./AiCoachTab";
 
-type Props = { client: Client | null; onOpenAiCoach: () => void };
+type Props = {
+  client: Client | null;
+  onOpenAiCoach: () => void;
+  /** Prompt 58: a Library template to start the new-assignment form from (read once, when the tab opens). */
+  prefill?: TemplatePrefill | null;
+  onPrefillUsed?: () => void;
+};
 
 type Filter = "All" | AssignmentType;
 const FILTERS: Filter[] = ["All", ...ASSIGNMENT_TYPES];
 
 // Manual Planner tab: everything assigned to the selected client
 // (GET /api/clients/:clientId/assignments, newest first), with instant type filters.
-export function PlannerTab({ client, onOpenAiCoach }: Props) {
+export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed }: Props) {
   const [filter, setFilter] = useState<Filter>("All");
+  // The form reads the template on its first render; after that the parent forgets it, so coming
+  // back to this tab later starts from an empty form again.
+  const [startFrom] = useState(prefill ?? null);
+  useEffect(() => {
+    if (startFrom) onPrefillUsed?.();
+  }, [startFrom, onPrefillUsed]);
 
   const assignmentsQuery = useQuery({
     queryKey: queryKeys.assignments(client?.id ?? "none"),
@@ -107,7 +119,7 @@ export function PlannerTab({ client, onOpenAiCoach }: Props) {
       <h2 className="text-2xl">Manual Planner</h2>
       <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
       <div className="mt-4">{body}</div>
-      {client && <ManualAssignmentForm key={client.id} clientId={client.id} onCreated={onCreated} />}
+      {client && <ManualAssignmentForm key={client.id} clientId={client.id} onCreated={onCreated} prefill={startFrom} />}
     </>
   );
 }

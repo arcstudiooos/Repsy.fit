@@ -1,9 +1,16 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createAssignment, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import { localToday, TYPE_CHIP } from "../tabs/AiCoachTab";
-import { ASSIGNMENT_TYPES, type Assignment, type AssignmentType, type NewAssignment } from "../types";
+import {
+  ASSIGNMENT_TYPES,
+  type Assignment,
+  type AssignmentType,
+  type NewAssignment,
+  type TemplateExercise,
+  type WorkoutTemplate,
+} from "../types";
 import { CUSTOM_GROUP, searchExercises, type Exercise } from "../data/exercises";
 
 // Inputs: --surface2 background, 14px radius (design system).
@@ -20,7 +27,7 @@ const TITLE_PLACEHOLDER: Record<AssignmentType, string> = {
 
 // Dose per exercise: reps is text so "AMRAP" or "30 sec" work; rest is in seconds.
 type Dose = { sets: number; reps: string; rest: number };
-type DoseRow = Exercise & Dose & { key: number };
+export type DoseRow = Exercise & Dose & { key: number };
 
 const DEFAULT_DOSE: Dose = { sets: 3, reps: "10", rest: 60 };
 const MIN_SETS = 1;
@@ -35,40 +42,38 @@ function workoutDetails(rows: DoseRow[], notes: string): string {
   return notes ? `${list}\n\n${notes}` : list;
 }
 
-type Props = {
-  clientId: string;
-  /** Called after the plan is saved and the list refreshed. */
-  onCreated: (assignment: Assignment) => void;
-};
+/** Template exercises (name, sets, reps, rest) as editable rows, in order. */
+export function rowsFromTemplate(list: TemplateExercise[]): DoseRow[] {
+  return list.map((e, i) => ({ name: e.name, group: CUSTOM_GROUP, sets: e.sets, reps: e.reps, rest: e.rest, key: i + 1 }));
+}
 
-// Manual create form: same shape as AI plans (type, title, details, reasoning, date),
-// saved with source "manual" via POST /api/clients/:clientId/assignments.
-export function ManualAssignmentForm({ clientId, onCreated }: Props) {
-  const queryClient = useQueryClient();
-  const [type, setType] = useState<AssignmentType>("Workout");
-  const [title, setTitle] = useState("");
-  const [details, setDetails] = useState("");
-  const [reasoning, setReasoning] = useState("");
-  const [date, setDate] = useState(localToday);
+/** Rows back to the stored shape (name, sets, reps, rest), keeping the coach's order. */
+export function templateFromRows(rows: DoseRow[]): TemplateExercise[] {
+  return rows.map((r) => ({ name: r.name, sets: r.sets, reps: r.reps.trim(), rest: r.rest }));
+}
+
+type PickerProps = { rows: DoseRow[]; onRowsChange: Dispatch<SetStateAction<DoseRow[]>> };
+
+/**
+ * The exercise search (46 exercises + custom) and the selected rows with sets / reps / rest controls.
+ * Shared by the Manual Planner form and the Library's template form; the rows live in the parent.
+ */
+export function ExercisePicker({ rows, onRowsChange }: PickerProps) {
   const [exerciseQuery, setExerciseQuery] = useState("");
-  // Picked exercises with their dose (Workout only). Kept while the type changes; saved as the details.
-  const [exercises, setExercises] = useState<DoseRow[]>([]);
-  const [nextExerciseKey, setNextExerciseKey] = useState(1);
   const exerciseResults = searchExercises(exerciseQuery);
   const customName = exerciseQuery.trim();
 
   function addExercise(exercise: Exercise) {
-    setExercises((list) => [...list, { ...exercise, ...DEFAULT_DOSE, key: nextExerciseKey }]);
-    setNextExerciseKey((k) => k + 1);
+    onRowsChange((list) => [...list, { ...exercise, ...DEFAULT_DOSE, key: Math.max(0, ...list.map((r) => r.key)) + 1 }]);
     setExerciseQuery("");
   }
 
   function updateExercise(key: number, change: Partial<Dose>) {
-    setExercises((list) => list.map((item) => (item.key === key ? { ...item, ...change } : item)));
+    onRowsChange((list) => list.map((item) => (item.key === key ? { ...item, ...change } : item)));
   }
 
   function moveExercise(index: number, by: -1 | 1) {
-    setExercises((list) => {
+    onRowsChange((list) => {
       const target = index + by;
       if (target < 0 || target >= list.length) return list;
       const next = [...list];
@@ -76,6 +81,92 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
       return next;
     });
   }
+
+  return (
+    <div>
+      <label htmlFor="exercise-search" className="mb-1 block text-sm font-semibold text-text">
+        Search exercises
+      </label>
+      <div className="relative">
+        <input
+          id="exercise-search"
+          className={inputClass}
+          value={exerciseQuery}
+          onChange={(e) => setExerciseQuery(e.target.value)}
+          placeholder="Search by name or muscle group, e.g. squat or back"
+          autoComplete="off"
+        />
+        {customName !== "" && (
+          <ul
+            aria-label="Exercise results"
+            className="absolute left-0 right-0 z-10 mt-1 overflow-hidden rounded-card border border-border bg-surface"
+          >
+            {exerciseResults.map((ex) => (
+              <li key={ex.name}>
+                <button
+                  type="button"
+                  onClick={() => addExercise(ex)}
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface2"
+                >
+                  <span className="font-semibold text-text">{ex.name}</span>
+                  <span className="text-dim">{ex.group}</span>
+                </button>
+              </li>
+            ))}
+            <li className="border-t border-border">
+              <button
+                type="button"
+                onClick={() => addExercise({ name: customName, group: CUSTOM_GROUP })}
+                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface2"
+              >
+                <span className="font-semibold text-accent2">Add custom exercise "{customName}"</span>
+                <span className="text-dim">{CUSTOM_GROUP}</span>
+              </button>
+            </li>
+          </ul>
+        )}
+      </div>
+      {rows.length > 0 && (
+        <ul aria-label="Selected exercises" className="mt-2 flex flex-col gap-2">
+          {rows.map((ex, index) => (
+            <DoseRowItem
+              key={ex.key}
+              row={ex}
+              isFirst={index === 0}
+              isLast={index === rows.length - 1}
+              onChange={(change) => updateExercise(ex.key, change)}
+              onMove={(by) => moveExercise(index, by)}
+              onRemove={() => onRowsChange((list) => list.filter((item) => item.key !== ex.key))}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** A plan opened from a Library template (Prompt 58): fills the form, still editable before saving. */
+export type TemplatePrefill = { template: WorkoutTemplate; date: string };
+
+type Props = {
+  clientId: string;
+  /** Called after the plan is saved and the list refreshed. */
+  onCreated: (assignment: Assignment) => void;
+  /** Start from a template: Workout, its name as title, its exercises, notes and "From template: name". */
+  prefill?: TemplatePrefill | null;
+};
+
+// Manual create form: same shape as AI plans (type, title, details, reasoning, date),
+// saved with source "manual" via POST /api/clients/:clientId/assignments.
+export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
+  const queryClient = useQueryClient();
+  const [type, setType] = useState<AssignmentType>("Workout");
+  const [title, setTitle] = useState(prefill?.template.name ?? "");
+  const [details, setDetails] = useState(prefill?.template.notes ?? "");
+  const [reasoning, setReasoning] = useState(prefill ? `From template: ${prefill.template.name}` : "");
+  const [date, setDate] = useState(() => prefill?.date || localToday());
+  // Picked exercises with their dose (Workout only). Kept while the type changes; saved as the details.
+  const [exercises, setExercises] = useState<DoseRow[]>(() => (prefill ? rowsFromTemplate(prefill.template.exercises) : []));
 
   const mutation = useMutation({
     mutationFn: (input: NewAssignment) => createAssignment(clientId, input),
@@ -150,67 +241,7 @@ export function ManualAssignmentForm({ clientId, onCreated }: Props) {
             aria-required="true"
           />
         </div>
-        {type === "Workout" && (
-          <div>
-            <label htmlFor="exercise-search" className="mb-1 block text-sm font-semibold text-text">
-              Search exercises
-            </label>
-            <div className="relative">
-              <input
-                id="exercise-search"
-                className={inputClass}
-                value={exerciseQuery}
-                onChange={(e) => setExerciseQuery(e.target.value)}
-                placeholder="Search by name or muscle group, e.g. squat or back"
-                autoComplete="off"
-              />
-              {customName !== "" && (
-                <ul
-                  aria-label="Exercise results"
-                  className="absolute left-0 right-0 z-10 mt-1 overflow-hidden rounded-card border border-border bg-surface"
-                >
-                  {exerciseResults.map((ex) => (
-                    <li key={ex.name}>
-                      <button
-                        type="button"
-                        onClick={() => addExercise(ex)}
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface2"
-                      >
-                        <span className="font-semibold text-text">{ex.name}</span>
-                        <span className="text-dim">{ex.group}</span>
-                      </button>
-                    </li>
-                  ))}
-                  <li className="border-t border-border">
-                    <button
-                      type="button"
-                      onClick={() => addExercise({ name: customName, group: CUSTOM_GROUP })}
-                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface2"
-                    >
-                      <span className="font-semibold text-accent2">Add custom exercise "{customName}"</span>
-                      <span className="text-dim">{CUSTOM_GROUP}</span>
-                    </button>
-                  </li>
-                </ul>
-              )}
-            </div>
-            {exercises.length > 0 && (
-              <ul aria-label="Selected exercises" className="mt-2 flex flex-col gap-2">
-                {exercises.map((ex, index) => (
-                  <DoseRowItem
-                    key={ex.key}
-                    row={ex}
-                    isFirst={index === 0}
-                    isLast={index === exercises.length - 1}
-                    onChange={(change) => updateExercise(ex.key, change)}
-                    onMove={(by) => moveExercise(index, by)}
-                    onRemove={() => setExercises((list) => list.filter((item) => item.key !== ex.key))}
-                  />
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {type === "Workout" && <ExercisePicker rows={exercises} onRowsChange={setExercises} />}
         <div>
           <label htmlFor="assignment-details" className="mb-1 block text-sm font-semibold text-text">
             {fromExercises ? "Extra notes (optional)" : "Details"}

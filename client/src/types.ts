@@ -146,6 +146,26 @@ export interface Measurement {
 export type NewMeasurement = Pick<Measurement, "date"> &
   Partial<Pick<Measurement, "waistCm" | "chestCm" | "armCm" | "hipCm" | "bodyFatPercent" | "note">>;
 
+/** One exercise of a template, in the Manual Planner's shape (Prompt 58). `rest` is seconds. */
+export interface TemplateExercise {
+  name: string;
+  sets: number;
+  reps: string;
+  rest: number;
+}
+
+/** A coach's reusable workout (Prompt 58). Coach-level, not tied to a client. */
+export interface WorkoutTemplate {
+  id: string;
+  coachId: string;
+  name: string;
+  focus: string;
+  exercises: TemplateExercise[];
+  notes: string;
+  createdAt: string;
+}
+export type NewWorkoutTemplate = Pick<WorkoutTemplate, "name" | "exercises"> & Partial<Pick<WorkoutTemplate, "focus" | "notes">>;
+
 /** A habit the coach tracks for one client (Prompt 54), with its this-week ticks and streaks. */
 export interface Habit {
   id: string;

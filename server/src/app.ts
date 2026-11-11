@@ -14,6 +14,7 @@ import { reviewQueueRouter } from "./routes/reviewQueue.js";
 import { dailyCheckInsRouter } from "./routes/dailyCheckIns.js";
 import { habitsRouter } from "./routes/habits.js";
 import { measurementsRouter } from "./routes/measurements.js";
+import { templatesRouter } from "./routes/templates.js";
 import { leadsRouter } from "./routes/leads.js";
 import { authRouter } from "./routes/auth.js";
 import { sessionMiddleware } from "./auth/session.js";
@@ -62,7 +63,9 @@ app.use("/api/checkins", requireCoach);
 app.use("/api/weekly-summary", requireCoach);
 app.use("/api/review-queue", requireCoach);
 app.use("/api/at-risk", requireCoach);
+app.use("/api/templates", requireCoach);
 
+app.use("/api/templates", templatesRouter);
 app.use("/api/tasks", tasksRouter);
 app.use("/api/at-risk", atRiskRouter);
 app.use("/api/checkins", checkinsRouter);

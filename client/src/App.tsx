@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientStrip } from "./ClientStrip";
@@ -8,6 +8,7 @@ import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import { CheckInsTab } from "./tabs/CheckInsTab";
 import { HomeTab, useReviewQueueCount } from "./tabs/HomeTab";
+import type { TemplatePrefill } from "./components/ManualAssignmentForm";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
@@ -15,8 +16,10 @@ import type { Client, Coach } from "./types";
 
 // The account page (Prompt 47) is its own lazy chunk: its form validation (zod) stays out of the first /app load.
 const AccountPage = lazy(() => import("./auth/AccountPage"));
+// The Library tab (Prompt 58) loads on first open, which keeps the /app first load inside its size budget.
+const LibraryTab = lazy(() => import("./tabs/LibraryTab").then((m) => ({ default: m.LibraryTab })));
 
-type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins";
+type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Home" },
@@ -25,6 +28,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "planner", label: "Manual Planner" },
   { id: "progress", label: "Progress" },
   { id: "checkins", label: "Check-ins" },
+  { id: "library", label: "Library" },
 ];
 
 function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
@@ -205,6 +209,9 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   const onAccount = usePathname() === "/app/account";
   const [activeTab, setActiveTab] = useState<TabId>("ai");
   const current = TABS.find((t) => t.id === activeTab)!;
+  // Prompt 58: a Library template waiting to fill the Manual Planner's new-assignment form.
+  const [plannerPrefill, setPlannerPrefill] = useState<TemplatePrefill | null>(null);
+  const clearPlannerPrefill = useCallback(() => setPlannerPrefill(null), []);
 
   // Shared "selected client" for the whole app.
   const clientsQuery = useQuery({
@@ -252,6 +259,19 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
         seedSixMonth={seedSixMonth}
       />
     );
+  } else if (current.id === "library") {
+    // Templates belong to the coach, not to a client: no client strip, and it works with zero clients.
+    panelContent = (
+      <Suspense fallback={<LoadingState />}>
+        <LibraryTab
+          onAssign={(clientId, prefill) => {
+            setSelectedClientId(clientId);
+            setPlannerPrefill(prefill);
+            setActiveTab("planner");
+          }}
+        />
+      </Suspense>
+    );
   } else if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {
     // Also while retrying after an error, so Retry gives visible feedback.
     panelContent = <LoadingState />;
@@ -288,6 +308,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             key={`planner:${selectedClientId ?? "none"}`}
             client={selectedClient}
             onOpenAiCoach={() => setActiveTab("ai")}
+            prefill={plannerPrefill}
+            onPrefillUsed={clearPlannerPrefill}
           />
         ) : current.id === "progress" ? (
           <ProgressTab key={`progress:${selectedClientId ?? "none"}`} client={selectedClient} />

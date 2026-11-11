@@ -31,7 +31,10 @@ for (const k of first) if (HEAVY.test(k) || HEAVY.test(byKey(k).file)) errors.pu
 const firstKb = first.reduce((n, k) => n + gz(byKey(k).file), 0) / 1024;
 
 // 2. The /app chunk (src/App.tsx) must not statically include heavy code.
-const appKey = Object.keys(manifest).find((k) => k.endsWith("src/App.tsx"));
+// (When a lazy tab shares code with it, Vite lists the chunk as "_App-<hash>.js" instead: same chunk, found by name.)
+const appKey =
+  Object.keys(manifest).find((k) => k.endsWith("src/App.tsx")) ??
+  Object.keys(manifest).find((k) => manifest[k].name === "App" && manifest[k].isDynamicEntry);
 if (!appKey) errors.push("no separate chunk for src/App.tsx");
 else for (const k of staticClosure(appKey)) if (HEAVY.test(k) || HEAVY.test(byKey(k).file)) errors.push(`/app includes ${k}`);
 

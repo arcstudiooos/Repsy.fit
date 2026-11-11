@@ -29,6 +29,7 @@ model Coach {
   dailyCheckIns DailyCheckIn[]
   habits       Habit[]
   measurements Measurement[]
+  workoutTemplates WorkoutTemplate[]
 
   @@map("coaches")
 }
@@ -226,6 +227,22 @@ model Measurement {
   @@index([clientId, date])
   @@index([coachId])
   @@map("measurements")
+}
+
+/// A coach's reusable workout (Prompt 58). `exercises` is JSON in the Manual Planner's shape, in order:
+/// [{ name, sets, reps, rest (seconds) }]. Coach-level: no client, never shared between coaches.
+model WorkoutTemplate {
+  id        String   @id @default(cuid())
+  coachId   String
+  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name      String
+  focus     String   @default("")
+  exercises Json
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([coachId])
+  @@map("workout_templates")
 }
 
 /// One thing waiting for the coach's decision (Prompt 52): an AI suggestion the coach parked, or a

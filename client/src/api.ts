@@ -28,6 +28,7 @@ import type {
   NewLead,
   NewMeasurement,
   NewProgressLog,
+  NewWorkoutTemplate,
   NewReviewItem,
   ProgressLog,
   RecentCheckIns,
@@ -37,6 +38,7 @@ import type {
   ReviewQueue,
   TodayTasks,
   WeeklySummaryResponse,
+  WorkoutTemplate,
 } from "./types";
 
 export type ApiErrorKind = "endpoint_missing" | "network" | "http";
@@ -168,6 +170,15 @@ export const addMeasurement = (clientId: string, input: NewMeasurement) =>
 export const deleteMeasurement = (clientId: string, measurementId: string) =>
   request<void>("DELETE", `/clients/${enc(clientId)}/measurements/${enc(measurementId)}`);
 
+// ----- Library: workout templates (per coach, Prompt 58) -----
+/** The signed-in coach's templates, A-Z by name. */
+export const listTemplates = () => request<WorkoutTemplate[]>("GET", "/templates");
+export const createTemplate = (input: NewWorkoutTemplate) => request<WorkoutTemplate>("POST", "/templates", input);
+/** Replaces name, focus, exercises and notes. */
+export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
+  request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
+export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
+
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
@@ -229,6 +240,7 @@ export const queryKeys = {
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
+  templates: ["templates"] as const,
   measurements: (clientId: string) => ["clients", clientId, "measurements"] as const,
   todayTasks: (date: string) => ["tasks", "today", date] as const,
   recentCheckIns: ["checkins", "recent"] as const,

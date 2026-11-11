@@ -4,7 +4,7 @@
 // needed ones created), so run these only against a test database.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
-const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins"];
+const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library"];
 const SAMPLE_CLIENTS = [
   { name: "Maya Patel", goal: "Fat loss + strength" },
   { name: "Arjun Mehta", goal: "Muscle gain" },
@@ -43,7 +43,7 @@ test.describe("app shell", () => {
     await expect(header.getByText("Prototype - coach command center")).toBeVisible();
   });
 
-  test("exactly 6 horizontal tabs, in order", async ({ page }) => {
+  test("exactly 7 horizontal tabs, in order", async ({ page }) => {
     await page.goto("/app");
     await expect(page.getByRole("tab")).toHaveText(TABS);
     await expect(page.getByRole("tablist")).toHaveCSS("flex-direction", "row");
@@ -170,7 +170,7 @@ test.describe("production server", () => {
   test("refreshing on a deep /app path still opens the full app", async ({ page }) => {
     const res = await page.goto("/app/some/deep/link");
     expect(res?.status()).toBe(200);
-    await expect(page.getByRole("tab")).toHaveCount(6);
+    await expect(page.getByRole("tab")).toHaveCount(7);
     await expect(strip(page).getByRole("button")).toHaveCount(3);
   });
 

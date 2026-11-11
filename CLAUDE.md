@@ -104,6 +104,19 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Workout templates (Prompt 58).** `WorkoutTemplate` = `{ id, coachId, name, focus, exercises, notes,
+  createdAt }`; `exercises` is JSON in the Manual Planner's shape, in order: `[{ name, sets (1-10 whole),
+  reps (text, 1-30 chars: "AMRAP" works), rest (whole seconds, 6-3600) }]`, 1 to 50 of them. `name` 1-100
+  characters, `focus` up to 100, `notes` up to 2000. **Coach-level:** a template belongs to one coach, has no
+  client, and is never shared between coaches (no marketplace); deleting the coach deletes their templates.
+  Deleting a template never touches assignments already made from it. The 7th tab, **Library**
+  (`client/src/tabs/LibraryTab.tsx`, lazy chunk), has no client strip and works with zero clients. It reuses the
+  Planner's exercise search and sets / reps / rest rows (`ExercisePicker` in `ManualAssignmentForm.tsx`).
+  "Assign to client" picks any of the coach's clients and a date (default today), then opens the Manual Planner for
+  that client with the New assignment form pre-filled (Workout, title = template name, its exercises, its notes as
+  extra notes, reasoning `From template: <name>`); **nothing is saved until the coach taps "Assign plan"**, and every
+  field stays editable. The pre-fill is used once: coming back to the Planner later starts empty.
+
 - **Body measurements (Prompt 56).** `Measurement` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
   waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; everything except `date` is
   optional (`null` / `""`). Ranges: each tape value above 0 and at most 300 cm, `bodyFatPercent` above 0
@@ -243,6 +256,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `listMeasurements(clientId)` | GET | `/api/clients/:clientId/measurements` | — | `Measurement[]`, newest first (`date`, then `createdAt`, `id`); 404 `Client not found`. (Prompt 56) |
 | `addMeasurement(clientId, input)` | POST | `/api/clients/:clientId/measurements` | `NewMeasurement`: `{ date, waistCm?, chestCm?, armCm?, hipCm?, bodyFatPercent?, note? }` | `Measurement` 201 `{ id, coachId, clientId, date, waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; 400 `{ error }` for a bad date, a value that is not above 0, a tape value over 300, `bodyFatPercent` over 75 or a note over 500 characters |
 | `deleteMeasurement(clientId, measurementId)` | DELETE | `/api/clients/:clientId/measurements/:measurementId` | — | 204, no body; 404 `{ "error": "Measurement not found" }` (also for another client's / coach's row) |
+| `listTemplates()` | GET | `/api/templates` | — | `WorkoutTemplate[]` of the signed-in coach, A-Z by name (`name`, `createdAt`, `id`). Needs `requireCoach`. (Prompt 58) |
+| `createTemplate(input)` | POST | `/api/templates` | `NewWorkoutTemplate`: `{ name, exercises: { name, sets, reps, rest }[], focus?, notes? }` | `WorkoutTemplate` 201 `{ id, coachId, name, focus, exercises, notes, createdAt }`; 400 `{ error }` for a missing name, no exercises, sets outside 1-10, empty reps, rest outside 6-3600 s, or a too-long text |
+| `updateTemplate(templateId, input)` | PUT | `/api/templates/:templateId` | `NewWorkoutTemplate` (replaces name, focus, exercises, notes) | `WorkoutTemplate`; 400 as above; 404 `{ "error": "Template not found" }` (also for another coach's row) |
+| `deleteTemplate(templateId)` | DELETE | `/api/templates/:templateId` | — | 204, no body; 404 `{ "error": "Template not found" }` |
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
@@ -425,5 +442,10 @@ and record it here.
 - Prompt 56: measurements are built on `/api/clients/:clientId/measurements` (the prompt named no routes). The prompt's
   "sensible ranges" became above 0 / at most 300 cm and body fat above 0 / at most 75 %. Delete uses the shared
   `ConfirmDialog` (the Progress check-in list itself deletes without asking).
+- Prompt 58: the prompt named no routes; templates are coach-level, so they live at `/api/templates` (not under
+  `/api/clients/:clientId`). "Assign to client" creates nothing itself: it opens the Manual Planner pre-filled and the
+  assignment is saved by the existing `POST /api/clients/:clientId/assignments` when the coach taps "Assign plan".
+  The Library tab is lazy-loaded to keep `/app` inside its size budget, so `client/scripts/check-budget.mjs` now also
+  finds the App chunk by its name when Vite lists it as `_App-<hash>.js` (same checks, unchanged budgets).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.
