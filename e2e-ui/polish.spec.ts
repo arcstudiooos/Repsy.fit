@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 const client = (i: number, name: string) => ({
   id: `c-${i}`,
-  coachId: "default-coach",
+  coachId: null,
   name,
   goal: "Fat loss + strength",
   age: 29,
@@ -20,7 +20,7 @@ const MANY = ["Maya Patel", "Arjun Mehta", "Casey Jordan", "Rohan Kapoor", "Sara
 const logs = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
     id: `l${i}`,
-    coachId: "default-coach",
+    coachId: null,
     clientId: "c-0",
     date: new Date(Date.UTC(2026, 8, 7 + i * 7)).toISOString().slice(0, 10),
     weightKg: 68 - i * 0.4,
@@ -32,7 +32,7 @@ const logs = (n: number) =>
 const assignments = (n: number) =>
   Array.from({ length: n }, (_, i) => ({
     id: `a${i}`,
-    coachId: "default-coach",
+    coachId: null,
     clientId: "c-0",
     type: ["Workout", "Nutrition", "Habit", "Recovery"][i % 4],
     title: `Plan ${i + 1}`,

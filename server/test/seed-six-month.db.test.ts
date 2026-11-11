@@ -11,10 +11,10 @@ const isRenderDb = /render\.com|dpg-/.test(url);
 
 describe.skipIf(!url || isRenderDb)("six-month demo seed (database)", () => {
   beforeAll(async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
   });
   afterAll(async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
     await prisma.$disconnect();
   });
 

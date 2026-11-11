@@ -104,8 +104,23 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
-- Every Client, Assignment and ProgressLog has `coachId`. Until login exists, all records use
-  the placeholder coach `"default-coach"` (the column default).
+- **Coach accounts (Prompt 43).** `Coach` = `{ id, name, email (unique, lower-case),
+  passwordHash, createdAt }`. Passwords are hashed with bcrypt (`bcryptjs`, cost 12,
+  `server/src/auth/password.ts`); a plain-text password is never stored, returned or logged,
+  and `passwordHash` must never appear in any API response.
+- Every Client, Assignment, ProgressLog and ChatMessage has `coachId`, a real foreign key to
+  `Coach` (delete cascades). **`coachId` NULL means demo data not yet claimed by a coach.** The
+  old `"default-coach"` placeholder string was turned into NULL by migration
+  `20261111090000_add_coaches`; no fake coach row exists. Until login (Prompt 44-45) the API
+  keeps working in demo mode on the NULL rows (`DEMO_COACH_ID = null` in
+  `server/src/routes/clients.ts`).
+- **One-time claim:** `claimDemoData(tx, coachId)` (`server/src/auth/claimDemoData.ts`) moves
+  every NULL row to a coach, but only when that coach is the first and only coach. Registration
+  (Prompt 44) calls it in the same transaction that creates the coach; later coaches start empty.
+- `Lead` (landing sign-ups) is not coach data and has no `coachId`.
+- Register / login input rules live in ONE zod file shared by server and client:
+  `server/src/auth/schemas.ts` (re-exported by `client/src/authSchemas.ts`). Password: 10+
+  characters, max 72 bytes (bcrypt limit); email trimmed and lower-cased; plain-words errors.
 
 ## API contract
 
@@ -120,13 +135,14 @@ rename or reshape routes without updating `api.ts` in the same prompt.
 - **Every per-client route is scoped to one client.** The server must check that the
   assignment / progress log in the path belongs to `:clientId` and never return or change
   another client's data.
-- **`coachId` is never sent by the client.** The server sets it (currently `"default-coach"`).
+- **`coachId` is never sent by the client.** The server sets it (`null` = unclaimed demo data
+  until login exists; the signed-in coach's id from Prompt 45).
 - Fields omitted from create bodies get the database defaults (see Prisma schema).
 - Any 2xx means success. A route that returns nothing replies **204 No Content**
   (`api.ts` returns `undefined` for 204).
 - Response objects are the full records as defined in `types.ts` (`Client`, `Assignment`,
-  `ChatMessage`, `ProgressLog`), including `id`, `coachId` (except `ChatMessage`) and
-  `createdAt`.
+  `ChatMessage`, `ProgressLog`), including `id`, `coachId` (`string | null`; not in
+  `ChatMessage` responses, though the column exists) and `createdAt`.
 
 ### Error shape
 

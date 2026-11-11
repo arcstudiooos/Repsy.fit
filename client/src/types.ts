@@ -32,7 +32,8 @@ export type DateString = string;
 
 export interface Client {
   id: string;
-  coachId: string;
+  /** Owning coach; null = demo data not yet claimed by a coach. */
+  coachId: string | null;
   name: string;
   /** Free text; suggestions in GOALS. Default "General fitness". */
   goal: string;
@@ -48,7 +49,8 @@ export interface Client {
 
 export interface Assignment {
   id: string;
-  coachId: string;
+  /** Owning coach; null = demo data not yet claimed by a coach. */
+  coachId: string | null;
   clientId: string;
   type: AssignmentType;
   title: string;
@@ -70,7 +72,8 @@ export interface ChatMessage {
 
 export interface ProgressLog {
   id: string;
-  coachId: string;
+  /** Owning coach; null = demo data not yet claimed by a coach. */
+  coachId: string | null;
   clientId: string;
   date: DateString;
   weightKg: number | null;

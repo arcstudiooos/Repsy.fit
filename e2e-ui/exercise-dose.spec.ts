@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const CLIENTS = [
   {
     id: "c-maya",
-    coachId: "default-coach",
+    coachId: null,
     name: "Maya Patel",
     goal: "Fat loss + strength",
     age: 29,

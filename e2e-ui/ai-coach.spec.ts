@@ -7,7 +7,7 @@ type Msg = { id: string; clientId: string; role: "coach" | "ai"; content: string
 const CLIENTS = [
   {
     id: "c-maya",
-    coachId: "default-coach",
+    coachId: null,
     name: "Maya Patel",
     goal: "Fat loss + strength",
     age: 29,
@@ -20,7 +20,7 @@ const CLIENTS = [
   },
   {
     id: "c-arjun",
-    coachId: "default-coach",
+    coachId: null,
     name: "Arjun Mehta",
     goal: "Muscle gain",
     age: 24,

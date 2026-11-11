@@ -19,7 +19,7 @@ import { app } from "../src/app.js";
 
 const client = {
   id: "client-1",
-  coachId: "default-coach",
+  coachId: null,
   name: "Maya Patel",
   goal: "Fat loss + strength",
   age: 29,
@@ -96,7 +96,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     const response = await post({ type: "Workout" }, "missing");
     expect(response.status).toBe(404);
     expect(response.body).toEqual({ error: "Client not found" });
-    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: "missing", coachId: "default-coach" } });
+    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: "missing", coachId: null } });
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(prisma.assignment.create).not.toHaveBeenCalled();
   });
@@ -111,7 +111,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
       expect.objectContaining({
         id: "assignment-new",
         clientId: client.id,
-        coachId: "default-coach",
+        coachId: null,
         type: "Workout",
         title: plan.title,
         details: plan.details,
@@ -125,7 +125,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     expect(prisma.assignment.create).toHaveBeenCalledWith({
       data: {
         clientId: client.id,
-        coachId: "default-coach",
+        coachId: null,
         type: "Workout",
         title: plan.title,
         details: plan.details,

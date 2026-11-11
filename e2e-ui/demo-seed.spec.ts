@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 const DEMO = ["Maya Patel", "Arjun Mehta", "Casey Jordan"].map((name, i) => ({
   id: `demo-${i}`,
-  coachId: "default-coach",
+  coachId: null,
   name,
   goal: "Fat loss + strength",
   age: 29,

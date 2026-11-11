@@ -16,7 +16,7 @@ import { app } from "../src/app.js";
 
 const client = {
   id: "client-1",
-  coachId: "default-coach",
+  coachId: null,
   name: "Maya Patel",
   goal: "Fat loss + strength",
   age: 29,
@@ -114,16 +114,16 @@ describe("POST /api/clients/:clientId/chat", () => {
     });
 
     expect(prisma.client.findFirst).toHaveBeenCalledWith({
-      where: { id: client.id, coachId: "default-coach" },
+      where: { id: client.id, coachId: null },
     });
     expect(prisma.assignment.findMany).toHaveBeenCalledWith({
-      where: { clientId: client.id, coachId: "default-coach" },
+      where: { clientId: client.id, coachId: null },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 8,
       select: { type: true, title: true, status: true },
     });
     expect(prisma.progressLog.findMany).toHaveBeenCalledWith({
-      where: { clientId: client.id, coachId: "default-coach" },
+      where: { clientId: client.id, coachId: null },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       take: 6,
       select: { date: true, weightKg: true, adherence: true, workoutsDone: true },

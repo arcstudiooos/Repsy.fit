@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const CLIENTS = [
   {
     id: "c-maya",
-    coachId: "default-coach",
+    coachId: null,
     name: "Maya Patel",
     goal: "Fat loss + strength",
     age: 29,
@@ -52,7 +52,7 @@ async function mockApi(page: Page): Promise<Mock> {
       const type = body.type as string;
       const saved = {
         id: `as${nextId++}`,
-        coachId: "default-coach",
+        coachId: null,
         clientId,
         type,
         title: `${type} plan for Maya`,

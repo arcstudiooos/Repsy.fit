@@ -12,10 +12,10 @@ const isRenderDb = /render\.com|dpg-/.test(url);
 
 describe.skipIf(!url || isRenderDb)("both demo sets (database)", () => {
   beforeAll(async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
   });
   afterAll(async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
     await prisma.$disconnect();
   });
 
@@ -25,7 +25,7 @@ describe.skipIf(!url || isRenderDb)("both demo sets (database)", () => {
     expect((await request(app).get("/api/clients")).body).toHaveLength(13);
 
     const names = SIX_MONTH_ROSTER.map((c) => c.name);
-    const sixMonth = { client: { coachId: "default-coach", name: { in: names } } };
+    const sixMonth = { client: { coachId: null, name: { in: names } } };
     expect(await prisma.assignment.count({ where: sixMonth })).toBe(50);
     expect(await prisma.assignment.count({ where: { ...sixMonth, reasoning: "" } })).toBe(0);
     expect(await prisma.progressLog.count({ where: sixMonth })).toBe(260);

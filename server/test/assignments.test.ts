@@ -13,7 +13,7 @@ vi.mock("../src/db.js", () => ({ prisma }));
 
 import { app } from "../src/app.js";
 
-const client = { id: "client-1", coachId: "default-coach", name: "Maya Patel" };
+const client = { id: "client-1", coachId: null, name: "Maya Patel" };
 
 const aiBody = {
   type: "Workout",
@@ -43,14 +43,14 @@ describe("POST /api/clients/:clientId/assignments", () => {
     const res = await request(app).post(`/api/clients/${client.id}/assignments`).send(aiBody);
 
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ id: "assignment-1", ...aiBody, clientId: client.id, coachId: "default-coach", status: "Active" });
-    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: client.id, coachId: "default-coach" } });
+    expect(res.body).toMatchObject({ id: "assignment-1", ...aiBody, clientId: client.id, coachId: null, status: "Active" });
+    expect(prisma.client.findFirst).toHaveBeenCalledWith({ where: { id: client.id, coachId: null } });
     expect(prisma.assignment.create).toHaveBeenCalledOnce();
     expect(prisma.assignment.create.mock.calls[0][0].data).toEqual({
       ...aiBody,
       status: "Active",
       clientId: client.id,
-      coachId: "default-coach",
+      coachId: null,
     });
   });
 
@@ -90,7 +90,7 @@ describe("POST /api/clients/:clientId/assignments", () => {
       .send({ ...aiBody, coachId: "other-coach", clientId: "other-client" });
     expect(prisma.assignment.create.mock.calls[0][0].data).toMatchObject({
       clientId: client.id,
-      coachId: "default-coach",
+      coachId: null,
     });
   });
 
@@ -113,7 +113,7 @@ describe("GET /api/clients/:clientId/assignments", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual(rows);
     expect(prisma.assignment.findMany).toHaveBeenCalledWith({
-      where: { clientId: client.id, coachId: "default-coach" },
+      where: { clientId: client.id, coachId: null },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
   });

@@ -153,10 +153,10 @@ describe("POST /api/seed/six-month-demo", () => {
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
     const data = tx.client.create.mock.calls.map(([a]) => (a as CreateArg).data);
     for (const d of data) {
-      expect(d.coachId).toBe("default-coach");
+      expect(d.coachId).toBeNull();
       expect(d.progressLogs.create).toHaveLength(26);
       expect(d.assignments.create).toHaveLength(5);
-      expect(d.assignments.create.every((a) => a.coachId === "default-coach")).toBe(true);
+      expect(d.assignments.create.every((a) => a.coachId === null)).toBe(true);
       expect(d.weightKg).toBe(SIX_MONTH_ROSTER.find((c) => c.name === d.name)!.endKg);
       expect(d).not.toHaveProperty("startKg");
       expect(d).not.toHaveProperty("baseAdherence");
@@ -170,7 +170,7 @@ describe("POST /api/seed/six-month-demo", () => {
     expect(res.body).toHaveLength(8);
     expect(res.body.map((c: { name: string }) => c.name)).not.toContain("Sarah Mitchell");
     expect(tx.client.findMany).toHaveBeenCalledWith({
-      where: { coachId: "default-coach", name: { in: NAMES } },
+      where: { coachId: null, name: { in: NAMES } },
       select: { name: true },
     });
   });

@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const CLIENTS = [
   {
     id: "c-maya",
-    coachId: "default-coach",
+    coachId: null,
     name: "Maya Patel",
     goal: "Fat loss + strength",
     age: 29,
@@ -34,7 +34,7 @@ async function mockApi(page: Page) {
           status: 201,
           json: {
             id: "as1",
-            coachId: "default-coach",
+            coachId: null,
             clientId: "c-maya",
             reasoning: "",
             source: "manual",

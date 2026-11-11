@@ -42,7 +42,7 @@ describe("POST /api/seed/demo", () => {
     expect(res.status).toBe(201);
     expect(res.body.map((c: { name: string }) => c.name)).toEqual(["Maya Patel", "Arjun Mehta", "Casey Jordan"]);
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1); // advisory lock: two seeds can't interleave
-    expect(tx.client.count).toHaveBeenCalledWith({ where: { coachId: "default-coach" } });
+    expect(tx.client.count).toHaveBeenCalledWith({ where: { coachId: null } });
 
     const [maya, arjun, casey] = createdData();
     expect(maya).toMatchObject({
@@ -54,7 +54,7 @@ describe("POST /api/seed/demo", () => {
       level: "Intermediate",
       focus: "Lower body strength, protein intake",
       notes: "Vegetarian. Trains 4x/week. Sleep inconsistent on weekdays.",
-      coachId: "default-coach",
+      coachId: null,
     });
     expect(arjun).toMatchObject({
       name: "Arjun Mehta",
@@ -96,7 +96,7 @@ describe("POST /api/seed/demo", () => {
       const dates = logs.map((l) => new Date(`${String(l.date)}T00:00:00Z`).getTime());
       expect(dates[1] - dates[0]).toBe(7 * 86_400_000);
       expect(dates[2] - dates[1]).toBe(7 * 86_400_000);
-      expect(logs.every((l) => l.coachId === "default-coach")).toBe(true);
+      expect(logs.every((l) => l.coachId === null)).toBe(true);
 
       expect(data.assignments.create).toEqual([
         expect.objectContaining({
@@ -106,7 +106,7 @@ describe("POST /api/seed/demo", () => {
           reasoning: "Starter plan to establish baseline.",
           source: "manual",
           status: "Active",
-          coachId: "default-coach",
+          coachId: null,
         }),
       ]);
     }

@@ -6,7 +6,7 @@
 import type { Client } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db.js";
-import { DEFAULT_COACH_ID } from "./clients.js";
+import { DEMO_COACH_ID } from "./clients.js";
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 
@@ -32,13 +32,13 @@ const PROVIDER_TIMEOUT_MS = 30_000;
 export async function loadClientContext(client: Client): Promise<ClientContext> {
   const [assignments, progressLogs] = await Promise.all([
     prisma.assignment.findMany({
-      where: { clientId: client.id, coachId: DEFAULT_COACH_ID },
+      where: { clientId: client.id, coachId: DEMO_COACH_ID },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 8,
       select: { type: true, title: true, status: true },
     }),
     prisma.progressLog.findMany({
-      where: { clientId: client.id, coachId: DEFAULT_COACH_ID },
+      where: { clientId: client.id, coachId: DEMO_COACH_ID },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       take: 6,
       select: { date: true, weightKg: true, adherence: true, workoutsDone: true },

@@ -50,7 +50,7 @@ describe.skipIf(!process.env.DATABASE_URL)("manual assignments (database)", () =
     expect(list.status).toBe(200);
     expect(list.body).toHaveLength(3);
     const byId = (id: string) => list.body.find((a: { id: string }) => a.id === id);
-    expect(byId(habit.body.id)).toMatchObject({ type: "Habit", source: "manual", status: "Active", clientId, coachId: "default-coach" });
+    expect(byId(habit.body.id)).toMatchObject({ type: "Habit", source: "manual", status: "Active", clientId, coachId: null });
     expect(byId(nutrition.body.id)).toMatchObject({ type: "Nutrition", source: "manual", date: "2026-11-12", reasoning: "" });
     expect(byId(ai.body.id)).toMatchObject({ type: "Workout", source: "ai" });
   });

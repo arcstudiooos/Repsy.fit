@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
-  coachId: "default-coach",
+  coachId: null,
   name,
   goal: "Fat loss + strength",
   age: 29,
@@ -30,7 +30,7 @@ let nextId = 1;
 function assignment(clientId: string, fields: Partial<Assignment>): Assignment {
   return {
     id: `as${nextId++}`,
-    coachId: "default-coach",
+    coachId: null,
     clientId,
     type: "Workout",
     title: "Plan",

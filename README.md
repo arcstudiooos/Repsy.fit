@@ -142,7 +142,9 @@ Load the quick demo first, then the 6-month demo, to get all 13 clients.
 ## Known limits of v1
 
 - **No login yet.** Anyone with the URL can use the app, including the demo buttons.
-- **Single coach.** Every record belongs to one placeholder coach (`default-coach`).
+- **No login yet.** Coach accounts exist in the database (Prompt 43), but until login ships
+  (Prompts 44-46) the app runs in demo mode on unclaimed data. The first coach to register
+  claims it.
 - **AI is general-wellness only and can be wrong.** It doesn't diagnose; the coach reviews every
   plan before using it. Without a working AI key you get the fallback answer.
 - **Demo data is sample data.** Names and numbers are made up; delete any client at any time.

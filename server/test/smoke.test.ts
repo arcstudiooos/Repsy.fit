@@ -33,7 +33,7 @@ describe("smoke", () => {
     expect(res.body.name).toBe("Smoke Test Client");
     expect(res.body.goal).toBe("General fitness");
     expect(res.body.level).toBe("Beginner");
-    expect(res.body.coachId).toBe("default-coach");
+    expect(res.body.coachId).toBeNull();
   });
 
   it("list clients works", async () => {

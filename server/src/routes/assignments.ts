@@ -2,7 +2,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
-import { DEFAULT_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
+import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 export const ASSIGNMENT_SOURCES = ["ai", "manual"] as const;
@@ -47,7 +47,7 @@ async function findClientAssignment(req: Request, res: Response) {
     return null;
   }
   const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, clientId: client.id, coachId: DEFAULT_COACH_ID },
+    where: { id: assignmentId, clientId: client.id, coachId: DEMO_COACH_ID },
   });
   if (!assignment) {
     res.status(404).json({ error: "Assignment not found" });
@@ -70,7 +70,7 @@ assignmentsRouter.get(
       return;
     }
     const assignments = await prisma.assignment.findMany({
-      where: { clientId: client.id, coachId: DEFAULT_COACH_ID },
+      where: { clientId: client.id, coachId: DEMO_COACH_ID },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     });
     res.json(assignments);
@@ -94,7 +94,7 @@ assignmentsRouter.post(
       return;
     }
     const assignment = await prisma.assignment.create({
-      data: { ...parsed.data, clientId: client.id, coachId: DEFAULT_COACH_ID },
+      data: { ...parsed.data, clientId: client.id, coachId: DEMO_COACH_ID },
     });
     res.status(201).json(assignment);
   }),

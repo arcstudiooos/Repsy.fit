@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
-  coachId: "default-coach",
+  coachId: null,
   name,
   goal: "Fat loss + strength",
   age: 29,
@@ -24,7 +24,7 @@ type Mock = { assignments: Record<string, Assignment[]>; calls: string[]; failNe
 
 const assignment = (id: string, title: string, status = "Active"): Assignment => ({
   id,
-  coachId: "default-coach",
+  coachId: null,
   clientId: "c-maya",
   type: "Workout",
   title,

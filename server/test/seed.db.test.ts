@@ -12,10 +12,10 @@ const isRenderDb = /render\.com|dpg-/.test(url);
 
 describe.skipIf(!url || isRenderDb)("quick demo seed (database)", () => {
   beforeAll(async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
   });
   afterAll(async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
     await prisma.$disconnect();
   });
 
@@ -41,7 +41,7 @@ describe.skipIf(!url || isRenderDb)("quick demo seed (database)", () => {
   });
 
   it("two seeds at the same time still create exactly 3 clients", async () => {
-    await prisma.client.deleteMany({ where: { coachId: "default-coach" } });
+    await prisma.client.deleteMany({ where: { coachId: null } });
     const [a, b] = await Promise.all([request(app).post("/api/seed/demo"), request(app).post("/api/seed/demo")]);
     expect([a.body.length, b.body.length].sort()).toEqual([0, 3]);
     const after = await request(app).get("/api/clients");

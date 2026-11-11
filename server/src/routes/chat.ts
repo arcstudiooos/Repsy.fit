@@ -6,7 +6,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { answerQuestion, loadClientContext } from "./ai.js";
-import { asyncHandler, findClient, validationMessage } from "./clients.js";
+import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
 
 export const CHAT_ROLES = ["coach", "ai"] as const;
 export type ChatRole = (typeof CHAT_ROLES)[number];
@@ -16,7 +16,7 @@ export async function saveMessage(clientId: string, role: ChatRole, content: str
   if (!CHAT_ROLES.includes(role)) throw new Error(`Invalid chat role: ${role}`);
   const text = content.trim();
   if (!text) throw new Error("Chat message content can't be empty");
-  return prisma.chatMessage.create({ data: { clientId, role, content: text } });
+  return prisma.chatMessage.create({ data: { clientId, role, content: text, coachId: DEMO_COACH_ID } });
 }
 
 // Mounted at /api/clients/:clientId/chat

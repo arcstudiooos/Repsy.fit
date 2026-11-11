@@ -71,7 +71,7 @@ describe.skipIf(!process.env.DATABASE_URL)("assign from AI suggestion (database)
     expect(list.body[0]).toMatchObject({
       id: assigned.body.id,
       clientId,
-      coachId: "default-coach",
+      coachId: null,
       type: "Workout",
       source: "ai",
       status: "Active",

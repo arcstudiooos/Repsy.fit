@@ -4,7 +4,12 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 
 /** Placeholder coach until login exists. Every record belongs to this coach. */
-export const DEFAULT_COACH_ID = "default-coach";
+/**
+ * Demo / unclaimed data has no coach yet (coachId NULL). Prompt 43 removed the old
+ * "default-coach" placeholder string so coachId can be a real foreign key to Coach; the first
+ * coach who registers (Prompt 44) claims every NULL row via claimDemoData().
+ */
+export const DEMO_COACH_ID = null;
 
 export const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
@@ -33,7 +38,7 @@ export const asyncHandler =
 
 /** This coach's client with this id, or null (other coaches' clients are never returned). */
 export function findClient(clientId: string) {
-  return prisma.client.findFirst({ where: { id: clientId, coachId: DEFAULT_COACH_ID } });
+  return prisma.client.findFirst({ where: { id: clientId, coachId: DEMO_COACH_ID } });
 }
 
 export const clientsRouter = Router();
@@ -43,7 +48,7 @@ clientsRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
     const clients = await prisma.client.findMany({
-      where: { coachId: DEFAULT_COACH_ID },
+      where: { coachId: DEMO_COACH_ID },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
     res.json(clients);
@@ -59,7 +64,7 @@ clientsRouter.post(
       res.status(400).json({ error: validationMessage(parsed.error) });
       return;
     }
-    const client = await prisma.client.create({ data: { ...parsed.data, coachId: DEFAULT_COACH_ID } });
+    const client = await prisma.client.create({ data: { ...parsed.data, coachId: DEMO_COACH_ID } });
     res.status(201).json(client);
   }),
 );
@@ -69,7 +74,7 @@ clientsRouter.get(
   "/:clientId",
   asyncHandler(async (req, res) => {
     const client = await prisma.client.findFirst({
-      where: { id: req.params.clientId, coachId: DEFAULT_COACH_ID },
+      where: { id: req.params.clientId, coachId: DEMO_COACH_ID },
     });
     if (!client) {
       res.status(404).json({ error: "Client not found" });
@@ -85,7 +90,7 @@ clientsRouter.delete(
   "/:clientId",
   asyncHandler(async (req, res) => {
     const { count } = await prisma.client.deleteMany({
-      where: { id: req.params.clientId, coachId: DEFAULT_COACH_ID },
+      where: { id: req.params.clientId, coachId: DEMO_COACH_ID },
     });
     if (count === 0) {
       res.status(404).json({ error: "Client not found" });

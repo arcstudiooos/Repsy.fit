@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Migration check (fresh DB + DB with v1 demo data)
+        run: node server/scripts/check-migration.mjs
+
       - name: Apply migrations
         run: npx -w server prisma migrate deploy
 

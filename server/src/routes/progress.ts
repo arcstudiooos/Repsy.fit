@@ -3,7 +3,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { isDateString } from "./assignments.js";
-import { DEFAULT_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
+import { DEMO_COACH_ID, asyncHandler, findClient, validationMessage } from "./clients.js";
 
 const NewProgressLogSchema = z.object({
   date: z
@@ -45,7 +45,7 @@ progressRouter.get(
     const client = await clientOr404(req, res);
     if (!client) return;
     const logs = await prisma.progressLog.findMany({
-      where: { clientId: client.id, coachId: DEFAULT_COACH_ID },
+      where: { clientId: client.id, coachId: DEMO_COACH_ID },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
     res.json(logs);
@@ -65,7 +65,7 @@ progressRouter.post(
     const client = await clientOr404(req, res);
     if (!client) return;
     const log = await prisma.progressLog.create({
-      data: { ...parsed.data, clientId: client.id, coachId: DEFAULT_COACH_ID },
+      data: { ...parsed.data, clientId: client.id, coachId: DEMO_COACH_ID },
     });
     res.status(201).json(log);
   }),
@@ -80,7 +80,7 @@ progressRouter.delete(
     const { logId } = req.params as { logId: string };
     // One scoped delete: a second delete of the same log (double tap, two tabs) gets 404, not 500.
     const { count } = await prisma.progressLog.deleteMany({
-      where: { id: logId, clientId: client.id, coachId: DEFAULT_COACH_ID },
+      where: { id: logId, clientId: client.id, coachId: DEMO_COACH_ID },
     });
     if (count === 0) {
       res.status(404).json({ error: "Progress log not found" });

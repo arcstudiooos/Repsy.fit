@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const CLIENTS = [
   {
     id: "c-maya",
-    coachId: "default-coach",
+    coachId: null,
     name: "Maya Patel",
     goal: "Fat loss + strength",
     age: 29,
@@ -19,7 +19,7 @@ const CLIENTS = [
 ];
 
 type Log = { id: string; date: string; weightKg: number | null; adherence: number | null; workoutsDone: number | null; note: string };
-const full = (l: Log) => ({ coachId: "default-coach", clientId: "c-maya", createdAt: `${l.date}T09:00:00.000Z`, ...l });
+const full = (l: Log) => ({ coachId: null, clientId: "c-maya", createdAt: `${l.date}T09:00:00.000Z`, ...l });
 
 const PROMPT_25_LOGS: Log[] = [
   { id: "l1", date: "2026-10-26", weightKg: 68.4, adherence: 72, workoutsDone: 3, note: "Starting week" },
@@ -35,7 +35,7 @@ const ASSIGNMENTS = [
   ["a4", "Recovery"],
 ].map(([id, type]) => ({
   id,
-  coachId: "default-coach",
+  coachId: null,
   clientId: "c-maya",
   type,
   title: `${type} plan ${id}`,

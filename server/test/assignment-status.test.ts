@@ -13,11 +13,11 @@ vi.mock("../src/db.js", () => ({ prisma }));
 
 import { app } from "../src/app.js";
 
-const client = { id: "client-1", coachId: "default-coach", name: "Maya Patel" };
+const client = { id: "client-1", coachId: null, name: "Maya Patel" };
 const stored = {
   id: "assignment-1",
   clientId: client.id,
-  coachId: "default-coach",
+  coachId: null,
   type: "Workout",
   title: "Squat day",
   details: "Back squat 4x6",
@@ -44,7 +44,7 @@ describe("PATCH /api/clients/:clientId/assignments/:assignmentId", () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: stored.id, clientId: client.id, status });
     expect(prisma.assignment.findFirst).toHaveBeenCalledWith({
-      where: { id: stored.id, clientId: client.id, coachId: "default-coach" },
+      where: { id: stored.id, clientId: client.id, coachId: null },
     });
     expect(prisma.assignment.update).toHaveBeenCalledWith({ where: { id: stored.id }, data: { status } });
   });
@@ -89,7 +89,7 @@ describe("DELETE /api/clients/:clientId/assignments/:assignmentId", () => {
     expect(res.status).toBe(204);
     expect(res.text).toBe("");
     expect(prisma.assignment.findFirst).toHaveBeenCalledWith({
-      where: { id: stored.id, clientId: client.id, coachId: "default-coach" },
+      where: { id: stored.id, clientId: client.id, coachId: null },
     });
     expect(prisma.assignment.delete).toHaveBeenCalledWith({ where: { id: stored.id } });
   });

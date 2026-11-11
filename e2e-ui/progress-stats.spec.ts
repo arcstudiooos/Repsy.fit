@@ -4,7 +4,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
-  coachId: "default-coach",
+  coachId: null,
   name,
   goal: "Fat loss + strength",
   age: 29,
@@ -20,7 +20,7 @@ const CLIENTS = [client("c-maya", "Maya Patel", "2026-10-01T00:00:00.000Z"), cli
 type Log = { date: string; weightKg: number | null; adherence: number | null; workoutsDone: number | null };
 const log = (clientId: string, i: number, l: Log) => ({
   id: `log-${clientId}-${i}`,
-  coachId: "default-coach",
+  coachId: null,
   clientId,
   note: "",
   createdAt: `${l.date}T09:00:00.000Z`,
@@ -28,7 +28,7 @@ const log = (clientId: string, i: number, l: Log) => ({
 });
 const assignment = (clientId: string, i: number, status: string) => ({
   id: `as-${clientId}-${i}`,
-  coachId: "default-coach",
+  coachId: null,
   clientId,
   type: "Workout",
   title: `Plan ${i}`,

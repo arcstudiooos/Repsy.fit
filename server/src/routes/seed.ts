@@ -1,7 +1,7 @@
 // Demo seed - see "API contract" in CLAUDE.md.
 import { Router } from "express";
 import { prisma } from "../db.js";
-import { DEFAULT_COACH_ID, asyncHandler } from "./clients.js";
+import { DEMO_COACH_ID, asyncHandler } from "./clients.js";
 
 // The prototype's starter roster (Prompt 29), in display order.
 const DEMO_CLIENTS = [
@@ -67,7 +67,7 @@ seedRouter.post(
     const created = await prisma.$transaction(async (tx) => {
       // Serialise seeds so two quick taps can't both see "no clients" and seed twice.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEED_LOCK_KEY})`;
-      if ((await tx.client.count({ where: { coachId: DEFAULT_COACH_ID } })) > 0) return [];
+      if ((await tx.client.count({ where: { coachId: DEMO_COACH_ID } })) > 0) return [];
 
       const clients = [];
       for (const [i, demo] of DEMO_CLIENTS.entries()) {
@@ -75,12 +75,12 @@ seedRouter.post(
           await tx.client.create({
             data: {
               ...demo,
-              coachId: DEFAULT_COACH_ID,
+              coachId: DEMO_COACH_ID,
               // Distinct createdAt keeps the roster in this order (the list sorts by createdAt).
               createdAt: new Date(now.getTime() + i),
               progressLogs: {
                 create: DEMO_WEEKS.map((week, w) => ({
-                  coachId: DEFAULT_COACH_ID,
+                  coachId: DEMO_COACH_ID,
                   // The 3 most recent weeks: 14 days ago, 7 days ago, today.
                   date: isoDate(new Date(now.getTime() - (DEMO_WEEKS.length - 1 - w) * 7 * DAY_MS)),
                   weightKg: round1(demo.weightKg + week.weightOffset),
@@ -92,7 +92,7 @@ seedRouter.post(
               assignments: {
                 create: [
                   {
-                    coachId: DEFAULT_COACH_ID,
+                    coachId: DEMO_COACH_ID,
                     type: "Workout",
                     title: "Demo starter plan",
                     details: "Full-body session 3x this week - squat, hinge, push, pull. RPE 7-8.",
@@ -269,7 +269,7 @@ seedRouter.post(
       async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEED_LOCK_KEY})`;
         const existing = await tx.client.findMany({
-          where: { coachId: DEFAULT_COACH_ID, name: { in: SIX_MONTH_ROSTER.map((c) => c.name) } },
+          where: { coachId: DEMO_COACH_ID, name: { in: SIX_MONTH_ROSTER.map((c) => c.name) } },
           select: { name: true },
         });
         const taken = new Set(existing.map((c) => c.name));
@@ -284,15 +284,15 @@ seedRouter.post(
               data: {
                 ...profile,
                 weightKg: endKg,
-                coachId: DEFAULT_COACH_ID,
+                coachId: DEMO_COACH_ID,
                 createdAt: new Date(base + i),
                 progressLogs: {
-                  create: sixMonthLogs(c).map((log) => ({ ...log, coachId: DEFAULT_COACH_ID })),
+                  create: sixMonthLogs(c).map((log) => ({ ...log, coachId: DEMO_COACH_ID })),
                 },
                 assignments: {
                   create: sixMonthAssignments().map((a) => ({
                     ...a,
-                    coachId: DEFAULT_COACH_ID,
+                    coachId: DEMO_COACH_ID,
                     // createdAt on the plan's date, so the Planner lists newest first.
                     createdAt: new Date(`${a.date}T09:00:00Z`),
                   })),

@@ -7,10 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// A coach account (Prompt 43). Passwords are stored only as a bcrypt hash.
+model Coach {
+  id           String   @id @default(cuid())
+  name         String
+  /// Stored lower-case; one account per email.
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  clients      Client[]
+  assignments  Assignment[]
+  progressLogs ProgressLog[]
+  chatMessages ChatMessage[]
+
+  @@map("coaches")
+}
+
 model Client {
   id        String   @id @default(cuid())
-  /// Owning coach. Placeholder until login exists: every record uses "default-coach".
-  coachId   String   @default("default-coach")
+  /// Owning coach (FK to Coach). NULL = demo data not yet claimed by a coach (see claimDemoData).
+  coachId   String?
+  coach     Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
   name      String
   goal      String   @default("General fitness")
   age       Int?
@@ -32,8 +50,9 @@ model Client {
 
 model Assignment {
   id        String   @id @default(cuid())
-  /// Owning coach. Placeholder until login exists: every record uses "default-coach".
-  coachId   String   @default("default-coach")
+  /// Owning coach (FK to Coach). NULL = unclaimed demo data.
+  coachId   String?
+  coach     Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
   clientId  String
   /// One of: Workout, Nutrition, Habit, Recovery
   type      String
@@ -57,6 +76,9 @@ model Assignment {
 
 model ChatMessage {
   id        String   @id @default(cuid())
+  /// Owning coach (FK to Coach). NULL = unclaimed demo data.
+  coachId   String?
+  coach     Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
   clientId  String
   /// One of: coach, ai
   role      String
@@ -66,13 +88,15 @@ model ChatMessage {
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
+  @@index([coachId])
   @@map("chat_messages")
 }
 
 model ProgressLog {
   id           String   @id @default(cuid())
-  /// Owning coach. Placeholder until login exists: every record uses "default-coach".
-  coachId      String   @default("default-coach")
+  /// Owning coach (FK to Coach). NULL = unclaimed demo data.
+  coachId      String?
+  coach        Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
   clientId     String
   /// YYYY-MM-DD
   date         String

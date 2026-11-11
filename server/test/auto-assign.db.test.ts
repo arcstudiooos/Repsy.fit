@@ -69,7 +69,7 @@ describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
     expect(new Set(list.body.map((a: { type: string }) => a.type))).toEqual(new Set(TYPES));
     expect(new Set(list.body.map((a: { title: string }) => a.title)).size).toBe(4);
     for (const a of list.body) {
-      expect(a).toMatchObject({ clientId, coachId: "default-coach", source: "ai", status: "Active" });
+      expect(a).toMatchObject({ clientId, coachId: null, source: "ai", status: "Active" });
       expect(a.reasoning).toContain("Muscle gain");
     }
   });

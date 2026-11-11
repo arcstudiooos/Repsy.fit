@@ -5,7 +5,7 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 const CLIENTS = [
   {
     id: "c-maya",
-    coachId: "default-coach",
+    coachId: null,
     name: "Maya Patel",
     goal: "Fat loss + strength",
     age: 29,
@@ -46,7 +46,7 @@ async function mockApi(page: Page, logs: Log[] = START): Promise<Mock> {
       if (req.method() === "GET") {
         const sorted = [...mock.logs].sort((a, b) => a.date.localeCompare(b.date));
         return route.fulfill({
-          json: sorted.map((l) => ({ coachId: "default-coach", clientId: "c-maya", createdAt: `${l.date}T09:00:00.000Z`, note: "", weightKg: null, adherence: null, workoutsDone: null, ...l })),
+          json: sorted.map((l) => ({ coachId: null, clientId: "c-maya", createdAt: `${l.date}T09:00:00.000Z`, note: "", weightKg: null, adherence: null, workoutsDone: null, ...l })),
         });
       }
       if (req.method() === "POST") {
@@ -55,7 +55,7 @@ async function mockApi(page: Page, logs: Log[] = START): Promise<Mock> {
         if (mock.holdPost) await new Promise<void>((r) => (mock.release = r));
         const saved = { id: `n${next++}`, note: "", ...body } as Log;
         mock.logs.push(saved);
-        return route.fulfill({ status: 201, json: { coachId: "default-coach", clientId: "c-maya", createdAt: new Date().toISOString(), ...saved } });
+        return route.fulfill({ status: 201, json: { coachId: null, clientId: "c-maya", createdAt: new Date().toISOString(), ...saved } });
       }
     }
     const del = path.match(/^\/api\/clients\/c-maya\/progress\/([^/]+)$/);
