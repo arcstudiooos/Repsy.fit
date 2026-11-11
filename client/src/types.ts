@@ -102,6 +102,20 @@ export type TodayTask =
   | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
 export type TodayTasks = { date: DateString; tasks: TodayTask[] };
 
+/** One row of the Home "New check-ins" card. `kind` lets daily check-ins (Prompt 53) join the list later. */
+export type RecentCheckIn = {
+  kind: "progress";
+  id: string;
+  clientId: string;
+  clientName: string;
+  createdAt: string;
+  weightKg: number | null;
+  adherence: number | null;
+  workoutsDone: number | null;
+  note: string;
+};
+export type RecentCheckIns = { items: RecentCheckIn[] };
+
 export type NewProgressLog =Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;
 

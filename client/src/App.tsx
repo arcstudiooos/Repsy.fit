@@ -260,6 +260,10 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
               setSelectedClientId(clientId);
               setActiveTab(target);
             }}
+            onOpenCheckIn={(clientId) => {
+              setSelectedClientId(clientId);
+              setActiveTab("progress");
+            }}
           />
         ) : current.id === "ai" ? (
           <AiCoachTab

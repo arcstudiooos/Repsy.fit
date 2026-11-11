@@ -7,6 +7,7 @@ import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
 import { tasksRouter } from "./routes/tasks.js";
+import { checkinsRouter } from "./routes/checkins.js";
 import { leadsRouter } from "./routes/leads.js";
 import { authRouter } from "./routes/auth.js";
 import { sessionMiddleware } from "./auth/session.js";
@@ -51,8 +52,10 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/clients", requireCoach);
 app.use("/api/seed", requireCoach);
 app.use("/api/tasks", requireCoach);
+app.use("/api/checkins", requireCoach);
 
 app.use("/api/tasks", tasksRouter);
+app.use("/api/checkins", checkinsRouter);
 app.use("/api/clients/:clientId/assignments", assignmentsRouter);
 app.use("/api/clients/:clientId/auto-assign", autoAssignRouter);
 app.use("/api/clients/:clientId/chat", chatRouter);

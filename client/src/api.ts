@@ -20,6 +20,7 @@ import type {
   NewLead,
   NewProgressLog,
   ProgressLog,
+  RecentCheckIns,
   RegisterInput,
   ResetPasswordInput,
   TodayTasks,
@@ -125,6 +126,8 @@ export const deleteProgressLog = (clientId: string, logId: string) =>
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
+/** Latest check-ins (last 48 hours, newest first, max 8) across the signed-in coach's clients. */
+export const getRecentCheckIns = () => request<RecentCheckIns>("GET", "/checkins/recent");
 
 // ----- Demo data -----
 /** Creates demo clients with assignments and progress; returns the created clients. */
@@ -161,4 +164,5 @@ export const queryKeys = {
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
   todayTasks: (date: string) => ["tasks", "today", date] as const,
+  recentCheckIns: ["checkins", "recent"] as const,
 };
