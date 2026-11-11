@@ -8,6 +8,7 @@ const { prisma } = vi.hoisted(() => ({
   prisma: {
     client: { findMany: vi.fn() },
     progressLog: { findMany: vi.fn() },
+    dailyCheckIn: { findMany: vi.fn() },
   },
 }));
 

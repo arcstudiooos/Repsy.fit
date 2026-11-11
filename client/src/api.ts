@@ -14,10 +14,12 @@ import type {
   ChatMessage,
   Client,
   Coach,
+  DailyCheckIn,
   Lead,
   LoginInput,
   NewAssignment,
   NewClient,
+  NewDailyCheckIn,
   NewLead,
   NewProgressLog,
   NewReviewItem,
@@ -128,6 +130,14 @@ export const addProgressLog = (clientId: string, input: NewProgressLog) =>
 export const deleteProgressLog = (clientId: string, logId: string) =>
   request<void>("DELETE", `/clients/${enc(clientId)}/progress/${enc(logId)}`);
 
+// ----- Daily check-ins (per client, Prompt 53) -----
+/** That client's daily check-ins, newest first (default the last 14 days). */
+export const listDailyCheckIns = (clientId: string, days = 14) =>
+  request<DailyCheckIn[]>("GET", `/clients/${enc(clientId)}/checkins?days=${days}`);
+/** Saves one day. Saving the same date again updates that day instead of adding a second row. */
+export const saveDailyCheckIn = (clientId: string, input: NewDailyCheckIn) =>
+  request<DailyCheckIn>("POST", `/clients/${enc(clientId)}/checkins`, input);
+
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
@@ -187,6 +197,7 @@ export const queryKeys = {
   assignments: (clientId: string) => ["clients", clientId, "assignments"] as const,
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
+  dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   todayTasks: (date: string) => ["tasks", "today", date] as const,
   recentCheckIns: ["checkins", "recent"] as const,
   atRisk: (date: string) => ["at-risk", date] as const,

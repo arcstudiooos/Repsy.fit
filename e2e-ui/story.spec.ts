@@ -98,7 +98,7 @@ test.describe("desktop", () => {
     await open(page);
     await scrollThrough(page);
     await page.locator("header").getByRole("link", { name: "Start free" }).click();
-    await expect(page.getByRole("tab")).toHaveCount(5);
+    await expect(page.getByRole("tab")).toHaveCount(6);
     expect(errors).toEqual([]);
   });
 });

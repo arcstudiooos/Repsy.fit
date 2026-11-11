@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { prisma } = vi.hoisted(() => ({
   prisma: {
     progressLog: { findMany: vi.fn() },
+    dailyCheckIn: { findMany: vi.fn() },
   },
 }));
 
@@ -29,6 +30,7 @@ const log = (id: string, clientName: string, createdAt: Date, extra: Record<stri
 beforeEach(() => {
   vi.clearAllMocks();
   prisma.progressLog.findMany.mockResolvedValue([]);
+  prisma.dailyCheckIn.findMany.mockResolvedValue([]);
 });
 
 describe("GET /api/checkins/recent", () => {

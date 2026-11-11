@@ -104,6 +104,16 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Daily check-ins (Prompt 53).** `DailyCheckIn` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
+  energy 1-5, mood 1-5, sleepHours 0-16 (Prompt 55), recoveryScore 1-5 (Prompt 55), waterLiters,
+  steps, foodNote, createdAt, updatedAt }`, unique per `(clientId, date)`. Saving a date that
+  already exists **updates that row** (200) instead of adding a second one, and any field left out
+  of the body is cleared. Coach-side in v2. Two knock-on changes promised by earlier prompts:
+  `GET /api/checkins/recent` (Home "New check-ins") now merges daily check-ins with progress logs
+  in one list, each row carrying `kind: "daily" | "progress"` and sorted newest first; and the AI
+  Coach context includes the client's latest 7 daily check-ins, so an answer can mention recent
+  energy, mood, water, steps or a food note.
+
 - **Review queue (Prompt 52).** `ReviewItem` = `{ id, coachId, clientId, kind ("suggestion" |
   "checkin"), status ("Pending" | "Approved" | "Dismissed"), title, summary, type, details,
   reasoning, sourceId, assignmentId, createdAt, decidedAt }`. **A separate table was chosen over a
@@ -203,6 +213,8 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `listProgress(clientId)` | GET | `/api/clients/:clientId/progress` | — | `ProgressLog[]` |
 | `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
+| `listDailyCheckIns(clientId, days)` | GET | `/api/clients/:clientId/checkins?days=14` | — | `DailyCheckIn[]`, newest first (`days` 1-90, default 14) |
+| `saveDailyCheckIn(clientId, input)` | POST | `/api/clients/:clientId/checkins` | `NewDailyCheckIn` | `DailyCheckIn` — **201** for a new day, **200** when it updated that day (one row per client per day) |
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |

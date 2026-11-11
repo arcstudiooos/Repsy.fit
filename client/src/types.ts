@@ -102,18 +102,57 @@ export type TodayTask =
   | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
 export type TodayTasks = { date: DateString; tasks: TodayTask[] };
 
-/** One row of the Home "New check-ins" card. `kind` lets daily check-ins (Prompt 53) join the list later. */
-export type RecentCheckIn = {
-  kind: "progress";
+/** One day's check-in for a client (Prompt 53). One row per client per day. */
+export interface DailyCheckIn {
   id: string;
+  coachId: string | null;
   clientId: string;
-  clientName: string;
+  date: DateString;
+  /** 1-5 */
+  energy: number | null;
+  /** 1-5 */
+  mood: number | null;
+  /** 0-16, one decimal (filled in by Prompt 55) */
+  sleepHours: number | null;
+  /** 1-5 (filled in by Prompt 55) */
+  recoveryScore: number | null;
+  waterLiters: number | null;
+  steps: number | null;
+  foodNote: string;
   createdAt: string;
-  weightKg: number | null;
-  adherence: number | null;
-  workoutsDone: number | null;
-  note: string;
-};
+  updatedAt: string;
+}
+/** Body for saving one day. The same date again updates that day. */
+export type NewDailyCheckIn = Pick<DailyCheckIn, "date"> &
+  Partial<Pick<DailyCheckIn, "energy" | "mood" | "sleepHours" | "recoveryScore" | "waterLiters" | "steps" | "foodNote">>;
+
+/** One row of the Home "New check-ins" card: a progress log or a daily check-in (Prompt 53). */
+export type RecentCheckIn =
+  | {
+      kind: "daily";
+      id: string;
+      clientId: string;
+      clientName: string;
+      createdAt: string;
+      date: DateString;
+      energy: number | null;
+      mood: number | null;
+      sleepHours: number | null;
+      waterLiters: number | null;
+      steps: number | null;
+      foodNote: string;
+    }
+  | {
+      kind: "progress";
+      id: string;
+      clientId: string;
+      clientName: string;
+      createdAt: string;
+      weightKg: number | null;
+      adherence: number | null;
+      workoutsDone: number | null;
+      note: string;
+    };
 export type RecentCheckIns = { items: RecentCheckIn[] };
 
 /** One row of the Home "Needs attention" card: a client and every rule that fired, in plain words. */

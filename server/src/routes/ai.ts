@@ -23,13 +23,15 @@ type ClientContext = {
   client: Client;
   assignments: { type: string; title: string; status: string }[];
   progressLogs: { date: string; weightKg: number | null; adherence: number | null; workoutsDone: number | null }[];
+  /** Prompt 53: the client's latest daily check-ins, so the AI can mention recent energy / mood. */
+  dailyCheckIns: { date: string; energy: number | null; mood: number | null; sleepHours: number | null; waterLiters: number | null; steps: number | null; foodNote: string }[];
 };
 
 const PROVIDER_TIMEOUT_MS = 30_000;
 
-/** Latest 8 assignments and 6 progress logs of this coach's client. */
+/** Latest 8 assignments, 6 progress logs and 7 daily check-ins of this coach's client. */
 export async function loadClientContext(client: Client): Promise<ClientContext> {
-  const [assignments, progressLogs] = await Promise.all([
+  const [assignments, progressLogs, dailyCheckIns] = await Promise.all([
     prisma.assignment.findMany({
       where: { clientId: client.id, coachId: client.coachId },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -42,8 +44,15 @@ export async function loadClientContext(client: Client): Promise<ClientContext> 
       take: 6,
       select: { date: true, weightKg: true, adherence: true, workoutsDone: true },
     }),
+    prisma.dailyCheckIn.findMany({
+      // coachId is NOT NULL on this table (Prompt 53): scope by client, which is already coach-scoped.
+      where: { clientId: client.id },
+      orderBy: [{ date: "desc" }, { id: "desc" }],
+      take: 7,
+      select: { date: true, energy: true, mood: true, sleepHours: true, waterLiters: true, steps: true, foodNote: true },
+    }),
   ]);
-  return { client, assignments, progressLogs };
+  return { client, assignments, progressLogs, dailyCheckIns };
 }
 
 const SYSTEM_PROMPT = [
@@ -64,7 +73,7 @@ const orNone = (value: string | number | null | undefined, unit = "") =>
   value === null || value === undefined || value === "" ? "not set" : `${value}${unit}`;
 
 function buildUserMessage(
-  { client, assignments, progressLogs }: ClientContext,
+  { client, assignments, progressLogs, dailyCheckIns }: ClientContext,
   question: string,
   heading = "Coach's question:",
 ): string {
@@ -76,6 +85,13 @@ function buildUserMessage(
         (p) =>
           `- ${p.date}: weight ${orNone(p.weightKg, " kg")}, adherence ${orNone(p.adherence, "%")}, ` +
           `workouts done ${orNone(p.workoutsDone)}`,
+      )
+    : ["- none yet"];
+  const checkInLines = dailyCheckIns.length
+    ? dailyCheckIns.map(
+        (c) =>
+          `- ${c.date}: energy ${orNone(c.energy, "/5")}, mood ${orNone(c.mood, "/5")}, sleep ${orNone(c.sleepHours, " h")}, ` +
+          `water ${orNone(c.waterLiters, " L")}, steps ${orNone(c.steps)}${c.foodNote ? `, food note: ${c.foodNote}` : ""}`,
       )
     : ["- none yet"];
   return [
@@ -94,6 +110,9 @@ function buildUserMessage(
     "",
     "Latest progress logs (newest first):",
     ...progressLines,
+    "",
+    "Latest daily check-ins (newest first):",
+    ...checkInLines,
     "",
     heading,
     question,

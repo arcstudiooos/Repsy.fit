@@ -6,6 +6,7 @@ const { prisma } = vi.hoisted(() => ({
     client: { findFirst: vi.fn() },
     assignment: { findMany: vi.fn() },
     progressLog: { findMany: vi.fn() },
+    dailyCheckIn: { findMany: vi.fn() },
     chatMessage: { create: vi.fn() },
   },
 }));
@@ -74,6 +75,7 @@ beforeEach(() => {
   prisma.client.findFirst.mockResolvedValue(client);
   prisma.assignment.findMany.mockResolvedValue([assignment]);
   prisma.progressLog.findMany.mockResolvedValue([progressLog]);
+  prisma.dailyCheckIn.findMany.mockResolvedValue([]);
   prisma.chatMessage.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
     id: `message-${prisma.chatMessage.create.mock.calls.length}`,
     createdAt: new Date("2026-11-10T00:00:00.000Z"),

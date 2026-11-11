@@ -77,9 +77,18 @@ export function timeAgo(iso: string, now = Date.now()): string {
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-/** What was logged, in the order weight, adherence, workouts, note. */
+/** What was logged: a progress log, or a daily check-in (Prompt 53). */
 function loggedSummary(c: RecentCheckIn): string {
   const parts: string[] = [];
+  if (c.kind === "daily") {
+    if (c.energy !== null) parts.push(`energy ${c.energy}/5`);
+    if (c.mood !== null) parts.push(`mood ${c.mood}/5`);
+    if (c.sleepHours !== null) parts.push(`${c.sleepHours} h sleep`);
+    if (c.waterLiters !== null) parts.push(`${c.waterLiters} L`);
+    if (c.steps !== null) parts.push(`${c.steps} steps`);
+    if (c.foodNote.trim()) parts.push(c.foodNote.trim());
+    return parts.join(" · ") || "Daily check-in";
+  }
   if (c.weightKg !== null) parts.push(`${c.weightKg} kg`);
   if (c.adherence !== null) parts.push(`${c.adherence}% adherence`);
   if (c.workoutsDone !== null) parts.push(plural(c.workoutsDone, "workout"));

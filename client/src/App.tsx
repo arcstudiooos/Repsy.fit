@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./compo
 import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
+import { CheckInsTab } from "./tabs/CheckInsTab";
 import { HomeTab, useReviewQueueCount } from "./tabs/HomeTab";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
@@ -15,7 +16,7 @@ import type { Client, Coach } from "./types";
 // The account page (Prompt 47) is its own lazy chunk: its form validation (zod) stays out of the first /app load.
 const AccountPage = lazy(() => import("./auth/AccountPage"));
 
-type TabId = "home" | "ai" | "clients" | "planner" | "progress";
+type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Home" },
@@ -23,6 +24,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "clients", label: "Clients" },
   { id: "planner", label: "Manual Planner" },
   { id: "progress", label: "Progress" },
+  { id: "checkins", label: "Check-ins" },
 ];
 
 function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
@@ -289,6 +291,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           />
         ) : current.id === "progress" ? (
           <ProgressTab key={`progress:${selectedClientId ?? "none"}`} client={selectedClient} />
+        ) : current.id === "checkins" ? (
+          <CheckInsTab key={`checkins:${selectedClientId ?? "none"}`} client={selectedClient} />
         ) : (
           <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
         )}

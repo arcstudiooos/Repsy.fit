@@ -112,6 +112,7 @@ describe("factsFallbackText", () => {
 const prismaMock = vi.hoisted(() => ({
   client: { findMany: vi.fn() },
   progressLog: { findMany: vi.fn() },
+    dailyCheckIn: { findMany: vi.fn() },
   assignment: { findMany: vi.fn() },
   weeklySummary: { findUnique: vi.fn(), upsert: vi.fn() },
 }));
@@ -134,6 +135,7 @@ beforeEach(() => {
   process.env.AI_MODEL = "test-model";
   prismaMock.client.findMany.mockResolvedValue([{ id: "c1", name: "Maya", goal: "Fat loss", createdAt: new Date("2026-10-01T00:00:00.000Z") }]);
   prismaMock.progressLog.findMany.mockResolvedValue([{ clientId: "c1", date: "2026-11-10", weightKg: 70, adherence: 84 }]);
+  prismaMock.dailyCheckIn.findMany.mockResolvedValue([]);
   prismaMock.assignment.findMany.mockResolvedValue([
     { clientId: "c1", date: "2026-11-10", status: "Done" },
     { clientId: "c1", date: "2026-11-11", status: "Active" },

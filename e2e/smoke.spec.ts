@@ -170,7 +170,7 @@ test.describe("production server", () => {
   test("refreshing on a deep /app path still opens the full app", async ({ page }) => {
     const res = await page.goto("/app/some/deep/link");
     expect(res?.status()).toBe(200);
-    await expect(page.getByRole("tab")).toHaveCount(5);
+    await expect(page.getByRole("tab")).toHaveCount(6);
     await expect(strip(page).getByRole("button")).toHaveCount(3);
   });
 
