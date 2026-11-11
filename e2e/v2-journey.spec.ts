@@ -80,7 +80,7 @@ test("3. the coach adds a client", async () => {
   if (await add.isVisible()) await add.click();
   const form = panel(page).getByRole("form", { name: "Add client" });
   await form.getByLabel("Name", { exact: true }).fill(CLIENT_NAME);
-  await form.getByLabel("Goal").fill("Fat loss");
+  await form.getByLabel("Goal").selectOption("Fat loss");
   await form.getByRole("button", { name: "Save client" }).click();
   await expect(form).toHaveCount(0, { timeout: 30_000 });
   await expect(panel(page)).toContainText(CLIENT_NAME);
@@ -107,11 +107,17 @@ test("5. the coach assigns a program to the client", async () => {
   await expect(panel(page)).toContainText(`Selected: ${CLIENT_NAME}`);
   const form = panel(page).getByRole("form", { name: "New assignment" });
   await form.getByRole("group", { name: "Type" }).getByRole("button", { name: "Workout" }).click();
-  await form.getByLabel("Title").fill("Journey leg day");
-  await form.getByLabel("Details").fill("Back Squat 5 x 5");
-  await form.getByLabel("Date").fill(today);
+  await form.getByLabel("Title", { exact: true }).fill("Journey leg day");
+  await form.getByLabel("Details", { exact: true }).fill("Back Squat 5 x 5");
+  await form.getByLabel("Date", { exact: true }).fill(today);
   await form.getByRole("button", { name: "Assign plan" }).click();
   await expect(panel(page).getByRole("list", { name: "Assignments" })).toContainText("Journey leg day", { timeout: 30_000 });
+
+  // Home's Today's Tasks lists it now - while it is still Active (Done work drops off the list).
+  await tab(page, "Home").click();
+  await expect(panel(page).getByRole("region", { name: "Today's Tasks" })).toContainText("Workout due today: Journey leg day", {
+    timeout: 30_000,
+  });
 });
 
 test("6. the coach records a plan and a payment in Business", async () => {
@@ -158,7 +164,12 @@ test("8. the client sets a password, signs in, and sees ONLY their own plan", as
   const setForm = page.getByRole("form", { name: "Choose your password" });
   await setForm.getByLabel("Password").fill("client-password-1");
   await setForm.getByRole("button", { name: "Set password" }).click();
-  await expect(page).toHaveURL(/\/client(\/)?$/, { timeout: 30_000 });
+  // The new password works only through a real sign-in, which is what this proves.
+  await expect(page).toHaveURL(/\/client\/login/, { timeout: 30_000 });
+  await page.getByLabel("Email").fill(CLIENT_EMAIL);
+  await page.getByLabel("Password").fill("client-password-1");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/client\/?$/, { timeout: 30_000 });
 
   // Their own plan, sessions and streaks - and no coach UI anywhere.
   await expect(page.getByRole("region", { name: "My plan" })).toContainText("Monthly coaching");
@@ -186,10 +197,10 @@ test("9. the coach marks the workout Done and files a weekly check-in", async ()
 
   await tab(page, "Progress").click();
   const checkIn = panel(page).getByRole("form", { name: "Weekly check-in" });
-  await checkIn.getByLabel("Date").fill(today);
-  await checkIn.getByLabel("Weight kg").fill("70");
-  await checkIn.getByLabel("Adherence %").fill("85");
-  await checkIn.getByLabel("Workouts done").fill("3");
+  await checkIn.getByLabel("Date", { exact: true }).fill(today);
+  await checkIn.getByLabel("Weight kg", { exact: true }).fill("70");
+  await checkIn.getByLabel("Adherence %", { exact: true }).fill("85");
+  await checkIn.getByLabel("Workouts done", { exact: true }).fill("3");
   await checkIn.getByRole("button", { name: "Add check-in" }).click();
   await expect(panel(page)).toContainText("70", { timeout: 30_000 });
 });
@@ -210,15 +221,15 @@ test("10. the coach messages the client and the thread survives a reload", async
   await expect(page.getByRole("region", { name: `Conversation with ${CLIENT_NAME}` })).toContainText("Welcome aboard");
 });
 
-test("11. Home shows the work: today's tasks, the review queue and the alerts count", async () => {
+test("11. Home shows the coach the result: the check-in waits in the review queue, alerts render", async () => {
   await page.goto("/app");
   await tab(page, "Home").click();
-  // Today's Tasks lists the client whose plan is dated today.
-  await expect(panel(page).getByRole("region", { name: "Today's Tasks" })).toContainText(CLIENT_NAME, { timeout: 30_000 });
-  // The smart-alerts card ("Needs attention") renders with a real count, not a crash.
-  const alerts = panel(page).getByRole("region", { name: "Needs attention" });
-  await expect(alerts).toBeVisible();
-  await expect(panel(page).getByRole("region", { name: "Review queue" })).toBeVisible();
+  // Every new progress check-in waits in the review queue for the coach (Prompt 52).
+  await expect(panel(page).getByRole("region", { name: "Review queue" })).toContainText(CLIENT_NAME, { timeout: 30_000 });
+  // The smart-alerts card ("Needs attention") and Today's Tasks render from real data, not an error.
+  await expect(panel(page).getByRole("region", { name: "Needs attention" })).toBeVisible();
+  await expect(panel(page).getByRole("region", { name: "Today's Tasks" })).toBeVisible();
+  await expect(panel(page).getByRole("alert")).toHaveCount(0);
 });
 
 test("12. the weekly summary generates (AI fallback) and a CSV really downloads", async () => {
@@ -227,7 +238,8 @@ test("12. the weekly summary generates (AI fallback) and a CSV really downloads"
   const summary = panel(page).getByRole("region", { name: "AI weekly summary" });
   await summary.getByRole("button", { name: "Generate this week's summary" }).click();
   // With no AI key CI takes the fallback path: either way the card must end with real text, not an error.
-  await expect(summary).toContainText(/\w{20,}/, { timeout: 60_000 });
+  // AI or the facts fallback, the saved summary always ends with its "Week of ... saved" line.
+  await expect(summary).toContainText("Week of", { timeout: 60_000 });
 
   await tab(page, "Business").click();
   await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Reports" }).click();
