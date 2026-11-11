@@ -7,6 +7,8 @@ import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
 import { leadsRouter } from "./routes/leads.js";
+import { authRouter } from "./routes/auth.js";
+import { sessionMiddleware } from "./auth/session.js";
 import { prisma } from "./db.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,8 +21,11 @@ const clientDist = path.resolve(__dirname, "../../client/dist");
 // The Express app, without listening or connecting to the database,
 // so tests can import it directly.
 export const app = express();
+// Render puts one proxy in front of the app: trust it so req.ip (rate limits) is the real caller.
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
+app.use(sessionMiddleware);
 
 // Health check for Render and the coach: also checks the database answers (within 3 s).
 // 503 when it doesn't, so Render never switches traffic to an instance without a database.
@@ -47,6 +52,7 @@ app.use("/api/clients/:clientId/progress", progressRouter);
 app.use("/api/clients", clientsRouter);
 app.use("/api/seed", seedRouter);
 app.use("/api/leads", leadsRouter);
+app.use("/api/auth", authRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
 // "Not found" is reserved for missing routes (see API contract in CLAUDE.md).

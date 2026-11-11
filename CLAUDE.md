@@ -185,6 +185,18 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
 | `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client[]` (the six-month clients it created; `[]` when all 10 exist) |
 | `createLead(input)` | POST | `/api/leads` | `{ name, email }` | `Lead` 201 `{ id, name, email, createdAt }`; 400 `{ error }` (missing name / bad email); 409 `{ "error": "You are already on the list." }` for a known email (case-insensitive, stored lower-case). Landing page only; no password or payment. |
+| `register(input)` | POST | `/api/auth/register` | `{ name, email, password }` (rules in `server/src/auth/schemas.ts`) | `Coach` 201 `{ id, name, email, createdAt }` + session cookie; 400 `{ error }`; 409 `{ "error": "That email is already registered." }`; 429 too many attempts; 503 sign-in unavailable (no `SESSION_SECRET` in production). The first coach ever also claims the demo data. |
+| `login(input)` | POST | `/api/auth/login` | `{ email, password }` | `Coach` 200 + session cookie; 401 `{ "error": "That email or password is not right." }` (same for unknown email, no cookie); 400; 429; 503 |
+| `logout()` | POST | `/api/auth/logout` | — *(no body)* | 204, session cookie cleared (also when already signed out) |
+| `getMe()` | GET | `/api/auth/me` | — | `Coach` 200; 401 `{ "error": "You are not signed in." }` when signed out / session invalid or expired / coach deleted |
+
+**Sessions (Prompt 44):** a signed stateless JWT (HS256, `node:crypto`, secret from env `SESSION_SECRET`)
+in the `repsy_session` cookie: httpOnly, `Secure` in production, `SameSite=Lax`, 7-day expiry, path `/`.
+`sessionMiddleware` (`server/src/auth/session.ts`) runs on every request and sets `req.coachId` when the
+cookie is valid; it never blocks. **Other routes are not protected yet (Prompt 45).** Register and login are
+rate-limited to 10 attempts per 15 minutes per IP each (in memory, `server/src/auth/rateLimit.ts`; the 11th
+gets `429 { "error": "Too many attempts. Please wait 15 minutes and try again." }` with `Retry-After`).
+`passwordHash` is never in a response.
 
 `askAI`: `question` is the saved coach message (`role: "coach"`), `reply` is the saved AI
 message (`role: "ai"`). Both are stored in `chat_messages` for that client. `suggestion` is
@@ -283,5 +295,7 @@ and record it here.
   renaming it would make Render create a new, empty database.
 - `GET /api/health` returns `{ ok: true, db: true }`, or `503 { ok: false, db: false }` when the
   database doesn't answer within 3 s.
+- Prompt 44 said `sameSite=ax` (typo): built as `SameSite=Lax`. Chose a stateless JWT over a server
+  session table (no migration), and no new dependency (own HS256 + in-memory limiter on `node:crypto`).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

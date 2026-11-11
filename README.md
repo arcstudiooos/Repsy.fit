@@ -89,6 +89,7 @@ built client and the API, and applies migrations on start).
 | `AI_API_KEY` | For real AI answers | Your AI provider's secret key. Put it in `.env` locally or in the Render dashboard — never in code or chat. |
 | `AI_BASE_URL` | For real AI answers | Your provider's OpenAI-compatible base URL, e.g. `https://api.openai.com/v1`. |
 | `AI_MODEL` | For real AI answers | The chat model name to use. |
+| `SESSION_SECRET` | In production | A long random string (16+ characters) that signs login cookies. `render.yaml` makes Render generate one. Without it in production, register and login answer "Sign-in is not available right now" (logged). Locally a temporary secret is used. |
 | `PORT` | No | Port to listen on. Render sets it; the local default is 3001. |
 
 Without the AI values the app still works: the AI Coach gives a fallback answer built from the

@@ -107,3 +107,17 @@ export interface Lead {
   createdAt: string;
 }
 export type NewLead = Pick<Lead, "name" | "email">;
+
+/** A signed-in coach as the auth API returns it (never includes the password hash). */
+export interface Coach {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+export interface RegisterInput {
+  name: string;
+  email: string;
+  password: string;
+}
+export type LoginInput = Pick<RegisterInput, "email" | "password">;

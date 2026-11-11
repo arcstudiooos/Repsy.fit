@@ -11,12 +11,15 @@ import type {
   AutoAssignInput,
   ChatMessage,
   Client,
+  Coach,
   Lead,
+  LoginInput,
   NewAssignment,
   NewClient,
   NewLead,
   NewProgressLog,
   ProgressLog,
+  RegisterInput,
 } from "./types";
 
 export type ApiErrorKind = "endpoint_missing" | "network" | "http";
@@ -126,6 +129,13 @@ export const seedSixMonthDemo = () => request<Client[]>("POST", "/seed/six-month
 // ----- Landing page -----
 /** Saves a "Start free" sign-up. 409 "You are already on the list." for a known email. */
 export const createLead = (input: NewLead) => request<Lead>("POST", "/leads", input);
+
+// ----- Coach accounts (session cookie is set / cleared by the server) -----
+export const register = (input: RegisterInput) => request<Coach>("POST", "/auth/register", input);
+export const login = (input: LoginInput) => request<Coach>("POST", "/auth/login", input);
+export const logout = () => request<void>("POST", "/auth/logout");
+/** The signed-in coach; rejects with ApiError status 401 when signed out. */
+export const getMe = () => request<Coach>("GET", "/auth/me");
 
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.

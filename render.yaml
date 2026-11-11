@@ -27,6 +27,9 @@ services:
         sync: false
       - key: AI_MODEL
         sync: false
+      # Signs coach session cookies (Prompt 44). Render generates a random value once.
+      - key: SESSION_SECRET
+        generateValue: true
       # PORT is set by Render automatically.
 
 databases:
