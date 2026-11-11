@@ -1,6 +1,6 @@
 // Progress charts + check-in list (Prompt 27). Every /api call is mocked in the browser;
 // the mock keeps logs per client and supports DELETE, like the server.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const CLIENTS = [
   {

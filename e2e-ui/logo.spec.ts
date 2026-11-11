@@ -1,5 +1,5 @@
 // Repsy logo in the header, and the R-mark favicon.
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));

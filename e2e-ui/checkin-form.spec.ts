@@ -1,6 +1,6 @@
 // Weekly check-in form (Prompt 28). Every /api call is mocked in the browser; the mock stores
 // POSTed logs and supports DELETE, like the server.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const CLIENTS = [
   {

@@ -309,5 +309,9 @@ and record it here.
 - Prompt 45 said "auth middleware"; built as `requireCoach` on `/api/clients` and `/api/seed` (401 JSON
   `{ error }`). The `/app` UI has no login screen yet, so until the login prompt the dashboard shows
   API errors when signed out; browser tests register a throwaway coach in `e2e/global-setup.ts`.
+- Prompt 46: `/login` and `/register` (client `src/auth/AuthPages.tsx`, own lazy chunk) and the `/app` guard
+  (`App.tsx` calls `getMe()` first; 401 -> `/login`). Logout clears the whole React Query cache. No API change.
+  The "Forgot password" link is hidden until Prompt 47. Mocked UI specs import `test` from `e2e-ui/fixtures.ts`,
+  which answers `/api/auth/me`; `e2e-ui/auth.spec.ts` and `e2e/auth.spec.ts` cover the sign-in flow.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

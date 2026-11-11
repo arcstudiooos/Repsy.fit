@@ -1,14 +1,16 @@
-import { StrictMode, Suspense, lazy } from "react";
+import { StrictMode, Suspense, lazy, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "./api";
-import { IN_APP_KEY, routeFor } from "./route";
+import { IN_APP_KEY, routeFor, type Route } from "./route";
 import "./index.css";
 
 // Routing (Prompt 37): "/" = public landing page, "/app" (and "/app/...") = the coach dashboard.
 // Each side is its own lazy chunk, so the landing page's 3D / animation code never loads in /app.
 const App = lazy(() => import("./App"));
 const Landing = lazy(() => import("./landing/Landing"));
+// Login / register screens (Prompt 46): own lazy chunk, so zod and the forms stay out of the first load.
+const AuthPages = lazy(() => import("./auth/AuthPages"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,11 +42,38 @@ if (route === "landing") {
   document.head.appendChild(fonts);
 }
 else if (route === "app") void import("./App");
+else if (route === "login" || route === "register") void import("./auth/AuthPages");
+
+// In-page navigation (guard redirect, login -> app, logout -> login) fires "popstate"; a history
+// step is treated like Back/Forward so "/" still shows the landing page.
+function Root() {
+  const [current, setCurrent] = useState<Route>(route);
+  useEffect(() => {
+    const onNav = () => {
+      const next = routeFor(window.location.pathname, { inAppFlow: true, backForward: true });
+      if (next === "app") sessionStorage.setItem(IN_APP_KEY, "1");
+      setCurrent(next);
+    };
+    window.addEventListener("popstate", onNav);
+    return () => window.removeEventListener("popstate", onNav);
+  }, []);
+  return (
+    <Suspense fallback={null}>
+      {current === "app" ? (
+        <App />
+      ) : current === "landing" ? (
+        <Landing />
+      ) : current === "login" || current === "register" ? (
+        <AuthPages mode={current} />
+      ) : null}
+    </Suspense>
+  );
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={null}>{route === "app" ? <App /> : route === "landing" ? <Landing /> : null}</Suspense>
+      <Root />
     </QueryClientProvider>
   </StrictMode>,
 );

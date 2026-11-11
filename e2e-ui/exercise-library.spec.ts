@@ -1,6 +1,6 @@
 // Exercise library search in the Manual Planner form (Prompt 21). Every /api call is mocked in
 // the browser, so these run without a database.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const CLIENTS = [
   {

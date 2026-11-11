@@ -1,6 +1,6 @@
 // Polish pass (Prompt 35): phone (375px) and desktop (1280px) checks on all four tabs, plus the
 // empty-proofing cases. Every /api call is mocked in the browser.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const client = (i: number, name: string) => ({
   id: `c-${i}`,

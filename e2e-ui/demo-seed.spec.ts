@@ -1,6 +1,6 @@
 // Quick demo seed buttons (Prompt 29). Every /api call is mocked in the browser; the mock
 // behaves like the server: the first seed creates 3 clients, later seeds create nothing.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const DEMO = ["Maya Patel", "Arjun Mehta", "Casey Jordan"].map((name, i) => ({
   id: `demo-${i}`,

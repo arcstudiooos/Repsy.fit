@@ -1,6 +1,6 @@
 // Assign from an AI suggestion (Prompt 17). Every /api call is mocked in the browser, so
 // these run without a database or AI key. The mock stores assignments per client.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const CLIENTS = [
   {

@@ -1,7 +1,7 @@
 // Assignment status buttons and delete in the Manual Planner (Prompt 24). Every /api call is
 // mocked in the browser, so these run without a database. PATCH / DELETE change the mock, and
 // the list and Clients tab counts must follow without a page reload.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,

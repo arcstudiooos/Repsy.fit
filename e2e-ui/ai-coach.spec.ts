@@ -1,6 +1,6 @@
 // AI Coach tab UI (Prompt 16). Every /api call is mocked in the browser, so these run
 // without a database or AI key. The mock keeps chat history per client, like the server.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 type Msg = { id: string; clientId: string; role: "coach" | "ai"; content: string; createdAt: string };
 

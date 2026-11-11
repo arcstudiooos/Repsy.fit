@@ -1,6 +1,6 @@
 // Auto-assign buttons (Prompt 18). Every /api call is mocked in the browser, so these run
 // without a database or AI key. The mock saves one assignment per auto-assign call.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const CLIENTS = [
   {

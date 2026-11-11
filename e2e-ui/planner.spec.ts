@@ -1,7 +1,7 @@
 // Assignments list in the Manual Planner (Prompt 19). Every /api call is mocked in the
 // browser, so these run without a database or AI key. Auto-assign saves into the mock, and
 // the assignments list returns newest first, like the server.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,

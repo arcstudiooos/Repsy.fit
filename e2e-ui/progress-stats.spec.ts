@@ -1,6 +1,6 @@
 // Progress tab stat cards (Prompt 26). Every /api call is mocked in the browser.
 // The numbers below are hand-checked against the raw logs/assignments in each test.
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,

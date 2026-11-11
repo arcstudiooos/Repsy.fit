@@ -1,14 +1,15 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { listClients, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientStrip } from "./ClientStrip";
-import { EmptyState, ErrorState, LoadingState } from "./components/States";
+import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./components/States";
+import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
-import type { Client } from "./types";
+import type { Client, Coach } from "./types";
 
 type TabId = "ai" | "clients" | "planner" | "progress";
 
@@ -19,7 +20,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "progress", label: "Progress" },
 ];
 
-function Header() {
+function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
   return (
     <header className="header-strip bg-header">
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
@@ -27,6 +28,20 @@ function Header() {
         <img src="/repsy-logo.png" alt="Repsy" width={113} height={36} className="h-9 w-auto shrink-0" />
         <div className="leading-tight">
           <div className="text-xs text-white/70">Prototype - coach command center</div>
+        </div>
+        {/* Right side (Prompt 46): the signed-in coach and Logout. */}
+        <div className="ml-auto flex min-w-0 items-center gap-3">
+          <span className="truncate text-sm text-white/70" data-testid="coach-name">
+            {coach.name}
+          </span>
+          <button
+            type="button"
+            onClick={onLogout}
+            disabled={loggingOut}
+            className="shrink-0 rounded-lg border border-white/30 px-3 py-1.5 text-sm font-semibold text-white hover:border-white disabled:opacity-60"
+          >
+            Log out
+          </button>
         </div>
       </div>
     </header>
@@ -92,7 +107,61 @@ function PlaceholderTab({ tab, client }: TabProps) {
   );
 }
 
+// App guard (Prompt 46): nothing of the dashboard (and none of its queries) mounts until
+// /api/auth/me has answered. Signed out goes to /login; any other failure can be retried.
 export default function App() {
+  const queryClient = useQueryClient();
+  const meQuery = useQuery({ queryKey: queryKeys.me, queryFn: getMe, retry: false, staleTime: Infinity });
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  const signedOut = meQuery.error instanceof ApiError && meQuery.error.status === 401;
+  useEffect(() => {
+    if (signedOut) navigate("/login", { replace: true });
+  }, [signedOut]);
+
+  async function onLogout() {
+    setLoggingOut(true);
+    setLogoutError(null);
+    try {
+      await logout();
+    } catch (err) {
+      setLogoutError(plainErrorMessage(err));
+      setLoggingOut(false);
+      return;
+    }
+    // Leave the dashboard first, then drop every cached answer so the next coach on this
+    // browser can't see anything of this one.
+    navigate("/login", { replace: true });
+    queryClient.clear();
+  }
+
+  if (meQuery.data) {
+    return (
+      <>
+        <Dashboard coach={meQuery.data} onLogout={onLogout} loggingOut={loggingOut} />
+        {logoutError && (
+          <p role="alert" className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-amber-text">
+            {logoutError}
+          </p>
+        )}
+      </>
+    );
+  }
+  return (
+    <main className="mx-auto flex min-h-screen max-w-[1100px] items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        {meQuery.isError && !signedOut ? (
+          <ErrorState error={meQuery.error} onRetry={() => void meQuery.refetch()} />
+        ) : (
+          <LoadingState />
+        )}
+      </div>
+    </main>
+  );
+}
+
+function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
   const [activeTab, setActiveTab] = useState<TabId>("ai");
   const current = TABS.find((t) => t.id === activeTab)!;
 
@@ -179,7 +248,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <Header />
+      <Header coach={coach} onLogout={onLogout} loggingOut={loggingOut} />
       <main className="mx-auto max-w-[1100px] px-4 pb-10">
         <TabBar active={activeTab} onSelect={setActiveTab} />
         <section

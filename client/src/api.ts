@@ -140,6 +140,7 @@ export const getMe = () => request<Coach>("GET", "/auth/me");
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.
 export const queryKeys = {
+  me: ["auth", "me"] as const,
   clients: ["clients"] as const,
   assignments: (clientId: string) => ["clients", clientId, "assignments"] as const,
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
