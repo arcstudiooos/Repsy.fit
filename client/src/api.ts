@@ -23,23 +23,25 @@ import type {
   LoginInput,
   MacroInput,
   MacroResult,
+  Meal,
   Measurement,
+  MessageThread,
   NewAssignment,
   NewClient,
   NewDailyCheckIn,
-  Meal,
   NewLead,
   NewMeal,
   NewMeasurement,
   NewProgressLog,
-  NewWorkoutTemplate,
   NewReviewItem,
+  NewWorkoutTemplate,
   ProgressLog,
   RecentCheckIns,
   RegisterInput,
   ResetPasswordInput,
   ReviewItem,
   ReviewQueue,
+  ThreadMessage,
   TodayTasks,
   WeeklySummaryResponse,
   WorkoutTemplate,
@@ -195,6 +197,19 @@ export const deleteMeal = (mealId: string) => request<void>("DELETE", `/meals/${
 /** Starting-estimate calories and macros. Rejects with ApiError 400 for bad input or an age under 18. */
 export const calculateMacros = (input: MacroInput) => request<MacroResult>("POST", "/macros", input);
 
+// ----- Client messages (Prompt 63) - NOT the AI Coach chat above -----
+/** Newest page of 50 (or the page before `before`), oldest -> newest. Opening marks client messages read. */
+export const getMessageThread = (clientId: string, before?: string) =>
+  request<MessageThread>(
+    "GET",
+    `/clients/${enc(clientId)}/messages${before ? `?before=${encodeURIComponent(before)}` : ""}`,
+  );
+export const sendMessage = (clientId: string, body: string) =>
+  request<ThreadMessage>("POST", `/clients/${enc(clientId)}/messages`, { body });
+/** Own messages only, within 15 minutes of sending. */
+export const deleteMessage = (clientId: string, messageId: string) =>
+  request<void>("DELETE", `/clients/${enc(clientId)}/messages/${enc(messageId)}`);
+
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
@@ -255,6 +270,7 @@ export const queryKeys = {
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
+  messages: (clientId: string) => ["clients", clientId, "messages"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
   meals: ["meals"] as const,

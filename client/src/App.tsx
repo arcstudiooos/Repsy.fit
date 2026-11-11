@@ -20,8 +20,10 @@ const LibraryTab = lazy(() => import("./tabs/LibraryTab").then((m) => ({ default
 // with the whole dashboard. Home is the first screen and draws no charts, so nothing waits on it.
 const ProgressTab = lazy(() => import("./tabs/ProgressTab").then((m) => ({ default: m.ProgressTab })));
 const CheckInsTab = lazy(() => import("./tabs/CheckInsTab").then((m) => ({ default: m.CheckInsTab })));
+// Coach <-> client messages (Prompt 63) - a separate conversation from the AI Coach tab.
+const MessagesTab = lazy(() => import("./tabs/MessagesTab").then((m) => ({ default: m.MessagesTab })));
 
-type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library";
+type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library" | "messages";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Home" },
@@ -31,6 +33,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "progress", label: "Progress" },
   { id: "checkins", label: "Check-ins" },
   { id: "library", label: "Library" },
+  { id: "messages", label: "Messages" },
 ];
 
 function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
@@ -339,7 +342,13 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             />
           </Suspense>
         ) : (
-          <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
+          current.id === "messages" ? (
+            <Suspense fallback={<LoadingState />}>
+              <MessagesTab key={`messages:${selectedClientId ?? "none"}`} client={selectedClient} />
+            </Suspense>
+          ) : (
+            <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
+          )
         )}
       </>
     );

@@ -94,7 +94,7 @@ test("Library is the 7th tab and lists templates, with search by name", async ({
     tpl("t1", "Push day", { focus: "Upper body", notes: "Warm up first" }),
     tpl("t2", "Leg day", { exercises: [{ name: "Back Squat", sets: 4, reps: "6", rest: 120 }, { name: "Leg Press", sets: 3, reps: "12", rest: 90 }] }),
   ]);
-  await expect(page.getByRole("tab").last()).toHaveText("Library");
+  await expect(page.getByRole("tab").nth(6)).toHaveText("Library");
   const list = page.getByRole("list", { name: "Templates" });
   await expect(list.getByRole("heading", { level: 3 })).toHaveText(["Leg day", "Push day"]);
   await expect(list).toContainText("Back Squat");

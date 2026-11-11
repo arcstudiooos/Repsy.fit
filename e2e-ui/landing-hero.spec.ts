@@ -146,7 +146,7 @@ test("the landing-only fonts (pen notes, classic hero) never load on /app", asyn
   });
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveCount(7);
+  await expect(page.getByRole("tab")).toHaveCount(8);
   await page.waitForLoadState("networkidle");
   expect(fontCss.some((u) => /Caveat|Barlow/.test(u))).toBe(false);
   expect(await page.locator("link[data-landing-fonts]").count()).toBe(0);
@@ -189,7 +189,7 @@ test("the loop stops when the hero is scrolled off-screen", async ({ page }) => 
 test("/app headings: serif h2 at weight 400, Geist body, no faux-bold serif anywhere", async ({ page }) => {
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveCount(7);
+  await expect(page.getByRole("tab")).toHaveCount(8);
   const h2 = page.locator("h2").first();
   await expect(h2).toHaveCSS("font-family", /Instrument Serif/);
   await expect(h2).toHaveCSS("font-weight", "400");

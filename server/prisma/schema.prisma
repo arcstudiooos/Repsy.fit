@@ -29,6 +29,7 @@ model Coach {
   dailyCheckIns DailyCheckIn[]
   habits       Habit[]
   measurements Measurement[]
+  threadMessages ThreadMessage[]
   workoutTemplates WorkoutTemplate[]
   meals        Meal[]
 
@@ -73,6 +74,7 @@ model Client {
   dailyCheckIns DailyCheckIn[]
   habits       Habit[]
   measurements Measurement[]
+  threadMessages ThreadMessage[]
 
   @@index([coachId])
   @@map("clients")
@@ -102,6 +104,26 @@ model Assignment {
   @@index([clientId])
   @@index([coachId])
   @@map("assignments")
+}
+
+/// Coach <-> client chat (Prompt 63). NOT the AI Coach chat: that is ChatMessage / chat_messages.
+/// Real-time is out of v2 scope; the Messages tab polls every 20 seconds.
+model ThreadMessage {
+  id        String    @id @default(cuid())
+  coachId   String
+  coach     Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// One of: coach, client
+  sender    String
+  body      String
+  createdAt DateTime  @default(now())
+  /// When the OTHER side read it. Coach-side read = a client message the coach has opened.
+  readAt    DateTime?
+
+  @@index([clientId, createdAt])
+  @@index([coachId])
+  @@map("thread_messages")
 }
 
 model ChatMessage {

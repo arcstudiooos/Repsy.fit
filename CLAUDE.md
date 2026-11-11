@@ -104,6 +104,15 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Client messages (Prompt 63) are NOT the AI Coach chat.** `ThreadMessage` (table
+  `thread_messages`) = `{ id, coachId, clientId, sender ("coach" | "client"), body, createdAt,
+  readAt }`. The AI Coach keeps `ChatMessage` / `chat_messages` and `/api/clients/:clientId/chat`;
+  the two share no table, route or component. Messages are plain text and rendered as text, never
+  HTML. A coach may delete only their own message, and only within 15 minutes. Opening a thread
+  (the newest page) marks the client's messages read; an older page marks nothing. **No
+  real-time in v2**: no WebSockets or push - the Messages tab (8th tab, after Library, lazy-loaded)
+  fetches on open and polls every 20 seconds while the browser tab is visible.
+
 - **Lazy tabs and the bundle guard.** `/app` loads Home, AI Coach, Clients and Manual Planner
   eagerly; **Progress, Check-ins and Library load on first open**, each wrapped in `<Suspense>`.
   That keeps Recharts out of the dashboard's first download (`/app` ~99 KB gz, budget 130 KB in
@@ -266,7 +275,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `listClients()` | GET | `/api/clients` | — | `Client[]` (oldest first) |
 | `createClient(input)` | POST | `/api/clients` | `NewClient` | `Client` (201) |
 | `getClient(clientId)` | GET | `/api/clients/:clientId` | — | `Client` |
-| `deleteClient(clientId)` | DELETE | `/api/clients/:clientId` | — | 204, no body (also deletes the client's assignments, chat messages and progress logs) |
+| `deleteClient(clientId)` | DELETE | `/api/clients/:clientId` | — | 204, no body (also deletes the client's assignments, AI chat messages, client messages (`thread_messages`) and progress logs) |
 | `listAssignments(clientId)` | GET | `/api/clients/:clientId/assignments` | — | `Assignment[]` |
 | `createAssignment(clientId, input)` | POST | `/api/clients/:clientId/assignments` | `NewAssignment` | `Assignment` |
 | `updateAssignmentStatus(clientId, assignmentId, status)` | PATCH | `/api/clients/:clientId/assignments/:assignmentId` | `{ "status": AssignmentStatus }` | `Assignment` |
@@ -279,6 +288,9 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
 | `listDailyCheckIns(clientId, days)` | GET | `/api/clients/:clientId/checkins?days=14` | — | `DailyCheckIn[]`, newest first (`days` 1-90, default 14) |
 | `saveDailyCheckIn(clientId, input)` | POST | `/api/clients/:clientId/checkins` | `NewDailyCheckIn` | `DailyCheckIn` — **201** for a new day, **200** when it updated that day (one row per client per day) |
+| `getMessageThread(clientId, before?)` | GET | `/api/clients/:clientId/messages?before=<ISO>` | — | `{ messages: ThreadMessage[], hasMore }` — newest page of 50, oldest → newest; opening the newest page marks the client's messages read (`readAt`) |
+| `sendMessage(clientId, body)` | POST | `/api/clients/:clientId/messages` | `{ body }` (1-2000 chars, plain text) | `ThreadMessage` 201 (`sender: "coach"`); 400 `{ "error": "Write a message first." }` |
+| `deleteMessage(clientId, messageId)` | DELETE | `/api/clients/:clientId/messages/:messageId` | — | 204; 403 `{ "error": "Messages can only be deleted within 15 minutes of sending." }` or `"You can only delete messages you sent."`; 404 `"Message not found"` |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
 | `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |

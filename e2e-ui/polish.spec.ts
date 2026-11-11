@@ -58,11 +58,23 @@ async function mockApi(page: Page, setup: Setup = {}) {
     if (req.method() === "GET" && /\/chat$/.test(path)) return route.fulfill({ json: [] });
     if (req.method() === "GET" && /\/progress$/.test(path)) return route.fulfill({ json: logs(setup.logs ?? 6) });
     if (req.method() === "GET" && /\/assignments$/.test(path)) return route.fulfill({ json: assignments(setup.assignments ?? 4) });
+    if (req.method() === "GET" && /\/messages$/.test(path)) {
+      return route.fulfill({
+        json: {
+          messages: [
+            { id: "m1", coachId: "coach-1", clientId: "c1", sender: "coach", body: "How did the session go?", createdAt: "2026-11-10T09:00:00.000Z", readAt: null },
+            { id: "m2", coachId: "coach-1", clientId: "c1", sender: "client", body: "Great, legs are sore!", createdAt: "2026-11-10T10:00:00.000Z", readAt: null },
+          ],
+          hasMore: false,
+        },
+      });
+    }
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
 }
 
-const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins"];
+// Every tab that works on the selected client (Library is coach-level, so it is not in this list).
+const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Messages"];
 const panel = (page: Page) => page.getByRole("tabpanel");
 
 async function openTab(page: Page, tab: string) {

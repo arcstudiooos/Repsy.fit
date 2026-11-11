@@ -14,6 +14,7 @@ import { reviewQueueRouter } from "./routes/reviewQueue.js";
 import { dailyCheckInsRouter } from "./routes/dailyCheckIns.js";
 import { habitsRouter } from "./routes/habits.js";
 import { measurementsRouter } from "./routes/measurements.js";
+import { messagesRouter } from "./routes/messages.js";
 import { templatesRouter } from "./routes/templates.js";
 import { mealsRouter } from "./routes/meals.js";
 import { macrosRouter } from "./routes/macros.js";
@@ -84,6 +85,8 @@ app.use("/api/clients/:clientId/progress", progressRouter);
 app.use("/api/clients/:clientId/checkins", dailyCheckInsRouter);
 app.use("/api/clients/:clientId/habits", habitsRouter);
 app.use("/api/clients/:clientId/measurements", measurementsRouter);
+// Coach <-> client messages (Prompt 63). Separate from the AI Coach chat route above.
+app.use("/api/clients/:clientId/messages", messagesRouter);
 app.use("/api/clients", clientsRouter);
 app.use("/api/seed", seedRouter);
 app.use("/api/leads", leadsRouter);

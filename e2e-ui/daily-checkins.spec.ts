@@ -60,7 +60,7 @@ async function openTab(page: Page, existing: Record<string, unknown>[] = []) {
 
 test("Check-ins is the 6th tab, after Progress, and Library the 7th", async ({ page }) => {
   await openTab(page);
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library"]);
+  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages"]);
   await expect(page.getByRole("tab", { name: "Check-ins" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tabpanel")).toContainText("Selected: Maya Patel");
 });

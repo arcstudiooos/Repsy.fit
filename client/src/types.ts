@@ -102,6 +102,30 @@ export type TodayTask =
   | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
 export type TodayTasks = { date: DateString; tasks: TodayTask[] };
 
+/** Who wrote a coach <-> client message (Prompt 63). */
+export const MESSAGE_SENDERS = ["coach", "client"] as const;
+export type MessageSender = (typeof MESSAGE_SENDERS)[number];
+
+/**
+ * One coach <-> client message (Prompt 63). NOT an AI Coach chat message (that is `ChatMessage`).
+ * `body` is plain text and is always rendered as text, never as HTML.
+ */
+export interface ThreadMessage {
+  id: string;
+  coachId: string;
+  clientId: string;
+  sender: MessageSender;
+  body: string;
+  createdAt: string;
+  /** When the other side read it; for client messages, when the coach opened the thread. */
+  readAt: string | null;
+}
+/** One page of a thread, oldest -> newest. */
+export interface MessageThread {
+  messages: ThreadMessage[];
+  hasMore: boolean;
+}
+
 /** One day's check-in for a client (Prompt 53). One row per client per day. */
 export interface DailyCheckIn {
   id: string;
