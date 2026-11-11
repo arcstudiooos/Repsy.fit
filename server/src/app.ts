@@ -1,5 +1,4 @@
 import express, { type NextFunction, type Request, type Response } from "express";
-import cors from "cors";
 import { assignmentsRouter } from "./routes/assignments.js";
 import { autoAssignRouter } from "./routes/autoAssign.js";
 import { chatRouter } from "./routes/chat.js";
@@ -32,6 +31,7 @@ import { prisma } from "./db.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { securityHeaders } from "./security.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Built client lives at client/dist (two levels up from server/dist or server/src).
@@ -42,7 +42,12 @@ const clientDist = path.resolve(__dirname, "../../client/dist");
 export const app = express();
 // Render puts one proxy in front of the app: trust it so req.ip (rate limits) is the real caller.
 app.set("trust proxy", 1);
-app.use(cors());
+app.disable("x-powered-by");
+// Security headers on every response (Prompt 73). No CORS middleware: the built client is served by
+// this same app from this same origin (see the static handler below) and calls the API with relative
+// paths, and the Vite dev server proxies /api, so nothing legitimate is ever cross-origin. A wildcard
+// Access-Control-Allow-Origin on a cookie-authenticated app was the wrong default.
+app.use(securityHeaders);
 app.use(express.json());
 app.use(sessionMiddleware);
 // Client sessions (Prompt 65): reads only the client cookie, sets only req.clientAccountId.

@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { asyncHandler } from "./clients.js";
+import { rateLimit } from "../auth/rateLimit.js";
 
 const NewLeadSchema = z.object({
   name: z.string({ required_error: "Please enter your name." }).trim().min(1, "Please enter your name.").max(100, "Name is too long."),
@@ -26,6 +27,8 @@ export const leadsRouter = Router();
 // when that email (case-insensitive) is already saved.
 leadsRouter.post(
   "/",
+  // The only public write in the app, so it is metered like the sign-in routes (Prompt 73).
+  rateLimit("leads", { max: 20 }),
   asyncHandler(async (req, res) => {
     const parsed = NewLeadSchema.safeParse(req.body ?? {});
     if (!parsed.success) {

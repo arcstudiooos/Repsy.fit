@@ -10,7 +10,10 @@ export type Route =
   // Client sign-in (Prompt 65): separate pages for invited clients.
   | "client-login"
   | "client-set-password"
-  | "client-home";
+  | "client-home"
+  // Privacy and Terms (Prompt 73): DRAFTS for the owner's legal review, not final documents.
+  | "privacy"
+  | "terms";
 
 /** sessionStorage key: set once the visitor has opened /app in this tab. */
 export const IN_APP_KEY = "repsy:in-app";
@@ -31,6 +34,8 @@ export function routeFor(pathname: string, opts: { inAppFlow: boolean; backForwa
   if (pathname === "/client/login") return "client-login";
   if (pathname === "/client/set-password") return "client-set-password";
   if (pathname === "/client" || pathname === "/client/") return "client-home";
+  if (pathname === "/privacy") return "privacy";
+  if (pathname === "/terms") return "terms";
   if (pathname === "/" && opts.inAppFlow && !opts.backForward) return "redirect-to-app";
   return "landing";
 }

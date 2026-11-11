@@ -78,8 +78,10 @@ clientsRouter.get(
   }),
 );
 
-// DELETE /api/clients/:clientId - deletes the client and (via ON DELETE CASCADE) all of
-// their assignments, chat messages and progress logs.
+// DELETE /api/clients/:clientId - deletes the client and, by ON DELETE CASCADE, every record that
+// belongs to them: assignments, AI chat messages, coach-client thread messages, progress logs,
+// daily check-ins, habits (and their logs), measurements, invites, the plan (and its payments),
+// payments, appointments and review items. Verified against the migration SQL in Prompt 73.
 clientsRouter.delete(
   "/:clientId",
   asyncHandler(async (req, res) => {

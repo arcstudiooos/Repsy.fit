@@ -65,7 +65,9 @@ export function verifyClientSession(token: string): { clientId: string; version:
 }
 
 function cookieOptions(): CookieOptions {
-  return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" };
+  // Secure whenever this is a real deployment: Render does not set NODE_ENV, so RENDER counts too.
+  const deployed = process.env.NODE_ENV === "production" || !!process.env.RENDER;
+  return { httpOnly: true, secure: deployed, sameSite: "lax", path: "/" };
 }
 
 export function setClientSessionCookie(res: Response, clientId: string, version: number): void {

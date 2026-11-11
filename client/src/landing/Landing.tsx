@@ -166,11 +166,17 @@ export default function Landing() {
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-4 px-5 py-8 text-sm md:px-8">
           <span className="text-white/70">Repsy Coach</span>
           <nav aria-label="Legal" className="ml-auto flex gap-1">
-            {["Privacy", "Terms", "Contact"].map((label) => (
-              <a key={label} href={`#${label.toLowerCase()}`} className="flex min-h-10 items-center rounded-lg px-3 text-white/80 hover:text-white" title={`${label} - coming soon`}>
-                {label}
-              </a>
-            ))}
+            {/* Privacy and Terms are real pages (Prompt 73), labelled drafts pending legal review.
+                Contact points at the sign-up form on this page, not a dead "#contact" anchor. */}
+            <a href="/privacy" className="flex min-h-10 items-center rounded-lg px-3 text-white/80 hover:text-white">
+              Privacy
+            </a>
+            <a href="/terms" className="flex min-h-10 items-center rounded-lg px-3 text-white/80 hover:text-white">
+              Terms
+            </a>
+            <a href="#start" className="flex min-h-10 items-center rounded-lg px-3 text-white/80 hover:text-white">
+              Contact
+            </a>
           </nav>
         </div>
       </footer>

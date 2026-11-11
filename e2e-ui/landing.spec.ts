@@ -50,7 +50,14 @@ test("/ is the landing page: one h1, sticky header with logo, nav, Start free, c
   await expect(page.locator("#features")).toHaveCSS("background-color", "rgb(250, 247, 242)");
 
   const legal = page.getByRole("navigation", { name: "Legal" });
-  for (const label of ["Privacy", "Terms", "Contact"]) await expect(legal.getByRole("link", { name: label })).toBeVisible();
+  // Privacy and Terms are real pages (Prompt 73); Contact jumps to the sign-up form on this page.
+  for (const [label, href] of [
+    ["Privacy", "/privacy"],
+    ["Terms", "/terms"],
+    ["Contact", "#start"],
+  ]) {
+    await expect(legal.getByRole("link", { name: label })).toHaveAttribute("href", href);
+  }
 
   expect(apiCalls).toEqual([]); // the landing page calls no API
 });

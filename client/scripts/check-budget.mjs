@@ -47,6 +47,17 @@ const appKb = appKey ? [...new Set([...first, ...staticClosure(appKey)])].reduce
 if (appKb > BUDGET_APP_GZ_KB) errors.push(`/app loads ${appKb.toFixed(1)} KB gz > budget ${BUDGET_APP_GZ_KB} KB`);
 if (firstKb > BUDGET_FIRST_LOAD_GZ_KB) errors.push(`first load ${firstKb.toFixed(1)} KB gz > budget ${BUDGET_FIRST_LOAD_GZ_KB} KB`);
 
+// 4. No server secret may ever reach the browser (Prompt 73). The client has no import.meta.env
+// today; this guard is what keeps it that way, because a single VITE_-prefixed secret would be
+// inlined into these files in plain text.
+const FORBIDDEN = ["AI_API_KEY", "SESSION_SECRET", "DATABASE_URL", "SMTP_PASS", "SMTP_USER", "RENDER_API_KEY", "VITE_"];
+const assetDir = path.join(dist, "assets");
+for (const file of fs.existsSync(assetDir) ? fs.readdirSync(assetDir) : []) {
+  if (!/\.(js|css)$/.test(file)) continue;
+  const text = fs.readFileSync(path.join(assetDir, file), "utf8");
+  for (const needle of FORBIDDEN) if (text.includes(needle)) errors.push(`${file} contains "${needle}" - a server secret must never be bundled`);
+}
+
 const threeFiles = threeKey ? [...staticClosure(threeKey)].filter((k) => !first.includes(k)) : [];
 const threeKb = threeFiles.reduce((n, k) => n + gz(byKey(k).file), 0) / 1024;
 console.log(`budget: first load ${firstKb.toFixed(1)} KB gz (budget ${BUDGET_FIRST_LOAD_GZ_KB}), /app ${appKb.toFixed(1)} KB gz (budget ${BUDGET_APP_GZ_KB}), 3D chunk(s) ${threeKb.toFixed(1)} KB gz, lazy`);
@@ -54,4 +65,4 @@ if (errors.length) {
   console.error("Bundle guard FAILED:\n - " + errors.join("\n - "));
   process.exit(1);
 }
-console.log("Bundle guard OK: 3D code is in its own lazy chunk and not in /app or the first load.");
+console.log("Bundle guard OK: 3D code is in its own lazy chunk and not in /app or the first load; no server secret in the bundle.");

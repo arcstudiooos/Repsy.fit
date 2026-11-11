@@ -103,6 +103,36 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - **No vertical / side menu.** Navigation is horizontal, Chrome-style tabs across the top.
 
 ## Data notes
+- **Security and privacy (Prompt 73).** There is **no CORS middleware**: the built client is served by
+  the same Express app from the same origin and calls the API with relative paths, and the Vite dev
+  server proxies `/api`, so nothing legitimate is cross-origin. Do NOT re-add `cors()` - a wildcard
+  `Access-Control-Allow-Origin` on a cookie-authenticated app is what Prompt 73 removed.
+  `server/src/security.ts` sets the response headers by hand (no `helmet`: new dependencies are
+  forbidden): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, a global
+  `Referrer-Policy: strict-origin-when-cross-origin` (the invite/reset pages still override it with
+  `no-referrer`), `Cross-Origin-Opener-Policy: same-origin`, HSTS **only over HTTPS**, and a CSP whose
+  `script-src` is `'self'` with NO `'unsafe-inline'`. **Because of that CSP, `client/index.html` must
+  never use an inline event handler** (the old `onload="this.rel='stylesheet'"` font trick was
+  replaced with a plain stylesheet link); `style-src` does allow `'unsafe-inline'`, because inline
+  `style` attributes are used throughout and a nonce cannot cover a style attribute. `x-powered-by`
+  is disabled. Session cookies are `httpOnly`, `sameSite=lax`, `path=/`, 7 days, and `secure`
+  whenever `NODE_ENV=production` **or** `RENDER` is set, because Render does not set `NODE_ENV`.
+  `POST /api/leads` is rate limited (20/15 min) as the only public write. `client/scripts/check-budget.mjs`
+  fails the build if `VITE_`, `AI_API_KEY`, `SESSION_SECRET`, `DATABASE_URL` or `SMTP_*` appears in a
+  built asset: the client has no `import.meta.env` at all, and must keep it that way.
+- **Deletion (Prompt 73).** Every foreign key to `Coach` and `Client` is `onDelete: Cascade` in the
+  schema AND `ON DELETE CASCADE` in the applied migrations, so both deletes are one atomic statement:
+  `DELETE /api/clients/:clientId` removes the client and all 13 child tables, and
+  `DELETE /api/auth/account` removes the coach, their clients and every child row (plus templates,
+  meals, weekly summaries and reset tokens). Landing-page `Lead` rows are NOT coach-owned and are
+  deliberately left alone. If you ever write the deletes by hand instead, note that `Client.coachId`,
+  `Assignment.coachId`, `ChatMessage.coachId` and `ProgressLog.coachId` are NULLABLE (null = unclaimed
+  demo data), so a `deleteMany({ where: { coachId } })` would miss rows - match on the client ids too.
+- **Privacy and Terms (Prompt 73)** live at `/privacy` and `/terms` (`client/src/legal/LegalPages.tsx`,
+  their own lazy chunk, linked from the landing footer). They are **drafts for the owner's legal
+  review**, labelled as such at the top of the page and in the footer, with every gap marked
+  "To complete:". Do NOT present them as final legal documents or fill the gaps with invented claims.
+
 
 - **Business: plans and payments (Prompt 68) are RECORD-KEEPING ONLY.** No payment gateway,
   payment links, automatic charging, reminders or invoices (invoices/export are Prompt 70).
@@ -428,6 +458,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `downloadRosterCsv()` | GET | `/api/reports/roster` | — | `text/csv` attachment of all the signed-in coach's clients with plan status and next due date. Needs `requireCoach`. (Prompt 70) |
 | `getEngagement(date)` | GET | `/api/business/engagement?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: { clientId, clientName, rank (1-based, ties share; null = not enough data), checkInStreak, habitPercent (null = no active habits), workoutsThisWeek, enoughData }[] }` — ranked clients first, then unranked A-Z. 400 bad date; 401 signed out. Needs `requireCoach`. Business > Engagement only. (Prompt 71) |
 | `getMyStreaks(date)` | GET | `/api/client-auth/my-streaks?date=YYYY-MM-DD` | — | `{ date, checkInStreak, habitPercent, workoutsThisWeek, enoughData }` — the signed-in CLIENT's own numbers only, no rank; 400 bad date; 401 without a **client** session (Prompt 71); 404 if the coach deleted the client record (Prompt 71) |
+| `deleteAccount(password)` | DELETE | `/api/auth/account` | `{ password, confirm: "DELETE" }` | 204, session cookie cleared. Deletes the coach and EVERYTHING they own in one statement (Postgres cascades every child row); 400 wrong password or wrong confirm word; 401 signed out. Needs `requireCoach`, rate limited 5/15 min (Prompt 73) |
 | `getMyPlan()` | GET | `/api/client-auth/my-plan` | — | `{ plan: { planName, status, nextDueDate } \| null, lastPaymentDate }` — the signed-in CLIENT's own plan only; no amounts |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |

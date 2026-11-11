@@ -129,6 +129,8 @@ export function ClientsTab({
           )}
         </div>
       </div>
+      {/* Prompt 73: the coach is the one who must have permission for the data they type in. */}
+      <p className="mb-4 text-sm text-dim">Only add real client data you have permission to store.</p>
       <div className="mb-4 empty:hidden">
         <DemoSeedError seed={seedDemo} />
       </div>

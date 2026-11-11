@@ -6,7 +6,16 @@ import { prisma } from "../db.js";
 import { claimDemoData } from "../auth/claimDemoData.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import { rateLimit } from "../auth/rateLimit.js";
-import { ChangePasswordSchema, ForgotSchema, LoginSchema, RegisterSchema, ResetSchema, UpdateCurrencySchema, UpdateNameSchema } from "../auth/schemas.js";
+import {
+  ChangePasswordSchema,
+  DeleteAccountSchema,
+  ForgotSchema,
+  LoginSchema,
+  RegisterSchema,
+  ResetSchema,
+  UpdateCurrencySchema,
+  UpdateNameSchema,
+} from "../auth/schemas.js";
 import { clearSessionCookie, sessionSecret, setSessionCookie } from "../auth/session.js";
 import { deliverResetEmail } from "../auth/mailer.js";
 import { requireCoach, coachIdOf } from "../auth/requireCoach.js";
@@ -212,6 +221,40 @@ authRouter.post(
     const passwordHash = await hashPassword(parsed.data.newPassword);
     const updated = await prisma.coach.update({ where: { id }, data: { passwordHash, sessionVersion: { increment: 1 } } });
     setSessionCookie(res, updated.id, updated.sessionVersion);
+    res.status(204).end();
+  }),
+);
+
+export const DELETE_CONFIRM = "DELETE";
+export const WRONG_CONFIRM = `To delete your account, type ${DELETE_CONFIRM} and enter your password.`;
+
+// DELETE /api/auth/account { password, confirm: "DELETE" } -> 204, session cleared (Prompt 73).
+// Deletes the coach and EVERYTHING they own, in one statement: Postgres cascades from `coaches`
+// through clients to every child row (assignments, AI chats, thread messages, progress logs, daily
+// check-ins, habits and habit logs, measurements, invites, plans, payments, appointments, review
+// items, templates, meals, weekly summaries and reset tokens). Every one of those foreign keys is
+// ON DELETE CASCADE, checked against the migration SQL, so a single delete is atomic by itself and
+// cannot leave an orphan behind. Landing-page leads are NOT coach-owned and are left alone.
+// This cannot be undone, which is why it needs the password AND the typed word.
+authRouter.delete(
+  "/account",
+  requireCoach,
+  rateLimit("delete-account", { max: 5 }),
+  asyncHandler(async (req, res) => {
+    if (secretMissing(res)) return;
+    const parsed = DeleteAccountSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const id = coachIdOf(req);
+    const coach = await prisma.coach.findUnique({ where: { id } });
+    if (!coach || !(await verifyPassword(parsed.data.password, coach.passwordHash))) {
+      res.status(400).json({ error: WRONG_CURRENT });
+      return;
+    }
+    await prisma.coach.delete({ where: { id } });
+    clearSessionCookie(res);
     res.status(204).end();
   }),
 );

@@ -9,6 +9,9 @@ import "./index.css";
 // Each side is its own lazy chunk, so the landing page's 3D / animation code never loads in /app.
 const App = lazy(() => import("./App"));
 const Landing = lazy(() => import("./landing/Landing"));
+// Privacy / Terms (Prompt 73): drafts for legal review, their own lazy chunk.
+const PrivacyPage = lazy(() => import("./legal/LegalPages").then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import("./legal/LegalPages").then((m) => ({ default: m.TermsPage })));
 // Login / register screens (Prompt 46): own lazy chunk, so zod and the forms stay out of the first load.
 const AuthPages = lazy(() => import("./auth/AuthPages"));
 // Forgot / reset password screens (Prompt 47).
@@ -49,6 +52,7 @@ else if (route === "app") void import("./App");
 else if (route === "login" || route === "register") void import("./auth/AuthPages");
 else if (route === "forgot" || route === "reset") void import("./auth/PasswordPages");
 else if (route.startsWith("client-")) void import("./auth/ClientPages");
+else if (route === "privacy" || route === "terms") void import("./legal/LegalPages");
 
 // In-page navigation (guard redirect, login -> app, logout -> login) fires "popstate"; a history
 // step is treated like Back/Forward so "/" still shows the landing page.
@@ -75,6 +79,10 @@ function Root() {
         <PasswordPages mode={current} />
       ) : current === "client-login" || current === "client-set-password" || current === "client-home" ? (
         <ClientPages mode={current} />
+      ) : current === "privacy" ? (
+        <PrivacyPage />
+      ) : current === "terms" ? (
+        <TermsPage />
       ) : null}
     </Suspense>
   );

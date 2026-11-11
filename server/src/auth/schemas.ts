@@ -67,3 +67,14 @@ export type ForgotInput = z.infer<typeof ForgotSchema>;
 export type ResetInput = z.infer<typeof ResetSchema>;
 export type UpdateNameInput = z.infer<typeof UpdateNameSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+
+/**
+ * Deleting an account (Prompt 73): the password proves it is really them, and the typed word stops a
+ * mis-click. The confirm word is compared exactly, so a lowercase "delete" is refused.
+ */
+export const DeleteAccountSchema = z.object({
+  password: z.string({ required_error: "Please enter your password." }).min(1, "Please enter your password."),
+  confirm: z.literal("DELETE", {
+    errorMap: () => ({ message: "To delete your account, type DELETE and enter your password." }),
+  }),
+});

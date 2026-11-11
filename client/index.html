@@ -24,19 +24,14 @@
     <meta name="twitter:image" content="https://repsy-coach.onrender.com/og-image.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Fonts load without blocking the first paint (display=swap keeps text visible). -->
+<!--
+      A plain stylesheet link: display=swap keeps text visible while it loads, and there is no inline
+      onload handler, so the Content-Security-Policy can refuse inline scripts outright (Prompt 73).
+    -->
     <link
-      rel="preload"
-      as="style"
+      rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
-      onload="this.onload=null;this.rel='stylesheet'"
     />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
-      />
-    </noscript>
   </head>
   <body>
     <div id="root"></div>

@@ -225,6 +225,8 @@ export const saveClientPlan = (clientId: string, input: NewClientPlan) =>
 export const recordPayment = (clientId: string, input: NewPayment) =>
   request<{ payment: Payment; plan: ClientPlan }>("POST", `/clients/${enc(clientId)}/plan/payments`, input);
 export const listPayments = (clientId: string) => request<Payment[]>("GET", `/clients/${enc(clientId)}/plan/payments`);
+/** Deletes the coach and every record they own. Cannot be undone (Prompt 73). */
+export const deleteAccount = (password: string) => request<void>("DELETE", "/auth/account", { password, confirm: "DELETE" });
 export const updateCurrency = (currency: Currency) => request<Coach>("PATCH", "/auth/currency", { currency });
 /** The signed-in CLIENT's own plan (name, status, next due) and last payment date. */
 export const getMyPlan = () => request<MyPlan>("GET", "/client-auth/my-plan");
