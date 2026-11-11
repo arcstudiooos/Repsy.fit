@@ -11,7 +11,7 @@ function Page({ title, intro, children }: { title: string; intro: string; childr
     document.title = `${title} - Repsy Coach`;
   }, [title]);
   return (
-    <div className="landing-root landing-light min-h-dvh">
+    <div className="landing-cream a1 min-h-dvh">
       <header className="mx-auto flex max-w-[800px] items-center gap-4 px-5 py-6 md:px-8">
         <a href="/" className="flex min-h-10 items-center text-xl" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
           Repsy
@@ -27,14 +27,12 @@ function Page({ title, intro, children }: { title: string; intro: string; childr
       </header>
       <main className="mx-auto max-w-[800px] px-5 pb-16 md:px-8">
         {/* The draft label is deliberately the first thing on the page, not only in the footer. */}
-        <p role="note" className="rounded-lg border border-[#d8d2c6] bg-[#f1ede6] p-4 text-sm">
+        <p role="note" className="rounded-lg border border-[#d8d2c6] bg-[#f1ede6] p-4 text-sm text-[#1a1a1a]">
           <strong>Draft for legal review.</strong> This page is a working outline, not a final legal document, and
           not legal advice. The owner of Repsy Coach must have a qualified lawyer complete and approve it before
           relying on it.
         </p>
-        <h1 className="mt-8 text-4xl md:text-5xl" style={{ fontFamily: "var(--font-serif)" }}>
-          {title}
-        </h1>
+        <h1 className="mt-8 text-4xl md:text-5xl">{title}</h1>
         <p className="landing-dim mt-3 text-lg">{intro}</p>
         <p className="landing-dim mt-1 text-sm">Last updated: {UPDATED}</p>
         <div className="mt-8 space-y-8">{children}</div>
@@ -57,9 +55,7 @@ function Page({ title, intro, children }: { title: string; intro: string; childr
 function Section({ heading, children }: { heading: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-2xl" style={{ fontFamily: "var(--font-serif)" }}>
-        {heading}
-      </h2>
+      <h2 className="text-2xl">{heading}</h2>
       <div className="landing-dim mt-2 space-y-3 text-base">{children}</div>
     </section>
   );
@@ -68,7 +64,7 @@ function Section({ heading, children }: { heading: string; children: React.React
 /** Marks a gap the owner's lawyer must fill, so a placeholder can never read as a settled promise. */
 function ToComplete({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-lg border border-dashed border-[#c9c2b4] bg-white/60 p-3 text-sm">
+    <p className="rounded-lg border border-dashed border-[#c9c2b4] bg-white/60 p-3 text-sm text-[#1a1a1a]">
       <strong>To complete:</strong> {children}
     </p>
   );
@@ -101,7 +97,7 @@ export function PrivacyPage() {
         </p>
         <p>
           Training and tracking records: assignments and templates, progress logs, measurements, daily check-ins,
-          habits and habit ticks, progress photos the coach uploads, and appointments.
+          habits and habit ticks, and appointments. The app does not store progress photos.
         </p>
         <p>Messages between a coach and a client, and the coach's chats with the in-app AI assistant.</p>
         <p>Business records the coach enters by hand: plans, prices and recorded payments. No card or bank details are collected or stored, because the app does not take payments.</p>
@@ -147,12 +143,13 @@ export function PrivacyPage() {
 
       <Section heading="How to get data deleted">
         <p>
-          A coach can delete a single client from the Clients tab. That removes the client and their records,
-          including photos, messages, check-ins, habits, measurements, plans and payments.
+          A coach can delete a single client from the Clients tab. That removes the client and every record
+          belonging to them: assignments, messages, progress logs, check-ins, habits, measurements,
+          appointments, their plan and the payments recorded against it.
         </p>
         <p>
           A coach can delete their whole account from Account settings. That removes the coach, every client they
-          added, and all the records above, including uploaded photo files. It cannot be undone.
+          added, and all of the records above. It cannot be undone.
         </p>
         <p>
           A client who wants their data removed should ask their coach, who can delete it. A client can also contact

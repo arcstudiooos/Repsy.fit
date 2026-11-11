@@ -40,6 +40,45 @@ test("the Privacy draft says what data, why, who sees it and how to delete it - 
   // It must not claim a guarantee the app cannot keep.
   await expect(page.locator("main")).toContainText("No security measure is perfect");
   await expect(page.locator("main")).toContainText("No card or bank details are collected");
+  // It must not describe data the app never collects: there is no photo feature.
+  await expect(page.locator("main")).toContainText("The app does not store progress photos.");
+});
+
+/** Relative luminance contrast ratio, so "readable" is measured, not assumed. */
+async function contrast(page: Page, selector: string): Promise<number> {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel)!;
+    const lum = (c: string) => {
+      const [r, g, b] = c.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number);
+      const f = (v: number) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const style = getComputedStyle(el);
+    // Walk up for the first non-transparent background.
+    let bgEl: Element | null = el;
+    let bg = "rgb(255, 255, 255)";
+    while (bgEl) {
+      const c = getComputedStyle(bgEl).backgroundColor;
+      if (c && !/rgba\(0, 0, 0, 0\)|transparent/.test(c)) {
+        bg = c;
+        break;
+      }
+      bgEl = bgEl.parentElement;
+    }
+    const [a, b] = [lum(style.color), lum(bg)].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
+  }, selector);
+}
+
+test("the legal pages are readable: light theme, and the draft notice meets WCAG AA", async ({ page }) => {
+  for (const path of ["/privacy", "/terms"]) {
+    await page.goto(path);
+    // The pages use the landing page's cream theme, not the dashboard's dark one.
+    await expect(page.locator("div.landing-cream").first()).toHaveCSS("background-color", "rgb(250, 247, 242)");
+    // The draft label is the whole point of the page: it must be clearly legible (AA body text = 4.5).
+    expect(await contrast(page, "[role=note]"), `draft notice contrast on ${path}`).toBeGreaterThan(4.5);
+    expect(await contrast(page, "h1"), `heading contrast on ${path}`).toBeGreaterThan(4.5);
+  }
 });
 
 test("the Terms draft is a draft, and does not invent liability or pricing claims", async ({ page }) => {
