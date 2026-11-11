@@ -1,11 +1,12 @@
 // Which side of the site a path opens (Prompt 37, login screens added in Prompt 46).
-export type Route = "app" | "landing" | "redirect-to-app" | "login" | "register";
+export type Route = "app" | "landing" | "redirect-to-app" | "login" | "register" | "forgot" | "reset";
 
 /** sessionStorage key: set once the visitor has opened /app in this tab. */
 export const IN_APP_KEY = "repsy:in-app";
 
 /**
  * "/app" and "/app/..." open the coach dashboard; "/login" and "/register" the sign-in screens;
+ * "/forgot-password" and "/reset-password" (Prompt 47) the password reset screens;
  * every other path is the public landing page.
  * Old links to "/" go to /app only when this tab is already inside the app flow - except when the
  * visitor used Back/Forward, so Back from the app still reaches the landing page.
@@ -14,6 +15,8 @@ export function routeFor(pathname: string, opts: { inAppFlow: boolean; backForwa
   if (pathname === "/app" || pathname.startsWith("/app/")) return "app";
   if (pathname === "/login") return "login";
   if (pathname === "/register") return "register";
+  if (pathname === "/forgot-password") return "forgot";
+  if (pathname === "/reset-password") return "reset";
   if (pathname === "/" && opts.inAppFlow && !opts.backForward) return "redirect-to-app";
   return "landing";
 }

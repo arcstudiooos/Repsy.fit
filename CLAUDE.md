@@ -189,6 +189,24 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `login(input)` | POST | `/api/auth/login` | `{ email, password }` | `Coach` 200 + session cookie; 401 `{ "error": "That email or password is not right." }` (same for unknown email, no cookie); 400; 429; 503 |
 | `logout()` | POST | `/api/auth/logout` | — *(no body)* | 204, session cookie cleared (also when already signed out) |
 | `getMe()` | GET | `/api/auth/me` | — | `Coach` 200; 401 `{ "error": "You are not signed in." }` when signed out / session invalid or expired / coach deleted |
+| `forgotPassword(email)` | POST | `/api/auth/forgot` | `{ email }` | 200 `{ "message": "If that email exists, a reset link is on its way." }` — the SAME reply for a known and an unknown email (the email is sent after replying); 400 for a malformed email; 429. |
+| `resetPassword(input)` | POST | `/api/auth/reset` | `{ token, password }` (password rules as register) | 204 (signs nobody in; the coach then logs in); 400 `{ "error": "This reset link is not valid any more. Please ask for a new one." }` for an expired, used or unknown token (one message for all three); 400 weak password; 429. |
+| `updateName(name)` | PATCH | `/api/auth/me` | `{ name }` | `Coach` 200 (name only; email is read-only); 401; 400 |
+| `changePassword(input)` | POST | `/api/auth/change-password` | `{ currentPassword, newPassword }` | 204 + fresh session cookie for this session; 400 `{ "error": "Your current password is not right." }`; 401; 429. |
+
+**Password reset and account (Prompt 47):** `PasswordResetToken` rows (`password_reset_tokens`) hold only the
+SHA-256 hash of a 256-bit token, `expiresAt` = 1 hour, `usedAt` set when spent (one atomic `updateMany` claims
+it, so a token works once even under a race); a newer request deletes the coach's older unused tokens.
+`Coach.sessionVersion` (int, default 0) is copied into the session token (`v`); `sessionMiddleware` checks it
+against the database (`server/src/auth/sessionCheck.ts`), so a reset or password change (which add 1) ends every
+older session at once, while change-password re-signs the current session. Tokens from before Prompt 47 count
+as version 0. Email goes out only through the `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` /
+`SMTP_PASS` / `SMTP_FROM` env vars (sent with `nodemailer` in `server/src/auth/mailer.ts`; STARTTLS required for remote servers); the link
+uses `APP_URL` (else `RENDER_EXTERNAL_URL`). With no provider configured, development logs the link on the
+server console and production logs that email is not set up — a link is never returned by the API or shown in
+the UI. Client: `/forgot-password`, `/reset-password?token=…` (`src/auth/PasswordPages.tsx`) and `/app/account`
+(`src/auth/AccountPage.tsx`, header "Account" link). `server/test/setup.ts` answers the session check "current"
+for mocked tests; tests of the check call `vi.unmock("../src/auth/sessionCheck.js")`.
 
 **Sessions (Prompt 44):** a signed stateless JWT (HS256, `node:crypto`, secret from env `SESSION_SECRET`)
 in the `repsy_session` cookie: httpOnly, `Secure` in production, `SameSite=Lax`, 7-day expiry, path `/`.
@@ -311,7 +329,11 @@ and record it here.
   API errors when signed out; browser tests register a throwaway coach in `e2e/global-setup.ts`.
 - Prompt 46: `/login` and `/register` (client `src/auth/AuthPages.tsx`, own lazy chunk) and the `/app` guard
   (`App.tsx` calls `getMe()` first; 401 -> `/login`). Logout clears the whole React Query cache. No API change.
-  The "Forgot password" link is hidden until Prompt 47. Mocked UI specs import `test` from `e2e-ui/fixtures.ts`,
+  The "Forgot password?" link was hidden until Prompt 47 (now shown). Mocked UI specs import `test` from `e2e-ui/fixtures.ts`,
   which answers `/api/auth/me`; `e2e-ui/auth.spec.ts` and `e2e/auth.spec.ts` cover the sign-in flow.
+- Prompt 47: the prompt named `POST /api/auth/forgot` / `/reset` as written; the account section is a
+  `/app/account` page (header "Account" link) built on `PATCH /api/auth/me` (name) and
+  `POST /api/auth/change-password`, which the prompt left unnamed. `reset` replies 204 and signs nobody in.
+  SMTP is a small built-in client (no `nodemailer`); env names `SMTP_*` and `APP_URL` (see `.env.example`).
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

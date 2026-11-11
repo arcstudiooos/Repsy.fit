@@ -6,10 +6,17 @@ import { prisma } from "../db.js";
 import { claimDemoData } from "../auth/claimDemoData.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import { rateLimit } from "../auth/rateLimit.js";
-import { LoginSchema, RegisterSchema } from "../auth/schemas.js";
+import { ChangePasswordSchema, ForgotSchema, LoginSchema, RegisterSchema, ResetSchema, UpdateNameSchema } from "../auth/schemas.js";
 import { clearSessionCookie, sessionSecret, setSessionCookie } from "../auth/session.js";
+import { deliverResetEmail } from "../auth/mailer.js";
+import { requireCoach, coachIdOf } from "../auth/requireCoach.js";
+import { appBaseUrl, hashToken, issueResetToken, resetLink } from "../auth/resetToken.js";
 import { asyncHandler } from "./clients.js";
 
+export const FORGOT_REPLY = "If that email exists, a reset link is on its way.";
+export const BAD_RESET = "This reset link is not valid any more. Please ask for a new one.";
+export const WRONG_CURRENT = "Your current password is not right.";
+class InvalidResetToken extends Error {}
 export const EMAIL_TAKEN = "That email is already registered.";
 export const BAD_LOGIN = "That email or password is not right.";
 export const NOT_SIGNED_IN = "You are not signed in.";
@@ -51,7 +58,7 @@ authRouter.post(
         await claimDemoData(tx, created.id);
         return created;
       });
-      setSessionCookie(res, coach.id);
+      setSessionCookie(res, coach.id, coach.sessionVersion);
       res.status(201).json(publicCoach(coach));
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -80,8 +87,117 @@ authRouter.post(
       res.status(401).json({ error: BAD_LOGIN });
       return;
     }
-    setSessionCookie(res, coach.id);
+    setSessionCookie(res, coach.id, coach.sessionVersion);
     res.json(publicCoach(coach));
+  }),
+);
+
+// POST /api/auth/forgot { email } -> always 200 with the same message, whether or not the email has an
+// account. The work (and the email) happens after the reply is sent, so timing can't give it away.
+authRouter.post(
+  "/forgot",
+  rateLimit("forgot"),
+  asyncHandler(async (req, res) => {
+    const parsed = ForgotSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    res.json({ message: FORGOT_REPLY });
+    void sendResetLink(parsed.data.email).catch((err) => {
+      console.error("Password reset request failed:", err instanceof Error ? err.message : err);
+    });
+  }),
+);
+
+async function sendResetLink(email: string): Promise<void> {
+  const coach = await prisma.coach.findUnique({ where: { email } });
+  if (!coach) return;
+  const base = appBaseUrl();
+  if (!base) {
+    console.error("Password reset email not sent: APP_URL is not set, so no link can be built.");
+    return;
+  }
+  const token = await issueResetToken(prisma, coach.id);
+  await deliverResetEmail(coach.email, resetLink(base, token));
+}
+
+// POST /api/auth/reset { token, password } -> 204. Spends the single-use token, sets the new password and
+// ends every existing session (nobody is signed in by it: the coach logs in with the new password).
+authRouter.post(
+  "/reset",
+  rateLimit("reset"),
+  asyncHandler(async (req, res) => {
+    const parsed = ResetSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const { token, password } = parsed.data;
+    const tokenHash = hashToken(token);
+    const passwordHash = await hashPassword(password);
+    try {
+      await prisma.$transaction(async (tx) => {
+        // One atomic claim: only an unused, unexpired token matches, and only one caller can win it.
+        const claimed = await tx.passwordResetToken.updateMany({
+          where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+          data: { usedAt: new Date() },
+        });
+        if (claimed.count !== 1) throw new InvalidResetToken();
+        const row = await tx.passwordResetToken.findUnique({ where: { tokenHash } });
+        if (!row) throw new InvalidResetToken();
+        await tx.coach.update({ where: { id: row.coachId }, data: { passwordHash, sessionVersion: { increment: 1 } } });
+        await tx.passwordResetToken.deleteMany({ where: { coachId: row.coachId, usedAt: null } });
+      });
+    } catch (err) {
+      if (err instanceof InvalidResetToken) {
+        res.status(400).json({ error: BAD_RESET });
+        return;
+      }
+      throw err;
+    }
+    res.status(204).end();
+  }),
+);
+
+// PATCH /api/auth/me { name } -> 200 coach (display name only; the email is read-only).
+authRouter.patch(
+  "/me",
+  requireCoach,
+  asyncHandler(async (req, res) => {
+    const parsed = UpdateNameSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const coach = await prisma.coach.update({ where: { id: coachIdOf(req) }, data: { name: parsed.data.name } });
+    res.json(publicCoach(coach));
+  }),
+);
+
+// POST /api/auth/change-password { currentPassword, newPassword } -> 204. Needs the current password.
+// Every other session ends; this one gets a fresh cookie and carries on.
+authRouter.post(
+  "/change-password",
+  requireCoach,
+  rateLimit("change-password"),
+  asyncHandler(async (req, res) => {
+    if (secretMissing(res)) return;
+    const parsed = ChangePasswordSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const id = coachIdOf(req);
+    const coach = await prisma.coach.findUnique({ where: { id } });
+    if (!coach || !(await verifyPassword(parsed.data.currentPassword, coach.passwordHash))) {
+      res.status(400).json({ error: WRONG_CURRENT });
+      return;
+    }
+    const passwordHash = await hashPassword(parsed.data.newPassword);
+    const updated = await prisma.coach.update({ where: { id }, data: { passwordHash, sessionVersion: { increment: 1 } } });
+    setSessionCookie(res, updated.id, updated.sessionVersion);
+    res.status(204).end();
   }),
 );
 

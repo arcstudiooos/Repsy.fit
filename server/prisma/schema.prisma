@@ -14,14 +14,33 @@ model Coach {
   /// Stored lower-case; one account per email.
   email        String   @unique
   passwordHash String
+  /// Prompt 47: session tokens carry this number; a password change or reset raises it, which
+  /// ends every session issued before (tokens from before Prompt 47 count as 0).
+  sessionVersion Int     @default(0)
   createdAt    DateTime @default(now())
 
+  resetTokens  PasswordResetToken[]
   clients      Client[]
   assignments  Assignment[]
   progressLogs ProgressLog[]
   chatMessages ChatMessage[]
 
   @@map("coaches")
+}
+
+/// A password-reset link (Prompt 47). Only the SHA-256 hash of the token is stored; it expires after
+/// 1 hour and works once (usedAt is set when it is spent).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  coachId   String
+  coach     Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([coachId])
+  @@map("password_reset_tokens")
 }
 
 model Client {

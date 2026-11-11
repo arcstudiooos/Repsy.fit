@@ -90,6 +90,8 @@ built client and the API, and applies migrations on start).
 | `AI_BASE_URL` | For real AI answers | Your provider's OpenAI-compatible base URL, e.g. `https://api.openai.com/v1`. |
 | `AI_MODEL` | For real AI answers | The chat model name to use. |
 | `SESSION_SECRET` | In production | A long random string (16+ characters) that signs login cookies. `render.yaml` makes Render generate one. Without it in production, register and login answer "Sign-in is not available right now" (logged). Locally a temporary secret is used. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | For password-reset emails | Your email provider's SMTP settings (port 587 with STARTTLS by default; `SMTP_SECURE=true` for port 465). `SMTP_HOST` and `SMTP_FROM` are the minimum. Without them, no reset email is sent: development prints the reset link in the server console only, production logs that email is not set up. Set them in `.env` locally or the Render dashboard. |
+| `APP_URL` | For password-reset emails | The public address of the app (e.g. `https://repsy-coach.onrender.com`), used to build the link in the email. On Render it falls back to `RENDER_EXTERNAL_URL`; locally to `http://localhost:5173`. |
 | `PORT` | No | Port to listen on. Render sets it; the local default is 3001. |
 
 Without the AI values the app still works: the AI Coach gives a fallback answer built from the

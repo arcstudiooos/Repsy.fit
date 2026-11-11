@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientStrip } from "./ClientStrip";
@@ -10,6 +10,9 @@ import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
 import type { Client, Coach } from "./types";
+
+// The account page (Prompt 47) is its own lazy chunk: its form validation (zod) stays out of the first /app load.
+const AccountPage = lazy(() => import("./auth/AccountPage"));
 
 type TabId = "ai" | "clients" | "planner" | "progress";
 
@@ -31,9 +34,21 @@ function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () =>
         </div>
         {/* Right side (Prompt 46): the signed-in coach and Logout. */}
         <div className="ml-auto flex min-w-0 items-center gap-3">
-          <span className="truncate text-sm text-white/70" data-testid="coach-name">
-            {coach.name}
-          </span>
+          {/* The name opens the account page (Prompt 47): no extra button, so the header still fits at 375px. */}
+          <a
+            href="/app/account"
+            title="Account"
+            aria-label={`Account: ${coach.name}`}
+            data-testid="coach-name"
+            onClick={(e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+              e.preventDefault();
+              navigate("/app/account");
+            }}
+            className="inline-flex min-h-10 min-w-0 items-center text-sm text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+          >
+            <span className="truncate">{coach.name}</span>
+          </a>
           <button
             type="button"
             onClick={onLogout}
@@ -161,7 +176,19 @@ export default function App() {
   );
 }
 
+/** The current path, kept in step with in-page navigation (main.tsx's "popstate" convention). */
+function usePathname(): string {
+  const [pathname, setPathname] = useState(window.location.pathname);
+  useEffect(() => {
+    const onNav = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", onNav);
+    return () => window.removeEventListener("popstate", onNav);
+  }, []);
+  return pathname;
+}
+
 function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
+  const onAccount = usePathname() === "/app/account";
   const [activeTab, setActiveTab] = useState<TabId>("ai");
   const current = TABS.find((t) => t.id === activeTab)!;
 
@@ -250,6 +277,26 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     <div className="min-h-screen">
       <Header coach={coach} onLogout={onLogout} loggingOut={loggingOut} />
       <main className="mx-auto max-w-[1100px] px-4 pb-10">
+        {onAccount ? (
+          <section className="card mt-4 p-6" aria-label="Account">
+            <p className="mb-4 text-sm">
+              <a
+                href="/app"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/app");
+                }}
+                className="font-semibold text-accent2 underline underline-offset-4"
+              >
+                Back to dashboard
+              </a>
+            </p>
+            <Suspense fallback={<LoadingState />}>
+              <AccountPage coach={coach} />
+            </Suspense>
+          </section>
+        ) : (
+          <>
         <TabBar active={activeTab} onSelect={setActiveTab} />
         <section
           role="tabpanel"
@@ -264,6 +311,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           )}
           {panelContent}
         </section>
+          </>
+        )}
       </main>
       <footer className="mx-auto max-w-[1100px] px-4 pb-6 text-center text-xs text-dim">Repsy Coach - v1</footer>
     </div>

@@ -11,6 +11,8 @@ const App = lazy(() => import("./App"));
 const Landing = lazy(() => import("./landing/Landing"));
 // Login / register screens (Prompt 46): own lazy chunk, so zod and the forms stay out of the first load.
 const AuthPages = lazy(() => import("./auth/AuthPages"));
+// Forgot / reset password screens (Prompt 47).
+const PasswordPages = lazy(() => import("./auth/PasswordPages"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +45,7 @@ if (route === "landing") {
 }
 else if (route === "app") void import("./App");
 else if (route === "login" || route === "register") void import("./auth/AuthPages");
+else if (route === "forgot" || route === "reset") void import("./auth/PasswordPages");
 
 // In-page navigation (guard redirect, login -> app, logout -> login) fires "popstate"; a history
 // step is treated like Back/Forward so "/" still shows the landing page.
@@ -65,6 +68,8 @@ function Root() {
         <Landing />
       ) : current === "login" || current === "register" ? (
         <AuthPages mode={current} />
+      ) : current === "forgot" || current === "reset" ? (
+        <PasswordPages mode={current} />
       ) : null}
     </Suspense>
   );

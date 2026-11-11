@@ -10,6 +10,7 @@ if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
+    setupFiles: ["test/setup.ts"],
     // Database-backed test files share one database (the seed test empties the clients
     // table), so test files run one at a time.
     fileParallelism: false,

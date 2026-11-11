@@ -100,7 +100,8 @@ test("login: right password opens the app with the coach's name, Logout and own 
   await mockApi(page);
   await page.goto("/login");
   await expect(page.locator('img[alt="Repsy"], img[alt="R"]').first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /forgot password/i })).toHaveCount(0);
+  // Prompt 47 turned the "Forgot password?" link on.
+  await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
   await page.getByLabel("Email").fill("alice@example.com");
   await page.getByLabel("Password").fill("alice-password-1");
   await page.getByRole("button", { name: "Log in" }).click();

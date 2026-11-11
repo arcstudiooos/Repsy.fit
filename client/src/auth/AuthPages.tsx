@@ -10,24 +10,24 @@ import { plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
 import type { Coach } from "../types";
 
-type Field = "name" | "email" | "password";
-type FieldErrors = Partial<Record<Field, string>>;
+// Field names across the auth, reset and account forms (the last three are Prompt 47).
+export type FieldErrors = Partial<Record<"name" | "email" | "password" | "currentPassword" | "newPassword", string>>;
 
-const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text";
+export const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text";
 
 /** First plain-words message per field; null when the values pass. */
-function validate(schema: ZodTypeAny, values: Record<string, string>): FieldErrors | null {
+export function validate(schema: ZodTypeAny, values: Record<string, string>): FieldErrors | null {
   const result = schema.safeParse(values);
   if (result.success) return null;
   const errors: FieldErrors = {};
   for (const issue of result.error.issues) {
-    const field = issue.path[0] as Field;
+    const field = issue.path[0] as keyof FieldErrors;
     if (!errors[field]) errors[field] = issue.message;
   }
   return errors;
 }
 
-function InternalLink({ to, children }: { to: string; children: string }) {
+export function InternalLink({ to, children }: { to: string; children: string }) {
   return (
     <a
       href={to}
@@ -43,7 +43,7 @@ function InternalLink({ to, children }: { to: string; children: string }) {
   );
 }
 
-function TextField({
+export function TextField({
   id,
   label,
   type = "text",
@@ -137,6 +137,11 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
             onChange={setPassword}
             error={errors.password}
           />
+          {!isRegister && (
+            <p className="-mt-2 text-sm">
+              <InternalLink to="/forgot-password">Forgot password?</InternalLink>
+            </p>
+          )}
           {serverError && (
             <p role="alert" className="text-sm font-semibold text-amber-text">
               {serverError}

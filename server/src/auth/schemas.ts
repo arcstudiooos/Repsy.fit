@@ -15,23 +15,39 @@ const email = z
   .email("Please enter a valid email address.")
   .transform((e) => e.toLowerCase());
 
-export const RegisterSchema = z.object({
-  name: z
-    .string({ required_error: "Please enter your name." })
-    .trim()
-    .min(1, "Please enter your name.")
-    .max(100, "Please use a name under 100 characters."),
-  email,
-  password: z
-    .string({ required_error: "Please choose a password." })
-    .min(PASSWORD_MIN_LENGTH, `Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`)
-    .refine((p) => new TextEncoder().encode(p).length <= PASSWORD_MAX_BYTES, "That password is too long. Please use a shorter one (72 bytes at most; emoji and accents count double)."),
-});
+const name = z
+  .string({ required_error: "Please enter your name." })
+  .trim()
+  .min(1, "Please enter your name.")
+  .max(100, "Please use a name under 100 characters.");
+
+const newPassword = z
+  .string({ required_error: "Please choose a password." })
+  .min(PASSWORD_MIN_LENGTH, `Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`)
+  .refine((p) => new TextEncoder().encode(p).length <= PASSWORD_MAX_BYTES, "That password is too long. Please use a shorter one (72 bytes at most; emoji and accents count double).");
+
+export const RegisterSchema = z.object({ name, email, password: newPassword });
 
 export const LoginSchema = z.object({
   email,
   password: z.string({ required_error: "Please enter your password." }).min(1, "Please enter your password."),
 });
 
+// Password reset and account settings (Prompt 47).
+export const ForgotSchema = z.object({ email });
+export const ResetSchema = z.object({
+  token: z.string({ required_error: "This reset link is not valid any more. Please ask for a new one." }).min(1, "This reset link is not valid any more. Please ask for a new one.").max(200),
+  password: newPassword,
+});
+export const UpdateNameSchema = z.object({ name });
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string({ required_error: "Please enter your current password." }).min(1, "Please enter your current password."),
+  newPassword,
+});
+
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
+export type ForgotInput = z.infer<typeof ForgotSchema>;
+export type ResetInput = z.infer<typeof ResetSchema>;
+export type UpdateNameInput = z.infer<typeof UpdateNameSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

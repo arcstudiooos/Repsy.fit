@@ -10,6 +10,7 @@ import type {
   AssignmentType,
   AutoAssignInput,
   ChatMessage,
+  ChangePasswordInput,
   Client,
   Coach,
   Lead,
@@ -20,6 +21,7 @@ import type {
   NewProgressLog,
   ProgressLog,
   RegisterInput,
+  ResetPasswordInput,
 } from "./types";
 
 export type ApiErrorKind = "endpoint_missing" | "network" | "http";
@@ -136,6 +138,14 @@ export const login = (input: LoginInput) => request<Coach>("POST", "/auth/login"
 export const logout = () => request<void>("POST", "/auth/logout");
 /** The signed-in coach; rejects with ApiError status 401 when signed out. */
 export const getMe = () => request<Coach>("GET", "/auth/me");
+/** Asks for a reset link. Always answers the same message, whether or not the email has an account. */
+export const forgotPassword = (email: string) => request<{ message: string }>("POST", "/auth/forgot", { email });
+/** Spends a reset link's token and sets a new password (204). Nobody is signed in by it. */
+export const resetPassword = (input: ResetPasswordInput) => request<void>("POST", "/auth/reset", input);
+/** Account page: change the display name (the email can't be changed). */
+export const updateName = (name: string) => request<Coach>("PATCH", "/auth/me", { name });
+/** Account page: needs the current password (204); other sessions are signed out, this one stays. */
+export const changePassword = (input: ChangePasswordInput) => request<void>("POST", "/auth/change-password", input);
 
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.

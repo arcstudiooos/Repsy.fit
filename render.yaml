@@ -30,6 +30,22 @@ services:
       # Signs coach session cookies (Prompt 44). Render generates a random value once.
       - key: SESSION_SECRET
         generateValue: true
+      # Password reset email (Prompt 47): values are set in the Render dashboard, never in this file.
+      # APP_URL is optional: Render's own RENDER_EXTERNAL_URL is used when it is empty.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: APP_URL
+        sync: false
       # PORT is set by Render automatically.
 
 databases:

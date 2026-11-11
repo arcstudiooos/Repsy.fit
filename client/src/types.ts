@@ -121,3 +121,12 @@ export interface RegisterInput {
   password: string;
 }
 export type LoginInput = Pick<RegisterInput, "email" | "password">;
+/** Password reset and account settings (Prompt 47). */
+export interface ResetPasswordInput {
+  token: string;
+  password: string;
+}
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
