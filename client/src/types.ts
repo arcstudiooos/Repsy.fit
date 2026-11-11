@@ -136,6 +136,38 @@ export type WeeklyFacts = {
 export type WeeklySummary = { weekStart: DateString; text: string; facts: WeeklyFacts; createdAt: string; source: "ai" | "facts" };
 export type WeeklySummaryResponse = { weekStart: DateString; summary: WeeklySummary | null };
 
+/** One thing waiting for the coach in the review queue (Prompt 52). Decided items are kept as history. */
+export const REVIEW_STATUSES = ["Pending", "Approved", "Dismissed"] as const;
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+export type ReviewItem = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  /** "suggestion" = an AI plan the coach parked; "checkin" = a new progress log to look at. */
+  kind: "suggestion" | "checkin";
+  status: ReviewStatus;
+  title: string;
+  summary: string;
+  type: AssignmentType | null;
+  details: string;
+  reasoning: string;
+  assignmentId: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+};
+export type ReviewQueue = { pendingCount: number; items: ReviewItem[] };
+/** Body for parking an AI suggestion. `type` is required when kind is "suggestion". */
+export type NewReviewItem = {
+  clientId: string;
+  kind?: "suggestion" | "checkin";
+  title: string;
+  summary?: string;
+  type?: AssignmentType | null;
+  details?: string;
+  reasoning?: string;
+  sourceId?: string | null;
+};
+
 export type NewProgressLog =Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;
 

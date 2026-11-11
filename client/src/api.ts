@@ -20,10 +20,13 @@ import type {
   NewClient,
   NewLead,
   NewProgressLog,
+  NewReviewItem,
   ProgressLog,
   RecentCheckIns,
   RegisterInput,
   ResetPasswordInput,
+  ReviewItem,
+  ReviewQueue,
   TodayTasks,
   WeeklySummaryResponse,
 } from "./types";
@@ -138,6 +141,17 @@ export const getWeeklySummary = (date: string) =>
 /** Generates and saves this week's summary. Rejects with ApiError 409 unless `replace` is true. */
 export const generateWeeklySummary = (date: string, replace = false) =>
   request<WeeklySummaryResponse>("POST", "/weekly-summary", { date, replace });
+/** The review queue: `status` "pending" (default) or "decided" (history). */
+export const getReviewQueue = (status: "pending" | "decided" = "pending") =>
+  request<ReviewQueue>("GET", `/review-queue?status=${status}`);
+/** Parks an AI suggestion for later instead of assigning it now. */
+export const addReviewItem = (input: NewReviewItem) => request<ReviewItem>("POST", "/review-queue", input);
+/** Approves one item: a suggestion becomes a real assignment; a check-in is just marked read. */
+export const approveReviewItem = (itemId: string, date: string) =>
+  request<{ item: ReviewItem; assignment: Assignment | null }>("POST", `/review-queue/${enc(itemId)}/approve`, { date });
+/** Dismisses one item. It leaves the queue but stays in the client's history. */
+export const dismissReviewItem = (itemId: string) =>
+  request<{ item: ReviewItem; assignment: null }>("POST", `/review-queue/${enc(itemId)}/dismiss`);
 
 // ----- Demo data -----
 /** Creates demo clients with assignments and progress; returns the created clients. */
@@ -177,4 +191,5 @@ export const queryKeys = {
   recentCheckIns: ["checkins", "recent"] as const,
   atRisk: (date: string) => ["at-risk", date] as const,
   weeklySummary: (date: string) => ["weekly-summary", date] as const,
+  reviewQueue: (status: "pending" | "decided") => ["review-queue", status] as const,
 };

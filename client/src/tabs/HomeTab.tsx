@@ -1,9 +1,20 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, generateWeeklySummary, getAtRiskClients, getRecentCheckIns, getTodayTasks, getWeeklySummary, queryKeys } from "../api";
+import {
+  ApiError,
+  approveReviewItem,
+  dismissReviewItem,
+  generateWeeklySummary,
+  getAtRiskClients,
+  getRecentCheckIns,
+  getReviewQueue,
+  getTodayTasks,
+  getWeeklySummary,
+  queryKeys,
+} from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ErrorState, LoadingState } from "../components/States";
-import type { RecentCheckIn, TodayTask } from "../types";
+import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
 import { localToday } from "./AiCoachTab";
 
 export type TaskTarget = "planner" | "ai";
@@ -47,6 +58,7 @@ export function HomeTab({ onOpenTask, onOpenCheckIn }: Props) {
       </section>
       <NewCheckIns onOpenCheckIn={onOpenCheckIn} />
       <NeedsAttention date={date} onOpenClient={onOpenCheckIn} />
+      <ReviewQueueCard date={date} />
       <WeeklySummaryCard date={date} />
     </>
   );
@@ -263,6 +275,145 @@ function WeeklySummaryCard({ date }: { date: string }) {
         >
           <p>This week's summary is already saved. Generating again replaces it.</p>
         </ConfirmDialog>
+      )}
+    </section>
+  );
+}
+
+/** Count of items waiting for the coach; the Home tab badge uses the same query. */
+export function useReviewQueueCount() {
+  const query = useQuery({ queryKey: queryKeys.reviewQueue("pending"), queryFn: () => getReviewQueue("pending") });
+  return query.data?.pendingCount ?? 0;
+}
+
+// Review queue card (Prompt 52): AI suggestions the coach parked and new check-ins to look at.
+// Approve or Dismiss decides one item; nothing is ever decided automatically, and dismissed
+// items stay in the client's history (the "Decided" view below).
+function ReviewQueueCard({ date }: { date: string }) {
+  const queryClient = useQueryClient();
+  const [showDecided, setShowDecided] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const pending = useQuery({ queryKey: queryKeys.reviewQueue("pending"), queryFn: () => getReviewQueue("pending") });
+  const decided = useQuery({
+    queryKey: queryKeys.reviewQueue("decided"),
+    queryFn: () => getReviewQueue("decided"),
+    enabled: showDecided,
+  });
+
+  const refresh = async (clientId: string) => {
+    setFailed(null);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviewQueue("pending") }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviewQueue("decided") }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.assignments(clientId) }),
+    ]);
+  };
+  const decide = useMutation({
+    mutationFn: ({ item, approve }: { item: ReviewItem; approve: boolean }) =>
+      approve ? approveReviewItem(item.id, date) : dismissReviewItem(item.id),
+    onSuccess: (_data, { item }) => void refresh(item.clientId),
+    onError: () => setFailed("We couldn't save that decision just now. Please try again."),
+  });
+
+  let body;
+  if (pending.isPending || (pending.isError && pending.isFetching)) {
+    body = <LoadingState />;
+  } else if (pending.isError) {
+    body = <ErrorState error={pending.error} onRetry={() => void pending.refetch()} />;
+  } else if (pending.data.items.length === 0) {
+    body = <p className="text-dim">Queue clear. Nothing waiting for you.</p>;
+  } else {
+    body = (
+      <ul aria-label="Review queue" className="divide-y divide-border">
+        {pending.data.items.map((item) => (
+          <li key={item.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-text">
+                {item.clientName}
+                <span className="ml-2 font-mono text-xs font-normal uppercase tracking-wide text-dim">
+                  {item.kind === "suggestion" ? item.type ?? "Suggestion" : "Check-in"}
+                </span>
+              </p>
+              <p className="text-sm text-text">{item.title}</p>
+              {item.summary && <p className="text-sm text-dim">{item.summary}</p>}
+              <p className="font-mono text-xs text-dim">{new Date(item.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                aria-label={`Approve: ${item.clientName} ${item.title}`}
+                disabled={decide.isPending}
+                onClick={() => decide.mutate({ item, approve: true })}
+                className="btn-primary rounded-lg px-3 py-2 text-sm disabled:opacity-60"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                aria-label={`Dismiss: ${item.clientName} ${item.title}`}
+                disabled={decide.isPending}
+                onClick={() => decide.mutate({ item, approve: false })}
+                className="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-text disabled:opacity-60"
+              >
+                Dismiss
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <section aria-label="Review queue" className="card mt-4 p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base">
+          Review queue
+          {(pending.data?.pendingCount ?? 0) > 0 && (
+            <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-accent">
+              {pending.data?.pendingCount}
+            </span>
+          )}
+        </h3>
+        <button
+          type="button"
+          onClick={() => setShowDecided((v) => !v)}
+          className="text-sm font-semibold text-text underline decoration-2 underline-offset-4"
+        >
+          {showDecided ? "Hide decided" : "Show decided"}
+        </button>
+      </div>
+      {failed && (
+        <p role="alert" className="mt-3 text-sm font-semibold text-amber-text">
+          {failed}
+        </p>
+      )}
+      <div className="mt-3">{body}</div>
+      {showDecided && (
+        <div className="mt-4 border-t border-border pt-3">
+          <h4 className="text-sm font-bold text-text">Decided (kept in the client's history)</h4>
+          {decided.isPending ? (
+            <LoadingState />
+          ) : decided.isError ? (
+            <ErrorState error={decided.error} onRetry={() => void decided.refetch()} />
+          ) : decided.data.items.length === 0 ? (
+            <p className="mt-2 text-dim">Nothing decided yet.</p>
+          ) : (
+            <ul aria-label="Decided review items" className="mt-2 divide-y divide-border">
+              {decided.data.items.map((item) => (
+                <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                  <span className="min-w-0 text-sm">
+                    <span className="font-semibold text-text">{item.clientName}</span>{" "}
+                    <span className="text-dim">{item.title}</span>
+                  </span>
+                  <span className={`shrink-0 font-mono text-xs font-bold ${item.status === "Approved" ? "text-accent2" : "text-dim"}`}>
+                    {item.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </section>
   );

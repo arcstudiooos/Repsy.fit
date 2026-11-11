@@ -25,6 +25,7 @@ model Coach {
   progressLogs ProgressLog[]
   chatMessages ChatMessage[]
   weeklySummaries WeeklySummary[]
+  reviewItems  ReviewItem[]
 
   @@map("coaches")
 }
@@ -63,6 +64,7 @@ model Client {
   assignments  Assignment[]
   chatMessages ChatMessage[]
   progressLogs ProgressLog[]
+  reviewItems  ReviewItem[]
 
   @@index([coachId])
   @@map("clients")
@@ -132,6 +134,38 @@ model ProgressLog {
   @@index([clientId])
   @@index([coachId])
   @@map("progress_logs")
+}
+
+/// One thing waiting for the coach's decision (Prompt 52): an AI suggestion the coach parked, or a
+/// new progress log flagged for review. A separate table (not a status on Assignment / ProgressLog)
+/// because a parked suggestion is not an assignment yet and must not appear in the planner, and a
+/// flagged log must stay exactly as logged. Decided rows are kept forever: history, never deleted.
+model ReviewItem {
+  id        String   @id @default(cuid())
+  coachId   String
+  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// One of: suggestion, checkin
+  kind      String
+  /// One of: Pending, Approved, Dismissed
+  status    String   @default("Pending")
+  title     String
+  summary   String   @default("")
+  /// Suggestions only: the assignment to create on approve (Workout / Nutrition / Habit / Recovery).
+  type      String?
+  details   String   @default("")
+  reasoning String   @default("")
+  /// checkin items: the ProgressLog this row is about.
+  sourceId  String?
+  /// Set when an approved suggestion became a real assignment.
+  assignmentId String?
+  createdAt DateTime @default(now())
+  decidedAt DateTime?
+
+  @@index([coachId, status])
+  @@index([clientId])
+  @@map("review_items")
 }
 
 /// One saved AI weekly summary per coach per week (Prompt 51). `facts` is the exact numbers the

@@ -40,6 +40,8 @@ async function mockApi(page: Page, tasks: Tasks | "missing") {
     if (req.method() === "GET" && url.pathname === "/api/at-risk") return route.fulfill({ json: { date: "2026-11-11", clients: [] } });
     // Prompt 51 card: no summary saved for this week (its own spec covers the card itself).
     if (url.pathname === "/api/weekly-summary") return route.fulfill({ json: { weekStart: "2026-11-09", summary: null } });
+    // Prompt 52 card and tab badge (its own spec covers the queue itself).
+    if (url.pathname === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
     if (req.method() === "GET" && /\/(assignments|chat|progress)$/.test(url.pathname)) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });

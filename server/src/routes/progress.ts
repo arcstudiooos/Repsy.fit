@@ -53,6 +53,16 @@ progressRouter.get(
   }),
 );
 
+/** Short plain-words line for the review queue: what was logged. */
+function checkInSummary(log: { weightKg: number | null; adherence: number | null; workoutsDone: number | null; note: string }): string {
+  const parts: string[] = [];
+  if (log.weightKg !== null) parts.push(`${log.weightKg} kg`);
+  if (log.adherence !== null) parts.push(`${log.adherence}% adherence`);
+  if (log.workoutsDone !== null) parts.push(`${log.workoutsDone} workout${log.workoutsDone === 1 ? "" : "s"}`);
+  if (log.note.trim()) parts.push(log.note.trim());
+  return parts.join(" · ").slice(0, 500) || "Check-in logged";
+}
+
 // POST /api/clients/:clientId/progress - add one weekly check-in. clientId comes from the path
 // and coachId is set by the server (never from the body).
 progressRouter.post(
@@ -65,9 +75,24 @@ progressRouter.post(
     }
     const client = await clientOr404(req, res);
     if (!client) return;
-    const log = await prisma.progressLog.create({
-      data: { ...parsed.data, clientId: client.id, coachId: coachIdOf(req) },
-    });
+    const coachId = coachIdOf(req);
+    const log = await prisma.progressLog.create({ data: { ...parsed.data, clientId: client.id, coachId } });
+    // Prompt 52: every new check-in waits in the review queue until the coach approves or dismisses it.
+    // The log is already saved: a queue failure is logged, never shown as a failed save.
+    try {
+      await prisma.reviewItem.create({
+        data: {
+          coachId,
+          clientId: client.id,
+          kind: "checkin",
+          title: `Check-in ${log.date}`,
+          summary: checkInSummary(log),
+          sourceId: log.id,
+        },
+      });
+    } catch (err) {
+      console.error(`Could not queue check-in ${log.id} for review: ${(err as Error).message}`);
+    }
     res.status(201).json(log);
   }),
 );

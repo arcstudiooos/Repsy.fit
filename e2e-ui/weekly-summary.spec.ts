@@ -40,6 +40,7 @@ async function openHome(page: Page, options: { saved?: unknown; post?: (calls: n
     if (path === "/api/tasks/today") return route.fulfill({ json: { date: "2026-11-11", tasks: [] } });
     if (path === "/api/checkins/recent") return route.fulfill({ json: { items: [] } });
     if (path === "/api/at-risk") return route.fulfill({ json: { date: "2026-11-11", clients: [] } });
+    if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
     return route.fulfill({ json: [] });
   });
   await page.goto("/app");

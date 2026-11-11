@@ -104,6 +104,17 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Review queue (Prompt 52).** `ReviewItem` = `{ id, coachId, clientId, kind ("suggestion" |
+  "checkin"), status ("Pending" | "Approved" | "Dismissed"), title, summary, type, details,
+  reasoning, sourceId, assignmentId, createdAt, decidedAt }`. **A separate table was chosen over a
+  status on Assignment / ProgressLog** because a parked suggestion is not an assignment yet (it
+  must not appear in the Manual Planner or in client counts) and a flagged check-in must stay
+  exactly as logged. Producers: the AI Coach "Review later" button parks a suggestion, and every
+  new progress log is flagged (`kind: "checkin"`; a queue failure never fails the save).
+  Approve / Dismiss are the only ways an item leaves the queue - nothing is ever decided
+  automatically, and **decided rows are never deleted**: they stay as the client's history and are
+  listed by `?status=decided`. The Home tab badge is `pendingCount`, scoped to the signed-in coach.
+
 - **AI weekly summary (Prompt 51).** `WeeklySummary` = `{ id, coachId, weekStart ("YYYY-MM-DD",
   the Monday, UTC), text, facts (Json), createdAt }`, unique per `(coachId, weekStart)`. The
   server counts the week's facts from its own records (`server/src/weeklySummary.ts`) and sends
@@ -197,6 +208,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
 | `getWeeklySummary(date)` | GET | `/api/weekly-summary?date=YYYY-MM-DD` | — | `{ weekStart, summary: WeeklySummary \| null }` (that week's saved summary) |
 | `generateWeeklySummary(date, replace)` | POST | `/api/weekly-summary` | `{ date?, replace? }` | `{ weekStart, summary }` 201; 409 `{ "error": "This week's summary is already saved. Confirm to replace it." }` unless `replace` is true |
+| `getReviewQueue(status)` | GET | `/api/review-queue?status=pending\|decided` | — | `{ pendingCount, items: ReviewItem[] }` (pending oldest first; decided newest first) |
+| `addReviewItem(input)` | POST | `/api/review-queue` | `NewReviewItem` | `ReviewItem` 201; 404 `{ "error": "Client not found" }`; 400 when a suggestion has no `type` |
+| `approveReviewItem(itemId, date)` | POST | `/api/review-queue/:itemId/approve` | `{ date? }` | `{ item, assignment }` — a suggestion becomes a real Assignment (`source: "ai"`, status Active); a check-in item is just marked read (`assignment: null`) |
+| `dismissReviewItem(itemId)` | POST | `/api/review-queue/:itemId/dismiss` | — | `{ item, assignment: null }` — status Dismissed, row kept as history |
 | `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
 | `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client[]` (the six-month clients it created; `[]` when all 10 exist) |
 | `createLead(input)` | POST | `/api/leads` | `{ name, email }` | `Lead` 201 `{ id, name, email, createdAt }`; 400 `{ error }` (missing name / bad email); 409 `{ "error": "You are already on the list." }` for a known email (case-insensitive, stored lower-case). Landing page only; no password or payment. |

@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./compo
 import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
-import { HomeTab } from "./tabs/HomeTab";
+import { HomeTab, useReviewQueueCount } from "./tabs/HomeTab";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
@@ -70,6 +70,8 @@ function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () =>
 // The panel's top border is drawn as a 1px line at the bottom of this row (not on the
 // panel), so the active tab can cover it without being clipped by the scroll container.
 function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => void }) {
+  // Prompt 52: how many items wait in the review queue (this coach only). 0 shows no badge.
+  const reviewCount = useReviewQueueCount();
   return (
     <div
       role="tablist"
@@ -103,6 +105,14 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
             }
           >
             {tab.label}
+            {tab.id === "home" && reviewCount > 0 && (
+              <span
+                aria-label={`${reviewCount} waiting in the review queue`}
+                className="ml-2 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-accent"
+              >
+                {reviewCount}
+              </span>
+            )}
           </button>
         );
       })}

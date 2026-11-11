@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, askAI, autoAssign, createAssignment, listChat, queryKeys, type AiSuggestion } from "../api";
+import {
+  ApiError,
+  addReviewItem,
+  askAI,
+  autoAssign,
+  createAssignment,
+  listChat,
+  queryKeys,
+  type AiSuggestion,
+} from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { Assignment, AssignmentType, ChatMessage, Client } from "../types";
 
@@ -269,6 +278,19 @@ type SuggestionCardProps = {
 // coach taps "Assign to client"; "Dismiss" (or asking again) discards it without saving.
 function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: SuggestionCardProps) {
   const queryClient = useQueryClient();
+  const park = useMutation({
+    mutationFn: () =>
+      addReviewItem({
+        clientId,
+        kind: "suggestion",
+        title: suggestion.title,
+        summary: suggestion.reasoning,
+        type: suggestion.type,
+        details: suggestion.details,
+        reasoning: suggestion.reasoning,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.reviewQueue("pending") }),
+  });
   const assign = useMutation({
     mutationFn: () =>
       createAssignment(clientId, {
@@ -294,7 +316,9 @@ function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: Sugg
       {suggestion.reasoning.trim() !== "" && (
         <p className="mt-2 text-sm text-dim">Why: {suggestion.reasoning}</p>
       )}
-      {assign.isSuccess ? (
+      {park.isSuccess && !assign.isSuccess ? (
+        <p className="mt-3 text-sm font-bold text-accent2">✓ Sent to the review queue on Home</p>
+      ) : assign.isSuccess ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="text-sm font-bold text-accent2">✓ Assigned</span>
           <button type="button" onClick={onOpenPlanner} className="text-sm font-semibold text-accent2 underline">
@@ -312,7 +336,15 @@ function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: Sugg
             >
               {assign.isPending ? "Assigning..." : "Assign to client"}
             </button>
-            <button type="button" disabled={assign.isPending} onClick={onDismiss} className={secondaryButton}>
+            <button
+              type="button"
+              disabled={assign.isPending || park.isPending}
+              onClick={() => park.mutate()}
+              className={secondaryButton}
+            >
+              {park.isPending ? "Sending..." : "Review later"}
+            </button>
+            <button type="button" disabled={assign.isPending || park.isPending} onClick={onDismiss} className={secondaryButton}>
               Dismiss
             </button>
           </div>
