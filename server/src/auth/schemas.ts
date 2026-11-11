@@ -40,6 +40,11 @@ export const ResetSchema = z.object({
   password: newPassword,
 });
 export const UpdateNameSchema = z.object({ name });
+/** Prompt 68: the coach's single currency for plan prices and payments. */
+export const COACH_CURRENCIES = ["INR", "USD"] as const;
+export const UpdateCurrencySchema = z.object({
+  currency: z.enum(COACH_CURRENCIES, { errorMap: () => ({ message: "Please choose INR or USD." }) }),
+});
 export const ChangePasswordSchema = z.object({
   currentPassword: z.string({ required_error: "Please enter your current password." }).min(1, "Please enter your current password."),
   newPassword,

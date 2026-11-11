@@ -109,6 +109,22 @@ clientAuthRouter.post("/logout", (_req, res) => {
   res.status(204).end();
 });
 
+// GET /api/client-auth/my-plan (Prompt 68) -> { plan: { planName, status, nextDueDate } | null, lastPaymentDate }
+// Only the signed-in client's OWN plan, and only these fields: no amounts, no payment history beyond
+// the date of their own last payment, nothing about any other client.
+clientAuthRouter.get(
+  "/my-plan",
+  requireClient,
+  asyncHandler(async (req, res) => {
+    const clientId = clientAccountIdOf(req);
+    const [plan, last] = await Promise.all([
+      prisma.clientPlan.findUnique({ where: { clientId }, select: { planName: true, status: true, nextDueDate: true } }),
+      prisma.payment.findFirst({ where: { clientId }, orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }], select: { paidOn: true } }),
+    ]);
+    res.json({ plan, lastPaymentDate: last?.paidOn ?? null });
+  }),
+);
+
 // GET /api/client-auth/me -> 200 own account, or 401 when no CLIENT session (a coach session does not count).
 clientAuthRouter.get(
   "/me",

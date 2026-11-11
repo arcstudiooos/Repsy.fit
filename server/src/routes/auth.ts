@@ -6,7 +6,7 @@ import { prisma } from "../db.js";
 import { claimDemoData } from "../auth/claimDemoData.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import { rateLimit } from "../auth/rateLimit.js";
-import { ChangePasswordSchema, ForgotSchema, LoginSchema, RegisterSchema, ResetSchema, UpdateNameSchema } from "../auth/schemas.js";
+import { ChangePasswordSchema, ForgotSchema, LoginSchema, RegisterSchema, ResetSchema, UpdateCurrencySchema, UpdateNameSchema } from "../auth/schemas.js";
 import { clearSessionCookie, sessionSecret, setSessionCookie } from "../auth/session.js";
 import { deliverResetEmail } from "../auth/mailer.js";
 import { requireCoach, coachIdOf } from "../auth/requireCoach.js";
@@ -25,8 +25,8 @@ const AUTH_DOWN = "Sign-in is not available right now. Please try again later.";
 // A real bcrypt hash of a random string, so an unknown email costs the same time as a wrong password.
 export const DUMMY_HASH = "$2b$12$CwTycUXWue0Thq9StjUM0uJ8.gIEG9mP2LzvQe4gGSx0Q1l5hQ8se";
 
-type PublicCoach = { id: string; name: string; email: string; createdAt: Date };
-const publicCoach = (c: PublicCoach): PublicCoach => ({ id: c.id, name: c.name, email: c.email, createdAt: c.createdAt });
+type PublicCoach = { id: string; name: string; email: string; createdAt: Date; currency: string };
+const publicCoach = (c: PublicCoach): PublicCoach => ({ id: c.id, name: c.name, email: c.email, createdAt: c.createdAt, currency: c.currency });
 
 /** In production without SESSION_SECRET: log once per request and refuse with a plain message. */
 export function secretMissing(res: Response): boolean {
@@ -157,6 +157,21 @@ authRouter.post(
       throw err;
     }
     res.status(204).end();
+  }),
+);
+
+// PATCH /api/auth/currency { currency } -> 200 coach (Prompt 68: "INR" or "USD" for plans and payments).
+authRouter.patch(
+  "/currency",
+  requireCoach,
+  asyncHandler(async (req, res) => {
+    const parsed = UpdateCurrencySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const coach = await prisma.coach.update({ where: { id: coachIdOf(req) }, data: { currency: parsed.data.currency } });
+    res.json(publicCoach(coach));
   }),
 );
 

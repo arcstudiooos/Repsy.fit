@@ -109,7 +109,7 @@ const box = (page: Page) => page.getByLabel(/^Message to /);
 test("Messages is the 8th tab, after Library, says it is not live, and has no client strip", async ({ page }) => {
   await mockServer(page);
   await openMessages(page);
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages"]);
+  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
   await expect(page.getByRole("tabpanel")).toContainText("Not live: messages refresh when you open this tab and every 20 seconds.");
   await expect(page.getByRole("group", { name: "Select client" })).toHaveCount(0);
 });

@@ -4,7 +4,7 @@
 // only exists after the coach sends an invite, so these pages never link to registration.
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, clientLogin, clientLogout, clientSetPassword, getClientAccount, queryKeys } from "../api";
+import { ApiError, clientLogin, clientLogout, clientSetPassword, getClientAccount, getMyPlan, queryKeys } from "../api";
 import { ClientLoginSchema, ClientSetPasswordSchema } from "../authSchemas";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
@@ -147,6 +147,45 @@ function ClientSetPasswordPage() {
   );
 }
 
+const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
+
+/**
+ * "My plan" (Prompt 68): the client's OWN plan name, status and next due date, and the date of their
+ * own last payment. No amounts, no payment history, nothing about any other client.
+ */
+function MyPlanSection() {
+  const plan = useQuery({ queryKey: queryKeys.myPlan, queryFn: getMyPlan, retry: false });
+  return (
+    <section aria-label="My plan" className="mt-6 rounded-lg border border-border bg-surface2 p-4 text-left">
+      <h2 className="text-base">My plan</h2>
+      {plan.isPending ? (
+        <p className="mt-2 text-sm text-dim">Loading...</p>
+      ) : plan.isError ? (
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          {plainErrorMessage(plan.error)}
+        </p>
+      ) : !plan.data.plan ? (
+        <p className="mt-2 text-sm text-dim">Your coach has not set up a plan for you yet.</p>
+      ) : (
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt className="text-dim">Plan</dt>
+          <dd className="font-semibold text-text">{plan.data.plan.planName}</dd>
+          <dt className="text-dim">Status</dt>
+          <dd className="text-text">{plan.data.plan.status}</dd>
+          {plan.data.plan.status !== "Ended" && (
+            <>
+              <dt className="text-dim">Next due</dt>
+              <dd className="text-text">{dayText(plan.data.plan.nextDueDate)}</dd>
+            </>
+          )}
+          <dt className="text-dim">Last payment</dt>
+          <dd className="text-text">{plan.data.lastPaymentDate ? dayText(plan.data.lastPaymentDate) : "None recorded yet"}</dd>
+        </dl>
+      )}
+    </section>
+  );
+}
+
 /** /client: the signed-in client's own page. Signed out -> /client/login (never the coach /login). */
 function ClientHomePage() {
   const queryClient = useQueryClient();
@@ -185,7 +224,7 @@ function ClientHomePage() {
   }
   return (
     <Shell title={`Hi, ${me.data.name}`} intro={`Signed in as ${me.data.loginEmail ?? "you"}.`}>
-      <p className="mt-6 text-center text-sm text-text">You're signed in to Repsy Coach. Your client view is on its way.</p>
+      <MyPlanSection />
       <div className="mt-6 flex justify-center">
         <button
           type="button"

@@ -104,6 +104,30 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 ## Data notes
 
+- **Business: plans and payments (Prompt 68) are RECORD-KEEPING ONLY.** No payment gateway,
+  payment links, automatic charging, reminders or invoices (invoices/export are Prompt 70).
+  `ClientPlan` (one per client, `client_plans`): `planName, priceAmount, anchorDay, billingCycle (Monthly |
+  Quarterly | Yearly | One-time), startDate, nextDueDate, status (Active | Paused | Ended)`.
+  `Payment` (`payments`): `clientPlanId, clientId, coachId, amount, paidOn, method (Cash | UPI | Card
+  | Bank | Other), note`. Amounts are plain numbers (2 decimals at most) in `Coach.currency`
+  (`"INR"` default or `"USD"`, set on the Account page); data never stores a symbol and the UI
+  formats with `Intl.NumberFormat`. Recording a payment on an **Active** plan moves `nextDueDate` on
+  by one cycle from the current due date (`server/src/billing.ts` `advanceDueDate`), in calendar
+  months on the plan's stored due day `ClientPlan.anchorDay` (set from the first due date and
+  whenever the coach sets a due date): start Nov 1, first due Nov 15 -> Dec 15; a short month clamps
+  to its last day and the next month returns to the due day (due 30th: Jan 30 -> Feb 28 -> Mar 30;
+  due 31st: Jan 31 -> Feb 28 -> Mar 31; Feb 29 yearly -> Feb 28 -> ... -> Feb 29). One-time plans never move; a
+  Paused plan records the payment without moving; an Ended plan refuses payments (400). The advance
+  runs in a transaction with a row lock, so two payments saved at once advance twice. The plan edit
+  form sends `nextDueDate` only when the coach changed it, so it cannot undo a payment recorded
+  meanwhile. Overdue / due-soon only apply to Active plans; the list shows overdue, due soon, later,
+  then Paused / Ended. Amounts must be 0.01 or more with at most 2 decimals, and the next due date
+  can't be before the start date (also checked when only the start date is edited). Errors are shown
+  as written (no field-name prefix); a blank amount box says "Please enter the amount." **Deviations:** (1) the spec's "overdue in red text" is the orange pill with dark text
+  (`bg-accent text-on-accent`) - the palette has no red, and small orange text fails contrast; due
+  within 7 days is `text-amber-text`. (2) The client "My plan" section was to be left empty by
+  Prompt 66, which was dropped, so it lives on the signed-in client's `/client` page.
+
 - **Client sign-in (Prompt 65) is a separate auth system from the coach's.** `Client` gained
   `loginEmail` (unique when set), `passwordHash` (NULL until the client sets a password) and
   `clientSessionVersion`; invites live in `client_invites` (`ClientInvite`: the invited `email`, SHA-256 `tokenHash`
@@ -342,6 +366,13 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `clientLogin(email, password)` | POST | `/api/client-auth/login` | `{ email, password }` | 200 `ClientAccount` + **client** cookie; 401 `"That email or password is not right."` |
 | `clientLogout()` | POST | `/api/client-auth/logout` | — | 204, clears the client cookie only |
 | `getClientAccount()` | GET | `/api/client-auth/me` | — | 200 `{ id, name, loginEmail }` (their own client only); 401 without a **client** session |
+| `getBusinessPlans()` | GET | `/api/business/plans` | — | `{ currency, plans: [{ client: { id, name }, plan: ClientPlan, lastPayment: { amount, paidOn, method } \| null }] }` (coach, Prompt 68) |
+| `saveClientPlan(clientId, input)` | PUT | `/api/clients/:clientId/plan` | `NewClientPlan` | `ClientPlan` — 201 new / 200 updated (one plan per client) |
+| — | GET | `/api/clients/:clientId/plan` | — | `ClientPlan \| null` |
+| `recordPayment(clientId, input)` | POST | `/api/clients/:clientId/plan/payments` | `{ amount, paidOn, method, note? }` | 201 `{ payment, plan }` — `plan.nextDueDate` moved on one cycle (not for One-time); 400 `"This client has no plan yet. Add a plan first."` |
+| `listPayments(clientId)` | GET | `/api/clients/:clientId/plan/payments` | — | `Payment[]`, newest first |
+| `updateCurrency(currency)` | PATCH | `/api/auth/currency` | `{ currency: "INR" \| "USD" }` | `Coach` (now includes `currency`) |
+| `getMyPlan()` | GET | `/api/client-auth/my-plan` | — | `{ plan: { planName, status, nextDueDate } \| null, lastPaymentDate }` — the signed-in CLIENT's own plan only; no amounts |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
 | `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |

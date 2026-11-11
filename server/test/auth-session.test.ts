@@ -145,7 +145,7 @@ describe("login, me, logout", () => {
     expect(res.headers["retry-after"]).toBeDefined();
     expect(cookieOf(res)).toBeUndefined();
     expect(prisma.coach.findUnique).not.toHaveBeenCalled();
-  });
+  }, 20_000); // 10 real bcrypt checks (cost 12): can pass 5 s on a busy machine
 
   it("register is rate-limited too", async () => {
     for (let i = 0; i < 10; i++) await request(app).post("/api/auth/register").send({ ...body, password: "short" });

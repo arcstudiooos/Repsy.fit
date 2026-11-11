@@ -10,12 +10,15 @@ import type {
   AssignmentType,
   AtRiskClients,
   AutoAssignInput,
+  BusinessPlanRow,
   ChangePasswordInput,
   ChatMessage,
   Client,
   ClientAccess,
   ClientAccount,
+  ClientPlan,
   Coach,
+  Currency,
   DailyCheckIn,
   HabitRecord,
   HabitTick,
@@ -29,15 +32,19 @@ import type {
   Meal,
   Measurement,
   MessageThread,
+  MyPlan,
   NewAssignment,
   NewClient,
+  NewClientPlan,
   NewDailyCheckIn,
   NewLead,
   NewMeal,
   NewMeasurement,
+  NewPayment,
   NewProgressLog,
   NewReviewItem,
   NewWorkoutTemplate,
+  Payment,
   ProgressLog,
   RecentCheckIns,
   RegisterInput,
@@ -201,6 +208,19 @@ export const deleteMeal = (mealId: string) => request<void>("DELETE", `/meals/${
 /** Starting-estimate calories and macros. Rejects with ApiError 400 for bad input or an age under 18. */
 export const calculateMacros = (input: MacroInput) => request<MacroResult>("POST", "/macros", input);
 
+// ----- Business (Prompt 68): plans and payments, record-keeping only -----
+export const getBusinessPlans = () => request<{ currency: Currency; plans: BusinessPlanRow[] }>("GET", "/business/plans");
+/** Creates the client's plan, or updates it if they already have one. */
+export const saveClientPlan = (clientId: string, input: NewClientPlan) =>
+  request<ClientPlan>("PUT", `/clients/${enc(clientId)}/plan`, input);
+/** Records a payment; the server moves nextDueDate on by one cycle (not for One-time plans). */
+export const recordPayment = (clientId: string, input: NewPayment) =>
+  request<{ payment: Payment; plan: ClientPlan }>("POST", `/clients/${enc(clientId)}/plan/payments`, input);
+export const listPayments = (clientId: string) => request<Payment[]>("GET", `/clients/${enc(clientId)}/plan/payments`);
+export const updateCurrency = (currency: Currency) => request<Coach>("PATCH", "/auth/currency", { currency });
+/** The signed-in CLIENT's own plan (name, status, next due) and last payment date. */
+export const getMyPlan = () => request<MyPlan>("GET", "/client-auth/my-plan");
+
 // ----- Client access (Prompt 65): the coach invites; the CLIENT signs in on /client/login -----
 export const getClientAccess = (clientId: string) => request<ClientAccess>("GET", `/clients/${enc(clientId)}/invite`);
 export const inviteClient = (clientId: string, email: string) =>
@@ -292,6 +312,8 @@ export const queryKeys = {
   threads: ["messages", "threads"] as const,
   clientAccess: (clientId: string) => ["clients", clientId, "access"] as const,
   clientAccount: ["client-account", "me"] as const,
+  myPlan: ["client-account", "my-plan"] as const,
+  businessPlans: ["business", "plans"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
   meals: ["meals"] as const,

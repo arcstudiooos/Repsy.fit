@@ -22,10 +22,12 @@ const ProgressTab = lazy(() => import("./tabs/ProgressTab").then((m) => ({ defau
 const CheckInsTab = lazy(() => import("./tabs/CheckInsTab").then((m) => ({ default: m.CheckInsTab })));
 // Coach <-> client messages (Prompt 63) - a separate conversation from the AI Coach tab.
 const MessagesTab = lazy(() => import("./tabs/MessagesTab").then((m) => ({ default: m.MessagesTab })));
+// Business (Prompt 68): plans and recorded payments, coach-level like Library.
+const BusinessTab = lazy(() => import("./tabs/BusinessTab").then((m) => ({ default: m.BusinessTab })));
 // Type-only: erased at build time, so the Messages code stays in its own lazy chunk.
 import type { ChatState } from "./tabs/MessagesTab";
 
-type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library" | "messages";
+type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library" | "messages" | "business";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Home" },
@@ -36,6 +38,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "checkins", label: "Check-ins" },
   { id: "library", label: "Library" },
   { id: "messages", label: "Messages" },
+  { id: "business", label: "Business" },
 ];
 
 function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
@@ -303,7 +306,7 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
       <>
         {/* Client selector strip: every tab except Clients (that tab is the full list). */}
         {/* Messages has its own client column (with previews and unread dots) instead of the strip. */}
-        {current.id !== "messages" && (
+        {current.id !== "messages" && current.id !== "business" && (
           <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
         )}
         {/* key forces a clean remount when the selected client changes, so no tab can
@@ -350,7 +353,11 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             />
           </Suspense>
         ) : (
-          current.id === "messages" ? (
+          current.id === "business" ? (
+            <Suspense fallback={<LoadingState />}>
+              <BusinessTab clients={clients} />
+            </Suspense>
+          ) : current.id === "messages" ? (
             <Suspense fallback={<LoadingState />}>
               <MessagesTab
                 clients={clients}

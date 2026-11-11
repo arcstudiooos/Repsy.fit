@@ -17,6 +17,7 @@ import { measurementsRouter } from "./routes/measurements.js";
 import { messagesRouter, threadsRouter } from "./routes/messages.js";
 import { clientAuthRouter } from "./routes/clientAuth.js";
 import { clientInviteRouter } from "./routes/clientInvite.js";
+import { businessRouter, clientPlanRouter } from "./routes/business.js";
 import { clientSessionMiddleware } from "./auth/clientSession.js";
 import { templatesRouter } from "./routes/templates.js";
 import { mealsRouter } from "./routes/meals.js";
@@ -75,9 +76,11 @@ app.use("/api/templates", requireCoach);
 app.use("/api/meals", requireCoach);
 app.use("/api/macros", requireCoach);
 app.use("/api/messages", requireCoach);
+app.use("/api/business", requireCoach);
 
 app.use("/api/macros", macrosRouter);
 app.use("/api/messages", threadsRouter);
+app.use("/api/business", businessRouter);
 app.use("/api/templates", templatesRouter);
 app.use("/api/meals", mealsRouter);
 app.use("/api/tasks", tasksRouter);
@@ -95,6 +98,7 @@ app.use("/api/clients/:clientId/measurements", measurementsRouter);
 // Coach <-> client messages (Prompt 63). Separate from the AI Coach chat route above.
 app.use("/api/clients/:clientId/messages", messagesRouter);
 app.use("/api/clients/:clientId/invite", clientInviteRouter);
+app.use("/api/clients/:clientId/plan", clientPlanRouter);
 app.use("/api/clients", clientsRouter);
 app.use("/api/seed", seedRouter);
 app.use("/api/leads", leadsRouter);

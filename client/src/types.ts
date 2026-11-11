@@ -104,6 +104,52 @@ export type TodayTask =
   | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
 export type TodayTasks = { date: DateString; tasks: TodayTask[] };
 
+// ----- Business: plans and recorded payments (Prompt 68). Record-keeping only. -----
+export const CURRENCIES = ["INR", "USD"] as const;
+export type Currency = (typeof CURRENCIES)[number];
+export const BILLING_CYCLES = ["Monthly", "Quarterly", "Yearly", "One-time"] as const;
+export type BillingCycle = (typeof BILLING_CYCLES)[number];
+export const PLAN_STATUSES = ["Active", "Paused", "Ended"] as const;
+export type PlanStatus = (typeof PLAN_STATUSES)[number];
+export const PAYMENT_METHODS = ["Cash", "UPI", "Card", "Bank", "Other"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+export interface ClientPlan {
+  id: string;
+  coachId: string;
+  clientId: string;
+  planName: string;
+  /** In the coach's currency; formatted for display, never stored with a symbol. */
+  priceAmount: number;
+  billingCycle: BillingCycle;
+  startDate: DateString;
+  nextDueDate: DateString;
+  /** The day of the month payments fall due (1-31). */
+  anchorDay: number;
+  status: PlanStatus;
+}
+export interface Payment {
+  id: string;
+  clientPlanId: string;
+  clientId: string;
+  amount: number;
+  paidOn: DateString;
+  method: PaymentMethod;
+  note: string;
+}
+export type NewClientPlan = Pick<ClientPlan, "planName" | "priceAmount" | "billingCycle" | "startDate"> &
+  Partial<Pick<ClientPlan, "nextDueDate" | "status">>;
+export type NewPayment = { amount: number; paidOn: DateString; method: PaymentMethod; note?: string };
+export interface BusinessPlanRow {
+  client: { id: string; name: string };
+  plan: ClientPlan;
+  lastPayment: { amount: number; paidOn: DateString; method: PaymentMethod } | null;
+}
+/** What a signed-in CLIENT sees of their own plan: no amounts. */
+export interface MyPlan {
+  plan: { planName: string; status: PlanStatus; nextDueDate: DateString } | null;
+  lastPaymentDate: DateString | null;
+}
+
 /** A client's sign-in status as the coach sees it (Prompt 65). */
 export type ClientAccessStatus = "none" | "invited" | "active";
 export interface ClientAccess {
@@ -388,6 +434,8 @@ export interface Coach {
   name: string;
   email: string;
   createdAt: string;
+  /** Prompt 68: the currency of plan prices and payments. */
+  currency?: Currency;
 }
 export interface RegisterInput {
   name: string;

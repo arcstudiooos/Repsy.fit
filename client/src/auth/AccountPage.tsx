@@ -2,10 +2,10 @@
 // current one; other devices are signed out). No delete-account in v2.
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { changePassword, queryKeys, updateName } from "../api";
+import { changePassword, queryKeys, updateCurrency, updateName } from "../api";
 import { ChangePasswordSchema, UpdateNameSchema } from "../authSchemas";
 import { plainErrorMessage } from "../components/States";
-import type { Coach } from "../types";
+import { CURRENCIES, type Coach, type Currency } from "../types";
 import { TextField, validate, type FieldErrors } from "./AuthPages";
 
 function NameForm({ coach }: { coach: Coach }) {
@@ -50,6 +50,67 @@ function NameForm({ coach }: { coach: Coach }) {
       )}
       <button type="submit" disabled={busy} className="btn-primary min-h-11 justify-self-start rounded-lg px-5 text-sm disabled:opacity-60">
         {busy ? "Please wait..." : "Save name"}
+      </button>
+    </form>
+  );
+}
+
+/** Prompt 68: the one currency plan prices and payments are shown in. */
+function CurrencyForm({ coach }: { coach: Coach }) {
+  const queryClient = useQueryClient();
+  const [currency, setCurrency] = useState<Currency>(coach.currency ?? "INR");
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setServerError(null);
+    setSaved(false);
+    setBusy(true);
+    try {
+      const updated = await updateCurrency(currency);
+      queryClient.setQueryData(queryKeys.me, updated);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.businessPlans });
+      setSaved(true);
+    } catch (err) {
+      setServerError(plainErrorMessage(err));
+    }
+    setBusy(false);
+  }
+
+  return (
+    <form onSubmit={submit} noValidate aria-label="Currency settings" className="grid max-w-sm gap-4">
+      <div>
+        <label htmlFor="account-currency" className="mb-1 block text-sm font-bold">
+          Currency for plans and payments
+        </label>
+        <select
+          id="account-currency"
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value as Currency)}
+          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c} value={c}>
+              {c === "INR" ? "INR - Indian rupee" : "USD - US dollar"}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-dim">Amounts are not converted: this only changes how they are shown.</p>
+      </div>
+      {serverError && (
+        <p role="alert" className="text-sm font-semibold text-amber-text">
+          {serverError}
+        </p>
+      )}
+      {saved && (
+        <p role="status" className="text-sm font-semibold text-accent2">
+          Currency saved.
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="btn-primary min-h-11 justify-self-start rounded-lg px-5 text-sm disabled:opacity-60">
+        {busy ? "Please wait..." : "Save currency"}
       </button>
     </form>
   );
@@ -134,6 +195,10 @@ export default function AccountPage({ coach }: { coach: Coach }) {
       <section className="grid gap-3">
         <h3 className="text-base">Name</h3>
         <NameForm coach={coach} />
+      </section>
+      <section className="grid gap-3">
+        <h3 className="text-base">Currency</h3>
+        <CurrencyForm coach={coach} />
       </section>
       <section className="grid gap-3">
         <h3 className="text-base">Password</h3>

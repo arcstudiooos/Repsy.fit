@@ -17,6 +17,9 @@ model Coach {
   /// Prompt 47: session tokens carry this number; a password change or reset raises it, which
   /// ends every session issued before (tokens from before Prompt 47 count as 0).
   sessionVersion Int     @default(0)
+  /// Prompt 68: the one currency all of this coach's plan prices and payments are in (ISO code,
+  /// "INR" or "USD"). Data never stores a symbol; the UI formats the amount with this code.
+  currency     String   @default("INR")
   createdAt    DateTime @default(now())
 
   resetTokens  PasswordResetToken[]
@@ -31,14 +34,68 @@ model Coach {
   measurements Measurement[]
   threadMessages ThreadMessage[]
   clientInvites ClientInvite[]
+  clientPlans  ClientPlan[]
+  payments     Payment[]
   workoutTemplates WorkoutTemplate[]
   meals        Meal[]
 
   @@map("coaches")
 }
 
-/// A password-reset link (Prompt 47). Only the SHA-256 hash of the token is stored; it expires after
-/// 1 hour and works once (usedAt is set when it is spent).
+/// A client's current paid plan (Prompt 68). RECORD-KEEPING ONLY: nothing here charges anyone.
+/// One plan per client: change it by editing, end it with status "Ended" (history stays in Payment).
+model ClientPlan {
+  id           String   @id @default(cuid())
+  coachId      String
+  coach        Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId     String   @unique
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  planName     String
+  /// In the coach's currency (Coach.currency). Two decimals at most.
+  priceAmount  Float
+  /// One of: Monthly, Quarterly, Yearly, One-time
+  billingCycle String
+  /// YYYY-MM-DD
+  startDate    String
+  /// YYYY-MM-DD. Moves on by one billing cycle each time a payment is recorded (not for One-time).
+  nextDueDate  String
+  /// The day of the month payments fall due (1-31). Set from nextDueDate when the plan is created
+  /// and whenever the coach sets a due date; a short month clamps to its last day and the next one
+  /// returns to this day, so a plan due on the 31st (or 30th, 29th) never drifts to the 28th.
+  anchorDay    Int
+  /// One of: Active, Paused, Ended
+  status       String   @default("Active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  payments Payment[]
+
+  @@index([coachId])
+  @@map("client_plans")
+}
+
+/// One payment the coach recorded by hand (Prompt 68). No gateway, no automatic charging.
+model Payment {
+  id           String     @id @default(cuid())
+  coachId      String
+  coach        Coach      @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientPlanId String
+  clientPlan   ClientPlan @relation(fields: [clientPlanId], references: [id], onDelete: Cascade)
+  amount       Float
+  /// YYYY-MM-DD
+  paidOn       String
+  /// One of: Cash, UPI, Card, Bank, Other
+  method       String
+  note         String     @default("")
+  createdAt    DateTime   @default(now())
+
+  @@index([clientId, paidOn])
+  @@index([coachId])
+  @@map("payments")
+}
+
 /// A single-use invite for a client to set their password (Prompt 65). Only the SHA-256 hash of the
 /// token is stored; the raw token exists only in the emailed / copied link. Lives 48 hours.
 model ClientInvite {
@@ -60,6 +117,8 @@ model ClientInvite {
   @@map("client_invites")
 }
 
+/// A password-reset link (Prompt 47). Only the SHA-256 hash of the token is stored; it expires after
+/// 1 hour and works once (usedAt is set when it is spent).
 model PasswordResetToken {
   id        String    @id @default(cuid())
   coachId   String
@@ -106,6 +165,8 @@ model Client {
   measurements Measurement[]
   threadMessages ThreadMessage[]
   invites      ClientInvite[]
+  plan         ClientPlan?
+  payments     Payment[]
 
   @@index([coachId])
   @@map("clients")

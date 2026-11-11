@@ -68,19 +68,19 @@ test("landing copy sticks to shipped features: no testimonials, logos or user co
   expect(text.match(/\$\d+/g)).toEqual(["$39", "$89", "$199"]);
 });
 
-test("Start free opens the dashboard at /app with all 8 tabs", async ({ page }) => {
+test("Start free opens the dashboard at /app with all 9 tabs", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
   await page.locator("header").getByRole("link", { name: "Start free" }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages"]);
+  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
 });
 
 test("/app never loads the landing or 3D code", async ({ page }) => {
   await mockApi(page);
   const scripts = trackScripts(page);
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveCount(8);
+  await expect(page.getByRole("tab")).toHaveCount(9);
   await page.waitForLoadState("networkidle");
   expect(scripts.some((s) => /Landing|Hero3D|Story|three|gsap/i.test(s))).toBe(false);
 });
@@ -90,10 +90,10 @@ test("old links to / go to /app once this tab is inside the app; Back still reac
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveCount(8);
+  await expect(page.getByRole("tab")).toHaveCount(9);
   await page.goto("/");
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole("tab")).toHaveCount(8);
+  await expect(page.getByRole("tab")).toHaveCount(9);
   // A brand-new visitor (new tab) still gets the landing page at /.
   const fresh = await page.context().newPage();
   await mockApi(fresh);

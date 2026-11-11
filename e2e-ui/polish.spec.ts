@@ -58,6 +58,20 @@ async function mockApi(page: Page, setup: Setup = {}) {
     if (req.method() === "GET" && /\/chat$/.test(path)) return route.fulfill({ json: [] });
     if (req.method() === "GET" && /\/progress$/.test(path)) return route.fulfill({ json: logs(setup.logs ?? 6) });
     if (req.method() === "GET" && /\/assignments$/.test(path)) return route.fulfill({ json: assignments(setup.assignments ?? 4) });
+    if (req.method() === "GET" && path === "/api/business/plans") {
+      return route.fulfill({
+        json: {
+          currency: "INR",
+          plans: [
+            {
+              client: { id: "c1", name: "Maya Patel" },
+              plan: { id: "p1", coachId: "coach-1", clientId: "c1", planName: "Monthly coaching", priceAmount: 4999, billingCycle: "Monthly", startDate: "2026-01-31", nextDueDate: "2026-01-31", status: "Active" },
+              lastPayment: { amount: 4999, paidOn: "2026-01-01", method: "UPI" },
+            },
+          ],
+        },
+      });
+    }
     if (req.method() === "GET" && /\/messages$/.test(path)) {
       return route.fulfill({
         json: {
@@ -74,7 +88,7 @@ async function mockApi(page: Page, setup: Setup = {}) {
 }
 
 // Every tab that works on the selected client (Library is coach-level, so it is not in this list).
-const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Messages"];
+const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Messages", "Business"];
 const panel = (page: Page) => page.getByRole("tabpanel");
 
 async function openTab(page: Page, tab: string) {
