@@ -73,14 +73,14 @@ test("Start free opens the dashboard at /app with all 4 tabs", async ({ page }) 
   await page.goto("/");
   await page.locator("header").getByRole("link", { name: "Start free" }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole("tab")).toHaveText(["AI Coach", "Clients", "Manual Planner", "Progress"]);
+  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress"]);
 });
 
 test("/app never loads the landing or 3D code", async ({ page }) => {
   await mockApi(page);
   const scripts = trackScripts(page);
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveCount(4);
+  await expect(page.getByRole("tab")).toHaveCount(5);
   await page.waitForLoadState("networkidle");
   expect(scripts.some((s) => /Landing|Hero3D|Story|three|gsap/i.test(s))).toBe(false);
 });
@@ -90,10 +90,10 @@ test("old links to / go to /app once this tab is inside the app; Back still reac
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveCount(4);
+  await expect(page.getByRole("tab")).toHaveCount(5);
   await page.goto("/");
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByRole("tab")).toHaveCount(4);
+  await expect(page.getByRole("tab")).toHaveCount(5);
   // A brand-new visitor (new tab) still gets the landing page at /.
   const fresh = await page.context().newPage();
   await mockApi(fresh);

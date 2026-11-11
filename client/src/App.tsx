@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./compo
 import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
+import { HomeTab } from "./tabs/HomeTab";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { ProgressTab } from "./tabs/ProgressTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
@@ -14,9 +15,10 @@ import type { Client, Coach } from "./types";
 // The account page (Prompt 47) is its own lazy chunk: its form validation (zod) stays out of the first /app load.
 const AccountPage = lazy(() => import("./auth/AccountPage"));
 
-type TabId = "ai" | "clients" | "planner" | "progress";
+type TabId = "home" | "ai" | "clients" | "planner" | "progress";
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: "home", label: "Home" },
   { id: "ai", label: "AI Coach" },
   { id: "clients", label: "Clients" },
   { id: "planner", label: "Manual Planner" },
@@ -252,7 +254,14 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
         <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
         {/* key forces a clean remount when the selected client changes, so no tab can
             keep showing the previous client's data. */}
-        {current.id === "ai" ? (
+        {current.id === "home" ? (
+          <HomeTab
+            onOpenTask={(clientId, target) => {
+              setSelectedClientId(clientId);
+              setActiveTab(target);
+            }}
+          />
+        ) : current.id === "ai" ? (
           <AiCoachTab
             key={`ai:${selectedClientId ?? "none"}`}
             client={selectedClient}

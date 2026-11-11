@@ -182,6 +182,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `listProgress(clientId)` | GET | `/api/clients/:clientId/progress` | — | `ProgressLog[]` |
 | `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
+| `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `seedDemo()` | POST | `/api/seed/demo` | — *(no body)* | `Client[]` (the created demo clients) |
 | `seedSixMonthDemo()` | POST | `/api/seed/six-month-demo` | — *(no body)* | `Client[]` (the six-month clients it created; `[]` when all 10 exist) |
 | `createLead(input)` | POST | `/api/leads` | `{ name, email }` | `Lead` 201 `{ id, name, email, createdAt }`; 400 `{ error }` (missing name / bad email); 409 `{ "error": "You are already on the list." }` for a known email (case-insensitive, stored lower-case). Landing page only; no password or payment. |
@@ -335,5 +336,9 @@ and record it here.
   `/app/account` page (header "Account" link) built on `PATCH /api/auth/me` (name) and
   `POST /api/auth/change-password`, which the prompt left unnamed. `reset` replies 204 and signs nobody in.
   SMTP is a small built-in client (no `nodemailer`); env names `SMTP_*` and `APP_URL` (see `.env.example`).
+- Prompt 48: Home is the FIRST tab but `/app` still opens on AI Coach (making Home the landing tab would change
+  what many existing specs assume; say so if you want it). Today's Tasks is built on the new
+  `GET /api/tasks/today`. The review-queue count line is omitted (no check-in review data exists until Prompt 52).
+  Buttons: a due task opens Manual Planner, an idle client opens AI Coach, each with that client selected.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

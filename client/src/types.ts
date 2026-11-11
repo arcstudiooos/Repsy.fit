@@ -96,7 +96,13 @@ export type NewAssignment = Pick<Assignment, "type" | "title" | "details"> &
 /** Auto-assign body: the plan type; date defaults to today (UTC). */
 export type AutoAssignInput = { type: AssignmentType; date?: DateString };
 
-export type NewProgressLog = Pick<ProgressLog, "date"> &
+/** One row of Today's Tasks (Home tab): a plan due today, or a client with no plan in 7+ days. */
+export type TodayTask =
+  | { kind: "due"; clientId: string; clientName: string; assignmentId: string; assignmentType: AssignmentType; text: string }
+  | { kind: "idle"; clientId: string; clientName: string; daysSince: number | null; text: string };
+export type TodayTasks = { date: DateString; tasks: TodayTask[] };
+
+export type NewProgressLog =Pick<ProgressLog, "date"> &
   Partial<Pick<ProgressLog, "weightKg" | "adherence" | "workoutsDone" | "note">>;
 
 /** Landing page "Start free" sign-up (Prompt 41). */

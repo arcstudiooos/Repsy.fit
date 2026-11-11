@@ -22,6 +22,7 @@ import type {
   ProgressLog,
   RegisterInput,
   ResetPasswordInput,
+  TodayTasks,
 } from "./types";
 
 export type ApiErrorKind = "endpoint_missing" | "network" | "http";
@@ -121,6 +122,10 @@ export const addProgressLog = (clientId: string, input: NewProgressLog) =>
 export const deleteProgressLog = (clientId: string, logId: string) =>
   request<void>("DELETE", `/clients/${enc(clientId)}/progress/${enc(logId)}`);
 
+// ----- Home tab -----
+/** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
+export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
+
 // ----- Demo data -----
 /** Creates demo clients with assignments and progress; returns the created clients. */
 export const seedDemo = () => request<Client[]>("POST", "/seed/demo");
@@ -155,4 +160,5 @@ export const queryKeys = {
   assignments: (clientId: string) => ["clients", clientId, "assignments"] as const,
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,
+  todayTasks: (date: string) => ["tasks", "today", date] as const,
 };
