@@ -41,7 +41,7 @@ describe.skipIf(!process.env.DATABASE_URL)("reports and CSV export (database)", 
     expect(progress.text).toBe("﻿date,weightKg,adherence,workoutsDone,note\r\n2026-10-05,70,80,3,'=cmd\r\n");
     const all = await coach.get(`/api/reports/clients/${maya}/export/progress`);
     expect(all.text.trim().split("\r\n")).toHaveLength(3);
-    expect((await coach.get(`/api/reports/clients/${maya}/export/measurements`)).text).toContain("2026-10-06,,,,,");
+    expect((await coach.get(`/api/reports/clients/${maya}/export/measurements`)).text).toContain("\r\n2026-10-06,80,,,,,\r\n"); // date, waistCm=80, then empty chest/arm/hip/bodyFat/note
     expect((await coach.get(`/api/reports/clients/${maya}/export/payments`)).text).toBe("﻿paidOn,amount,method,note\r\n2026-10-01,4999,UPI,\r\n");
     expect((await coach.get(`/api/reports/clients/${maya}/export/assignments`)).text).toContain("2026-10-07,Workout,Legs,Squat,,manual,Done");
   });
