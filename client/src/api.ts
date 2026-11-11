@@ -25,7 +25,9 @@ import type {
   NewAssignment,
   NewClient,
   NewDailyCheckIn,
+  Meal,
   NewLead,
+  NewMeal,
   NewMeasurement,
   NewProgressLog,
   NewWorkoutTemplate,
@@ -179,6 +181,14 @@ export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
 
+// ----- Library: meals (per coach, Prompt 60) -----
+/** The signed-in coach's meals, A-Z by name. */
+export const listMeals = () => request<Meal[]>("GET", "/meals");
+export const createMeal = (input: NewMeal) => request<Meal>("POST", "/meals", input);
+/** Replaces every field. */
+export const updateMeal = (mealId: string, input: NewMeal) => request<Meal>("PUT", `/meals/${enc(mealId)}`, input);
+export const deleteMeal = (mealId: string) => request<void>("DELETE", `/meals/${enc(mealId)}`);
+
 // ----- Home tab -----
 /** Today's Tasks for the signed-in coach; `date` is the coach's local "YYYY-MM-DD". */
 export const getTodayTasks = (date: string) => request<TodayTasks>("GET", `/tasks/today?date=${enc(date)}`);
@@ -241,6 +251,7 @@ export const queryKeys = {
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   habits: (clientId: string) => ["clients", clientId, "habits"] as const,
   templates: ["templates"] as const,
+  meals: ["meals"] as const,
   measurements: (clientId: string) => ["clients", clientId, "measurements"] as const,
   todayTasks: (date: string) => ["tasks", "today", date] as const,
   recentCheckIns: ["checkins", "recent"] as const,

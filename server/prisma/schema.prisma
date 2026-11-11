@@ -30,6 +30,7 @@ model Coach {
   habits       Habit[]
   measurements Measurement[]
   workoutTemplates WorkoutTemplate[]
+  meals        Meal[]
 
   @@map("coaches")
 }
@@ -243,6 +244,26 @@ model WorkoutTemplate {
 
   @@index([coachId])
   @@map("workout_templates")
+}
+
+/// A coach's reusable meal (Prompt 60). `mealType` is Breakfast / Lunch / Dinner / Snack (checked by zod).
+/// Every macro value is coach-entered: nothing is fetched or calculated. Coach-level, never shared.
+model Meal {
+  id          String   @id @default(cuid())
+  coachId     String
+  coach       Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name        String
+  mealType    String
+  calories    Int
+  proteinG    Float
+  carbsG      Float
+  fatG        Float
+  ingredients String   @default("")
+  steps       String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([coachId])
+  @@map("meals")
 }
 
 /// One thing waiting for the coach's decision (Prompt 52): an AI suggestion the coach parked, or a

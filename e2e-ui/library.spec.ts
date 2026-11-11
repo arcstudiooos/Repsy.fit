@@ -47,6 +47,7 @@ async function openLibrary(page: Page, initial: T[] = []) {
     const method = req.method();
     if (path === "/api/clients") return route.fulfill({ json: CLIENTS });
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
+    if (path === "/api/meals") return route.fulfill({ json: [] }); // meal library has its own spec (meals.spec.ts)
     if (path === "/api/templates") {
       if (method === "POST") {
         const body = req.postDataJSON() as Partial<T>;

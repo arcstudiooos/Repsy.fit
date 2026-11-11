@@ -1,4 +1,5 @@
-// Library tab (Prompt 58): the coach's own workout templates. Search by name, create / edit with the
+// Library tab (Prompt 58): the coach's own workout templates, plus the meal library section
+// (Prompt 60). Search by name, create / edit with the
 // Manual Planner's exercise search and sets / reps / rest controls, delete with a confirm, and
 // "Assign to client", which opens the Manual Planner for that client with the form pre-filled.
 // Templates belong to the signed-in coach only: no sharing, no marketplace.
@@ -6,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createTemplate, deleteTemplate, listClients, listTemplates, queryKeys, updateTemplate } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { MealLibrary } from "../components/MealLibrary";
 import { ExercisePicker, rowsFromTemplate, templateFromRows, type DoseRow, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
@@ -153,6 +155,8 @@ export function LibraryTab({ onAssign }: Props) {
           )}
         </ConfirmDialog>
       )}
+
+      <MealLibrary />
     </>
   );
 }

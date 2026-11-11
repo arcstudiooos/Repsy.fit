@@ -122,6 +122,17 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   extra notes, reasoning `From template: <name>`); **nothing is saved until the coach taps "Assign plan"**, and every
   field stays editable. The pre-fill is used once: coming back to the Planner later starts empty.
 
+- **Meal library (Prompt 60).** `Meal` = `{ id, coachId, name, mealType ("Breakfast" | "Lunch" | "Dinner" | "Snack"),
+  calories, proteinG, carbsG, fatG, ingredients, steps, createdAt }`. `name` 1-100 characters, `calories` whole number 0-10000,
+  each macro 0-1000 (decimals allowed), `ingredients` up to 2000, `steps` up to 4000. **Every value is coach-entered** and the UI
+  labels them "Coach-entered values": nothing is fetched from a food database / barcode / API, nothing is calculated from the
+  ingredients, and there are no diet or health claims. The Library tab's empty state says so. **Coach-level** like templates: one
+  coach, no client, never shared; deleting the coach deletes their meals, deleting a meal never touches assignments made from it.
+  A "Meal library" section under the workout templates (`client/src/components/MealLibrary.tsx`) has search by name, a meal-type
+  filter, card list with macros, add / edit / delete (confirm). "Assign to client" (client + date, default today) **saves right away**
+  a `Nutrition` assignment (`source: "manual"`) through the existing assignments route: title = meal name, details = name, then
+  `450 kcal · Protein 30g · Carbs 45.5g · Fat 15g`, then the steps; reasoning `From meal library: <name>`.
+
 - **Body measurements (Prompt 56).** `Measurement` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
   waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; everything except `date` is
   optional (`null` / `""`). Ranges: each tape value above 0 and at most 300 cm, `bodyFatPercent` above 0
@@ -265,6 +276,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `createTemplate(input)` | POST | `/api/templates` | `NewWorkoutTemplate`: `{ name, exercises: { name, sets, reps, rest }[], focus?, notes? }` | `WorkoutTemplate` 201 `{ id, coachId, name, focus, exercises, notes, createdAt }`; 400 `{ error }` for a missing name, no exercises, sets outside 1-10, empty reps, rest outside 6-3600 s, or a too-long text |
 | `updateTemplate(templateId, input)` | PUT | `/api/templates/:templateId` | `NewWorkoutTemplate` (replaces name, focus, exercises, notes) | `WorkoutTemplate`; 400 as above; 404 `{ "error": "Template not found" }` (also for another coach's row) |
 | `deleteTemplate(templateId)` | DELETE | `/api/templates/:templateId` | — | 204, no body; 404 `{ "error": "Template not found" }` |
+| `listMeals()` | GET | `/api/meals` | — | `Meal[]` of the signed-in coach, A-Z by name (`name`, `createdAt`, `id`). Needs `requireCoach`. (Prompt 60) |
+| `createMeal(input)` | POST | `/api/meals` | `NewMeal`: `{ name, mealType, calories, proteinG, carbsG, fatG, ingredients?, steps? }` | `Meal` 201 `{ id, coachId, name, mealType, calories, proteinG, carbsG, fatG, ingredients, steps, createdAt }`; 400 `{ error }` for a missing name, a mealType outside the four, a missing / negative / too-big number, calories not whole, or a too-long text |
+| `updateMeal(mealId, input)` | PUT | `/api/meals/:mealId` | `NewMeal` (replaces every field) | `Meal`; 400 as above; 404 `{ "error": "Meal not found" }` (also for another coach's row) |
+| `deleteMeal(mealId)` | DELETE | `/api/meals/:mealId` | — | 204, no body; 404 `{ "error": "Meal not found" }` |
 | `getTodayTasks(date)` | GET | `/api/tasks/today?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, tasks: TodayTask[] }` (`TodayTask` in `types.ts`): per client of the signed-in coach, one `{ kind: "due", clientId, clientName, assignmentId, assignmentType, text }` for each **Active** assignment dated that day, and one `{ kind: "idle", clientId, clientName, daysSince (null = no assignment ever), text }` for a client whose latest assignment date is 7+ days before `date` (or who has none; a plan dated ahead counts as covered). Due rows first, then idle, clients oldest first. 400 bad date; 401 signed out. Needs `requireCoach`. Home tab only (Prompt 48). |
 | `getRecentCheckIns()` | GET | `/api/checkins/recent` | — | `{ items: RecentCheckIn[] }` (`types.ts`): the signed-in coach's progress logs created in the last 48 hours across all clients, newest first (`createdAt`, then `id`), max 8. Each item `{ kind: "progress", id, clientId, clientName, createdAt, weightKg, adherence, workoutsDone, note }`. `[]` when none. 401 signed out. Needs `requireCoach`. Read-only; no read/unread state. Home tab only (Prompt 49). **Prompt 53 hook:** `kind` is the discriminator, so daily check-ins join the SAME list later as a new `kind` (merged by `createdAt`, still max 8) without a UI rewrite; until then the card reads progress logs only. |
 | `getAtRiskClients(date)` | GET | `/api/at-risk?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: AtRiskClient[] }` (`types.ts`): the signed-in coach's clients that ANY rule picks, worst first (more rules firing, then bigger gaps, then name). Each `{ clientId, clientName, reasons: { rule: "adherence" \| "inactive" \| "weight", text }[] }`, `text` being the exact plain-words reason (e.g. "Adherence 45% over the last 2 weeks"). Rules live in ONE pure function, `findAtRiskClients` in `server/src/atRisk.ts`, with named constants `ADHERENCE_MIN_PERCENT` (60), `ADHERENCE_WINDOW_DAYS` (14), `INACTIVE_DAYS` (10), `WEIGHT_STREAK_LOGS` (3): (1) average adherence under 60% over the logs dated within 14 days up to the client's latest adherence log; (2) latest progress log 10+ days old (a client with no logs counts once created 10+ days ago); (3) weight moved the wrong way for the goal on 3 straight logs (3 moves, so 4 weights; logs without weight are skipped; goals with "fat loss" want down, "muscle gain" up, any other goal is not judged). Rules only, no AI. 400 bad date; 401 signed out. Needs `requireCoach`. Read-only; messages nobody, changes no plan. Home tab only (Prompt 50). |
@@ -452,5 +467,8 @@ and record it here.
   assignment is saved by the existing `POST /api/clients/:clientId/assignments` when the coach taps "Assign plan".
   The Library tab is lazy-loaded to keep `/app` inside its size budget, so `client/scripts/check-budget.mjs` now also
   finds the App chunk by its name when Vite lists it as `_App-<hash>.js` (same checks, unchanged budgets).
+- Prompt 60: the prompt named no routes; meals are coach-level, so they live at `/api/meals`. Unlike templates, "Assign to client"
+  saves the Nutrition assignment straight away (the prompt says "creates"), with the success line shown in the panel. Calories,
+  protein, carbs and fat are all required (the prompt did not say); ingredients and steps are optional.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.

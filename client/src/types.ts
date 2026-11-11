@@ -166,6 +166,26 @@ export interface WorkoutTemplate {
 }
 export type NewWorkoutTemplate = Pick<WorkoutTemplate, "name" | "exercises"> & Partial<Pick<WorkoutTemplate, "focus" | "notes">>;
 
+export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
+
+/** A coach's reusable meal (Prompt 60). Coach-level. Every value is typed in by the coach. */
+export interface Meal {
+  id: string;
+  coachId: string;
+  name: string;
+  mealType: MealType;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  ingredients: string;
+  steps: string;
+  createdAt: string;
+}
+export type NewMeal = Pick<Meal, "name" | "mealType" | "calories" | "proteinG" | "carbsG" | "fatG"> &
+  Partial<Pick<Meal, "ingredients" | "steps">>;
+
 /** A habit the coach tracks for one client (Prompt 54), with its this-week ticks and streaks. */
 export interface Habit {
   id: string;
