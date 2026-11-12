@@ -27,32 +27,29 @@ const STRIP_COUNT = STRIPS.length;
 
 function SheetBody() {
   return (
-    <div className="px-7 pb-9 pt-10 text-[13px] leading-[1.55]">
-      <p className="text-center text-[22px] font-bold tracking-[0.18em]">{SHEET.title}</p>
+    <div className="pb-8 pl-12 pr-6 pt-[30px] text-[12.5px] leading-[24px]">
+      <p className="ln-display text-[26px] leading-[24px]">{SHEET.title}</p>
       {SHEET.meta.map((m) => (
-        <p key={m} className="text-center text-[11px] opacity-70">
+        <p key={m} className="text-[11px]" style={{ color: "var(--mute)" }}>
           {m}
         </p>
       ))}
-      <div className="my-4 border-t-2 border-dashed" style={{ borderColor: "var(--line)" }} />
-      <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-[3px]">
-        {SHEET.rows.map(([move, dose, rest]) => (
-          <Row key={move} move={move} dose={dose} rest={rest} />
+      <div className="mt-6 grid grid-cols-[1fr_auto_auto] gap-x-3">
+        {SHEET.rows.map(([move, dose, rest], i) => (
+          <Row key={move} move={`${i + 1}. ${move}`} dose={dose} rest={rest} />
         ))}
       </div>
-      <div className="my-4 border-t-2 border-dashed" style={{ borderColor: "var(--line)" }} />
-      {SHEET.totals.map(([k, v]) => (
-        <p key={k} className="flex justify-between text-[12px] opacity-70">
-          <span>{k}</span>
-          <span>{v}</span>
-        </p>
-      ))}
-      <p className="mt-3 flex justify-between text-[17px] font-bold">
-        <span>EXERCISES</span>
-        <span>5</span>
+      <div className="mt-6">
+        {SHEET.totals.map(([k, v]) => (
+          <p key={k} className="flex justify-between text-[12px]" style={{ color: "var(--mute)" }}>
+            <span>{k}</span>
+            <span>{v}</span>
+          </p>
+        ))}
+      </div>
+      <p className="ln-hand mt-6 rotate-[-1.5deg] text-[1.25rem] leading-[24px]" style={{ color: "var(--orange-deep)" }}>
+        {SHEET.why}
       </p>
-      <div className="my-4 border-t-2 border-dashed" style={{ borderColor: "var(--line)" }} />
-      <p className="text-center text-[10.5px] tracking-[0.12em] opacity-70">{SHEET.why}</p>
     </div>
   );
 }
@@ -62,7 +59,9 @@ function Row({ move, dose, rest }: { move: string; dose: string; rest: string })
     <>
       <span>{move}</span>
       <span className="text-right font-bold">{dose}</span>
-      <span className="text-right opacity-60">{rest}</span>
+      <span className="text-right" style={{ color: "var(--mute)" }}>
+        {rest}
+      </span>
     </>
   );
 }
@@ -100,17 +99,14 @@ export function Hero() {
             <br />
             Track it.
             <br />
-            Coached.
+            <span className="ln-key">Coached.</span>
           </h1>
           <p className="ln-lead mt-7 max-w-[30rem] lg:max-w-[22rem] xl:max-w-[30rem]">
             Write a workout once, with the reasoning attached, and reuse it for every client. Mark it Done
             as they train and the check-ins chart themselves. No spreadsheets. No chasing.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-6">
-            <a href="#get" className="ln-cta">
-              <span className="ln-cta-dot">
-                <Icon name="arrow" size={16} />
-              </span>
+            <a href="#get" className="ln-btn">
               Start free
             </a>
             <a href="#how" className="ln-btn-ghost">
@@ -120,7 +116,7 @@ export function Hero() {
           <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-[0.82rem] font-medium" style={{ color: "var(--mute)" }}>
             {["7-day free trial", "Clients install nothing", "AI suggests, you decide"].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
-                <Icon name="check" size={14} />
+                <Icon name="check" size={14} className="ln-tick" />
                 {t}
               </li>
             ))}
@@ -149,7 +145,9 @@ export function Hero() {
                   DONE
                 </span>
                 <span data-strip-chip className="absolute -bottom-16 flex flex-col items-center gap-1 opacity-0">
-                  <span className="ln-chip">{s.name}</span>
+                  <span className="ln-chip" style={{ background: "var(--orange)", color: "var(--ink)" }}>
+                    {s.name}
+                  </span>
                   <span className="ln-mono text-[12px] font-semibold">{s.note}</span>
                 </span>
               </div>
@@ -203,8 +201,8 @@ export function Intro() {
         <span className="ln-dim">Now comes the spreadsheet.</span>
       </h2>
       <p data-rise className="ln-h2 relative mx-auto mt-12 inline-block">
-        Let Repsy handle it.
-        <Scribble className="absolute -bottom-5 left-1/2 w-[46%] -translate-x-1/3" />
+        Let <span className="ln-key">Repsy</span> handle it.
+        <Scribble className="absolute -bottom-5 left-1/2 w-[46%] -translate-x-1/3" style={{ color: "var(--orange)" }} />
       </p>
       <p data-rise className="mt-10 text-lg font-medium" style={{ color: "var(--mute)" }}>
         (so you never have to text: did you train today?)
@@ -251,7 +249,9 @@ function AiMock() {
       </div>
       <p className="ln-bubble ln-bubble-dark ml-auto mt-3 w-fit">Make a push day for Maya</p>
       <div className="mt-3 rounded-2xl p-3" style={{ background: "var(--bg)" }}>
-        <p className="ln-mono text-[11px] font-bold tracking-wider">SUGGESTED · WORKOUT</p>
+        <p className="ln-mono text-[11px] font-bold tracking-wider" style={{ color: "var(--orange-deep)" }}>
+          SUGGESTED · WORKOUT
+        </p>
         <p className="mt-1 font-bold">Push day · Week 3</p>
         <p className="ln-mono mt-2 text-[12px] leading-relaxed">
           1. Bench Press 4 × 8 · Rest 90s
@@ -261,7 +261,9 @@ function AiMock() {
         <p className="mt-2 rounded-xl px-3 py-2 text-[12px]" style={{ background: "var(--paper)" }}>
           <b>Why:</b> bench has stalled for 3 weeks, so more volume at RPE 7.
         </p>
-        <span className="ln-chip mt-3">Assign</span>
+        <span className="ln-chip mt-3" style={{ background: "var(--orange)", color: "var(--ink)" }}>
+          Assign
+        </span>
       </div>
     </div>
   );
@@ -272,7 +274,7 @@ function DoseMock() {
     <div data-rise className="ln-white mx-auto w-full max-w-[330px] p-5">
       <div className="flex items-center justify-between">
         <p className="font-bold">Leg day</p>
-        <span className="ln-tag ln-tag-light">Workout</span>
+        <span className="ln-tag ln-tag-workout">Workout</span>
       </div>
       <div className="ln-mono mt-4 space-y-2 text-[12.5px]">
         {[
@@ -305,7 +307,7 @@ function LiveMock() {
           ["Check-in", "Casey · 6-day streak"],
         ].map(([a, b], i) => (
           <div key={a} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: i === 0 ? "var(--bg)" : undefined }}>
-            <span className="ln-avatar">
+            <span className="ln-avatar" style={{ background: "var(--teal)" }}>
               <Icon name="check" size={14} />
             </span>
             <div className="leading-tight">
@@ -321,7 +323,7 @@ function LiveMock() {
           <p className="text-[11px] opacity-70">trained this week</p>
         </div>
         <div className="mt-2 h-1.5 rounded-full" style={{ background: "var(--dark-3)" }}>
-          <div data-fill className="h-full rounded-full" style={{ width: "75%", background: "var(--paper)" }} />
+          <div data-fill className="h-full rounded-full" style={{ width: "75%", background: "var(--orange)" }} />
         </div>
       </div>
     </div>
@@ -339,24 +341,24 @@ function CheckinMock() {
         {[22, 55, 88].map((y) => (
           <line key={y} x1="0" x2="300" y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 5" />
         ))}
-        <path data-draw d="M5 30 C 40 34, 60 26, 90 44 S 150 52, 180 62 S 240 70, 295 84" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" />
+        <path data-draw d="M5 30 C 40 34, 60 26, 90 44 S 150 52, 180 62 S 240 70, 295 84" fill="none" stroke="var(--teal)" strokeWidth="3" strokeLinecap="round" />
         {[
           [5, 30],
           [90, 44],
           [180, 62],
           [295, 84],
         ].map(([x, y]) => (
-          <circle key={x} cx={x} cy={y} r="4.5" fill="var(--paper)" stroke="var(--ink)" strokeWidth="2.5" />
+          <circle key={x} cx={x} cy={y} r="4.5" fill="var(--paper)" stroke="var(--teal)" strokeWidth="2.5" />
         ))}
       </svg>
-      <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[12px]" style={{ background: "var(--bg)" }}>
-        <Icon name="bell" size={15} />
+      <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[12px]" style={{ background: "color-mix(in srgb, var(--amber) 14%, var(--paper))" }}>
+        <Icon name="bell" size={15} style={{ color: "var(--amber)" }} />
         <span>
           <b>Needs attention:</b> Leo · adherence 58% over 2 weeks
         </span>
       </div>
       {/* the scan line that sweeps the chart (motion.ts moves it) */}
-      <div data-scan className="pointer-events-none absolute inset-x-0 top-14 h-[2px]" style={{ background: "var(--ink)", boxShadow: "0 0 18px 6px var(--card)" }} />
+      <div data-scan className="pointer-events-none absolute inset-x-0 top-14 h-[2px]" style={{ background: "var(--orange)", boxShadow: "0 0 18px 6px var(--card)" }} />
     </div>
   );
 }
@@ -397,7 +399,16 @@ export function Road() {
     <section id="how" ref={sectionRef} data-scene="road" aria-labelledby="ln-how-title" className="relative scroll-mt-24 pb-24">
       {geom && (
         <svg className="ln-road pointer-events-none absolute inset-0 hidden md:block" width={geom.w} height={geom.h} viewBox={`0 0 ${geom.w} ${geom.h}`} aria-hidden="true">
+          {/* The lane draws on scroll (motion.ts). The dashed centre line is clipped to a rectangle
+              that motion.ts keeps level with the lane's drawing tip, so it appears as the lane does.
+              Without motion the rectangle covers everything and the whole line shows. */}
+          <defs>
+            <clipPath id="ln-road-clip">
+              <rect data-road-clip x="0" y="0" width={geom.w} height={geom.h} />
+            </clipPath>
+          </defs>
           <path data-road d={geom.d} pathLength={1000} strokeWidth="46" />
+          <path data-road-line d={geom.d} strokeWidth="3" clipPath="url(#ln-road-clip)" />
         </svg>
       )}
       <h2 id="ln-how-title" className="sr-only">
@@ -429,40 +440,59 @@ export function Road() {
 }
 
 /* ======================================================================================
- * CURRENCY: the one real setting that changes how the whole Business tab reads.
+ * PLAN TYPES: the same client, two kinds of plan. Workout from the Manual Planner, Nutrition
+ * from the meal library and macro calculator - both real tabs.
  * ==================================================================================== */
 
-const MONEY = {
-  // Paid = Maya + Arjun; due = all four (Casey is on a quarterly plan).
-  INR: { sym: "₹", plan: "4,999", total: "9,998", of: "26,997", q: "12,000", pct: "37%" },
-  USD: { sym: "$", plan: "59", total: "118", of: "326", q: "149", pct: "36%" },
+const PLAN_VIEWS = {
+  workout: {
+    label: "Workout",
+    title: "Leg day · Week 3",
+    kicker: "Manual Planner",
+    stat: ["4 moves", "52 min"],
+    rows: [
+      ["Back Squat", "4 × 6 · Rest 120s"],
+      ["Romanian Deadlift", "3 × 10 · Rest 90s"],
+      ["Walking Lunge", "3 × 12 · Rest 60s"],
+      ["Calf Raise", "3 × 15 · Rest 60s"],
+    ],
+    foot: "Saved exactly like this, numbered.",
+  },
+  nutrition: {
+    label: "Nutrition",
+    title: "Cut · 2,100 kcal",
+    kicker: "Meals + macros",
+    stat: ["160 g protein", "4 meals"],
+    rows: [
+      ["Oats, whey, berries", "520 kcal · 38 g P"],
+      ["Chicken rice bowl", "640 kcal · 48 g P"],
+      ["Greek yoghurt, nuts", "310 kcal · 24 g P"],
+      ["Paneer, dal, roti", "630 kcal · 50 g P"],
+    ],
+    foot: "Targets from the macro calculator; meals from your library.",
+  },
 } as const;
 
 export function Currency() {
-  const [cur, setCur] = useState<keyof typeof MONEY>("INR");
-  const m = MONEY[cur];
-  const rows: [string, string, string][] = [
-    ["Maya", `${m.sym}${m.plan}`, "Paid"],
-    ["Arjun", `${m.sym}${m.plan}`, "Paid"],
-    ["Casey", `${m.sym}${m.q}`, "Due in 2 days"],
-    ["Leo", `${m.sym}${m.plan}`, "3 days overdue"],
-  ];
+  const [kind, setKind] = useState<keyof typeof PLAN_VIEWS>("workout");
+  const v = PLAN_VIEWS[kind];
+  const tone = kind === "workout" ? "var(--orange)" : "var(--teal)";
   return (
     <section className="ln-wrap grid items-center gap-16 py-24 md:grid-cols-2 md:py-32">
       <div data-rise>
         <h2 className="ln-h2">
-          Prices, just the
+          Plans, the way
           <br />
-          way you bill.
+          you <span className="ln-key">coach.</span>
         </h2>
-        <p className="ln-h2 mt-8 text-[clamp(1.6rem,3vw,2.2rem)]" style={{ color: "var(--mute-2)" }}>
-          Rupees or dollars?
+        <p className="ln-h2 mt-8 text-[clamp(1.7rem,3vw,2.3rem)]" style={{ color: "var(--mute-2)" }}>
+          Strength or nutrition?
         </p>
         <div className="mt-6 flex items-center gap-4">
-          <div className="ln-toggle" role="group" aria-label="Currency">
-            {(["INR", "USD"] as const).map((c) => (
-              <button key={c} type="button" aria-pressed={cur === c} onClick={() => setCur(c)}>
-                {c === "INR" ? "₹ INR" : "$ USD"}
+          <div className="ln-toggle" role="group" aria-label="Plan type">
+            {(["workout", "nutrition"] as const).map((k) => (
+              <button key={k} type="button" data-type={k} aria-pressed={kind === k} onClick={() => setKind(k)}>
+                {PLAN_VIEWS[k].label}
               </button>
             ))}
           </div>
@@ -472,49 +502,52 @@ export function Currency() {
           </span>
         </div>
         <p className="mt-6 max-w-sm text-[0.9rem]" style={{ color: "var(--mute)" }}>
-          Set your currency once on the Account page. Plan prices and the payments you record show in it
-          everywhere. Repsy keeps the record; it never charges anyone.
+          Workout, Nutrition, Habit and Recovery plans live side by side on one client. Build them by hand
+          in the Manual Planner, from a Library template, or from an AI suggestion you approve.
+        </p>
+        <p className="sr-only" aria-live="polite">
+          Showing the {v.label} plan
         </p>
       </div>
       <div data-rise className="flex justify-center">
         <div className="ln-phone">
           <span className="ln-notch" aria-hidden="true" />
-          <p className="sr-only" aria-live="polite">
-            Showing amounts in {cur}
-          </p>
           <div className="ln-phone-screen px-5 pb-6 pt-14">
-            <p className="text-[1.2rem] font-bold">Business</p>
-            <p className="ln-who">Monthly coaching · November</p>
-            <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--bg)" }}>
-              <div className="flex items-baseline justify-between">
-                <p className="ln-display text-[2rem]">
-                  {m.sym}
-                  {m.total}
-                </p>
-                <p className="ln-who">
-                  of {m.sym}
-                  {m.of}
-                </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[1.2rem] font-bold">Maya Patel</p>
+                <p className="ln-who">{v.kicker}</p>
               </div>
-              <div className="mt-2 h-1.5 rounded-full" style={{ background: "var(--line)" }}>
-                <div className="h-full rounded-full" style={{ width: m.pct, background: "var(--ink)" }} />
-              </div>
-              <p className="ln-who mt-2">2 of 4 paid</p>
+              <span className={"ln-tag " + (kind === "workout" ? "ln-tag-workout" : "ln-tag-nutrition")}>{v.label}</span>
             </div>
-            <ul className="mt-4 space-y-3">
-              {rows.map(([n, amt, st]) => (
-                <li key={n} className="flex items-center gap-3">
-                  <span className="ln-avatar">{n[0]}</span>
-                  <span className="flex-1 text-[0.9rem] font-semibold">{n}</span>
-                  <span className="text-right">
-                    <span className="ln-mono block text-[0.82rem] font-bold">{amt}</span>
-                    <span className={"ln-tag mt-0.5 " + (st === "Paid" ? "ln-tag-dark" : "ln-tag-light")}>{st}</span>
+            <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--bg)" }}>
+              <p className="ln-display text-[1.7rem] leading-none">{v.title}</p>
+              <div className="mt-3 flex gap-2">
+                {v.stat.map((s) => (
+                  <span key={s} className="ln-mono rounded-full px-2.5 py-1 text-[11px] font-semibold" style={{ background: "var(--paper)" }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <ol className="mt-4 space-y-2.5">
+              {v.rows.map(([a, b], i) => (
+                <li key={a} className="flex items-center gap-3">
+                  <span className="ln-avatar" style={{ background: tone, color: kind === "workout" ? "var(--ink)" : "var(--paper)" }}>
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[0.9rem] font-semibold">{a}</span>
+                    <span className="ln-mono block text-[0.76rem]" style={{ color: "var(--mute)" }}>
+                      {b}
+                    </span>
                   </span>
                 </li>
               ))}
-            </ul>
-            <p className="mt-6 rounded-full py-3 text-center text-[0.85rem] font-bold" style={{ background: "var(--ink)", color: "var(--paper)" }}>
-              Record payment
+            </ol>
+            <p className="ln-who mt-4">{v.foot}</p>
+            <p className="mt-4 rounded-full py-3 text-center text-[0.85rem] font-bold" style={{ background: "var(--orange)", color: "var(--ink)", boxShadow: "0 3px 0 var(--ink)" }}>
+              Assign to Maya
             </p>
           </div>
         </div>
@@ -539,7 +572,7 @@ export function More() {
         {MORE.map((m) => (
           <article key={m.title} data-rise className="ln-white p-6">
             <div className="flex items-center justify-between">
-              <span className="ln-icon" style={{ background: "var(--bg)" }}>
+              <span className="ln-icon" style={{ background: "var(--card)", color: "var(--orange-deep)" }}>
                 <Icon name={m.icon} />
               </span>
               <span className="ln-tag ln-tag-light">{m.tag}</span>
@@ -589,7 +622,7 @@ export function Compare() {
           <h2 className="ln-h2 text-[clamp(2rem,3.8vw,2.9rem)]">
             <span className="ln-dim">More than a group chat.</span>
             <br />
-            See the difference.
+            See the <span className="ln-key">difference.</span>
           </h2>
           <table className="mt-10 w-full text-left text-[0.88rem]">
             <thead>
@@ -612,7 +645,7 @@ export function Compare() {
                     {row}
                   </th>
                   <td className="text-center">
-                    <span data-pop className="inline-grid h-7 w-9 place-items-center rounded-md" style={{ background: "var(--ink)", color: "var(--paper)" }}>
+                    <span data-pop className="inline-grid h-7 w-9 place-items-center rounded-md" style={{ background: "var(--teal)", color: "var(--paper)" }}>
                       <Icon name="check" size={15} />
                       <span className="sr-only">Yes</span>
                     </span>
@@ -643,12 +676,12 @@ function Badge() {
         <defs>
           <path id="ln-badge-circle" d="M 150,150 m -122,0 a 122,122 0 1,1 244,0 a 122,122 0 1,1 -244,0" />
         </defs>
-        <circle cx="150" cy="150" r="146" fill="none" stroke="var(--dark-3)" strokeWidth="4" />
+        <circle cx="150" cy="150" r="146" fill="none" stroke="var(--orange)" strokeWidth="4" />
         <text style={{ fontFamily: "var(--display)", fontWeight: 700, fontSize: 25, letterSpacing: "0.14em", fill: "var(--soft)" }}>
           <textPath href="#ln-badge-circle">{label}</textPath>
         </text>
       </svg>
-      <div className="grid h-[150px] w-[150px] place-items-center rounded-full border-2 text-center md:h-[170px] md:w-[170px]" style={{ borderColor: "var(--paper)" }}>
+      <div className="grid h-[150px] w-[150px] place-items-center rounded-full border-2 text-center md:h-[170px] md:w-[170px]" style={{ borderColor: "var(--orange)" }}>
         <div>
           <p className="ln-display text-[3rem] md:text-[3.4rem]">12/12</p>
           <p className="mt-1 text-[0.62rem] font-bold tracking-[0.2em]" style={{ color: "var(--soft)" }}>
@@ -669,14 +702,14 @@ export function Done() {
           the best part of Monday
         </p>
         <h2 id="ln-done-title" data-rise className="ln-display mt-2 text-[clamp(3.4rem,10vw,8.5rem)]">
-          Trained. Tracked. Done.
+          Trained. Tracked. <span className="ln-key">Done.</span>
         </h2>
       </div>
       <div className="mt-14 overflow-hidden" aria-hidden="true">
         <div className="ln-marquee">
           {feed.map(([t, s], i) => (
             <div key={i} className="ln-dark-chip">
-              <span className="ln-avatar" style={{ background: "var(--paper)", color: "var(--ink)" }}>
+              <span className="ln-avatar" style={{ background: "var(--teal)", color: "var(--paper)" }}>
                 <Icon name="check" size={14} />
               </span>
               <span className="leading-tight">
@@ -756,7 +789,9 @@ function AppCard() {
           <p className="text-[1.25rem] font-bold">Maya Patel</p>
           <p className="ln-who">Progress · 12 check-ins · Block 2</p>
         </div>
-        <span className="ln-tag ln-tag-dark">Repsy</span>
+        <span className="ln-tag" style={{ background: "var(--orange)", color: "var(--ink)" }}>
+          Repsy
+        </span>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2">
         {[
@@ -771,7 +806,7 @@ function AppCard() {
         ))}
       </div>
       <svg viewBox="0 0 300 70" className="mt-3 w-full" aria-hidden="true">
-        <path d="M5 50 C 40 46, 60 54, 95 40 S 150 30, 185 34 S 250 18, 295 14" fill="none" stroke="var(--ink)" strokeWidth="2.5" />
+        <path d="M5 50 C 40 46, 60 54, 95 40 S 150 30, 185 34 S 250 18, 295 14" fill="none" stroke="var(--teal)" strokeWidth="2.5" />
       </svg>
       <ul className="mt-2 divide-y text-[0.86rem]" style={{ borderColor: "var(--line)" }}>
         {[
@@ -781,7 +816,7 @@ function AppCard() {
         ].map(([a, b]) => (
           <li key={a} className="flex items-center justify-between py-2.5">
             <span className="ln-mono text-[12px]">{a}</span>
-            <span className={"ln-tag " + (b === "Done" ? "ln-tag-dark" : "ln-tag-light")}>{b}</span>
+            <span className={"ln-tag " + (b === "Done" ? "ln-tag-nutrition" : "ln-tag-workout")}>{b}</span>
           </li>
         ))}
       </ul>
@@ -809,8 +844,12 @@ export function OldWay() {
             </div>
           ))}
           <div data-beat={BEATS.length} className="ln-beat-end mt-10">
-            <span className="ln-tag ln-tag-dark">Repsy</span>
-            <p className="ln-display mt-3 text-[clamp(3.2rem,6vw,5rem)]">Progress.</p>
+            <span className="ln-tag" style={{ background: "var(--orange)", color: "var(--ink)" }}>
+              Repsy
+            </span>
+            <p className="ln-display mt-3 text-[clamp(3.2rem,6vw,5rem)]">
+              <span className="ln-key">Progress.</span>
+            </p>
             <p className="mt-2 text-[1.15rem] font-semibold" style={{ color: "var(--mute)" }}>
               The same client. The maths done.
             </p>
@@ -821,7 +860,7 @@ export function OldWay() {
                 ["Stalls get flagged", "Needs attention shows who, and why."],
               ].map(([a, b]) => (
                 <li key={a} className="flex gap-3">
-                  <span className="ln-avatar h-6 w-6">
+                  <span className="ln-avatar h-6 w-6" style={{ background: "var(--teal)" }}>
                     <Icon name="check" size={12} />
                   </span>
                   <span>
@@ -856,7 +895,7 @@ export function Pricing() {
   return (
     <section id="pricing" className="ln-wrap scroll-mt-24 py-24 md:py-32" aria-labelledby="ln-pricing-title">
       <h2 id="ln-pricing-title" data-rise className="ln-h2 text-center">
-        Start free for 7 days.
+        Start <span className="ln-key">free</span> for 7 days.
         <br />
         <span className="ln-dim">Pick a plan when it fits.</span>
       </h2>
@@ -887,16 +926,12 @@ export function Pricing() {
             <ul className="mt-6 flex-1 space-y-2.5 text-[0.88rem]">
               {p.features.map((f) => (
                 <li key={f} className="flex gap-2.5">
-                  <Icon name="check" size={16} className="mt-0.5 flex-none" />
+                  <Icon name="check" size={16} className="ln-tick mt-0.5 flex-none" />
                   {f}
                 </li>
               ))}
             </ul>
-            <a
-              href="#get"
-              className="mt-8 flex min-h-12 items-center justify-center rounded-full text-[0.9rem] font-bold"
-              style={p.dark ? { background: "var(--paper)", color: "var(--ink)" } : { background: "var(--ink)", color: "var(--paper)" }}
-            >
+            <a href="#get" className="ln-btn mt-8 w-full">
               Start free
             </a>
           </article>
@@ -946,7 +981,7 @@ export function FaqChat() {
         <h2 id="ln-faq-title" className="ln-h2 text-[clamp(2.6rem,5.4vw,4.2rem)]">
           Questions
           <br />
-          coaches <span className="ln-dim">will</span>
+          coaches <span className="ln-key">will</span>
           <br />
           <span className="ln-dim">ask.</span>
         </h2>
@@ -1013,7 +1048,7 @@ export function Get() {
       <div data-rise className="ln-white grid gap-12 p-8 md:grid-cols-[1.3fr_0.7fr] md:p-14">
         <div>
           <h2 id="ln-get-title" className="ln-h2 text-[clamp(2.4rem,5vw,4rem)]">
-            Get Repsy.
+            Get <span className="ln-key">Repsy.</span>
             <br />
             <span className="ln-dim">Your clients just get a link.</span>
           </h2>
@@ -1027,7 +1062,7 @@ export function Get() {
           <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-[0.8rem] font-medium" style={{ color: "var(--mute)" }}>
             {["7-day free trial", "No card to start", "Export your data any time"].map((t) => (
               <li key={t} className="flex items-center gap-1.5">
-                <Icon name="check" size={14} />
+                <Icon name="check" size={14} className="ln-tick" />
                 {t}
               </li>
             ))}
@@ -1045,7 +1080,7 @@ export function Get() {
               repsy-coach.onrender.com/client/set-password?token=…
             </p>
             <p className="ln-who mt-3">Works once, for 48 hours. Emailed to them, or copy it if email isn't set up.</p>
-            <p className="mt-4 rounded-full py-2.5 text-center text-[0.8rem] font-bold" style={{ background: "var(--ink)", color: "var(--paper)" }}>
+            <p className="mt-4 rounded-full py-2.5 text-center text-[0.8rem] font-bold" style={{ background: "var(--orange)", color: "var(--ink)", boxShadow: "0 3px 0 var(--ink)" }}>
               Copy link
             </p>
           </div>

@@ -61,7 +61,7 @@ function Nav() {
   return (
     <header className="ln-nav">
       <a href="#top" className="ln-logo" aria-label="Repsy, back to top">
-        Repsy<span aria-hidden="true">.</span>
+        Repsy<span className="ln-key" aria-hidden="true">.</span>
       </a>
       <nav aria-label="Sections" className="ln-links">
         {NAV.map((n) => (
@@ -97,7 +97,9 @@ function Footer() {
     <footer className="ln-wrap overflow-hidden pb-8 pt-20">
       <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
-          <p className="ln-display text-[1.6rem]">Repsy.</p>
+          <p className="ln-display text-[1.8rem]">
+            Repsy<span className="ln-key">.</span>
+          </p>
           <p className="mt-3 max-w-xs text-[0.88rem]" style={{ color: "var(--mute)" }}>
             Coaching software for personal trainers: plans with the reasoning, check-ins that add up, and
             clients who need nothing but a link.
@@ -122,10 +124,10 @@ function Footer() {
       </div>
       <p
         aria-hidden="true"
-        className="ln-display mb-10 mt-16 select-none text-center leading-[0.9] tracking-[-0.07em]"
+        className="ln-display mb-10 mt-16 select-none text-center leading-[0.9] tracking-[-0.05em]"
         style={{ fontSize: "clamp(6rem, 27vw, 24rem)" }}
       >
-        repsy
+        repsy<span className="ln-key">.</span>
       </p>
       <div className="mt-6 flex flex-wrap justify-between gap-3 border-t pt-5 text-[0.78rem]" style={{ borderColor: "var(--line)", color: "var(--mute)" }}>
         <p>© {new Date().getFullYear()} Repsy. AI advice is general wellness guidance, not medical advice.</p>

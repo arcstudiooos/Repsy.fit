@@ -92,14 +92,17 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   `color-mix()` (graph-paper lines from `--border`, paper tones mixed from `--amber` and
   `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
 - **Studio landing** (`client/src/landing-new/`, Nov 2026, preview at `/?design=studio`): the
-  owner asked for a page in the style of a reference site (bharpai.app): monochrome, bold
-  tight sans, pinned scroll scenes. It copies the look and motion only, never the reference's
-  words, logo, story or art; every claim is a shipped Repsy feature. Colours are ONLY `#141414`
-  and `#ffffff` plus `color-mix()` greys (a UI test enforces this). Fonts: Geist / Geist Mono
-  (bold, tight) plus the landing-only Caveat and Barlow Condensed. GSAP is a lazy `motion-*`
-  chunk that loads only on wide screens without reduced motion; without it the page is a
-  complete still page. A "Pause motion" button stops the marquee and badge. Tests:
-  `e2e-ui/studio-landing.spec.ts`.
+  owner asked for a page with the scroll scenes and motion of a reference site (bharpai.app),
+  then for it to be restyled in Repsy's own theme. It copies the reference's layout and motion
+  only, never its words, logo, story or art; every claim is a shipped Repsy feature. Theme: the
+  A1 rules above (cream paper, ink, one orange accent, teal for ticks and data, Instrument
+  Serif headlines with one *italic orange* key word, Geist body, Geist Mono numbers, orange
+  pill buttons with the hard ink shadow). Colours are ONLY `theme.css` tokens plus
+  `color-mix()` tints (a UI test enforces this). Objects are fitness things: a ruled plan
+  sheet torn into client strips, a Workout / Nutrition plan toggle, a check-in chart, a coach's
+  notebook. GSAP is a lazy `motion-*` chunk that loads only on wide screens without reduced
+  motion; without it the page is a complete still page. A "Pause motion" button stops the
+  marquee and badge. Tests: `e2e-ui/studio-landing.spec.ts`.
 
 ### Cards and buttons
 

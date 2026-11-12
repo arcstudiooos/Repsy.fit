@@ -99,18 +99,19 @@ test("hero sheet: four strips, each with a client, the hidden copies stay out of
   for (const n of ["Maya", "Arjun", "Casey", "Leo"]) await expect(page.locator("[data-strip-chip]", { hasText: n })).toHaveCount(1);
 });
 
-test("currency toggle swaps every amount and is announced", async ({ page }) => {
+test("plan-type toggle swaps the phone between a workout and a nutrition plan, and is announced", async ({ page }) => {
   await open(page);
-  const inr = page.getByRole("button", { name: "₹ INR" });
-  const usd = page.getByRole("button", { name: "$ USD" });
-  await expect(inr).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText("₹9,998")).toBeVisible();
-  await usd.click();
-  await expect(usd).toHaveAttribute("aria-pressed", "true");
-  await expect(inr).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByText("$118")).toBeVisible();
-  await expect(page.getByText("Showing amounts in USD")).toHaveCount(1);
-  await expect(page.getByText("₹9,998")).toHaveCount(0);
+  const phone = page.locator(".ln-phone-screen");
+  const workout = page.getByRole("button", { name: "Workout", exact: true });
+  const nutrition = page.getByRole("button", { name: "Nutrition", exact: true });
+  await expect(workout).toHaveAttribute("aria-pressed", "true");
+  await expect(phone.getByText("Back Squat")).toBeVisible();
+  await nutrition.click();
+  await expect(nutrition).toHaveAttribute("aria-pressed", "true");
+  await expect(workout).toHaveAttribute("aria-pressed", "false");
+  await expect(phone.getByText("Chicken rice bowl")).toBeVisible();
+  await expect(phone.getByText("Back Squat")).toHaveCount(0);
+  await expect(page.getByText("Showing the Nutrition plan")).toHaveCount(1);
 });
 
 test("FAQ chat: six questions, tapping one shows Repsy's answer, tapping again hides it", async ({ page }) => {
@@ -155,7 +156,7 @@ test("reduced motion on a wide screen: no animation chunk, no pins, the whole st
   await expect(page.locator(".ln-cursor")).toHaveCount(0);
   // The old-way scene's ending (the Repsy beat and the app card) is shown, not left on frame one.
   await expect(page.getByText("Progress.", { exact: true })).toBeVisible();
-  await expect(page.getByText("Maya Patel", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-nb-app]").getByText("Maya Patel", { exact: true })).toBeVisible();
   await expect(page.locator("[data-nb-x]")).toBeHidden();
   expect(await invisibleText(page)).toEqual([]);
 });
@@ -262,8 +263,12 @@ test("keyboard: skip link first, then the nav, and every control has a name", as
   expect(snapshot).not.toMatch(/- (link|button)\s*(:|$)/m);
 });
 
-test("colour rule: the Studio stylesheet uses only the existing #141414 and #ffffff", () => {
-  const css = fs.readFileSync(path.resolve(__dirname, "../client/src/landing-new/landing-new.css"), "utf8");
-  const hexes = new Set((css.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).map((h) => h.toLowerCase()));
-  expect([...hexes].sort()).toEqual(["#141414", "#ffffff"]);
+test("colour rule: the Studio landing uses only the theme.css tokens (no new hex colours)", () => {
+  const theme = fs.readFileSync(path.resolve(__dirname, "../client/src/theme.css"), "utf8");
+  const allowed = new Set((theme.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).map((h) => h.toLowerCase()));
+  for (const file of ["landing-new.css", "scenes.tsx", "StudioLanding.tsx", "icons.tsx"]) {
+    const src = fs.readFileSync(path.resolve(__dirname, "../client/src/landing-new", file), "utf8");
+    const used = [...new Set((src.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).map((h) => h.toLowerCase()))].filter((h) => !/^#ln-/.test(h));
+    expect(used.filter((h) => !allowed.has(h)), `${file} uses hex colours that are not theme tokens`).toEqual([]);
+  }
 });

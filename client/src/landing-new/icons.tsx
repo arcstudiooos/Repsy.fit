@@ -46,9 +46,9 @@ const PATHS: Record<string, React.ReactNode> = {
   pause: <path d="M8 5v14M16 5v14" strokeWidth={2.6} />,
 };
 
-export function Icon({ name, size = 18, className = "" }: { name: keyof typeof PATHS | string; size?: number; className?: string }) {
+export function Icon({ name, size = 18, className = "", style }: { name: keyof typeof PATHS | string; size?: number; className?: string; style?: React.CSSProperties }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className} {...P}>
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className} style={style} {...P}>
       {PATHS[name]}
     </svg>
   );
@@ -76,9 +76,9 @@ export function PenArrow({ dir = "left", className = "" }: { dir?: "left" | "rig
 }
 
 /** The scribbled underline under "Let Repsy handle it." Drawn on scroll (data-draw). */
-export function Scribble({ className = "" }: { className?: string }) {
+export function Scribble({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 220 22" aria-hidden="true" focusable="false" className={className} fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round">
+    <svg viewBox="0 0 220 22" aria-hidden="true" focusable="false" className={className} style={style} fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round">
       <path data-draw d="M4 14C40 6 96 4 150 8c22 1.6 44 4 64 8" />
       <path data-draw d="M32 18c38-4 92-5 138-2" strokeWidth={2.2} />
     </svg>

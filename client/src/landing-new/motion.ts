@@ -100,12 +100,19 @@ export function startMotion(root: HTMLElement): () => void {
 
     /* ---------- road: draws itself as the section scrolls past ---------- */
     const road = root.querySelector<SVGPathElement>("[data-road]");
+    const clip = root.querySelector<SVGRectElement>("[data-road-clip]");
     if (road) {
       drawPrep([road]);
+      if (clip) gsap.set(clip, { attr: { height: 0 } });
       gsap.to(road, {
         strokeDashoffset: 0,
         ease: "none",
         scrollTrigger: { trigger: "[data-scene=road]", start: "top 70%", end: "bottom 80%", scrub: 0.5 },
+        onUpdate() {
+          if (!clip) return;
+          const p = road.getPointAtLength(road.getTotalLength() * this.progress());
+          clip.setAttribute("height", String(Math.max(0, p.y + 24)));
+        },
       });
     }
 
