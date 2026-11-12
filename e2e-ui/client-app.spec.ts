@@ -267,3 +267,25 @@ test("the coach's plan list says when the client finished it, with effort and no
   await expect(mine).toContainText("Squats felt heavy");
   await expect(cards.filter({ hasText: "Coach ticked it" })).not.toContainText("Done by client");
 });
+
+test("an AI plan over several days: day headings, loads, and ticks kept apart when numbering restarts", async ({ page }) => {
+  const week = plan("w2", "Workout", "Push pull week", {
+    details: [
+      "Day 1 — Push",
+      "1. Bench Press — 4 sets × 6 reps · 60 kg · Rest 120s",
+      "Day 2 — Pull",
+      "1. Deadlift — 3 sets × 5 reps · 100 kg · Rest 180s",
+    ].join("\n"),
+  });
+  await mock(page, { plans: [week] });
+  await page.goto("/client/plan/w2");
+  const ex = page.getByRole("region", { name: "Exercises" });
+  await expect(ex.getByText("Day 1 — Push")).toBeVisible();
+  await expect(ex.getByText("Day 2 — Pull")).toBeVisible();
+  await expect(ex.getByText("4 sets × 6 reps · 60 kg")).toBeVisible();
+  await expect(ex.getByText("3 sets × 5 reps · 100 kg")).toBeVisible();
+  await ex.getByRole("checkbox", { name: /Bench Press/ }).check();
+  await expect(ex.getByRole("checkbox", { name: /Deadlift/ })).not.toBeChecked();
+  await expect(page.getByText("1 of 2 exercises ticked")).toBeVisible();
+});
+

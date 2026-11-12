@@ -112,6 +112,18 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - **Landing colours:** the tokens above, plus tints and mixes of them made with `rgba()` /
   `color-mix()` (graph-paper lines from `--border`, paper tones mixed from `--amber` and
   `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
+- **Light / dark switch** (owner, Nov 2026): `components/ThemeSwitch.tsx` (role=switch "Dark mode") sits in the
+  coach header and the client app header. `lib/theme.ts` keeps the choice in localStorage `repsy-theme` and sets
+  `<html data-theme>`; theme.css applies the dark values for `[data-theme=dark]` or for a dark device without a
+  choice. Colours fade during the switch (`html.theme-anim`, off for reduced motion). The coach header subtitle is
+  hidden below 640px so the switch fits. Test: `e2e-ui/theme-switch.spec.ts`.
+- **AI Coach voice and format** (owner, Nov 2026): the AI talks TO the coach ABOUT the client (third person, first
+  name; 'you' = the coach), answers only what was asked under 120 words, cites the client's data, and puts any
+  exercises in the suggestion as `N. Name — S sets × R reps · LOAD · Rest Ns` (load in the client's unit or
+  'bodyweight'; 'Day N — Name' lines for multi-day plans). It gets the 6 latest chat turns (`CHAT_HISTORY_TURNS`)
+  and the two newest workout plans in full so loads progress. `components/FormattedText.tsx` renders replies
+  (bold, lists) and plans (day headings, exercise rows) with no HTML injection; `planLines.ts` reads the optional
+  load and day lines, and the client checklist keys on `seq` so restarting numbers per day don't collide.
 - **Sign-in screens look like the landing** (owner, Nov 2026): every login / sign-up / password / client
   sign-in, join, welcome and waiting screen is wrapped in `auth/PaperFrame.tsx` (`.paper` in index.css): cream
   paper in light AND dark mode, the "Repsy." wordmark home link, orange pill buttons with the hard ink shadow,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { FormattedText, PlanDetails } from "../components/FormattedText";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -254,7 +255,9 @@ function AutoAssignedCard({
           {assignment.type}
         </span>
       </div>
-      <p className="mt-2 whitespace-pre-wrap text-sm text-text">{assignment.details}</p>
+      <div className="mt-2">
+        <PlanDetails details={assignment.details} />
+      </div>
       {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {assignment.reasoning}</p>}
       <button type="button" onClick={onOpenPlanner} className="mt-3 text-sm font-semibold text-accent2 underline">
         View in Manual Planner
@@ -308,7 +311,9 @@ function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: Sugg
           {suggestion.type}
         </span>
       </div>
-      <p className="mt-2 whitespace-pre-wrap text-sm text-text">{suggestion.details}</p>
+      <div className="mt-3">
+        <PlanDetails details={suggestion.details} />
+      </div>
       {suggestion.reasoning.trim() !== "" && (
         <p className="mt-2 text-sm text-dim">Why: {suggestion.reasoning}</p>
       )}
@@ -371,11 +376,11 @@ function Conversation({ messages }: { messages: ChatMessage[] }) {
           <li key={m.id} className={"flex flex-col " + (isCoach ? "items-end" : "items-start")}>
             <div
               className={
-                "max-w-[85%] whitespace-pre-wrap rounded-card px-4 py-2.5 " +
-                (isCoach ? "bg-accent text-on-accent" : "border border-border bg-surface text-text")
+                "max-w-[85%] rounded-card px-4 py-2.5 " +
+                (isCoach ? "whitespace-pre-wrap bg-accent text-on-accent" : "border border-border bg-surface text-text")
               }
             >
-              {m.content}
+              {isCoach ? m.content : <FormattedText text={m.content} />}
             </div>
             <span className="mt-1 text-xs text-dim">
               {isCoach ? "You" : "AI coach"} · {timeFormat.format(new Date(m.createdAt))}

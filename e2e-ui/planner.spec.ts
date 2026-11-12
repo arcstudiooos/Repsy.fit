@@ -177,8 +177,7 @@ test("cards show source, status, date, line breaks, and no Why line when reasoni
   await expect(card.getByText("Paused", { exact: true })).toBeVisible();
   await expect(card).toContainText("2026-11-03");
   await expect(card).not.toContainText("Why:");
-  const details = card.getByText("Breakfast: oats");
-  await expect(details).toHaveCSS("white-space", "pre-wrap");
+  const details = card.locator(".plan-details");
   expect(await details.innerText()).toBe("Breakfast: oats\nLunch: lentils");
 });
 

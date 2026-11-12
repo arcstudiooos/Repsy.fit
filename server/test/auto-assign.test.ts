@@ -145,8 +145,10 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     expect(body.response_format).toEqual({ type: "json_object" });
     const [system, user] = body.messages.map((m) => m.content);
     expect(system).toContain("ONE complete, ready-to-use Workout assignment");
-    expect(system).toContain("sets x reps");
-    expect(system).toContain("rest seconds");
+    expect(system).toContain("4 sets × 6 reps · 60 kg · Rest 120s");
+    expect(system).toContain("rest in seconds");
+    expect(system).toContain("Never leave the load out");
+    expect(system).toContain("never 'you' for the");
     expect(system).toContain("goal, level");
     // Same client context as the chat (Prompt 15).
     for (const fact of [

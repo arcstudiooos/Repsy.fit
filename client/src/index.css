@@ -89,9 +89,12 @@
 
 /* Header strip: dark mode only gets a 1px bottom border (light mode unchanged). */
 @media (prefers-color-scheme: dark) {
-  .header-strip {
+  :root:not([data-theme="light"]) .header-strip {
     border-bottom: 1px solid var(--header-border);
   }
+}
+:root[data-theme="dark"] .header-strip {
+  border-bottom: 1px solid var(--header-border);
 }
 
 /* Printing the progress report (Prompt 70): only the report page, on white, without the app chrome. */
@@ -191,5 +194,64 @@
 html.paper-page,
 html.paper-page body {
   background-color: #faf7f2;
-  color-scheme: light;
+  color-scheme: light !important;
+}
+
+/* Light / dark switch in the coach and client headers (components/ThemeSwitch.tsx). The track takes its
+   tint from the header's text colour, so it fits the dark coach strip and the client app's header. */
+.theme-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  min-height: 40px;
+  min-width: 56px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.theme-switch-track {
+  display: inline-flex;
+  align-items: center;
+  width: 56px;
+  height: 30px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.theme-switch:hover .theme-switch-track {
+  border-color: color-mix(in srgb, currentColor 55%, transparent);
+}
+.theme-switch-knob {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--amber);
+  box-shadow: 0 1px 3px rgba(20, 20, 20, 0.35);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease, background-color 0.3s ease;
+}
+.theme-switch[aria-checked="true"] .theme-switch-knob {
+  transform: translateX(26px);
+  background: #141414;
+  color: var(--white);
+}
+/* While switching, colours fade instead of snapping (off for reduced motion). */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-anim,
+  html.theme-anim *,
+  html.theme-anim *::before,
+  html.theme-anim *::after {
+    transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, fill 0.35s ease, stroke 0.35s ease !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-switch-track,
+  .theme-switch-knob {
+    transition: none;
+  }
 }

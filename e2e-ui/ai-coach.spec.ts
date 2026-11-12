@@ -33,6 +33,9 @@ const CLIENTS = [
   },
 ];
 
+/** Lets one test swap the suggestion's details. */
+const SUGGESTION_OVERRIDE: { details: string | null } = { details: null };
+
 const SUGGESTION = {
   type: "Workout",
   title: "Lower-body strength session",
@@ -84,7 +87,7 @@ async function mockApi(page: Page): Promise<Mock> {
         const q: Msg = { id: `m${nextId++}`, clientId, role: "coach", content: question, createdAt: now };
         const r: Msg = { id: `m${nextId++}`, clientId, role: "ai", content: `Answer about ${clientId}: keep going.`, createdAt: now };
         (mock.chats[clientId] ??= []).push(q, r);
-        return route.fulfill({ status: 201, json: { question: q, reply: r, suggestion: SUGGESTION } });
+        return route.fulfill({ status: 201, json: { question: q, reply: r, suggestion: { ...SUGGESTION, details: SUGGESTION_OVERRIDE.details ?? SUGGESTION.details } } });
       }
     }
 
@@ -126,7 +129,8 @@ test("coach messages sit right in accent colour, AI messages left in a white car
   await mockApi(page);
   await page.goto("/app");
   const coach = conversation(page).getByText("How is Maya doing?", { exact: true });
-  const ai = conversation(page).getByText("Maya is consistent with training.", { exact: true });
+  // AI text is formatted (paragraphs, lists) inside its card.
+  const ai = conversation(page).getByRole("listitem").filter({ hasText: "Maya is consistent with training." }).locator("> div");
   await expect(coach).toHaveCSS("background-color", "rgb(255, 74, 31)");
   await expect(ai).toHaveCSS("background-color", "rgb(255, 255, 255)");
   const c = (await coach.boundingBox())!;
@@ -238,4 +242,44 @@ test("history survives a reload and each client sees only their own chat", async
   await expect(conversation(page)).toContainText("Arjun only question");
   await expect(conversation(page)).not.toContainText("Persist me");
   await expect(conversation(page)).not.toContainText("How is Maya doing?");
+});
+
+test("AI replies are formatted: bold and bullet lists render, no raw ** marks", async ({ page }) => {
+  const mock = await mockApi(page);
+  mock.chats["c-maya"].push({
+    id: "m3",
+    clientId: "c-maya",
+    role: "ai",
+    content: "For Maya, keep **strength first**:\n- Adherence is 86%\n- Sleep averages 6.5 h",
+    createdAt: "2026-11-09T10:01:00.000Z",
+  });
+  await page.goto("/app");
+  const reply = conversation(page).getByRole("listitem").filter({ hasText: "For Maya, keep" });
+  await expect(reply.locator("strong")).toHaveText("strength first");
+  await expect(reply.getByRole("listitem")).toHaveText(["Adherence is 86%", "Sleep averages 6.5 h"]);
+  await expect(reply).not.toContainText("**");
+});
+
+test("a suggested plan shows day headings and each exercise as a row with sets x reps, load and rest", async ({ page }) => {
+  await mockApi(page);
+  SUGGESTION_OVERRIDE.details = [
+    "Day 1 — Push",
+    "1. Bench Press — 4 sets × 6 reps · 60 kg · Rest 120s",
+    "2. Dips — 3 sets × 10 reps · bodyweight · Rest 90s",
+    "Day 2 — Pull",
+    "1. Deadlift — 3 sets × 5 reps · 100 kg · Rest 180s",
+  ].join("\n");
+  await page.goto("/app");
+  await composer(page).fill("Make a push pull week");
+  await composer(page).press("Enter");
+  const card = panel(page).getByRole("region", { name: "AI suggestion" });
+  await expect(card.getByText("Day 1 — Push")).toBeVisible();
+  await expect(card.getByText("Day 2 — Pull")).toBeVisible();
+  const rows = card.locator('[data-plan-line="exercise"]');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText("Bench Press");
+  await expect(rows.nth(0)).toContainText("4 × 6 · 60 kg · 120s");
+  await expect(rows.nth(1)).toContainText("3 × 10 · bodyweight · 90s");
+  await expect(rows.nth(2)).toContainText("3 × 5 · 100 kg · 180s");
+  SUGGESTION_OVERRIDE.details = null;
 });

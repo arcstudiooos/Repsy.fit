@@ -40,8 +40,10 @@
   --radius-card: 14px;
 }
 
+/* Dark theme: follows the device unless the person picked one with the header switch, which sets
+   <html data-theme="light|dark"> (lib/theme.ts). The two blocks hold the same values. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #141414;
     --surface: #1e1e1e;
     --surface2: #262626;
@@ -55,4 +57,24 @@
     /* #92400E is unreadable on dark backgrounds; #D97706 passes contrast there. */
     --amber-text: #d97706;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #141414;
+  --surface: #1e1e1e;
+  --surface2: #262626;
+  --text: #f5f1eb;
+  --dim: #a8a29e;
+  --border: #333333;
+  --tab-inactive: #262626;
+  /* Header strip is lifted off the #141414 page in dark mode, with a 1px bottom border. */
+  --header: #1e1e1e;
+  --header-border: #333333;
+  /* #92400E is unreadable on dark backgrounds; #D97706 passes contrast there. */
+  --amber-text: #d97706;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }

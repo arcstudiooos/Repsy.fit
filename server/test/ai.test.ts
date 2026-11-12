@@ -7,7 +7,7 @@ const { prisma } = vi.hoisted(() => ({
     assignment: { findMany: vi.fn() },
     progressLog: { findMany: vi.fn() },
     dailyCheckIn: { findMany: vi.fn() },
-    chatMessage: { create: vi.fn() },
+    chatMessage: { create: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -122,7 +122,7 @@ describe("POST /api/clients/:clientId/chat", () => {
       where: { clientId: client.id, coachId: TEST_COACH_ID },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 8,
-      select: { type: true, title: true, status: true },
+      select: { type: true, title: true, status: true, date: true, details: true, clientEffort: true },
     });
     expect(prisma.progressLog.findMany).toHaveBeenCalledWith({
       where: { clientId: client.id, coachId: TEST_COACH_ID },
@@ -144,7 +144,12 @@ describe("POST /api/clients/:clientId/chat", () => {
     expect(requestBody.model).toBe("test-model");
     expect(requestBody.response_format).toEqual({ type: "json_object" });
     expect(requestBody.messages[0].content).toContain("You are Repsy AI");
-    expect(requestBody.messages[0].content).toContain("3-5 sentences");
+    // Talks to the coach about the client, short, specific, and plans carry sets x reps, load and rest.
+    expect(requestBody.messages[0].content).toContain("Refer to the client by first name in the third person");
+    expect(requestBody.messages[0].content).toContain("'you' always means the coach");
+    expect(requestBody.messages[0].content).toContain("under 120 words");
+    expect(requestBody.messages[0].content).toContain("1. Back Squat — 4 sets × 6 reps · 60 kg · Rest 120s");
+    expect(requestBody.messages[0].content).toContain("Never leave the load out");
     expect(requestBody.messages[0].content).toContain("never diagnose medical conditions");
     expect(requestBody.messages[1].content).toContain("Maya Patel");
     expect(requestBody.messages[1].content).toContain("Fat loss + strength");
@@ -159,6 +164,26 @@ describe("POST /api/clients/:clientId/chat", () => {
     expect(requestBody.messages[1].content).toContain("What should Maya focus on this week?");
     expect(prisma.chatMessage.create.mock.invocationCallOrder[0]).toBeLessThan(fetchSpy.mock.invocationCallOrder[0]);
     expect(fetchSpy.mock.invocationCallOrder[0]).toBeLessThan(prisma.chatMessage.create.mock.invocationCallOrder[1]);
+  });
+
+  it("sends the last few chat turns (oldest first, this coach's client only) so follow-ups make sense", async () => {
+    prisma.chatMessage.findMany.mockResolvedValueOnce([
+      { role: "ai", content: "For Maya: a 3-day push/pull split." },
+      { role: "coach", content: "Make Maya a push/pull week" },
+    ]);
+    const fetchSpy = stubProviderResult(JSON.stringify(answerPayload));
+    await request(app).post(`/api/clients/${client.id}/chat`).send({ question: "Make it 4 days" });
+    expect(prisma.chatMessage.findMany).toHaveBeenCalledWith({
+      where: { clientId: client.id, coachId: TEST_COACH_ID },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 6,
+      select: { role: true, content: true },
+    });
+    const messages = (JSON.parse(fetchSpy.mock.calls[0][1]?.body as string) as { messages: { role: string; content: string }[] }).messages;
+    expect(messages.map((m) => m.role)).toEqual(["system", "user", "assistant", "user"]);
+    expect(messages[1].content).toBe("Make Maya a push/pull week");
+    expect(messages[2].content).toBe("For Maya: a 3-day push/pull split.");
+    expect(messages[3].content).toContain("Make it 4 days");
   });
 
   it("returns no suggestion when the model reports None", async () => {

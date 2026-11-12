@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { PlanDetails } from "../components/FormattedText";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteAssignment, listAssignments, queryKeys, updateAssignmentStatus } from "../api";
 import { ManualAssignmentForm, type TemplatePrefill } from "../components/ManualAssignmentForm";
@@ -210,7 +211,9 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
           {assignment.clientNote && <p className="mt-1 whitespace-pre-wrap text-text">“{assignment.clientNote}”</p>}
         </div>
       )}
-      <p className="mt-2 whitespace-pre-wrap text-sm text-text">{assignment.details}</p>
+      <div className="mt-2">
+        <PlanDetails details={assignment.details} />
+      </div>
       {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {assignment.reasoning}</p>}
     </li>
   );

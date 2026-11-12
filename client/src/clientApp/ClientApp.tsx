@@ -7,6 +7,8 @@
 // Everything comes from the client's OWN /api/client-auth routes; a client can only mark a plan done or
 // not done - never change what the coach wrote.
 import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { PlanDetails } from "../components/FormattedText";
+import { ThemeSwitch } from "../components/ThemeSwitch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, getMyUnreadCount, markMyAssignment, queryKeys } from "../api";
 import { addDays, localDateKey, weekStartOf } from "../lib/schedule";
@@ -119,6 +121,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
               <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact={false} badge={badgeFor(t.tab)} />
             ))}
           </nav>
+          <ThemeSwitch className="text-text" />
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-5">
@@ -523,7 +526,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
       {exercises.length > 0 ? (
         <section aria-label="Exercises" className="mt-5">
           <p className="mb-2 text-sm text-dim">
-            {exercises.filter((e) => e.kind === "exercise" && checked.includes(e.n)).length} of {exercises.length} exercises ticked
+            {exercises.filter((e) => e.kind === "exercise" && checked.includes(e.seq)).length} of {exercises.length} exercises ticked
           </p>
           <ol className="grid gap-2">
             {lines.map((l, i) =>
@@ -532,16 +535,17 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
                   <input
                     id={`ex-${i}`}
                     type="checkbox"
-                    checked={checked.includes(l.n)}
-                    onChange={() => toggle(l.n)}
+                    checked={checked.includes(l.seq)}
+                    onChange={() => toggle(l.seq)}
                     className="h-6 w-6 shrink-0 accent-[var(--accent)]"
                   />
                   <label htmlFor={`ex-${i}`} className="min-w-0 flex-1">
-                    <span className={`block font-semibold ${checked.includes(l.n) ? "text-dim line-through" : "text-text"}`}>
+                    <span className={`block font-semibold ${checked.includes(l.seq) ? "text-dim line-through" : "text-text"}`}>
                       {l.n}. {l.name}
                     </span>
                     <span className="block text-sm text-dim">
                       {l.sets} sets × {l.reps} reps
+                      {l.load ? ` · ${l.load}` : ""}
                     </span>
                   </label>
                   <button
@@ -554,8 +558,8 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
                   </button>
                 </li>
               ) : (
-                <li key={i} className="px-1 text-sm text-text">
-                  {l.text}
+                <li key={i} className={l.kind === "day" ? "px-1 pt-3 text-base font-semibold text-text" : "px-1 text-sm text-text"}>
+                  {l.text.replace(/\*\*/g, "")}
                 </li>
               ),
             )}
@@ -563,7 +567,9 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
           <p className="mt-2 text-xs text-dim">Ticks are kept on this device only.</p>
         </section>
       ) : (
-        <p className="mt-5 whitespace-pre-wrap text-base text-text">{plan.details}</p>
+        <div className="mt-5 text-base text-text">
+          <PlanDetails details={plan.details} />
+        </div>
       )}
 
       {plan.type === "Nutrition" && <NutritionExtras plan={plan} />}

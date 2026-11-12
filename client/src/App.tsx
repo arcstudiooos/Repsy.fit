@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from "react";
+import { ThemeSwitch } from "./components/ThemeSwitch";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientStrip } from "./ClientStrip";
@@ -48,11 +49,13 @@ function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () =>
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
         {/* The Repsy logo: gradient R mark + white wordmark, made for the dark header strip. */}
         <img src="/repsy-logo.png" alt="Repsy" width={113} height={36} className="h-9 w-auto shrink-0" />
-        <div className="leading-tight">
+        {/* Hidden on phones so the light / dark switch fits the header. */}
+        <div className="hidden leading-tight sm:block">
           <div className="text-xs text-white/70">Prototype - coach command center</div>
         </div>
         {/* Right side (Prompt 46): the signed-in coach and Logout. */}
         <div className="ml-auto flex min-w-0 items-center gap-3">
+          <ThemeSwitch className="text-white" />
           {/* The name opens the account page (Prompt 47): no extra button, so the header still fits at 375px. */}
           <a
             href="/app/account"

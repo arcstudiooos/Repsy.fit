@@ -16,7 +16,9 @@ for (const width of [375, 1280]) {
     const box = (await logo.boundingBox())!;
     expect(Math.round(box.height)).toBe(36);
     expect(box.width).toBeGreaterThan(100); // wide wordmark, not squashed
-    await expect(header).toContainText("Prototype - coach command center");
+    // The subtitle shows on wider screens; on phones it makes room for the light / dark switch.
+    if (width >= 640) await expect(header).toContainText("Prototype - coach command center");
+    await expect(header.getByRole("switch", { name: "Dark mode" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   });
 }

@@ -114,10 +114,13 @@ test("saving the 2-exercise workout sends the numbered list in the exact format 
 
   await expect(cards(page)).toHaveCount(1);
   expect(mock.posts[0]).toMatchObject({ type: "Workout", title: "Lower body strength", details: PLAN, source: "manual" });
-  const text = cards(page).first().locator("p.whitespace-pre-wrap");
-  await expect(text).toHaveText(PLAN, { useInnerText: true });
-  const lines = (await text.innerText()).split("\n");
-  expect(lines).toEqual(["1. Back Squat — 4 sets × 6 reps · Rest 120s", "2. Romanian Deadlift — 3 sets × 8 reps · Rest 90s"]);
+  // The card shows each exercise as a row: number, name, sets × reps · rest.
+  const rows = cards(page).first().locator('[data-plan-line="exercise"]');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("Back Squat");
+  await expect(rows.nth(0)).toContainText("4 × 6 · 120s");
+  await expect(rows.nth(1)).toContainText("Romanian Deadlift");
+  await expect(rows.nth(1)).toContainText("3 × 8 · 90s");
 
   // The form clears, including the exercise rows.
   await expect(title(page)).toHaveValue("");

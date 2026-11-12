@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ApiError } from "./api";
 import { IN_APP_KEY, routeFor, type Route } from "./route";
 import "./index.css";
+import { applyTheme, storedTheme } from "./lib/theme";
+
+// The person's light / dark choice from the header switch, before anything renders (no flash).
+applyTheme(storedTheme());
 
 // Routing (Prompt 37): "/" = public landing page, "/app" (and "/app/...") = the coach dashboard.
 // Each side is its own lazy chunk, so the landing page's 3D / animation code never loads in /app.

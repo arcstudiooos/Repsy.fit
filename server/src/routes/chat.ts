@@ -5,7 +5,10 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
-import { answerQuestion, loadClientContext } from "./ai.js";
+import { answerQuestion, loadClientContext, type ChatTurn } from "./ai.js";
+
+/** How many earlier chat messages go to the AI with a new question. */
+export const CHAT_HISTORY_TURNS = 6;
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
@@ -67,9 +70,21 @@ chatRouter.post(
       res.status(404).json({ error: "Client not found" });
       return;
     }
-    const context = await loadClientContext(client);
+    // The last few turns of this client's chat (oldest first), so follow-ups like "make it 4 days" work.
+    const [context, recent] = await Promise.all([
+      loadClientContext(client),
+      prisma.chatMessage.findMany({
+        where: { clientId: client.id, coachId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: CHAT_HISTORY_TURNS,
+        select: { role: true, content: true },
+      }),
+    ]);
+    const history: ChatTurn[] = recent
+      .reverse()
+      .filter((m): m is ChatTurn => m.role === "coach" || m.role === "ai");
     const question = await saveMessage(client.id, "coach", parsed.data.question, coachId);
-    const { answer, suggestion } = await answerQuestion(context, parsed.data.question);
+    const { answer, suggestion } = await answerQuestion(context, parsed.data.question, history);
     const reply = await saveMessage(client.id, "ai", answer, coachId);
     res.status(201).json({ question, reply, suggestion });
   }),
