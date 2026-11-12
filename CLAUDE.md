@@ -409,6 +409,19 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   `server/src/auth/schemas.ts` (re-exported by `client/src/authSchemas.ts`). Password: 10+
   characters, max 72 bytes (bcrypt limit); email trimmed and lower-cased; plain-words errors.
 
+### Join codes (Prompt 76)
+- Each coach has ONE join code: `Coach.joinCode` (unique, stored upper-case, made on first `GET /api/join-code`),
+  `joinCodeActive`, `approveNewClients`. Format: 4 letters from the coach's name (A-Z, padded with `X`) + `-` + 6
+  random characters from `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (no 0/O/1/I/L), unbiased (rejection sampling). Code
+  in `server/src/auth/joinCode.ts`; routes in `server/src/routes/joinCode.ts`.
+- "Make a new code" replaces the code; the old one stops working at once. Turning the code off makes the public
+  lookup answer exactly like an unknown code. Clients who already joined are never affected by either.
+- The Clients tab shows the **Invite clients** panel (`components/JoinCodePanel.tsx`, its own lazy chunk): code,
+  link, Copy code / Copy link, Share (only where `navigator.share` exists), a QR code, and the two switches.
+- QR codes come from `client/src/lib/qr.ts`, a small hand-written encoder (byte mode, level M, versions 1-6; no
+  dependency), drawn by `components/QrCode.tsx` as dark ink on `--white` in both themes, since phone cameras
+  need dark-on-light. `e2e-ui/qr-encoder.spec.ts` checks it bit for bit against reference matrices.
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -495,6 +508,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getProgressReport(clientId, range)` | GET | `/api/reports/clients/:clientId/progress-report?from=YYYY-MM-DD&to=YYYY-MM-DD` | — (`from` / `to` optional, inclusive) | `ProgressReport` `{ client: { name, goal, age, weightKg, heightCm, level }, range: { from, to }, logs: { date, weightKg, adherence, workoutsDone }[] (oldest first), measurements: { date, waistCm, chestCm, armCm, hipCm, bodyFatPercent }[], assignments: { total, done, byType: { type, count }[] }, checkIns: { count, energy, mood, sleepHours, recoveryScore, waterLiters, steps (averages or null) } }`. No notes, focus, reasoning or chat. 400 `{ error }` for a bad date or `from` after `to`; 404 `Client not found` (also another coach's client). Needs `requireCoach`. (Prompt 70) |
 | `downloadClientCsv(clientId, type, range)` | GET | `/api/reports/clients/:clientId/export/:type?from&to` | — (`type` = `progress` \| `measurements` \| `payments` \| `assignments`) | `text/csv; charset=utf-8` attachment, columns in "Reports and export" above; 400 for another type or a bad range; 404 `Client not found`. Needs `requireCoach`. (Prompt 70) |
 | `downloadRosterCsv()` | GET | `/api/reports/roster` | — | `text/csv` attachment of all the signed-in coach's clients with plan status and next due date. Needs `requireCoach`. (Prompt 70) |
+| `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |
+| `regenerateJoinCode()` | POST | `/api/join-code/regenerate` | — | `JoinCode` with a NEW code; the old code stops working at once. Rate limited per coach (20 / 15 min). Needs `requireCoach`. (Prompt 76) |
+| `updateJoinCode(patch)` | PATCH | `/api/join-code` | `{ active?: boolean, approveNewClients?: boolean }` (at least one; nothing else) | `JoinCode`. 400 `Nothing to change.` / `active must be true or false.` / `Only active and approveNewClients can be changed.` Needs `requireCoach`. (Prompt 76) |
+| — (Prompt 77 join page) | GET | `/api/join/:code` | — | Public. `{ coachName }` for an active code (any letter case). 404 `This join code is not valid. Please ask your coach for a new one.` for an unknown, malformed OR turned-off code (one message, so codes cannot be probed). Rate limited (60 / 15 min per IP). (Prompt 76) |
 | `getEngagement(date)` | GET | `/api/business/engagement?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: { clientId, clientName, rank (1-based, ties share; null = not enough data), checkInStreak, habitPercent (null = no active habits), workoutsThisWeek, enoughData }[] }` — ranked clients first, then unranked A-Z. 400 bad date; 401 signed out. Needs `requireCoach`. Business > Engagement only. (Prompt 71) |
 | `getMyStreaks(date)` | GET | `/api/client-auth/my-streaks?date=YYYY-MM-DD` | — | `{ date, checkInStreak, habitPercent, workoutsThisWeek, enoughData }` — the signed-in CLIENT's own numbers only, no rank; 400 bad date; 401 without a **client** session (Prompt 71); 404 if the coach deleted the client record (Prompt 71) |
 | `deleteAccount(password)` | DELETE | `/api/auth/account` | `{ password, confirm: "DELETE" }` | 204, session cookie cleared. Deletes the coach and EVERYTHING they own in one statement (Postgres cascades every child row); 400 wrong password or wrong confirm word; 401 signed out. Needs `requireCoach`, rate limited 5/15 min (Prompt 73) |

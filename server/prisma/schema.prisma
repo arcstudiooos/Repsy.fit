@@ -23,6 +23,13 @@ model Coach {
   /// "Continue with Google": the Google account's stable id (OIDC `sub`), set on first Google
   /// sign-in. NULL for coaches who have never used Google. Unique when set.
   googleSub    String?  @unique
+  /// Prompt 76: the coach's join code (e.g. ANNA-7K2Q8M), stored upper-case, made on first use.
+  /// Clients sign up under this coach with it. A new code replaces the old one at once.
+  joinCode     String?  @unique
+  /// Prompt 76: false = the code is turned off (the public lookup answers the same 404 as unknown).
+  joinCodeActive Boolean @default(true)
+  /// Prompt 76: when true, clients who join with the code wait for the coach's approval (Prompt 77/84).
+  approveNewClients Boolean @default(false)
   createdAt    DateTime @default(now())
 
   resetTokens  PasswordResetToken[]

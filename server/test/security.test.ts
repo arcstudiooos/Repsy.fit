@@ -70,6 +70,10 @@ const COACH_ROUTES: [string, string][] = [
   ["patch", "/api/auth/me"],
   ["patch", "/api/auth/currency"],
   ["post", "/api/auth/change-password"],
+  // Prompt 76: the coach's join code.
+  ["get", "/api/join-code"],
+  ["post", "/api/join-code/regenerate"],
+  ["patch", "/api/join-code"],
 ];
 
 /** Every route that needs a CLIENT session. */

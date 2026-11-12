@@ -25,6 +25,7 @@ import { mealsRouter } from "./routes/meals.js";
 import { macrosRouter } from "./routes/macros.js";
 import { leadsRouter } from "./routes/leads.js";
 import { authRouter } from "./routes/auth.js";
+import { joinCodeRouter, publicJoinRouter } from "./routes/joinCode.js";
 import { sessionMiddleware } from "./auth/session.js";
 import { requireCoach } from "./auth/requireCoach.js";
 import { prisma } from "./db.js";
@@ -86,8 +87,12 @@ app.use("/api/messages", requireCoach);
 app.use("/api/business", requireCoach);
 app.use("/api/appointments", requireCoach);
 app.use("/api/reports", requireCoach);
+app.use("/api/join-code", requireCoach);
 
 app.use("/api/reports", reportsRouter);
+// Prompt 76: the coach's join code (coach-only) and its public lookup (signed-out clients).
+app.use("/api/join-code", joinCodeRouter);
+app.use("/api/join", publicJoinRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/macros", macrosRouter);
 app.use("/api/messages", threadsRouter);

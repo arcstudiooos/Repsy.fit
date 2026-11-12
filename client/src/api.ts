@@ -59,6 +59,7 @@ import type {
   ResetPasswordInput,
   ReviewItem,
   ReviewQueue,
+  JoinCode,
   ThreadMessage,
   ThreadSummary,
   TodayTasks,
@@ -249,6 +250,11 @@ export const getEngagement = (date: string) => request<EngagementBoard>("GET", `
 export const getMyStreaks = (date: string) => request<MyStreaks>("GET", `/client-auth/my-streaks?date=${enc(date)}`);
 
 // ----- Client access (Prompt 65): the coach invites; the CLIENT signs in on /client/login -----
+/** Prompt 76: the coach's join code (made on first use), its settings, and a new code on demand. */
+export const getJoinCode = () => request<JoinCode>("GET", "/join-code");
+export const regenerateJoinCode = () => request<JoinCode>("POST", "/join-code/regenerate");
+export const updateJoinCode = (patch: { active?: boolean; approveNewClients?: boolean }) =>
+  request<JoinCode>("PATCH", "/join-code", patch);
 export const getClientAccess = (clientId: string) => request<ClientAccess>("GET", `/clients/${enc(clientId)}/invite`);
 export const inviteClient = (clientId: string, email: string) =>
   request<InviteResult>("POST", `/clients/${enc(clientId)}/invite`, { email });
@@ -388,6 +394,7 @@ export const changePassword = (input: ChangePasswordInput) => request<void>("POS
 export const queryKeys = {
   me: ["auth", "me"] as const,
   clients: ["clients"] as const,
+  joinCode: ["join-code"] as const,
   assignments: (clientId: string) => ["clients", clientId, "assignments"] as const,
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,

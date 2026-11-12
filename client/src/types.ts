@@ -220,6 +220,15 @@ export interface MyPlan {
 }
 
 /** A client's sign-in status as the coach sees it (Prompt 65). */
+/** Prompt 76: the coach's join code that clients sign up with. */
+export interface JoinCode {
+  code: string;
+  active: boolean;
+  approveNewClients: boolean;
+  /** The full link to share, e.g. https://app.repsy.fit/join/ANNA-7K2Q8M */
+  link: string;
+}
+
 export type ClientAccessStatus = "none" | "invited" | "active";
 export interface ClientAccess {
   /** The email the client signs in with (set when they used an invite). */

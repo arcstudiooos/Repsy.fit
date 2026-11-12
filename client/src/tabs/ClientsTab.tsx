@@ -9,6 +9,8 @@ import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
 
 // The invite panel (Prompt 65) loads on first open, so its form validation (zod) stays out of /app.
+// Prompt 76: the join-code panel (with the QR encoder) is its own lazy chunk too.
+const JoinCodePanel = lazy(() => import("../components/JoinCodePanel").then((m) => ({ default: m.JoinCodePanel })));
 const ClientInvitePanel = lazy(() => import("../components/ClientInvite").then((m) => ({ default: m.ClientInvitePanel })));
 
 type Props = {
@@ -136,6 +138,9 @@ export function ClientsTab({
       </div>
       <SixMonthDemoControl seed={seedSixMonth} />
       {form}
+      <Suspense fallback={<LoadingState />}>
+        <JoinCodePanel />
+      </Suspense>
       {inviteFor && (
         <Suspense fallback={<LoadingState />}>
           <ClientInvitePanel key={inviteFor.id} client={inviteFor} onClose={() => setInviteFor(null)} />
