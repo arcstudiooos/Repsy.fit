@@ -102,7 +102,9 @@ test("5. manual Workout with exercise search, sets, reps and rest, then mark it 
   await form.getByLabel("Reps for Back Squat").fill("6");
   await form.getByLabel("Rest seconds for Back Squat").fill("120");
   await form.getByRole("button", { name: "Assign plan" }).click();
-  await expect(panel(page)).toContainText("1. Back Squat — 4 sets × 6 reps · Rest 120s", { timeout: 30_000 });
+  // The card shows the exercise as a row: name, then sets × reps · rest.
+  const row = panel(page).locator('[data-plan-line="exercise"]').filter({ hasText: "Back Squat" });
+  await expect(row).toContainText("4 × 6 · 120s", { timeout: 30_000 });
 
   // ...and mark it Done, on the same card.
   const card = panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem").filter({ hasText: "Journey leg day" });

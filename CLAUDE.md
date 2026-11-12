@@ -112,6 +112,9 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - **Landing colours:** the tokens above, plus tints and mixes of them made with `rgba()` /
   `color-mix()` (graph-paper lines from `--border`, paper tones mixed from `--amber` and
   `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
+- **Logo files** (`client/public`, made from the owner's 2172px artwork by `prompts/make_logos.py`):
+  `repsy-logo.png` (gradient R + white wordmark, dark coach header only), `repsy-logo-dark.png` (gradient R + ink
+  wordmark: landing, sign-in, legal pages), `repsy-mark.png` (the R alone: client app header). Test: `logo.spec.ts`.
 - **Light / dark switch** (owner, Nov 2026): `components/ThemeSwitch.tsx` (role=switch "Dark mode") sits in the
   coach header and the client app header. `lib/theme.ts` keeps the choice in localStorage `repsy-theme` and sets
   `<html data-theme>`; theme.css applies the dark values for `[data-theme=dark]` or for a dark device without a

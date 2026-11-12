@@ -35,8 +35,8 @@ function LegalPage({ doc }: { doc: Doc }) {
   return (
     <div className="landing-cream a1 min-h-dvh">
       <header className="mx-auto flex max-w-[800px] items-center gap-4 px-5 py-6 md:px-8">
-        <a href="/" className="flex min-h-10 items-center text-xl" style={{ fontFamily: "var(--font-serif)", fontStyle: "italic" }}>
-          Repsy
+        <a href="/" className="flex min-h-10 items-center" aria-label="Repsy home">
+          <img src="/repsy-logo-dark.png" alt="" width={391} height={108} className="h-8 w-auto" />
         </a>
         <nav aria-label="Legal" className="ml-auto flex gap-1 text-sm">
           <a href="/privacy" className="flex min-h-10 items-center rounded-lg px-3 hover:underline">

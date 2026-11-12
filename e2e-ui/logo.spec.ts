@@ -32,3 +32,15 @@ test("the favicon and touch icon are the R mark and load", async ({ page, reques
     expect(res.headers()["content-type"]).toBe("image/png");
   }
 });
+
+// Cream pages use the dark-wordmark logo (the white one is only for the dark coach header).
+for (const path of ["/", "/?design=classic", "/login", "/register", "/client/login", "/privacy"]) {
+  test(`${path} shows the full Repsy logo (gradient R + dark wordmark), loaded`, async ({ page }) => {
+    await page.goto(path);
+    const logo = page.locator('img[src="/repsy-logo-dark.png"]').first();
+    await expect(logo).toBeVisible();
+    expect(await logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 300)).toBe(true);
+    expect((await logo.boundingBox())!.height).toBeGreaterThanOrEqual(28);
+  });
+}
+

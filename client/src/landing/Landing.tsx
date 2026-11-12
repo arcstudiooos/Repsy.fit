@@ -41,10 +41,13 @@ function Header({ dark }: { dark: boolean }) {
     <header className={`a1-header sticky top-0 z-20 ${dark ? "a1-header-dark" : ""}`} data-solid={solid}>
       <div className="mx-auto flex h-[72px] max-w-[1200px] items-center gap-4 px-5 md:px-8">
         <a href="/" className="flex shrink-0 items-center gap-2.5 rounded-lg" aria-label="Repsy home">
-          <img src="/favicon.png" alt="" width={32} height={32} className="h-8 w-8" />
-          <span className="a1-wordmark" aria-hidden="true">
-            Repsy
-          </span>
+          <img
+            src={dark ? "/repsy-logo.png" : "/repsy-logo-dark.png"}
+            alt=""
+            width={391}
+            height={108}
+            className="h-8 w-auto"
+          />
         </a>
         <nav aria-label="Landing" className="ml-auto hidden items-center gap-1 sm:flex">
           {NAV.map(([label, href]) => (

@@ -61,7 +61,7 @@ function Nav() {
   return (
     <header className="ln-nav">
       <a href="#top" className="ln-logo" aria-label="Repsy, back to top">
-        Repsy<span className="ln-key" aria-hidden="true">.</span>
+        <img src="/repsy-logo-dark.png" alt="" width={391} height={108} className="h-7 w-auto" />
       </a>
       <nav aria-label="Sections" className="ln-links">
         {NAV.map((n) => (
@@ -97,9 +97,7 @@ function Footer() {
     <footer className="ln-wrap overflow-hidden pb-8 pt-20">
       <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
-          <p className="ln-display text-[1.8rem]">
-            Repsy<span className="ln-key">.</span>
-          </p>
+          <img src="/repsy-logo-dark.png" alt="Repsy" width={391} height={108} loading="lazy" className="h-10 w-auto" />
           <p className="mt-3 max-w-xs text-[0.88rem]" style={{ color: "var(--mute)" }}>
             Coaching software for personal trainers: plans with the reasoning, check-ins that add up, and
             clients who need nothing but a link.

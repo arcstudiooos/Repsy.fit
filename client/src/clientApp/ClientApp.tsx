@@ -111,7 +111,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
     <div className="min-h-screen bg-bg pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-8">
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <img src="/favicon.png" alt="" width={32} height={32} className="h-8 w-8" />
+          <img src="/repsy-mark.png" alt="" width={39} height={32} className="h-8 w-auto" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-base font-bold text-text">Hi, {account.name}</p>
             {account.coachName && <p className="truncate text-xs text-dim">Coached by {account.coachName}</p>}

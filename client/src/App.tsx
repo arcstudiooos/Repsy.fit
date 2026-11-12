@@ -48,7 +48,7 @@ function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () =>
     <header className="header-strip bg-header">
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
         {/* The Repsy logo: gradient R mark + white wordmark, made for the dark header strip. */}
-        <img src="/repsy-logo.png" alt="Repsy" width={113} height={36} className="h-9 w-auto shrink-0" />
+        <img src="/repsy-logo.png" alt="Repsy" width={130} height={36} className="h-9 w-auto shrink-0" />
         {/* Hidden on phones so the light / dark switch fits the header. */}
         <div className="hidden leading-tight sm:block">
           <div className="text-xs text-white/70">Prototype - coach command center</div>
