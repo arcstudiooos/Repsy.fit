@@ -24,7 +24,7 @@ import { Icon, PenArrow, Scribble } from "./icons";
  * land: lifted. Without motion it is shown fully loaded.
  * ==================================================================================== */
 
-const BAR = { w: 960, h: 270, y: 140, sleeve: 250, plateW: 34, gap: 4, plateH: 196 };
+const BAR = { w: 960, h: 290, y: 150, sleeve: 250, plateT: 26, gap: 3, plateH: 200 };
 
 /** Bar as a path so it can bend: both ends droop by `sag`, the middle stays put. */
 export function barPath(sag: number): string {
@@ -32,56 +32,114 @@ export function barPath(sag: number): string {
   return `M 24 ${y + sag} Q ${w / 2} ${y - sag * 0.6} ${w - 24} ${y + sag}`;
 }
 
+/** Mix helpers for the shaded faces (tints of the plate's own colour, no new hex values). */
+const shade = (c: string, pct: number) => `color-mix(in srgb, var(--ink) ${pct}%, ${c})`;
+const tint = (c: string, pct: number) => `color-mix(in srgb, var(--paper) ${pct}%, ${c})`;
+
+/**
+ * A bumper plate seen in three-quarter view from the middle of the bar: the disc is an ellipse
+ * (foreshortened), its thickness runs along the sleeve. `x` is the INNER face's centre and the
+ * thickness extends outward (-x), so the big inner plate is in front and the smaller ones show
+ * behind it, as on a loaded bar seen from the lifter's side.
+ */
+function Plate({ x, color, h, kg, flip }: { x: number; color: string; h: number; kg: number; flip: boolean }) {
+  const { y, plateT } = BAR;
+  const ry = h / 2;
+  const rx = ry * 0.3; // how round the disc looks
+  const t = plateT;
+  return (
+    <g>
+      {/* rim (the thickness): a band from the back face to the front face */}
+      <path d={`M ${x - t} ${y - ry} A ${rx} ${ry} 0 0 0 ${x - t} ${y + ry} L ${x} ${y + ry} A ${rx} ${ry} 0 0 1 ${x} ${y - ry} Z`} fill={shade(color, 28)} />
+      <path d={`M ${x - t} ${y - ry} A ${rx} ${ry} 0 0 1 ${x - t} ${y + ry} L ${x} ${y + ry} A ${rx} ${ry} 0 0 0 ${x} ${y - ry} Z`} fill={shade(color, 16)} />
+      {/* front face */}
+      <ellipse cx={x} cy={y} rx={rx} ry={ry} fill={color} stroke={shade(color, 35)} strokeWidth="1.5" />
+      {/* raised inner ring + bevel highlight */}
+      <ellipse cx={x} cy={y} rx={rx * 0.68} ry={ry * 0.68} fill="none" stroke={shade(color, 22)} strokeWidth="2" />
+      <ellipse cx={x} cy={y} rx={rx * 0.62} ry={ry * 0.62} fill="none" stroke={tint(color, 30)} strokeWidth="1.2" />
+      <path d={`M ${x - rx * 0.55} ${y - ry * 0.75} A ${rx * 0.9} ${ry * 0.9} 0 0 1 ${x + rx * 0.2} ${y - ry * 0.95}`} fill="none" stroke={tint(color, 55)} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+      {/* steel hub */}
+      <ellipse cx={x} cy={y} rx={rx * 0.26} ry={ry * 0.26} fill="var(--dark-3)" stroke="var(--ink)" strokeWidth="1.5" />
+      <ellipse cx={x} cy={y} rx={rx * 0.12} ry={ry * 0.12} fill="var(--ink)" />
+      {/* printed weight on the lower half of the face */}
+      {/* the right sleeve is a mirrored copy, so un-mirror the print there */}
+      <g transform={flip ? `translate(${2 * x} 0) scale(-1 1)` : undefined}>
+        <text x={x} y={y + ry * 0.56} textAnchor="middle" fontFamily="var(--mono)" fontWeight="700" fontSize={Math.max(11, ry * 0.2)} fill={shade(color, 45)}>
+          {kg}
+        </text>
+        <text x={x} y={y + ry * 0.56 + Math.max(9, ry * 0.12)} textAnchor="middle" fontFamily="var(--mono)" fontWeight="700" fontSize={Math.max(6, ry * 0.08)} fill={shade(color, 45)}>
+          KG
+        </text>
+      </g>
+    </g>
+  );
+}
+
+/** A cylinder along the bar (sleeve, collar): a body plus an elliptical end cap. */
+function Cylinder({ x1, x2, r, fill, cap }: { x1: number; x2: number; r: number; fill: string; cap: string }) {
+  const { y } = BAR;
+  const rx = r * 0.3;
+  return (
+    <g>
+      <rect x={x1} y={y - r} width={x2 - x1} height={r * 2} fill={fill} />
+      <ellipse cx={x2} cy={y} rx={rx} ry={r} fill={fill} />
+      <ellipse cx={x1} cy={y} rx={rx} ry={r} fill={cap} />
+    </g>
+  );
+}
+
+const KG = [25, 20, 15, 10];
+
 function Barbell() {
-  const { w, h, y, sleeve, plateW, gap, plateH } = BAR;
-  // Plate i sits on both sleeves, innermost first: left of the left shoulder, right of the right one.
-  const slots = PLATES.map((_, i) => sleeve - (i + 1) * (plateW + gap) + gap);
-  const outer = sleeve - PLATES.length * (plateW + gap);
+  const { w, h, y, sleeve, plateT, gap, plateH } = BAR;
+  // Plate i's inner face sits at slot[i]; plate 0 rests against the shoulder. Drawn outermost
+  // first so the inner plates overlap them.
+  const slots = PLATES.map((_, i) => sleeve - i * (plateT + gap));
+  const outer = sleeve - PLATES.length * (plateT + gap);
+  const order = PLATES.map((_, i) => i).reverse();
   return (
     <svg data-barbell viewBox={`0 0 ${w} ${h}`} className="block h-auto w-full overflow-visible" aria-hidden="true">
       <defs>
-        {/* userSpaceOnUse: a straight (zero-height) path has no bounding box, so a default gradient would vanish. */}
         <linearGradient id="ln-steel" gradientUnits="userSpaceOnUse" x1="0" y1={y - 12} x2="0" y2={y + 12}>
           <stop offset="0" stopColor="var(--dark-3)" />
           <stop offset="0.45" stopColor="var(--ink)" />
           <stop offset="1" stopColor="var(--dark-2)" />
         </linearGradient>
+        <linearGradient id="ln-sleeve" gradientUnits="userSpaceOnUse" x1="0" y1={y - 12} x2="0" y2={y + 12}>
+          <stop offset="0" stopColor="color-mix(in srgb, var(--paper) 40%, var(--ink))" />
+          <stop offset="0.5" stopColor="var(--dark-3)" />
+          <stop offset="1" stopColor="var(--ink)" />
+        </linearGradient>
         <pattern id="ln-knurl" width="6" height="6" patternUnits="userSpaceOnUse">
           <path d="M0 6 6 0M-1 1 1 -1M5 7 7 5" stroke="var(--dark-3)" strokeWidth="0.8" />
         </pattern>
       </defs>
+      <ellipse data-bar-shadow cx={w / 2} cy={h - 10} rx={w * 0.4} ry="6" fill="var(--ink)" opacity="0.08" />
       {/* shaft */}
       <g data-bar-group>
         <path data-bar d={barPath(0)} fill="none" stroke="url(#ln-steel)" strokeWidth="14" strokeLinecap="round" />
         <path data-bar-knurl d={barPath(0)} fill="none" stroke="url(#ln-knurl)" strokeWidth="14" strokeLinecap="round" strokeDasharray="150 60 150 1000" strokeDashoffset="-250" opacity="0.5" />
       </g>
-      {/* sleeves + shoulders */}
+      {/* sleeves, plates, collars - the right side is the left mirrored */}
       {[0, 1].map((side) => {
         const flip = side === 1;
-        const tx = flip ? `translate(${w} 0) scale(-1 1)` : undefined;
         return (
-          <g key={side} data-sleeve={side} transform={tx}>
-            <rect x="24" y={y - 11} width={sleeve - 24} height="22" rx="4" fill="url(#ln-steel)" />
-            <rect x={sleeve - 6} y={y - 20} width="14" height="40" rx="3" fill="var(--ink)" />
-            {PLATES.map((p, i) => {
-              const ph = plateH * p.h;
-              return (
-                <g key={p.type} data-plate={flip ? i + 4 : i} data-plate-side={side} data-plate-index={i}>
-                  <rect x={slots[i]} y={y - ph / 2} width={plateW} height={ph} rx="7" fill={p.color} stroke="var(--ink)" strokeWidth="2" />
-                  <rect x={slots[i] + 9} y={y - ph / 2 + 10} width="4" height={ph - 20} rx="2" fill="var(--paper)" opacity="0.35" />
-                  <circle cx={slots[i] + plateW / 2} cy={y} r="6" fill="var(--ink)" />
-                </g>
-              );
-            })}
+          <g key={side} data-sleeve={side} transform={flip ? `translate(${w} 0) scale(-1 1)` : undefined}>
+            <Cylinder x1={30} x2={sleeve} r={11} fill="url(#ln-sleeve)" cap="var(--dark-3)" />
+            {/* shoulder: the step the first plate rests against */}
+            <Cylinder x1={sleeve - 4} x2={sleeve + 10} r={20} fill="var(--ink)" cap="var(--dark-2)" />
+            {order.map((i) => (
+              <g key={PLATES[i].type} data-plate={flip ? i + 4 : i} data-plate-side={side} data-plate-index={i}>
+                <Plate x={slots[i]} color={PLATES[i].color} h={plateH * PLATES[i].h} kg={KG[i]} flip={flip} />
+              </g>
+            ))}
             <g data-collar={side}>
-              <rect x={outer - 18} y={y - 15} width="16" height="30" rx="3" fill="var(--ink)" />
-              <rect x={outer - 30} y={y - 8} width="12" height="16" rx="2" fill="var(--dark-3)" />
+              <Cylinder x1={outer - 26} x2={outer - 4} r={17} fill="var(--dark-2)" cap="var(--ink)" />
+              <rect x={outer - 24} y={y - 26} width="8" height="14" rx="2" fill="var(--ink)" />
             </g>
           </g>
         );
       })}
-      {/* floor shadow */}
-      <ellipse data-bar-shadow cx={w / 2} cy={h - 10} rx={w * 0.4} ry="6" fill="var(--ink)" opacity="0.08" />
     </svg>
   );
 }
@@ -559,6 +617,8 @@ export function Currency() {
  * MORE: the features people find later.
  * ==================================================================================== */
 
+const STICKER = ["var(--orange)", "var(--teal)", "var(--amber)", "var(--violet)"];
+
 export function More() {
   return (
     <section className="ln-wrap py-24 md:py-28">
@@ -568,11 +628,11 @@ export function More() {
         <span className="ln-dim">The bits you find later.</span>
       </h2>
       <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {MORE.map((m) => (
+        {MORE.map((m, i) => (
           <article key={m.title} data-rise className="ln-white p-6">
             <div className="flex items-center justify-between">
-              <span className="ln-icon" style={{ background: "var(--card)", color: "var(--orange-deep)" }}>
-                <Icon name={m.icon} />
+              <span className="ln-sticker" style={{ ["--c" as string]: STICKER[i % STICKER.length] }}>
+                <Icon name={m.icon} size={24} />
               </span>
               <span className="ln-tag ln-tag-light">{m.tag}</span>
             </div>
@@ -756,8 +816,8 @@ function Tangle() {
           className="absolute flex h-[108px] w-[108px] flex-col items-center justify-center gap-2 rounded-[22px]"
           style={{ left: `${a.x}%`, top: `${a.y}%`, transform: `rotate(${a.r}deg)`, background: "var(--paper)", border: "1px solid var(--line)", boxShadow: "0 18px 40px -22px color-mix(in srgb, var(--ink) 40%, transparent)" }}
         >
-          <span className="ln-icon" style={{ background: "var(--card)" }}>
-            <Icon name={a.icon} size={22} />
+          <span className="ln-icon h-12 w-12" style={{ background: a.color, color: a.on, boxShadow: "inset 0 -3px 0 color-mix(in srgb, var(--ink) 25%, transparent)" }}>
+            <Icon name={a.icon} size={24} />
           </span>
           <span className="text-[0.74rem] font-semibold">{a.name}</span>
           {i === 1 && (

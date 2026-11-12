@@ -64,7 +64,7 @@ export function startMotion(root: HTMLElement): () => void {
         // Start: an empty bar. Plates wait beyond the ends of the sleeves (the right sleeve group is
         // mirrored, so the same -x works for both sides); collars sit tight at the shoulders.
         gsap.set(plates, { x: -340, opacity: 0 });
-        gsap.set(collars, { x: 4 * (34 + 4) });
+        gsap.set(collars, { x: 4 * (26 + 3) });
         gsap.set(labels, { autoAlpha: 0, y: 10 });
         gsap.set(ticks, { autoAlpha: 0, scale: 0.4 });
         const count = { n: 0 };
@@ -79,7 +79,7 @@ export function startMotion(root: HTMLElement): () => void {
           const pair = plates.filter((p) => p.dataset.plateIndex === String(i));
           tl.to(pair, { x: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, at);
           tl.to(bend, { sag: sagOf(i + 1), duration: 0.35, ease: "elastic.out(1, 0.45)", onUpdate: setBar }, at + 0.3);
-          tl.to(collars, { x: (4 - (i + 1)) * (34 + 4), duration: 0.3 }, at + 0.1);
+          tl.to(collars, { x: (4 - (i + 1)) * (26 + 3), duration: 0.3 }, at + 0.1);
           tl.to(labels[i], { autoAlpha: 1, y: 0, duration: 0.3 }, at + 0.2);
           tl.to(count, { n: i + 1, duration: 0.01, onUpdate: setCount, onReverseComplete: setCount }, at + 0.2);
         }

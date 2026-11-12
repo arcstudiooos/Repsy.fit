@@ -307,6 +307,20 @@
   background: color-mix(in srgb, var(--paper) 72%, transparent);
 }
 
+/* Sticker icon: a coloured disc with a bevel, like a bumper plate's face */
+.ln-sticker {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--paper) 35%, var(--c)), var(--c) 70%);
+  color: var(--ink);
+  box-shadow:
+    inset 0 -3px 0 color-mix(in srgb, var(--ink) 28%, transparent),
+    0 2px 0 color-mix(in srgb, var(--ink) 20%, transparent);
+}
+
 /* ---------- curved ribbon ---------- */
 .ln-ribbon text {
   font-family: var(--display);

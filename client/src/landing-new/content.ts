@@ -20,11 +20,11 @@ export const PLATES = [
 
 /** The old way: five apps per client. Generic glyphs, no logos. */
 export const TANGLE = [
-  { icon: "list", name: "Sheets", x: 8, y: 6, r: -8 },
-  { icon: "inbox", name: "Chat", x: 62, y: 2, r: 6 },
-  { icon: "calendar", name: "Calendar", x: 70, y: 48, r: -5 },
-  { icon: "chart", name: "Calculator", x: 10, y: 56, r: 7 },
-  { icon: "doc", name: "Photos", x: 38, y: 30, r: -3 },
+  { icon: "list", name: "Sheets", x: 8, y: 6, r: -8, color: "var(--teal)", on: "var(--paper)" },
+  { icon: "inbox", name: "Chat", x: 62, y: 2, r: 6, color: "var(--orange)", on: "var(--ink)" },
+  { icon: "calendar", name: "Calendar", x: 70, y: 48, r: -5, color: "var(--violet)", on: "var(--paper)" },
+  { icon: "chart", name: "Calculator", x: 10, y: 56, r: 7, color: "var(--amber)", on: "var(--ink)" },
+  { icon: "doc", name: "Photos", x: 38, y: 30, r: -3, color: "var(--ink)", on: "var(--paper)" },
 ] as const;
 
 export const RIBBON = "PLANS WITH THE WHY · CLIENTS NEED NO APP · SETS, REPS, REST · CHECK-INS THAT ADD UP · ";
