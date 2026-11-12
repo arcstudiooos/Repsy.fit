@@ -36,9 +36,9 @@ describe.skipIf(!process.env.DATABASE_URL)("approving clients (database)", () =>
 
     expect((await asCoach(app, a.id).post(`/api/clients/${dee.id}/decline`)).status).toBe(200);
     const deeCookie = `${CLIENT_SESSION_COOKIE}=${signClientSession(dee.id, 0)}`;
-    expect((await supertest(app).get("/api/client-auth/my-assignments").set("Cookie", deeCookie)).status).toBe(403);
+    expect((await supertest(app).get("/api/client-auth/my-targets").set("Cookie", deeCookie)).status).toBe(403);
     expect((await supertest(app).get("/api/client-auth/me").set("Cookie", deeCookie)).body.joinStatus).toBe("declined");
     const patCookie = `${CLIENT_SESSION_COOKIE}=${signClientSession(pat.id, 0)}`;
-    expect((await supertest(app).get("/api/client-auth/my-assignments").set("Cookie", patCookie)).status).toBe(200);
+    expect((await supertest(app).get("/api/client-auth/my-targets").set("Cookie", patCookie)).status).toBe(200);
   });
 });
