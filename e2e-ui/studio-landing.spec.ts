@@ -194,6 +194,25 @@ for (const width of [1024, 1440]) {
   });
 }
 
+test("the road draws gradually with scroll (not a jump from nothing to all)", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page, { motion: true });
+  await expect(page.locator(".pin-spacer")).toHaveCount(2);
+  const road = page.locator("[data-road]");
+  const top = await page.locator("#how").evaluate((e) => e.getBoundingClientRect().top + window.scrollY);
+  // Scroll gradually to the middle of the road section.
+  for (let y = top - 900; y <= top + 400; y += 200) {
+    await page.evaluate((v) => window.scrollTo(0, v), y);
+    await page.waitForTimeout(60);
+  }
+  await expect
+    .poll(async () => road.evaluate((p) => parseFloat(getComputedStyle(p).strokeDashoffset)), { timeout: 4000 })
+    .toBeGreaterThan(150);
+  const off = await road.evaluate((p) => parseFloat(getComputedStyle(p).strokeDashoffset));
+  expect(off).toBeGreaterThan(150); // part drawn ...
+  expect(off).toBeLessThan(850); // ... and part still to come
+});
+
 test("tablet width (900px): the hero stays a still sheet, only the notebook scene pins", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 900 });
   await open(page, { motion: true });

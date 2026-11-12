@@ -397,7 +397,7 @@ export function Road() {
     <section id="how" ref={sectionRef} data-scene="road" aria-labelledby="ln-how-title" className="relative scroll-mt-24 pb-24">
       {geom && (
         <svg className="ln-road pointer-events-none absolute inset-0 hidden md:block" width={geom.w} height={geom.h} viewBox={`0 0 ${geom.w} ${geom.h}`} aria-hidden="true">
-          <path data-road d={geom.d} pathLength={1} strokeWidth="46" />
+          <path data-road d={geom.d} pathLength={1000} strokeWidth="46" />
         </svg>
       )}
       <h2 id="ln-how-title" className="sr-only">

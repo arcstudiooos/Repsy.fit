@@ -16,11 +16,14 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** Prepare paths to "draw": a normalised length of 1, so a path that is rebuilt later (the road
+const DRAW_LEN = 1000;
+
+/** Prepare paths to "draw": a normalised length, so a path that is rebuilt later (the road
  * redraws on resize) still draws exactly start to end without re-measuring. */
 function drawPrep(paths: SVGPathElement[]) {
-  // gsap.set (inside the context) so ctx.revert() puts the paths back fully drawn.
-  gsap.set(paths, { attr: { pathLength: 1 }, strokeDasharray: 1, strokeDashoffset: 1 });
+  // gsap.set (inside the context) so ctx.revert() puts the paths back fully drawn. The length is
+  // 1000, not 1: GSAP rounds px values to whole numbers, so 0-1 would snap instead of drawing.
+  gsap.set(paths, { attr: { pathLength: DRAW_LEN }, strokeDasharray: DRAW_LEN, strokeDashoffset: DRAW_LEN });
 }
 
 export function startMotion(root: HTMLElement): () => void {
