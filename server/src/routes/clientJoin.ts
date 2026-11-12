@@ -116,6 +116,8 @@ clientJoinRouter.post(
   }),
 );
 
+export const HEALTH_CONSENT_NEEDED = "Please tick the box to let your coach store your health details, or leave weight, height and injuries empty.";
+
 // GET /api/client-auth/me/profile -> the client's own welcome-question answers (for the form).
 clientJoinRouter.get(
   "/me/profile",
@@ -123,12 +125,12 @@ clientJoinRouter.get(
   asyncHandler(async (req, res) => {
     const c = await prisma.client.findUnique({
       where: { id: clientAccountIdOf(req) },
-      select: { goal: true, age: true, heightCm: true, weightKg: true, level: true, units: true, notes: true, weeklyCheckInDay: true },
+      select: { goal: true, age: true, heightCm: true, weightKg: true, level: true, units: true, notes: true, weeklyCheckInDay: true, healthConsentAt: true },
     });
     if (!c) return void res.status(404).json({ error: "Your account was not found. Please ask your coach." });
     const line = c.notes.split("\n").find((l) => l.startsWith(FROM_CLIENT));
     // Only the client's OWN line from notes - never the coach's private notes.
-    res.json({ goal: c.goal, age: c.age, heightCm: c.heightCm, weightKg: c.weightKg, level: c.level, units: c.units, weeklyCheckInDay: c.weeklyCheckInDay, injuries: line ? line.slice(FROM_CLIENT.length) : "" });
+    res.json({ goal: c.goal, age: c.age, heightCm: c.heightCm, weightKg: c.weightKg, level: c.level, units: c.units, weeklyCheckInDay: c.weeklyCheckInDay, healthConsent: c.healthConsentAt !== null, injuries: line ? line.slice(FROM_CLIENT.length) : "" });
   }),
 );
 
@@ -144,12 +146,25 @@ clientJoinRouter.patch(
     if (req.clientJoinStatus === "declined") return void res.status(403).json({ error: DECLINED });
     const parsed = ClientProfileSchema.safeParse(req.body ?? {});
     if (!parsed.success) return void res.status(400).json({ error: parsed.error.issues[0].message });
-    const { skip, injuries, ...fields } = parsed.data;
+    const { skip, injuries, healthConsent, ...fields } = parsed.data;
     const id = clientAccountIdOf(req);
-    await prisma.$transaction(async (tx) => {
-      const current = await tx.client.findUnique({ where: { id }, select: { notes: true, onboardedAt: true } });
-      if (!current) return;
+    // Health details (weight, height, injuries) need the client's explicit consent, asked separately from
+    // sign-up and recorded once with its time. Only a CHANGE needs it: re-sending a value already on the
+    // record (for example one the coach entered) or clearing one does not.
+    const result = await prisma.$transaction(async (tx) => {
+      const current = await tx.client.findUnique({
+        where: { id },
+        select: { notes: true, onboardedAt: true, healthConsentAt: true, weightKg: true, heightCm: true },
+      });
+      if (!current) return "ok";
+      const oldLine = current.notes.split("\n").find((l) => l.startsWith(FROM_CLIENT))?.slice(FROM_CLIENT.length) ?? "";
+      const newLine = (injuries ?? "").replace(/\s*[\r\n\u2028\u2029]+\s*/g, " ").trim();
+      const changes = (v: number | null | undefined, was: number | null) => v != null && v !== was;
+      const healthGiven =
+        !skip && (changes(fields.weightKg, current.weightKg) || changes(fields.heightCm, current.heightCm) || (newLine !== "" && newLine !== oldLine));
+      if (healthGiven && !current.healthConsentAt && !healthConsent) return "consent";
       const data: Prisma.ClientUpdateInput = { onboardedAt: current.onboardedAt ?? new Date() };
+      if (healthConsent && !current.healthConsentAt) data.healthConsentAt = new Date();
       if (!skip) {
         Object.assign(data, fields);
         if (injuries !== undefined) {
@@ -161,7 +176,9 @@ clientJoinRouter.patch(
         }
       }
       await tx.client.update({ where: { id }, data });
+      return "ok";
     });
+    if (result === "consent") return void res.status(400).json({ error: HEALTH_CONSENT_NEEDED });
     res.status(204).end();
   }),
 );

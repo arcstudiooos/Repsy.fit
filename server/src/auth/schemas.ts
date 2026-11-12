@@ -75,7 +75,7 @@ export const CLIENT_UNITS = ["kg", "lb"] as const;
 export const ClientProfileSchema = z
   .object({
     goal: z.string().trim().min(1, "Goal can't be empty.").max(100, "Please keep the goal under 100 characters.").optional(),
-    age: z.number({ invalid_type_error: "Age must be a whole number." }).int("Age must be a whole number.").min(13, "You need to be at least 13.").max(120, "Please enter a real age.").nullable().optional(),
+    age: z.number({ invalid_type_error: "Age must be a whole number." }).int("Age must be a whole number.").min(18, "You need to be 18 or over to use Repsy.").max(120, "Please enter a real age.").nullable().optional(),
     heightCm: z.number({ invalid_type_error: "Height must be a number." }).min(50, "Height looks too small.").max(300, "Height looks too big.").nullable().optional(),
     weightKg: z.number({ invalid_type_error: "Weight must be a number." }).min(20, "Weight looks too small.").max(500, "Weight looks too big.").nullable().optional(),
     level: z.enum(CLIENT_LEVELS, { errorMap: () => ({ message: "Please pick Beginner, Intermediate or Advanced." }) }).optional(),
@@ -83,6 +83,8 @@ export const ClientProfileSchema = z
     units: z.enum(CLIENT_UNITS, { errorMap: () => ({ message: "Please pick kg or lb." }) }).optional(),
     /** Prompt 80: the weekday for the weekly check-in, 0 = Sunday ... 6 = Saturday. */
     weeklyCheckInDay: z.number({ invalid_type_error: "Please pick a day of the week." }).int("Please pick a day of the week.").min(0, "Please pick a day of the week.").max(6, "Please pick a day of the week.").optional(),
+    /** The client's explicit consent to store the health details they enter (weight, height, injuries). */
+    healthConsent: z.literal(true, { errorMap: () => ({ message: "healthConsent can only be true." }) }).optional(),
     /** True for "Skip for now": nothing else is saved, the welcome step just stops showing. */
     skip: z.boolean().optional(),
   })

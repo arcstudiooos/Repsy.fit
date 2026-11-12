@@ -43,8 +43,7 @@ describe.skipIf(!process.env.DATABASE_URL)("client account deletion (database)",
     const cookie = `${CLIENT_SESSION_COOKIE}=${signClientSession(maya.id, 0)}`;
 
     const payments = await supertest(app).get("/api/client-auth/my-payments").set("Cookie", cookie);
-    expect(payments.body).toEqual([expect.objectContaining({ paidOn: today, method: "UPI", planName: "Monthly" })]);
-    expect(JSON.stringify(payments.body)).not.toContain("4999");
+    expect(payments.body).toEqual([{ id: expect.any(String), paidOn: today, amount: 4999, currency: "INR", method: "UPI", planName: "Monthly" }]);
 
     expect((await supertest(app).delete("/api/client-auth/me").set("Cookie", cookie).send({ password: "wrong", confirm: "DELETE" })).status).toBe(400);
     expect(await prisma.client.count({ where: { id: maya.id } })).toBe(1);

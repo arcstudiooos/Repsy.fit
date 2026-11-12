@@ -38,7 +38,7 @@ beforeEach(() => {
     return row;
   });
   prismaMock.client.deleteMany.mockResolvedValue({ count: 1 });
-  prismaMock.payment.findMany.mockResolvedValue([{ id: "p1", paidOn: "2026-11-01", method: "UPI", clientPlan: { planName: "Monthly" } }]);
+  prismaMock.payment.findMany.mockResolvedValue([{ id: "p1", paidOn: "2026-11-01", amount: 4999, method: "UPI", clientPlan: { planName: "Monthly" } }]);
   prismaMock.appointment.findMany.mockResolvedValue([]);
 });
 
@@ -100,12 +100,13 @@ describe("change password", () => {
 });
 
 describe("payments", () => {
-  it("only the client's own, newest first, dates and methods - no amounts", async () => {
+  it("only the client's own, newest first, with amounts in the coach's currency - never the coach's note", async () => {
+    row.coach = { currency: "USD" };
     const res = await as("get", "/api/client-auth/my-payments");
-    expect(res.body).toEqual([{ id: "p1", paidOn: "2026-11-01", method: "UPI", planName: "Monthly" }]);
+    expect(res.body).toEqual([{ id: "p1", paidOn: "2026-11-01", amount: 4999, currency: "USD", method: "UPI", planName: "Monthly" }]);
     const arg = prismaMock.payment.findMany.mock.calls[0][0];
     expect(arg.where).toEqual({ clientId: "c1" });
-    expect(arg.select.amount).toBeUndefined();
+    expect(arg.select.note).toBeUndefined();
   });
   it("there is no way to write payments as a client", async () => {
     for (const m of ["post", "patch", "delete"] as const) expect((await as(m, "/api/client-auth/my-payments")).status).toBe(404);

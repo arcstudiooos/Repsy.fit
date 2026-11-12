@@ -119,19 +119,21 @@ clientAuthRouter.post("/logout", (_req, res) => {
   res.status(204).end();
 });
 
-// GET /api/client-auth/my-plan (Prompt 68) -> { plan: { planName, status, nextDueDate } | null, lastPaymentDate }
-// Only the signed-in client's OWN plan, and only these fields: no amounts, no payment history beyond
-// the date of their own last payment, nothing about any other client.
+// GET /api/client-auth/my-plan (Prompt 68) -> { plan: { planName, status, nextDueDate, priceAmount, billingCycle } | null,
+//   lastPaymentDate, lastPaymentAmount, currency }
+// Only the signed-in client's OWN plan. Since Nov 2026 the client sees what they pay (the price, billing
+// cycle and their last payment's amount) in their coach's currency; never anything about another client.
 clientAuthRouter.get(
   "/my-plan",
   requireActiveClient,
   asyncHandler(async (req, res) => {
     const clientId = clientAccountIdOf(req);
-    const [plan, last] = await Promise.all([
-      prisma.clientPlan.findUnique({ where: { clientId }, select: { planName: true, status: true, nextDueDate: true } }),
-      prisma.payment.findFirst({ where: { clientId }, orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }], select: { paidOn: true } }),
+    const [plan, last, me] = await Promise.all([
+      prisma.clientPlan.findUnique({ where: { clientId }, select: { planName: true, status: true, nextDueDate: true, priceAmount: true, billingCycle: true } }),
+      prisma.payment.findFirst({ where: { clientId }, orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }], select: { paidOn: true, amount: true } }),
+      prisma.client.findUnique({ where: { id: clientId }, select: { coach: { select: { currency: true } } } }),
     ]);
-    res.json({ plan, lastPaymentDate: last?.paidOn ?? null });
+    res.json({ plan, lastPaymentDate: last?.paidOn ?? null, lastPaymentAmount: last?.amount ?? null, currency: me?.coach?.currency ?? "INR" });
   }),
 );
 

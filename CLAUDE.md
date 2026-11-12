@@ -535,8 +535,8 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 ### Client account (Prompt 83)
 - `server/src/routes/clientAccount.ts`: `/me/account` (GET name, loginEmail, googleConnected, timezone; PATCH
   name / timezone only - never email or coach), `/change-password` (bumps `clientSessionVersion`, re-issues this
-  session's cookie), `/my-payments` (own, read-only, dates / plan / method - NO amounts, same rule as
-  `/my-plan`), `DELETE /me` (deletes the Client row; every child table cascades).
+  session's cookie), `/my-payments` (own, read-only, date / amount / currency / plan / method; never the
+  coach's payment note - since Nov 2026 clients see what they pay, owner's decision), `DELETE /me` (deletes the Client row; every child table cascades).
 - Clients have Google OR a password, never both (linking Google sets an unguessable password; invite / reset
   removes the Google link), so `googleSub !== null` means "Google-only": change password says "Use Forgot
   password to set one", and deleting needs a Google sign-in within 5 minutes (`lastGoogleAuthAt`) plus DELETE.
@@ -676,7 +676,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getMyMessages()` / `getMyUnreadCount()` / `sendMyMessage(body)` | GET / GET / POST | `/api/client-auth/my-messages`, `/my-messages/unread` | POST `{ body }` (strict, 1-2000) | GET `{ messages }` newest 100 oldest first (marks the coach's shown messages read); `{ count }`; POST 201 sender "client"; 429 over 60 / 15 min. `requireActiveClient`. (Prompt 82) |
 | `getMyAccount()` / `saveMyAccount(body)` | GET / PATCH | `/api/client-auth/me/account` | PATCH `{ name?, timezone?: IANA \| null }` (strict) | GET `{ name, loginEmail, googleConnected, timezone }`; PATCH 204. (Prompt 83) |
 | `changeMyPassword(current, next)` | POST | `/api/client-auth/change-password` | `{ currentPassword, newPassword }` | 204 + fresh cookie, other sessions end; 400 wrong current / Google-only. (Prompt 83) |
-| `getMyPayments()` | GET | `/api/client-auth/my-payments` | — | `[{ id, paidOn, method, planName }]` own, newest first, no amounts. `requireActiveClient`. (Prompt 83) |
+| `getMyPayments()` | GET | `/api/client-auth/my-payments` | — | `[{ id, paidOn, amount, currency, method, planName }]` own, newest first; never the coach's note. `requireActiveClient`. (Prompt 83; amounts since Nov 2026) |
 | `deleteMyAccount(body)` | DELETE | `/api/client-auth/me` | `{ password?, confirm: "DELETE" }` (strict) | 204 + cookie cleared; 400 wrong word / password; 403 Google sign-in older than 5 min. (Prompt 83) |
 | `listWaitingClients()` | GET | `/api/clients/waiting` | — | `[{ id, name, loginEmail, joinStatus, joinedVia, createdAt }]` pending then declined. `requireCoach`. (Prompt 84) |
 | `approveClient(id)` / `declineClient(id)` | POST | `/api/clients/:clientId/approve`, `/decline` | — | the client; 409 not pending; 404 another coach's. (Prompt 84) |
@@ -690,7 +690,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getEngagement(date)` | GET | `/api/business/engagement?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, clients: { clientId, clientName, rank (1-based, ties share; null = not enough data), checkInStreak, habitPercent (null = no active habits), workoutsThisWeek, enoughData }[] }` — ranked clients first, then unranked A-Z. 400 bad date; 401 signed out. Needs `requireCoach`. Business > Engagement only. (Prompt 71) |
 | `getMyStreaks(date)` | GET | `/api/client-auth/my-streaks?date=YYYY-MM-DD` | — | `{ date, checkInStreak, habitPercent, workoutsThisWeek, enoughData }` — the signed-in CLIENT's own numbers only, no rank; 400 bad date; 401 without a **client** session (Prompt 71); 404 if the coach deleted the client record (Prompt 71) |
 | `deleteAccount(password)` | DELETE | `/api/auth/account` | `{ password, confirm: "DELETE" }` | 204, session cookie cleared. Deletes the coach and EVERYTHING they own in one statement (Postgres cascades every child row); 400 wrong password or wrong confirm word; 401 signed out. Needs `requireCoach`, rate limited 5/15 min (Prompt 73) |
-| `getMyPlan()` | GET | `/api/client-auth/my-plan` | — | `{ plan: { planName, status, nextDueDate } \| null, lastPaymentDate }` — the signed-in CLIENT's own plan only; no amounts |
+| `getMyPlan()` | GET | `/api/client-auth/my-plan` | — | `{ plan: { planName, status, nextDueDate, priceAmount, billingCycle } \| null, lastPaymentDate, lastPaymentAmount, currency }` — the signed-in CLIENT's own plan only, in the coach's currency (amounts shown to clients since Nov 2026) |
 | `getHabitWeek(clientId, date)` | GET | `/api/clients/:clientId/habits?date=YYYY-MM-DD` | — (`date` optional, default today UTC; the UI sends its local date) | `{ date, days: string[7] (oldest first, ending `date`), habits: Habit[] }`: ACTIVE habits oldest first, each `{ id, coachId, clientId, name, active, createdAt, week: boolean[7], currentStreak, bestStreak }`. 400 bad date; 404 `Client not found`. (Prompt 54) |
 | `addHabit(clientId, name)` | POST | `/api/clients/:clientId/habits` | `{ name }` (1-60 chars, trimmed) | `HabitRecord` 201; 400 `{ "error": "A client can have up to 8 habits. Archive one to add another." }` at 8 active |
 | `updateHabit(clientId, habitId, input)` | PATCH | `/api/clients/:clientId/habits/:habitId` | `{ name?, active? }` (at least one; `active: false` archives, `true` restores while under 8) | `HabitRecord`; 404 `{ "error": "Habit not found" }` |
@@ -915,3 +915,19 @@ and record it here.
   date in `?date=` is the whole timezone story here: do NOT add the `tz`/`tzEnd` offsets appointments need.
 - A later message proposed different shapes (`{ clients: [...] }` sorted A–Z, `{ id }` on
   create, `{ ok: true }` on delete). The user chose to keep this contract.
+
+## Decided by the owner (Nov 2026, after v3)
+
+- **Clients see what they pay.** `/my-plan` returns `priceAmount`, `billingCycle`, `lastPaymentAmount` and the coach's
+  `currency`; `/my-payments` returns each payment's `amount` and `currency`. The coach's payment `note` is never sent.
+  Shown with `client/src/lib/money.ts` (`formatMoney`, Indian grouping for INR).
+- **Accounts are 18+.** The client welcome form, the Me tab and `ClientProfileSchema` reject ages under 18; both
+  sign-up pages say "you confirm you're 18 or over".
+- **Health consent is separate and explicit.** `Client.healthConsentAt` (migration `20261112250000_client_health_consent`).
+  `PATCH /api/client-auth/me/profile` returns 400 `HEALTH_CONSENT_NEEDED` when a client *changes* weight, height or
+  their injuries line without `healthConsent: true` and no consent on record; re-sending an unchanged value (e.g. one
+  the coach entered) or clearing one needs none. The welcome form and Me tab show the tick box until consent is given.
+- **Website enquiries are deleted after 12 months** (`pruneOldLeads`, run at start-up and daily from `index.ts`).
+- **Legal text** (`client/src/legal/content.json`) was rewritten for the client app, India's DPDP Act and GDPR basics.
+  Keep the "Google user data" section's meaning (Google approved it). It still needs the operator's legal name,
+  address, a named Grievance Officer and a city for disputes when the owner provides them.

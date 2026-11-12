@@ -100,12 +100,26 @@ test("welcome questions: lb converts to kg, injuries are sent, then the client h
   await page.getByLabel("Weight in lb").fill("150");
   await page.getByLabel("Training experience").selectOption("Intermediate");
   await page.getByLabel("Injuries or anything your coach should know").fill("Left knee");
+  // Health details need the separate consent tick first.
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByText("Tick the box to let your coach store your health details")).toBeVisible();
+  expect(sent).toEqual([]);
+  await page.getByRole("checkbox", { name: /can store the health details I enter here/ }).check();
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
   expect(sent.at(-1)).toEqual({
     path: "/api/client-auth/me/profile",
-    body: { goal: "Muscle gain", age: 29, heightCm: 165, weightKg: 68, level: "Intermediate", units: "lb", injuries: "Left knee" },
+    body: { goal: "Muscle gain", age: 29, heightCm: 165, weightKg: 68, level: "Intermediate", units: "lb", injuries: "Left knee", healthConsent: true },
   });
+});
+
+test("welcome questions without health details need no consent tick", async ({ page }) => {
+  const { sent } = await mock(page);
+  await page.goto("/client/welcome");
+  await page.getByLabel("Age").fill("30");
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+  expect((sent.at(-1)?.body as Record<string, unknown>).healthConsent).toBeUndefined();
 });
 
 test("welcome questions check ranges, and Skip for now saves nothing else", async ({ page }) => {
@@ -114,7 +128,7 @@ test("welcome questions check ranges, and Skip for now saves nothing else", asyn
   await page.getByLabel("Age").fill("9");
   await page.getByLabel("Weight in kg").fill("5");
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByText("Enter your age in whole years (13 or over).")).toBeVisible();
+  await expect(page.getByText("Enter your age in whole years (18 or over).")).toBeVisible();
   await expect(page.getByText("Enter your weight in kg (20 to 500).")).toBeVisible();
   expect(sent).toEqual([]);
   await page.getByRole("button", { name: "Skip for now" }).click();

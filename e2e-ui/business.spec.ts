@@ -169,12 +169,14 @@ test("prices follow the coach's currency setting (USD)", async ({ page }) => {
   await expect(rowFor(page, "Maya Patel")).toContainText("$99.50");
 });
 
-test("the client's own My plan: name, status, next due, last payment date - no amounts", async ({ page }) => {
+test("the client's own My plan: name, price, status, next due, last payment with its amount", async ({ page }) => {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     if (path === "/api/client-auth/my-plan") {
-      return route.fulfill({ json: { plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-12-15" }, lastPaymentDate: "2026-11-15" } });
+      return route.fulfill({
+        json: { plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-12-15", priceAmount: 4999, billingCycle: "Monthly" }, lastPaymentDate: "2026-11-15", lastPaymentAmount: 4999, currency: "INR" },
+      });
     }
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });
@@ -184,7 +186,8 @@ test("the client's own My plan: name, status, next due, last payment date - no a
   await expect(mine).toContainText("Active");
   await expect(mine).toContainText("Dec 15, 2026");
   await expect(mine).toContainText("Nov 15, 2026");
-  await expect(mine).not.toContainText(/₹|\$|\d,\d{3}/);
+  await expect(mine).toContainText("₹4,999.00 per month");
+  await expect(mine).toContainText("Nov 15, 2026 · ₹4,999.00");
 });
 
 test("a client with no plan sees a plain note", async ({ page }) => {

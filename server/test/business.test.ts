@@ -251,14 +251,24 @@ describe("GET /api/client-auth/my-plan (the client's own plan)", () => {
     (prismaMock.client as Record<string, unknown>).findUnique = vi.fn().mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", joinStatus: "active" });
   });
 
-  it("shows only plan name, status, next due and their own last payment date - no amounts", async () => {
-    prismaMock.clientPlan.findUnique.mockResolvedValue({ planName: "Monthly coaching", status: "Active", nextDueDate: "2026-02-28" });
-    prismaMock.payment.findFirst.mockResolvedValue({ paidOn: "2026-01-31" });
+  it("shows the client's own plan with what they pay (price, cycle, last payment) in the coach's currency", async () => {
+    prismaMock.clientPlan.findUnique.mockResolvedValue({ planName: "Monthly coaching", status: "Active", nextDueDate: "2026-02-28", priceAmount: 4999, billingCycle: "Monthly" });
+    prismaMock.payment.findFirst.mockResolvedValue({ paidOn: "2026-01-31", amount: 4999 });
+    (prismaMock.client.findUnique as ReturnType<typeof vi.fn>).mockImplementation(async ({ select }: { select: Record<string, unknown> }) =>
+      select.coach ? { coach: { currency: "INR" } } : { clientSessionVersion: 0, passwordHash: "$2b$12$x", joinStatus: "active" },
+    );
     const res = await supertest(app).get("/api/client-auth/my-plan").set("Cookie", clientCookie);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-02-28" }, lastPaymentDate: "2026-01-31" });
-    expect(prismaMock.clientPlan.findUnique).toHaveBeenCalledWith({ where: { clientId: "c1" }, select: { planName: true, status: true, nextDueDate: true } });
-    expect(prismaMock.payment.findFirst.mock.calls[0][0]).toMatchObject({ where: { clientId: "c1" }, select: { paidOn: true } });
+    expect(res.body).toEqual({
+      plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-02-28", priceAmount: 4999, billingCycle: "Monthly" },
+      lastPaymentDate: "2026-01-31",
+      lastPaymentAmount: 4999,
+      currency: "INR",
+    });
+    expect(prismaMock.clientPlan.findUnique.mock.calls[0][0].where).toEqual({ clientId: "c1" });
+    expect(prismaMock.payment.findFirst.mock.calls[0][0]).toMatchObject({ where: { clientId: "c1" }, select: { paidOn: true, amount: true } });
+    // The coach's private payment note is never selected.
+    expect(prismaMock.payment.findFirst.mock.calls[0][0].select.note).toBeUndefined();
   });
 
   it("a coach session cannot use it", async () => {

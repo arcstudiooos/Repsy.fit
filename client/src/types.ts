@@ -156,10 +156,12 @@ export interface MyAccount {
   googleConnected: boolean;
   timezone: string | null;
 }
-/** Prompt 83: one of the client's own payments (no amounts). */
+/** Prompt 83: one of the client's own payments (amount in the coach's currency; never the coach's note). */
 export interface MyPayment {
   id: string;
   paidOn: DateString;
+  amount: number;
+  currency: string;
   method: string;
   planName: string;
 }
@@ -323,8 +325,11 @@ export interface BusinessPlanRow {
 }
 /** What a signed-in CLIENT sees of their own plan: no amounts. */
 export interface MyPlan {
-  plan: { planName: string; status: PlanStatus; nextDueDate: DateString } | null;
+  plan: { planName: string; status: PlanStatus; nextDueDate: DateString; priceAmount?: number; billingCycle?: string } | null;
   lastPaymentDate: DateString | null;
+  /** Nov 2026: clients see what they pay, in their coach's currency. */
+  lastPaymentAmount?: number | null;
+  currency?: string;
 }
 
 /** A client's sign-in status as the coach sees it (Prompt 65). */
@@ -375,6 +380,8 @@ export interface ClientProfile {
   injuries: string;
   /** Prompt 80: 0 = Sunday ... 6 = Saturday. */
   weeklyCheckInDay?: number;
+  /** True once the client has explicitly agreed to their health details being stored. */
+  healthConsent?: boolean;
 }
 /** Prompt 77: POST /api/client-auth/join replies 201 (signed in) or 202 (check your email). */
 export type JoinResult = ({ status?: undefined } & ClientAccount) | { status: "check-email"; message: string };

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getMyPlan, getMySessions, getMyStreaks, queryKeys } from "../api";
 import { localDateKey, viewerTimeZone } from "../lib/schedule";
+import { formatMoney, perCycle } from "../lib/money";
 import { plainErrorMessage } from "../components/States";
 
 const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
@@ -28,6 +29,14 @@ export function MyPlanSection() {
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-dim">Plan</dt>
           <dd className="font-semibold text-text">{plan.data.plan.planName}</dd>
+          {plan.data.plan.priceAmount != null && (
+            <>
+              <dt className="text-dim">Price</dt>
+              <dd className="font-mono text-text">
+                {formatMoney(plan.data.plan.priceAmount, plan.data.currency)} <span className="font-body text-dim">{perCycle(plan.data.plan.billingCycle)}</span>
+              </dd>
+            </>
+          )}
           <dt className="text-dim">Status</dt>
           <dd className="text-text">{plan.data.plan.status}</dd>
           {plan.data.plan.status !== "Ended" && (
@@ -37,7 +46,12 @@ export function MyPlanSection() {
             </>
           )}
           <dt className="text-dim">Last payment</dt>
-          <dd className="text-text">{plan.data.lastPaymentDate ? dayText(plan.data.lastPaymentDate) : "None recorded yet"}</dd>
+          <dd className="text-text">
+            {plan.data.lastPaymentDate ? dayText(plan.data.lastPaymentDate) : "None recorded yet"}
+            {plan.data.lastPaymentDate && plan.data.lastPaymentAmount != null && (
+              <span className="font-mono"> · {formatMoney(plan.data.lastPaymentAmount, plan.data.currency)}</span>
+            )}
+          </dd>
         </dl>
       )}
     </section>

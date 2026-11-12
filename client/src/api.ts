@@ -290,7 +290,7 @@ export const getJoinInfo = (code: string) => request<{ coachName: string }>("GET
 export const clientJoin = (input: { code: string; name: string; email: string; password: string }) =>
   request<JoinResult>("POST", "/client-auth/join", input);
 export const getMyProfile = () => request<ClientProfile>("GET", "/client-auth/me/profile");
-export const saveMyProfile = (input: Partial<Omit<ClientProfile, "level">> & { level?: string; skip?: boolean }) =>
+export const saveMyProfile = (input: Partial<Omit<ClientProfile, "level">> & { level?: string; skip?: boolean; healthConsent?: true }) =>
   request<void>("PATCH", "/client-auth/me/profile", input);
 /** Prompt 79: the client's own plans, and marking one done (with effort 1-10 and a note) or not done. */
 export const getMyAssignments = (from: string, to: string) =>

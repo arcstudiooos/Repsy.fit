@@ -47,3 +47,13 @@ leadsRouter.post(
     }
   }),
 );
+
+/** The Privacy Policy promises website enquiries are kept for at most 12 months. */
+export const LEAD_RETENTION_DAYS = 365;
+
+/** Deletes enquiries older than LEAD_RETENTION_DAYS. Run at start-up and once a day (index.ts). */
+export async function pruneOldLeads(now = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - LEAD_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const { count } = await prisma.lead.deleteMany({ where: { createdAt: { lt: cutoff } } });
+  return count;
+}

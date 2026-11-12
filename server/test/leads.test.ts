@@ -3,10 +3,21 @@ import request from "supertest";
 import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { prisma } = vi.hoisted(() => ({ prisma: { lead: { create: vi.fn() } } }));
+const { prisma } = vi.hoisted(() => ({ prisma: { lead: { create: vi.fn(), deleteMany: vi.fn() } } }));
 vi.mock("../src/db.js", () => ({ prisma }));
 
 import { app } from "../src/app.js";
+import { LEAD_RETENTION_DAYS, pruneOldLeads } from "../src/routes/leads.js";
+
+describe("pruneOldLeads (Privacy Policy: enquiries kept at most 12 months)", () => {
+  it("deletes only enquiries older than 365 days", async () => {
+    prisma.lead.deleteMany.mockResolvedValue({ count: 2 });
+    const now = new Date("2026-11-12T00:00:00.000Z");
+    expect(LEAD_RETENTION_DAYS).toBe(365);
+    expect(await pruneOldLeads(now)).toBe(2);
+    expect(prisma.lead.deleteMany).toHaveBeenCalledWith({ where: { createdAt: { lt: new Date("2025-11-12T00:00:00.000Z") } } });
+  });
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

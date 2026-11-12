@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { changeMyPassword, deleteMyAccount, getMyAccount, getMyPayments, getMyProfile, queryKeys, saveMyAccount, saveMyProfile } from "../api";
 import { LoadingState, plainErrorMessage } from "../components/States";
+import { formatMoney } from "../lib/money";
 import { navigate } from "../route";
 import type { ClientProfile, MyAccount } from "../types";
 
@@ -69,6 +70,7 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
   const toUnit = (kg: number | null, u: "kg" | "lb") => (kg == null ? "" : String(u === "lb" ? round1(kg * LB_PER_KG) : kg));
   const [weight, setWeight] = useState(toUnit(profile.weightKg, profile.units));
   const [level, setLevel] = useState<string>(profile.level);
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: async () => {
@@ -81,6 +83,7 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
         heightCm: height.trim() === "" ? null : Number(height),
         weightKg: w === null ? null : units === "lb" ? Math.round((w / LB_PER_KG) * 100) / 100 : w,
         ...(level ? { level } : {}),
+        ...(consent ? { healthConsent: true as const } : {}),
       });
     },
     // Settled, not just success: if the second save fails, the first one (the name) still shows.
@@ -101,7 +104,7 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
   function submit(e: FormEvent) {
     e.preventDefault();
     if (name.trim() === "") return setError("Please enter your name.");
-    if (age.trim() !== "" && (!Number.isInteger(Number(age)) || Number(age) < 13 || Number(age) > 120)) return setError("Age: a whole number from 13 to 120.");
+    if (age.trim() !== "" && (!Number.isInteger(Number(age)) || Number(age) < 18 || Number(age) > 120)) return setError("Age: a whole number from 18 to 120.");
     if (height.trim() !== "" && !(Number(height) >= 50 && Number(height) <= 300)) return setError("Height: 50 to 300 cm.");
     const w = Number(weight);
     const kg = units === "lb" ? w / LB_PER_KG : w;
@@ -169,6 +172,12 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
             ))}
           </select>
         </div>
+        {!profile.healthConsent && (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-4 w-4 accent-[var(--accent)]" />
+            <span>I agree that my coach and Repsy can store the health details I enter (such as weight and height) to coach me.</span>
+          </label>
+        )}
         <p className="text-xs text-dim">Your sign-in email and your coach can't be changed here - ask your coach if they need to change.</p>
         <Err text={error ?? (save.isError ? plainErrorMessage(save.error) : null)} />
         <Saved show={save.isSuccess} />
@@ -319,13 +328,14 @@ function PaymentsSection() {
           {payments.data.map((p) => (
             <li key={p.id} className="flex flex-wrap gap-x-3 py-2 text-sm">
               <span className="font-mono text-text">{p.paidOn}</span>
+              <span className="font-mono font-semibold text-text">{formatMoney(p.amount, p.currency)}</span>
               <span className="text-dim">{p.planName}</span>
               <span className="text-dim">{p.method}</span>
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-2 text-xs text-dim">Payments your coach recorded. Ask your coach about amounts or receipts.</p>
+      <p className="mt-2 text-xs text-dim">Payments your coach recorded. Repsy doesn't take payments itself - ask your coach about receipts or anything that looks wrong.</p>
     </section>
   );
 }

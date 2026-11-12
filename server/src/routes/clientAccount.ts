@@ -1,6 +1,6 @@
 // The client's own account (Prompt 83) - see "API contract" in CLAUDE.md. Mounted at /api/client-auth.
-// Account summary, change password, own payment history (dates and methods only, read-only - like
-// /my-plan, a client never sees amounts), timezone, and deleting their own account. A client can never
+// Account summary, change password, own payment history (read-only: date, amount in the coach's currency,
+// method, plan - never the coach's private payment note), timezone, and deleting their own account. A client can never
 // change their coach or their sign-in email here.
 // Google sign-in and a password are mutually exclusive for clients: linking Google replaces the password
 // with an unguessable one, and setting a password (invite / reset) removes the Google link. So a client
@@ -109,19 +109,24 @@ clientAccountRouter.post(
   }),
 );
 
-// GET /api/client-auth/my-payments -> [{ id, paidOn, method, planName }] the client's OWN payments, newest
-// first. Read-only, and no amounts (same rule as /my-plan).
+// GET /api/client-auth/my-payments -> [{ id, paidOn, amount, currency, method, planName }] the client's OWN
+// payments, newest first. Read-only. The coach's note on a payment stays private.
 clientAccountRouter.get(
   "/my-payments",
   requireActiveClient,
   asyncHandler(async (req, res) => {
-    const rows = await prisma.payment.findMany({
-      where: { clientId: clientAccountIdOf(req) },
-      orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }],
-      take: 100,
-      select: { id: true, paidOn: true, method: true, clientPlan: { select: { planName: true } } },
-    });
-    res.json(rows.map((p) => ({ id: p.id, paidOn: p.paidOn, method: p.method, planName: p.clientPlan.planName })));
+    const clientId = clientAccountIdOf(req);
+    const [rows, me] = await Promise.all([
+      prisma.payment.findMany({
+        where: { clientId },
+        orderBy: [{ paidOn: "desc" }, { createdAt: "desc" }],
+        take: 100,
+        select: { id: true, paidOn: true, amount: true, method: true, clientPlan: { select: { planName: true } } },
+      }),
+      prisma.client.findUnique({ where: { id: clientId }, select: { coach: { select: { currency: true } } } }),
+    ]);
+    const currency = me?.coach?.currency ?? "INR";
+    res.json(rows.map((p) => ({ id: p.id, paidOn: p.paidOn, amount: p.amount, currency, method: p.method, planName: p.clientPlan.planName })));
   }),
 );
 

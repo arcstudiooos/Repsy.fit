@@ -38,7 +38,7 @@ const { resetRateLimits } = await import("../src/auth/rateLimit.js");
 const { hashToken } = await import("../src/auth/resetToken.js");
 const { verifyPassword } = await import("../src/auth/password.js");
 const { BAD_JOIN_CODE } = await import("../src/routes/joinCode.js");
-const { EMAIL_HAS_ACCOUNT, CHECK_YOUR_EMAIL, CHECK_YOUR_EMAIL_NO_MAIL } = await import("../src/routes/clientJoin.js");
+const { EMAIL_HAS_ACCOUNT, CHECK_YOUR_EMAIL, CHECK_YOUR_EMAIL_NO_MAIL, HEALTH_CONSENT_NEEDED } = await import("../src/routes/clientJoin.js");
 const { FORGOT_REPLY, BAD_RESET } = await import("../src/routes/auth.js");
 const { Prisma } = await import("@prisma/client");
 
@@ -60,7 +60,7 @@ beforeEach(() => {
   mailer.reset.mockResolvedValue(undefined);
   COACH.joinCodeActive = true;
   COACH.approveNewClients = false;
-  stored = { id: "c1", coachId: "coach-1", name: "Maya Patel", notes: "", onboardedAt: null, joinedVia: "code", joinStatus: "active", loginEmail: "maya@example.com" };
+  stored = { id: "c1", coachId: "coach-1", name: "Maya Patel", notes: "", onboardedAt: null, healthConsentAt: null, joinedVia: "code", joinStatus: "active", loginEmail: "maya@example.com" };
   prismaMock.coach.findUnique.mockImplementation(async ({ where }: { where: { joinCode?: string } }) =>
     where.joinCode === COACH.joinCode ? COACH : null,
   );
@@ -247,18 +247,50 @@ describe("the welcome questions: GET/PATCH /api/client-auth/me/profile", () => {
     const res = await supertest(app)
       .patch("/api/client-auth/me/profile")
       .set("Cookie", cookie())
-      .send({ goal: "Fat loss", age: 29, heightCm: 165, weightKg: 68, level: "Intermediate", units: "lb", injuries: "Left knee\n  hurts on squats" });
+      .send({ goal: "Fat loss", age: 29, heightCm: 165, weightKg: 68, level: "Intermediate", units: "lb", injuries: "Left knee\n  hurts on squats", healthConsent: true });
     expect(res.status).toBe(204);
     const data = prismaMock.client.update.mock.calls[0][0].data;
     expect(data).toMatchObject({ goal: "Fat loss", age: 29, heightCm: 165, weightKg: 68, level: "Intermediate", units: "lb" });
     expect(data.notes).toBe("From client: Left knee hurts on squats");
     expect(data.onboardedAt).toBeInstanceOf(Date);
+    expect(data.healthConsentAt).toBeInstanceOf(Date);
     expect(prismaMock.client.update.mock.calls[0][0].where).toEqual({ id: "c1" });
+  });
+
+  it("health details need the client's separate, explicit consent", async () => {
+    for (const body of [{ weightKg: 70 }, { heightCm: 170 }, { injuries: "Bad back" }]) {
+      const res = await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send(body);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe(HEALTH_CONSENT_NEEDED);
+    }
+    expect(prismaMock.client.update).not.toHaveBeenCalled();
+    // Non-health answers and Skip don't need it; consent can't be sent as false.
+    expect((await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ goal: "Fat loss", age: 30 })).status).toBe(204);
+    expect((await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ skip: true })).status).toBe(204);
+    expect((await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ healthConsent: false })).status).toBe(400);
+  });
+
+  it("re-sending a value already on the record (e.g. the coach's) or clearing it needs no consent", async () => {
+    stored.weightKg = 70;
+    stored.heightCm = 170;
+    stored.notes = "From client: Bad back";
+    const res = await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ weightKg: 70, heightCm: null, injuries: "Bad back" });
+    expect(res.status).toBe(204);
+    expect((await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ weightKg: 71 })).status).toBe(400);
+  });
+
+  it("consent given once covers later edits, and the profile reports it", async () => {
+    stored.healthConsentAt = new Date("2026-11-01T00:00:00Z");
+    const res = await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ weightKg: 71 });
+    expect(res.status).toBe(204);
+    expect(prismaMock.client.update.mock.calls[0][0].data.healthConsentAt).toBeUndefined();
+    const got = await supertest(app).get("/api/client-auth/me/profile").set("Cookie", cookie());
+    expect(got.body.healthConsent).toBe(true);
   });
 
   it("keeps the coach's own notes and replaces only the client's line", async () => {
     stored.notes = "Coach: watch form\nFrom client: old text";
-    await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ injuries: "new text" });
+    await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ injuries: "new text", healthConsent: true });
     expect(stored.notes).toBe("Coach: watch form\nFrom client: new text");
     // GET shows the client ONLY their own line, never the coach's notes.
     const got = await supertest(app).get("/api/client-auth/me/profile").set("Cookie", cookie());
@@ -268,7 +300,7 @@ describe("the welcome questions: GET/PATCH /api/client-auth/me/profile", () => {
 
   it("turns every kind of line break into a space, so the client's text stays one line", async () => {
     stored.notes = "Coach: private";
-    await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ injuries: "a\rb\u2028c\u2029d\r\ne" });
+    await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie()).send({ injuries: "a\rb\u2028c\u2029d\r\ne", healthConsent: true });
     expect(stored.notes).toBe("Coach: private\nFrom client: a b c d e");
   });
 
@@ -286,7 +318,8 @@ describe("the welcome questions: GET/PATCH /api/client-auth/me/profile", () => {
   });
 
   it.each([
-    [{ age: 9 }, "You need to be at least 13."],
+    [{ age: 9 }, "You need to be 18 or over to use Repsy."],
+    [{ age: 17 }, "You need to be 18 or over to use Repsy."],
     [{ heightCm: 400 }, "Height looks too big."],
     [{ weightKg: "a lot" }, "Weight must be a number."],
     [{ level: "Pro" }, "Please pick Beginner, Intermediate or Advanced."],

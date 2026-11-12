@@ -195,6 +195,9 @@ model Client {
   googleSub     String?  @unique
   /// Prompt 83: the client's own timezone override (IANA name, e.g. "Asia/Kolkata"); null = the device's.
   timezone      String?
+  /// When the client explicitly agreed that their coach and Repsy may store the health details they enter
+  /// (weight, height, injuries). Asked separately from sign-up.
+  healthConsentAt DateTime?
   /// Prompt 78: the last Google sign-in (Prompt 83 lets a Google-only client delete their account
   /// within 5 minutes of a fresh one).
   lastGoogleAuthAt DateTime?

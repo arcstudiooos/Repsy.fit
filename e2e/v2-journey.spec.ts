@@ -184,9 +184,9 @@ test("8. the client sets a password, signs in, and sees ONLY their own plan", as
   await expect(page.getByRole("region", { name: "My streaks" })).toBeVisible({ timeout: 30_000 });
   await page.goto("/client/me");
   await expect(page.getByRole("region", { name: "My plan" })).toContainText("Monthly coaching", { timeout: 30_000 });
-  // No amounts and no other client's name are ever shown to a client.
+  // The client sees what they pay (their own price), and no other client's name.
   const text = await page.locator("body").innerText();
-  expect(text).not.toContain("4999");
+  expect(text).toMatch(/4,999/);
   expect(text).not.toContain("Engagement");
 
   // The client session cannot reach coach data.

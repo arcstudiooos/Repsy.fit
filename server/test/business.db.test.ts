@@ -108,13 +108,18 @@ describe.skipIf(!process.env.DATABASE_URL)("plans and payments (database)", () =
     expect((await otherCoach.post(`/api/clients/${maya}/plan/payments`).send({ amount: 1, paidOn: "2026-01-01", method: "Cash" })).status).toBe(404);
   });
 
-  it("a client sees only their own plan - never another client's - and no amounts", async () => {
+  it("a client sees only their own plan and what they pay - never another client's", async () => {
     await prisma.client.update({ where: { id: maya }, data: { passwordHash: await hashPassword("client password 1"), loginEmail: `${tag}-maya@example.com` } });
     const cookie = `${CLIENT_SESSION_COOKIE}=${signClientSession(maya, 0)}`;
     const res = await supertest(app).get("/api/client-auth/my-plan").set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-03-31" }, lastPaymentDate: "2026-02-27" });
-    expect(JSON.stringify(res.body)).not.toContain("4999");
+    expect(res.body).toEqual({
+      plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-03-31", priceAmount: 4999, billingCycle: "Monthly" },
+      lastPaymentDate: "2026-02-27",
+      lastPaymentAmount: 4999,
+      currency: "USD", // the coach switched to USD in the test above; the client follows the coach's setting
+    });
+    // Arjun's (another client's) quarterly plan never shows.
     expect(JSON.stringify(res.body)).not.toContain("Quarterly");
     // And the client session cannot reach the coach's business data.
     expect((await supertest(app).get("/api/business/plans").set("Cookie", cookie)).status).toBe(401);

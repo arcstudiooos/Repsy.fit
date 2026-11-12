@@ -51,7 +51,7 @@ What a client can do (only ever with their OWN data):
 | **Plan view** | Numbered exercises with sets, reps and rest, a rest timer, the coach's "why"; **Finish workout** with an effort rating (1-10) and a note. Nutrition plans show their calorie / protein targets and the meals the coach picked |
 | **Progress** | Weight and adherence charts (in kg or lb), body measurements (add; delete their own), streaks |
 | **Messages** | Their thread with the coach: Enter to send, refreshed every 20 seconds, unread badge, "Seen" |
-| **Me** | Membership and payment history (dates only, never amounts), sessions in their timezone, profile, kg / lb, change password (or "connected with Google"), weekly check-in day, sign out, **delete my account** |
+| **Me** | Membership (plan, price and billing cycle) and payment history (date, amount, method), sessions in their timezone, profile, kg / lb, change password (or "connected with Google"), weekly check-in day, sign out, **delete my account** |
 
 The coach sees it all straight away: "Done by client" with effort and note on the plan, client check-ins in
 the review queue, client messages in Messages, and a **Client activity** card on Home (waiting for approval,
@@ -59,7 +59,8 @@ new messages, plans finished in the last 24 hours, who joined this week).
 
 A client session is separate from a coach session: it gets `401` on every coach route; a coach session gets
 `401` on every client route; a client waiting for approval gets `403` on every data route. A client never
-sees another client, the coach's notes, the AI Coach chat, at-risk flags or amounts, and can't edit plans.
+sees another client, the coach's notes, the AI Coach chat or at-risk flags, and can't edit plans. They do see
+their own plan price and payment amounts.
 `server/test/security.test.ts` lists every `/api/client-auth` route and fails if a new one isn't covered.
 
 ## Landing page
@@ -206,8 +207,8 @@ Load the quick demo first, then the 6-month demo, to get all 13 clients.
   plan before it reaches a client. Without a working AI key you get the fallback answer.
 - **Client app limits (v3).** Clients tick exercises and finish workouts but don't log the actual weights
   lifted. Daily and weekly check-ins can be entered for today or yesterday only. Clients can't change their
-  coach or sign-in email themselves. One coach per client account. Payment history shows dates, never
-  amounts. Deleting a client account also deletes the coach's plan and payment records for that client.
+  coach or sign-in email themselves. One coach per client account. Payments are records the coach keeps
+  (Repsy doesn't take payments); clients see their price and payment amounts, not the coach's notes on them. Deleting a client account also deletes the coach's plan and payment records for that client.
 - **No progress photos.** The app does not store photos.
 - **Password-reset and invite emails need SMTP.** Until the `SMTP_*` variables are set, reset
   emails are not sent and invite links are shown to the coach to pass on by hand.

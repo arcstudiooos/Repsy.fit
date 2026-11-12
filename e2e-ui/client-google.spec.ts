@@ -62,7 +62,7 @@ test("the join page explains an account that belongs to another coach", async ({
 test("the join page's terms line covers both Google and email sign-up", async ({ page }) => {
   await mock(page, true);
   await page.goto("/join/ANNA-7K2Q8M");
-  await expect(page.getByText("By creating an account (with Google or email) you agree to the")).toBeVisible();
+  await expect(page.getByText("By creating an account (with Google or email) you confirm you're 18 or over and agree to the")).toBeVisible();
 });
 
 test("the coach login keeps its own Google link", async ({ page }) => {

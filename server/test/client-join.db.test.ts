@@ -38,10 +38,16 @@ describe.skipIf(!process.env.DATABASE_URL)("joining with a code (database)", () 
     // Signed in by the join: welcome questions, then data routes work.
     const cookie = clientCookieOf(joined);
     expect((await supertest(app).get("/api/client-auth/me").set("Cookie", cookie)).body).toMatchObject({ needsWelcome: true, coachName: "Anna" });
-    const saved = await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie).send({ goal: "Muscle gain", age: 31, units: "lb", injuries: "Bad wrist" });
+    const noConsent = await supertest(app).patch("/api/client-auth/me/profile").set("Cookie", cookie).send({ injuries: "Bad wrist" });
+    expect(noConsent.status).toBe(400);
+    const saved = await supertest(app)
+      .patch("/api/client-auth/me/profile")
+      .set("Cookie", cookie)
+      .send({ goal: "Muscle gain", age: 31, units: "lb", injuries: "Bad wrist", healthConsent: true });
     expect(saved.status).toBe(204);
     const after = await prisma.client.findUnique({ where: { id: row!.id } });
     expect(after).toMatchObject({ goal: "Muscle gain", age: 31, units: "lb", notes: "From client: Bad wrist" });
+    expect(after!.healthConsentAt).not.toBeNull();
     expect(after!.onboardedAt).not.toBeNull();
     expect((await supertest(app).get("/api/client-auth/me").set("Cookie", cookie)).body.needsWelcome).toBe(false);
     expect((await supertest(app).get("/api/client-auth/my-plan").set("Cookie", cookie)).status).toBe(200);

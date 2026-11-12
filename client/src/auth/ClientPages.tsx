@@ -322,7 +322,8 @@ function JoinPage() {
             </button>
           </form>
           <p className="mt-3 text-center text-xs text-dim">
-            By creating an account (with Google or email) you agree to the <a className="underline" href="/terms">Terms</a> and{" "}
+            By creating an account (with Google or email) you confirm you're 18 or over and agree to the{" "}
+            <a className="underline" href="/terms">Terms</a> and{" "}
             <a className="underline" href="/privacy">Privacy Policy</a>.
           </p>
         </>
@@ -370,7 +371,7 @@ function WelcomePage() {
   return <WelcomeForm initial={profile.data!} coachName={me.data.coachName ?? "your coach"} onDone={done} />;
 }
 
-type WelcomeErrors = Partial<Record<"goal" | "age" | "heightCm" | "weight" | "injuries", string>>;
+type WelcomeErrors = Partial<Record<"goal" | "age" | "heightCm" | "weight" | "injuries" | "consent", string>>;
 
 function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; coachName: string; onDone: () => Promise<void> }) {
   const known = (GOALS as readonly string[]).includes(initial.goal);
@@ -384,6 +385,7 @@ function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; c
   );
   const [level, setLevel] = useState<string>(initial.level);
   const [injuries, setInjuries] = useState(initial.injuries);
+  const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<WelcomeErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -414,16 +416,20 @@ function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; c
     if (goalChoice === OTHER_GOAL && !goal) found.goal = "Type your goal, or pick one from the list.";
     const num = (s: string) => (s.trim() === "" ? null : Number(s));
     const a = num(age);
-    if (a !== null && (!Number.isInteger(a) || a < 13 || a > 120)) found.age = "Enter your age in whole years (13 or over).";
+    if (a !== null && (!Number.isInteger(a) || a < 18 || a > 120)) found.age = "Enter your age in whole years (18 or over).";
     const h = num(heightCm);
     if (h !== null && (!Number.isFinite(h) || h < 50 || h > 300)) found.heightCm = "Enter your height in cm (50 to 300).";
     const w = num(weight);
     const kg = w === null ? null : units === "lb" ? round1(w / LB_PER_KG) : w;
     if (w !== null && (!Number.isFinite(w) || kg === null || kg < 20 || kg > 500))
       found.weight = units === "lb" ? "Enter your weight in lb (45 to 1100)." : "Enter your weight in kg (20 to 500).";
+    const healthGiven = h !== null || w !== null || injuries.trim() !== "";
+    if (healthGiven && !initial.healthConsent && !consent)
+      found.consent = "Tick the box to let your coach store your health details, or leave weight, height and injuries empty.";
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     void send({
+      ...(consent ? { healthConsent: true as const } : {}),
       ...(goal ? { goal } : {}),
       age: a,
       heightCm: h,
@@ -539,6 +545,27 @@ function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; c
             className="w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
           />
         </div>
+        {!initial.healthConsent && (
+          <div>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                aria-describedby={errors.consent ? "welcome-consent-error" : undefined}
+                className="mt-1 h-4 w-4 accent-[var(--accent)]"
+              />
+              <span>
+                I agree that {coachName} and Repsy can store the health details I enter here (weight, height, injuries) to coach me. See the{" "}
+                <a className="underline" href="/privacy">
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
+            {err("consent")}
+          </div>
+        )}
         <ServerError message={serverError} />
         <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
           {busy ? "Saving..." : "Save and continue"}

@@ -152,6 +152,19 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
             {busy ? "Please wait..." : isRegister ? "Create account" : "Log in"}
           </button>
         </form>
+        {isRegister && (
+          <p className="mt-3 text-center text-xs text-dim">
+            By creating an account (with Google or email) you confirm you're 18 or over and agree to the{" "}
+            <a className="underline" href="/terms">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a className="underline" href="/privacy">
+              Privacy Policy
+            </a>
+            .
+          </p>
+        )}
         <p className="mt-5 text-center text-sm text-dim">
           {isRegister ? (
             <>

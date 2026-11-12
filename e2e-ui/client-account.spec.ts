@@ -69,13 +69,25 @@ test("profile: edit name, goal and age; switching kg -> lb keeps the same body w
   await expect(form.getByLabel(/email/i)).toHaveCount(0);
 });
 
+test("profile: the health consent tick is offered until given, and is sent when ticked", async ({ page }) => {
+  const { sent } = await mock(page);
+  await page.goto("/client/me");
+  const form = page.getByRole("form", { name: "Profile" });
+  const tick = form.getByRole("checkbox", { name: /can store the health details I enter/ });
+  await tick.check();
+  await form.getByLabel("Weight (kg)").fill("70");
+  await form.getByRole("button", { name: "Save profile" }).click();
+  await expect(form.getByRole("status")).toHaveText("Saved.");
+  expect(sent.at(-1)).toMatchObject({ path: "/api/client-auth/me/profile", body: { weightKg: 70, healthConsent: true } });
+});
+
 test("profile validates before saving", async ({ page }) => {
   const { sent } = await mock(page);
   await page.goto("/client/me");
   const form = page.getByRole("form", { name: "Profile" });
   await form.getByLabel("Age").fill("9");
   await form.getByRole("button", { name: "Save profile" }).click();
-  await expect(form.getByRole("alert")).toHaveText("Age: a whole number from 13 to 120.");
+  await expect(form.getByRole("alert")).toHaveText("Age: a whole number from 18 to 120.");
   expect(sent).toEqual([]);
 });
 
@@ -115,13 +127,25 @@ test("timezone: sessions show in the override, and it can be set back to the dev
   await expect(sessions).toContainText(/7:30\s?AM/);
 });
 
-test("payment history: dates, plan and method - never amounts", async ({ page }) => {
-  await mock(page, { payments: [{ id: "p1", paidOn: "2026-11-01", method: "UPI", planName: "Monthly" }] });
+test("payment history: date, amount in the coach's currency, plan and method", async ({ page }) => {
+  await mock(page, {
+    payments: [
+      { id: "p2", paidOn: "2026-11-01", amount: 4999, currency: "INR", method: "UPI", planName: "Monthly" },
+      { id: "p1", paidOn: "2026-10-01", amount: 125000.5, currency: "INR", method: "Cash", planName: "Monthly" },
+    ],
+  });
   await page.goto("/client/me");
-  const list = page.getByRole("list", { name: "Payments" });
-  await expect(list).toContainText("2026-11-01");
-  await expect(list).toContainText("UPI");
-  await expect(page.locator("body")).not.toContainText(/₹|\bINR\b|4999/);
+  const rows = page.getByRole("list", { name: "Payments" }).getByRole("listitem");
+  await expect(rows.first()).toContainText("2026-11-01");
+  await expect(rows.first()).toContainText("₹4,999.00");
+  await expect(rows.first()).toContainText("UPI");
+  await expect(rows.last()).toContainText("₹1,25,000.50"); // Indian grouping for INR
+});
+
+test("a USD coach's client sees dollars", async ({ page }) => {
+  await mock(page, { payments: [{ id: "p1", paidOn: "2026-11-01", amount: 99.5, currency: "USD", method: "Card", planName: "Online" }] });
+  await page.goto("/client/me");
+  await expect(page.getByRole("list", { name: "Payments" })).toContainText("$99.50");
 });
 
 test("delete my account: needs DELETE typed and the password, then goes to sign-in with a note", async ({ page }) => {

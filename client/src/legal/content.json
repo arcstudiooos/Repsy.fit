@@ -3,27 +3,28 @@
   "contactEmail": "hello@repsy.fit",
   "privacy": {
     "title": "Privacy Policy",
-    "intro": "This policy explains what personal data Repsy Coach (\"Repsy\", \"we\", \"us\") collects, why we collect it, who it is shared with, how long we keep it, and the choices and rights you have. It applies to the website and web app at repsy.fit and app.repsy.fit.",
+    "intro": "This policy explains what personal data Repsy Coach collects, why we collect it, who it is shared with, how long we keep it, and the choices and rights you have. It applies to the website and web app at repsy.fit and app.repsy.fit, including the client app.",
     "sections": [
       {
         "heading": "Who we are and who this covers",
         "body": [
-          "Repsy Coach is coaching software for personal trainers and fitness coaches, operated by Repsy (repsy.fit). You can contact us about privacy at any time at hello@repsy.fit.",
-          "Repsy is used by two kinds of people: coaches, who create an account and manage their own coaching business in the app, and the coach's clients, whose details the coach records and who may be invited to sign in and see their own information.",
-          "For a coach's own account details, Repsy is responsible for that data. For the client records a coach chooses to enter, the coach decides what is stored and why, and Repsy stores and processes that data on the coach's behalf and on their instructions."
+          "Repsy Coach is coaching software for personal trainers and fitness coaches. It is operated by Repsy, based in India (\"Repsy\", \"we\", \"us\"). You can contact us about privacy at any time at hello@repsy.fit.",
+          "Two kinds of people use Repsy: coaches, who create an account to run their coaching business, and their clients. A client's record is either added by their coach, or created by the client when they join their coach with the coach's join code or invitation. A client can then sign in to the client app and use their own information.",
+          "For a coach's own account, Repsy decides how that data is used and is responsible for it. For a client's records, the coach decides what is collected and why; Repsy stores and processes that data on the coach's behalf and only to provide the service. In data protection terms, the coach is the controller (or \"data fiduciary\") of their clients' data and Repsy is the processor, except for the account and security data we need to run the client app itself, for which Repsy is also responsible. Coaches can ask for our data processing terms at hello@repsy.fit."
         ]
       },
       {
         "heading": "The data we collect",
         "body": [
-          "Coach account data: your name, email address, a one-way hash of your password (we never store the password itself), your currency setting and, if you sign in with Google, your Google account ID.",
-          "Client records entered by a coach: the client's name and, if the coach adds them, goal, age, height, weight, training level, focus and the coach's notes.",
-          "Training and tracking records entered in the app: workout, nutrition, habit and recovery plans, workout templates and meals, progress logs (weight, adherence, workouts done), body measurements, daily check-ins (mood, energy, sleep hours, recovery), habits and habit ticks, and scheduled sessions. We do not collect or store progress photos.",
+          "Coach account data: your name, email address, a one-way hash of your password (we never store the password itself), your currency setting, your join code and approval setting, and, if you sign in with Google, your Google account ID and the time you last signed in with Google.",
+          "Client records entered by a coach: the client's name and, if the coach adds them, goal, age, height, weight, training level, focus and the coach's own notes.",
+          "Client account data: for a client who signs in, their name, the email address they sign in with, a one-way hash of their password or, if they use Google, their Google account ID and the time they last signed in with Google; whether their coach has approved them; and their settings (weight unit kg or lb, timezone, weekly check-in day). If a client answers the optional welcome questions (goal, age, height, weight, training experience, injuries or other notes), the answers are added to their record so their coach can plan for them.",
+          "Training and tracking records, entered by the coach or by the client in the client app: workout, nutrition, habit and recovery plans, workout templates and meals, calorie and protein targets, which plans and exercises are done, effort ratings and notes on finished workouts, weekly check-ins (weight, adherence, workouts done, notes), daily check-ins (energy, mood, sleep hours, recovery, water, steps, food notes), habits and habit ticks, body measurements (waist, chest, arm, hip, body fat) and scheduled sessions. We do not collect or store progress photos.",
+          "Some of this is information about health or the body, such as weight, body measurements, sleep, mood and injuries. It is collected only to support the coaching the client has asked for. Clients choose whether to give it: the app asks for a separate, explicit consent (and records when it was given) before a client first enters health details such as weight, height or injuries, and every health field is optional.",
           "Messages: messages between a coach and a client inside the app, and a coach's conversations with the in-app AI assistant.",
-          "Business records a coach types in: plan names, prices, due dates and payments the coach records by hand. We do not collect or store any card or bank details, because Repsy does not take payments.",
-          "Client account data: for a client who is invited by their coach or joins with their coach's join code, their name, the email address they sign in with, a one-way hash of their password, their preferred weight unit and, if they sign in with Google, their Google account ID. If a client answers the optional welcome questions (goal, age, height, weight, training experience, injuries), those answers are added to their record so their coach can plan for them.",
+          "Business records a coach types in: plan names, prices, billing cycles, due dates, and payments the coach records by hand (date, amount, method and an optional note). A signed-in client can see their own plan, price and payment history, but never the coach's notes on payments. We do not collect or store any card or bank details, because Repsy does not take payments.",
           "Enquiries from our public website: the name and email address you give us when you ask to start a free trial.",
-          "Technical data needed to run the service: a session cookie that keeps you signed in, a short-lived security cookie used during Google sign-in, and server logs (which include IP addresses and the pages and API routes requested). We do not use advertising or analytics trackers."
+          "Technical data needed to run the service: a session cookie that keeps you signed in, a short-lived security cookie used during Google sign-in, your device's current date (sent with requests so \"today\" means your day), and server logs (which include IP addresses, the time, and the pages and API routes requested). We do not use advertising or analytics trackers."
         ]
       },
       {
@@ -31,171 +32,206 @@
         "body": [
           "If you choose \"Continue with Google\", we ask Google only for the basic scopes openid, email and profile. From your Google account we receive your name, your email address, whether Google has verified that email address, and your Google account ID. We do not request access to your Gmail, contacts, calendar, Drive files or any other Google data.",
           "We use this information only to create your Repsy account or sign you in to it, to show your name in the app, and to recognise you the next time you sign in with Google. If a Repsy account with the same verified email already exists, we link your Google sign-in to that account.",
-          "We do not sell Google user data, share it with anyone other than the service providers listed below that host and run Repsy, use it for advertising, or use it to train artificial intelligence models.",
+          "We do not sell Google user data, share it with anyone other than the coach a client joins (who sees that client's name and email) and the service providers listed below that host and run Repsy, use it for advertising, or use it to train artificial intelligence models.",
           "Repsy's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.",
-          "You can remove Repsy's access to your Google account at any time at myaccount.google.com/permissions. To delete the Google information we hold, delete your Repsy account from Account settings (see \"Deleting your data\" below)."
+          "You can remove Repsy's access to your Google account at any time at myaccount.google.com/permissions. To delete the Google information we hold, delete your Repsy account (see \"Deleting your data and your rights\" below)."
         ]
       },
       {
         "heading": "How we use data",
         "body": [
-          "To provide the service: storing a coach's client records, plans, progress and schedule, showing a signed-in client their own information, and carrying messages between a coach and their clients.",
-          "To sign people in securely and keep them signed in, and to send account emails such as password-reset links and client invitations.",
-          "To provide the AI assistant when a coach asks for it. When a coach asks the AI Coach about a client or requests a weekly summary, we send that client's relevant details to our AI model provider to generate the reply: name, goal, age, weight, level, focus, the coach's notes, recent plans, progress logs and check-ins. AI suggestions are drafts; nothing is assigned to a client unless the coach chooses it.",
+          "To provide the service: storing a coach's client records, plans, progress, schedule and business records; letting a signed-in client see and update their own plans, check-ins, habits, measurements and settings; and carrying messages between a coach and their clients.",
+          "To sign people in securely and keep them signed in, and to send account emails such as password-reset links, client invitations and a welcome email when a client joins.",
+          "To provide the AI assistant when a coach asks for it. When a coach asks the AI Coach about a client or requests a weekly summary, we send that client's relevant details to our AI model provider to generate the reply: name, goal, age, height, weight, level, focus, the coach's notes, recent plans, progress logs, and recent weekly and daily check-ins (including sleep, mood and food notes). AI suggestions are drafts; nothing is assigned to a client unless the coach chooses it. Clients do not use the AI assistant and never see the coach's AI conversations.",
+          "To show coaches useful summaries of their own data, such as who needs attention, streaks and new activity from their clients.",
           "To reply to an enquiry sent from our website.",
           "To keep the service secure and working: preventing abuse (for example by rate-limiting sign-in attempts), fixing errors and investigating problems.",
-          "We do not sell personal data, and we do not use it for advertising."
+          "We do not sell personal data, we do not use it for advertising, and we do not use it to train AI models. We only use an AI provider whose terms do not allow it to train its models on the data we send."
         ]
       },
       {
         "heading": "Legal bases",
         "body": [
-          "Where data protection laws such as the GDPR apply, we rely on: performance of our contract with a coach to provide the service; our legitimate interests in keeping the service secure, preventing abuse and replying to enquiries; and consent where we ask for it, which you can withdraw at any time. A coach is responsible for having a lawful basis, and where needed the client's permission, for the client data they enter."
+          "Where data protection laws such as India's Digital Personal Data Protection Act, 2023 or the EU/UK GDPR apply, we rely on: your consent, given when you create an account or join your coach, and separately and explicitly when you choose to enter health details such as weight, height or injuries; performance of our contract with a coach to provide the service; and our legitimate interests (or the \"legitimate uses\" the law allows) in keeping the service secure, preventing abuse and replying to enquiries. You can withdraw consent at any time by deleting your account or contacting us; this does not affect anything done before.",
+          "A coach is responsible for having a lawful basis, and the client's consent where the law requires it, for the client data they enter themselves, especially information about a client's health."
         ]
       },
       {
         "heading": "Who we share data with",
         "body": [
-          "A coach can see only their own clients and records. Coaches cannot see each other's data: every request is checked against the signed-in account. A signed-in client can see only their own information and never another client's data or their coach's private notes.",
-          "We use these service providers to run Repsy, and they process data only to provide their service to us:",
+          "A coach can see only their own clients and records; coaches cannot see each other's data, because every request is checked against the signed-in account. A signed-in client can see only their own information, never another client's data, their coach's private notes or the coach's AI conversations. People who join with a coach's code are visible to that coach (for approval) as soon as they sign up.",
+          "We use these service providers to run Repsy. They process data only to provide their service to us:",
           {
             "list": [
               "Render (United States): hosts the app and its database.",
-              "Resend (United States): sends account emails such as password-reset links and invitations.",
-              "Our AI model provider: generates AI Coach replies and weekly summaries from the client details described above, when a coach asks for them.",
-              "Google: provides \"Continue with Google\" sign-in, and serves the web fonts the site uses (your browser requests them from Google's servers).",
+              "Resend (United States): sends account emails such as password-reset links, invitations and welcome emails.",
+              "Our AI model provider (United States): generates AI Coach replies and weekly summaries from the client details described above, only when a coach asks for them. Its terms do not allow it to train its models on that data.",
+              "Google: provides \"Continue with Google\" sign-in, and serves the web fonts the site uses (your browser requests them from Google's servers, which receive your IP address).",
               "Cloudflare: provides DNS for our domain."
             ]
           },
-          "We may also disclose data if the law requires it, or to protect the rights, safety or property of our users or the public. If Repsy is ever sold or merged, data would transfer to the new owner under this policy."
+          "We may also disclose data if the law requires it, or to protect the rights, safety or property of our users or the public. If Repsy is ever sold or merged, data would transfer to the new owner under this policy, and we would tell coaches first."
         ]
       },
       {
         "heading": "International transfers",
         "body": [
-          "Our service providers store and process data in the United States and possibly other countries. Where the law requires it, we rely on appropriate safeguards for these transfers, such as the providers' standard contractual clauses."
+          "Our service providers store and process data in the United States and possibly other countries, so your data may be processed outside the country where you live, including outside India. Repsy is not established in the EU or the UK. Where the law requires it, we rely on appropriate safeguards for these transfers, such as the providers' standard contractual clauses, and we will follow any restrictions the Government of India sets on transfers to particular countries."
         ]
       },
       {
         "heading": "How long we keep data",
         "body": [
-          "Account, client and training data: for as long as the coach's account exists. When a coach deletes a client or their whole account, that data is deleted from our live database immediately.",
-          "Backups: our database host keeps short-term backups for disaster recovery, from which deleted data disappears automatically within 30 days.",
-          "Server logs: kept by our hosting provider for a limited period for security and troubleshooting, and then deleted.",
+          "Account, client and training data: for as long as the account exists. When a coach deletes a client, a client deletes their own account, or a coach deletes their whole account, that data is deleted from our live database immediately.",
+          "People who joined with a code and are waiting for approval or were declined: until the coach removes them or they delete their own account.",
+          "Backups: our database host keeps short-term backups for disaster recovery. Deleted data disappears from them automatically, within 30 days at most.",
+          "Server logs: kept by our hosting provider for security and troubleshooting for a limited period, normally no more than 30 days, and then deleted.",
           "Session cookies expire after 7 days. Password-reset links expire after 1 hour and invitation links after 48 hours, and each works only once.",
-          "Website enquiries: until the enquiry is dealt with, or until you ask us to delete it."
+          "Website enquiries: for up to 12 months after your last contact with us, or sooner if you ask us to delete them."
         ]
       },
       {
         "heading": "Deleting your data and your rights",
         "body": [
           "A coach can delete any client from the Clients tab. This removes the client and every record belonging to them.",
-          "A client can delete their own account from the Me tab in the client app (with their password, or a fresh Google sign-in). This removes their account and every record belonging to them, including the membership and payment records their coach kept for them, and their coach no longer sees them.",
+          "A client can delete their own account from the Me tab in the client app (with their password, or a fresh Google sign-in). This removes their account and every record belonging to them, including the membership and payment records their coach kept for them, and their coach no longer sees them. A client waiting for approval can do this from the waiting screen.",
           "A coach can delete their whole account from Account settings. This permanently removes the coach, every client they added and all related records, including any Google account information.",
-          "A client who wants their data changed or removed can ask their coach, or contact us directly at hello@repsy.fit.",
-          "Depending on where you live, you may have the right to access, correct, delete or export your data, to object to or restrict how we use it, and to withdraw consent. Coaches can export their data as CSV files from Reports at any time. To make any request, email hello@repsy.fit; we reply within 30 days. You also have the right to complain to your local data protection authority."
+          "Clients can correct their own name, profile answers and settings in the client app. A client who wants anything else changed or removed can ask their coach, or contact us directly at hello@repsy.fit.",
+          "Depending on where you live, you may have the right to access a summary of your data, correct or update it, delete it, export it, object to or restrict how we use it, withdraw consent, and (under Indian law) nominate someone to exercise your rights if you die or become unable to. Coaches can export their data as CSV files from Reports; clients can ask us or their coach for a copy of theirs. To make any request, email hello@repsy.fit; we reply within 30 days. Where we process a client's data for a coach, we may pass the request to that coach.",
+          "Grievances: if you have a complaint about how your data is handled, email hello@repsy.fit with the subject \"Grievance\"; we will acknowledge it promptly and respond within 30 days. If you are not satisfied after using this grievance process, you can complain to the Data Protection Board of India or your local data protection authority."
         ]
       },
       {
         "heading": "Security",
         "body": [
-          "All traffic to Repsy is encrypted in transit with HTTPS. Passwords are stored only as one-way hashes. Invitation and password-reset tokens are stored only as hashes, expire and work once. Session cookies are HTTP-only and secure. Access to each coach's data is limited to that coach's account.",
+          "All traffic to Repsy is encrypted in transit with HTTPS. Passwords are stored only as one-way hashes. Invitation and password-reset tokens are stored only as hashes, expire and work once. Session cookies are HTTP-only and secure, and coach and client sessions are kept separate. Access to each coach's data is limited to that coach's account, and each client's to their own records.",
           "No method of storing or sending data is completely secure, so we cannot guarantee absolute security. If a breach affecting your personal data occurs, we will notify affected users and the authorities as the law requires."
         ]
       },
       {
         "heading": "Cookies",
         "body": [
-          "Repsy uses only cookies that are needed for the service to work: a session cookie that keeps a coach or client signed in, and a short-lived security cookie used while signing in with Google. We do not use advertising, tracking or analytics cookies."
+          "Repsy uses only cookies that are needed for the service to work: a session cookie that keeps a coach or client signed in, and a short-lived security cookie used while signing in with Google. We do not use advertising, tracking or analytics cookies, so there is nothing to opt out of."
         ]
       },
       {
         "heading": "Children",
         "body": [
-          "Repsy is intended for people aged 18 and over, and coach accounts may only be created by adults. A coach who records information about a client under 18 must first obtain consent from that client's parent or guardian. If you believe a child has given us personal data without that consent, contact us and we will delete it."
+          "Repsy accounts are for people aged 18 and over: coaches and clients must be adults to create an account or sign in. We do not knowingly let anyone under 18 create an account.",
+          "A coach who coaches someone under 18 may keep a record about them in the app only with verifiable consent from that person's parent or guardian, and must not invite or enrol them in the client app. Coaches must not enter a minor's age, health or measurement data without that parent or guardian's verifiable consent. If you believe a child's data is in Repsy without that consent, contact us and we will delete it."
         ]
       },
       {
         "heading": "Changes to this policy",
         "body": [
-          "If we change this policy, we will update the date at the top of this page, and for significant changes we will notify coaches by email or in the app."
+          "If we change this policy, we will update the date at the top of this page, and for significant changes we will notify coaches and clients by email or in the app before the change takes effect."
         ]
       },
       {
         "heading": "Contact",
         "body": [
-          "Questions or requests about privacy: hello@repsy.fit."
+          "Questions, requests or grievances about privacy: hello@repsy.fit."
         ]
       }
     ]
   },
   "terms": {
     "title": "Terms of Service",
-    "intro": "These terms are the rules for using Repsy Coach (\"Repsy\", \"we\", \"us\") at repsy.fit and app.repsy.fit. By creating an account or using the service, you agree to them.",
+    "intro": "These terms are the rules for using Repsy Coach (\"Repsy\", \"we\", \"us\") at repsy.fit and app.repsy.fit, including the client app. By creating an account or using the service, you agree to them.",
     "sections": [
       {
         "heading": "What Repsy Coach is",
         "body": [
-          "Repsy Coach is a tool that helps a coach organise their own coaching business: client records, workout and nutrition plans, progress tracking, scheduling, messaging, and a record of the plans and payments they have been paid.",
-          "Repsy is not a payment service. It does not charge anyone, send payment links or reminders, or produce invoices. Payment entries are a record the coach types in themselves.",
-          "Repsy does not give medical, dietary, legal or financial advice. The AI assistant produces suggestions for the coach to review, which may be wrong or incomplete; the coach decides what their clients are told to do and is responsible for that advice."
+          "Repsy Coach is a tool that helps a coach run their own coaching business: client records, workout and nutrition plans, progress tracking, scheduling, messaging, a client app for their clients, and a record of their clients' plans and the payments they have received.",
+          "Repsy is not a payment service. It does not charge anyone, hold money, send payment links or reminders, or produce invoices. Plan prices and payment entries are a record the coach types in themselves; a client sees what their coach recorded. Any payment between a coach and a client happens outside Repsy and is a matter between them.",
+          "Repsy does not give medical, dietary, legal or financial advice, and it is not a medical device. The AI assistant produces suggestions for the coach to review, which may be wrong or incomplete; the coach decides what their clients are told to do and is responsible for that advice."
+        ]
+      },
+      {
+        "heading": "Who these terms are with",
+        "body": [
+          "These terms are an agreement between you and Repsy, based in India. They apply to coaches and to clients who use the client app. A coach's own agreement with their clients (their coaching services, prices and refunds) is between the coach and the client; Repsy is not a party to it."
         ]
       },
       {
         "heading": "Your account",
         "body": [
-          "You must be at least 18 years old to create an account. You must give accurate information, keep your password private, and you are responsible for what happens under your account.",
+          "You must be at least 18 years old to create an account or use the client app. You must give accurate information, keep your password private, and you are responsible for what happens under your account. Tell us at hello@repsy.fit if you think someone else has used it.",
           "You may sign in with an email address and password or with your Google account. If you sign in with Google, Google's own terms also apply to your Google account."
         ]
       },
       {
-        "heading": "Your clients and their data",
+        "heading": "Coaches: your clients and their data",
         "body": [
-          "You may only enter information about a client that you have the right to store, including the client's permission where the law requires it, and you must tell your clients what you hold about them. For a client under 18 you must have their parent or guardian's consent.",
-          "A client only gets access when their coach invites them, and sees only their own information. A coach can end a client's access at any time by deleting the client."
+          "You may only enter information about a client that you have the right to store, including the client's consent where the law requires it (for example for information about their health), and you must tell your clients what you hold about them and why. Do not enter information about anyone under 18 (including their age, health or measurements) without their parent or guardian's verifiable consent, and do not enrol them in the client app.",
+          "Clients can join you by invitation or with your join code. You can require approval before they join, and decline or remove anyone. You can end a client's access at any time by deleting the client.",
+          "You are responsible for the coaching, advice and plans you give your clients, for the prices and payments you record, and for following the laws that apply to your business."
+        ]
+      },
+      {
+        "heading": "Clients: using the client app",
+        "body": [
+          "The client app shows you the plans, targets, sessions and records your coach keeps for you, and lets you mark work done, check in, track habits and measurements, and message your coach. Your coach can see everything you enter.",
+          "Exercise and diet changes carry risks. Before starting a new training or nutrition plan, and especially if you have a medical condition, an injury, or are pregnant, check with a doctor. Stop exercising and get help if you feel pain, dizziness or shortness of breath. You take part in any training at your own risk; Repsy is not responsible for the advice your coach gives.",
+          "You can change your profile and settings, and delete your account, from the Me tab at any time. Questions about your coaching, plan price or payments are for your coach."
         ]
       },
       {
         "heading": "Acceptable use",
         "body": [
-          "You must not use Repsy to break the law, to store data you have no right to hold, to harass or harm anyone, to send spam, or to try to access another user's account or data. You must not interfere with the service, probe or bypass its security, or overload it.",
-          "We may suspend or close an account that breaks these rules, and where we reasonably can, we will tell you first."
+          "You must not use Repsy to break the law, to store data you have no right to hold, to harass or harm anyone, to send spam, or to try to access another user's account or data. You must not interfere with the service, probe or bypass its security, overload it, copy or resell it, or use automated tools to scrape it.",
+          "We may suspend or close an account that breaks these rules or puts other users at risk. Where we reasonably can, we will tell you first and, for coaches, give you a chance to export your data."
         ]
       },
       {
         "heading": "Your data",
         "body": [
-          "The records you enter remain yours. You give us permission to store and process them only to provide the service to you, as described in our Privacy Policy. You can export your data as CSV files from Reports at any time, and delete a client or your whole account from inside the app. Deleting an account is permanent and cannot be undone."
+          "The records you enter remain yours. You give us permission to store and process them only to provide the service, as described in our Privacy Policy. Coaches can export their data as CSV files from Reports at any time. Coaches can delete a client or their whole account, and clients can delete their own account, from inside the app. Deleting an account is permanent and cannot be undone."
+        ]
+      },
+      {
+        "heading": "Our software",
+        "body": [
+          "Repsy, its software, design and content belong to us. We give you a personal, non-transferable right to use the service under these terms while your account is open. If you send us feedback or ideas, we may use them without owing you anything."
         ]
       },
       {
         "heading": "Free trial and paid plans",
         "body": [
-          "New accounts may start with a free trial. If we introduce paid plans, the price, billing period and cancellation terms will be shown to you before you are asked to pay, and you will not be charged without agreeing to them."
+          "New accounts may start with a free trial. If we introduce paid plans, the price, billing period and cancellation terms will be shown to you before you are asked to pay, and you will not be charged without agreeing to them. Clients are never charged by Repsy."
         ]
       },
       {
         "heading": "Availability and changes",
         "body": [
-          "We work to keep Repsy available, but it may sometimes be unavailable, for example during maintenance or a hosting failure. We may change, add or remove features. Keep your own export if you need a copy you control."
+          "We work to keep Repsy available, but it may sometimes be unavailable, for example during maintenance or a hosting failure. We may change, add or remove features. Keep your own export if you need a copy you control. Repsy relies on third-party services (such as hosting, email and the AI provider) that we do not control."
         ]
       },
       {
         "heading": "Disclaimers and liability",
         "body": [
-          "Repsy is provided \"as is\" and \"as available\", without warranties of any kind, to the fullest extent the law allows. To the fullest extent the law allows, Repsy is not liable for indirect, incidental or consequential losses, lost profits or lost data, and our total liability for any claim is limited to the amount you paid us in the 12 months before the claim. Nothing in these terms limits liability that cannot be limited by law."
+          "Repsy is provided \"as is\" and \"as available\", without warranties of any kind, to the fullest extent the law allows. We do not promise that the service will be error-free or uninterrupted, or that AI suggestions will be accurate.",
+          "To the fullest extent the law allows, Repsy is not liable for indirect, incidental or consequential losses, lost profits or lost data, or for any injury or loss arising from training, nutrition or advice given by a coach. Our total liability for any claim is limited to the greater of the amount you paid us in the 12 months before the claim and INR 1,000. Nothing in these terms limits liability that cannot be limited by law, including your rights as a consumer.",
+          "If you are a coach, you agree to cover Repsy's reasonable losses from a claim brought by one of your clients or anyone else because of the data you entered or the coaching you provided, except where the loss was caused by our own breach of these terms."
         ]
       },
       {
         "heading": "Ending your use",
         "body": [
-          "You can stop using Repsy and delete your account at any time from Account settings."
+          "You can stop using Repsy and delete your account at any time: coaches from Account settings, clients from the Me tab. We may end these terms by closing an account as described under Acceptable use, or by giving at least 30 days' notice if we stop providing the service."
+        ]
+      },
+      {
+        "heading": "Law and disputes",
+        "body": [
+          "These terms are governed by the laws of India. If a dispute arises, please contact us first at hello@repsy.fit so we can try to resolve it. If we cannot, the courts of India have jurisdiction, without taking away any right you have to bring a claim where you live under consumer law.",
+          "If any part of these terms is found unenforceable, the rest still applies. If we do not enforce a right straight away, we have not given it up. These terms and our Privacy Policy are the whole agreement between you and us about Repsy."
         ]
       },
       {
         "heading": "Changes to these terms",
         "body": [
-          "If we change these terms, we will update the date at the top of this page and, for significant changes, notify coaches by email or in the app before they take effect. Continuing to use Repsy after a change means you accept the new terms."
+          "If we change these terms, we will update the date at the top of this page and, for significant changes, notify coaches and clients by email or in the app before they take effect. Continuing to use Repsy after a change means you accept the new terms; if you do not agree, you can delete your account."
         ]
       },
       {
