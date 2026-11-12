@@ -54,7 +54,7 @@ test("empty state, then the AI summary with its week and no error", async ({ pag
   await generateButton(page).click();
   await expect(card(page)).toContainText("3 active clients logged 7 check-ins.");
   await expect(card(page)).toContainText("Suggested actions:");
-  await expect(card(page)).toContainText("Week of 2026-11-09");
+  await expect(card(page)).toContainText(/Week of Mon, 9 Nov( 2026)?/);
   await expect(card(page)).not.toContainText("unavailable");
 });
 

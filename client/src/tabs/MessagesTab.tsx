@@ -2,11 +2,13 @@
 // This is the CLIENT conversation - a different thing from the AI Coach chat, with its own
 // endpoints, table and components (nothing here is shared with AiCoachTab). Not real-time: the
 // list and the open thread refresh when the tab opens and every 20 seconds while it is visible.
+// The list shows each conversation's last message, how long ago it was sent and an unread count.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMessageThread, listThreads, queryKeys, sendMessage } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { Client, ThreadMessage, ThreadSummary } from "../types";
+import { relativeTime } from "../lib/dates";
 
 /** How often the list and the open thread are re-fetched. There are no WebSockets or push in v2. */
 export const MESSAGES_POLL_MS = 20_000;
@@ -42,10 +44,7 @@ export function MessagesTab({ clients, selectedClientId, onSelect, chat, setChat
   return (
     <>
       <h2 className="text-2xl">Messages</h2>
-      <p className="mt-1 text-sm text-dim">
-        Your conversations with clients. Not live: messages refresh when you open this tab and every
-        20 seconds.
-      </p>
+      <p className="mt-1 text-sm text-dim">Your conversations with clients.</p>
       {/* minmax(0, 1fr): grid tracks may shrink below their content, so a long preview or the
           message box placeholder can never push the page sideways on a phone. */}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[17rem_minmax(0,1fr)]">
@@ -146,15 +145,28 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
                   }
                 >
                   <span className="min-w-0 flex-1">
-                    <span className={"block truncate text-sm text-text " + (unread ? "font-bold" : "font-semibold")}>
-                      {c.name}
+                    <span className="flex items-baseline gap-2">
+                      <span className={"min-w-0 flex-1 truncate text-sm text-text " + (unread ? "font-bold" : "font-semibold")}>
+                        {c.name}
+                      </span>
+                      {last && !failed && (
+                        <time dateTime={last.createdAt} className="shrink-0 text-xs text-dim">
+                          {relativeTime(last.createdAt)}
+                        </time>
+                      )}
                     </span>
-                    <span className={"block truncate text-xs " + (failed ? "font-semibold text-amber-text" : "text-dim")}>
+                    <span data-testid="thread-preview" className={"block truncate text-xs " + (failed ? "font-semibold text-amber-text" : "text-dim")}>
                       {chars.length > PREVIEW_CHARS ? `${chars.slice(0, PREVIEW_CHARS).join("")}…` : preview}
                     </span>
                   </span>
                   {unread && (
-                    <span data-testid="unread-dot" aria-hidden="true" className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent" />
+                    <span
+                      data-testid="unread-dot"
+                      aria-hidden="true"
+                      className="mt-0.5 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold text-on-accent"
+                    >
+                      {summary!.unreadCount > 99 ? "99+" : summary!.unreadCount}
+                    </span>
                   )}
                 </button>
               </li>

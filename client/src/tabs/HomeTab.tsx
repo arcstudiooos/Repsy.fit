@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
 import { timeRangeText } from "../lib/schedule";
+import { formatDay } from "../lib/dates";
 import { localToday } from "./AiCoachTab";
 
 export type TaskTarget = "planner" | "ai";
@@ -261,7 +262,7 @@ function WeeklySummaryCard({ date }: { date: string }) {
         )}
         <p className="whitespace-pre-line text-text">{summary.text}</p>
         <p className="mt-3 font-mono text-xs text-dim">
-          Week of {summary.weekStart} · saved {new Date(summary.createdAt).toLocaleString()}
+          Week of {formatDay(summary.weekStart)} · saved {new Date(summary.createdAt).toLocaleString()}
         </p>
       </>
     );
@@ -358,7 +359,7 @@ function ReviewQueueCard({ date }: { date: string }) {
               </p>
               <p className="text-sm text-text">{item.title}</p>
               {item.summary && <p className="text-sm text-dim">{item.summary}</p>}
-              <p className="font-mono text-xs text-dim">{new Date(item.createdAt).toLocaleDateString()}</p>
+              <p className="text-xs text-dim">{formatDay(item.createdAt)}</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <button

@@ -164,7 +164,8 @@ test("7. switch client: zero data leakage", async ({ page, request }) => {
 test("8. delete the test client and confirm cascade", async ({ page, request }) => {
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await panel(page).getByRole("button", { name: `Delete ${A}` }).click();
+  await panel(page).getByRole("button", { name: `More actions for ${A}` }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
   await expect(panel(page)).not.toContainText(A, { timeout: 30_000 });
   for (const p of ["assignments", "progress", "chat"]) {

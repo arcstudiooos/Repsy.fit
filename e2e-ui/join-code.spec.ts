@@ -50,11 +50,22 @@ async function open(page: Page, opts: { failFirst?: boolean; share?: boolean } =
   return { panel, calls, recover: () => (state.failing = false) };
 }
 
-test("shows the code, the link and a scannable-size QR code", async ({ page }) => {
+test("a compact bar: the code, Copy link and the QR behind a button; settings folded away", async ({ page }) => {
   const { panel } = await open(page);
   await expect(panel.getByTestId("join-code")).toHaveText("ANNA-7K2Q8M");
+  await expect(panel.getByRole("button", { name: "Copy link" })).toBeVisible();
+  // The settings (and the full link) sit behind "Invite settings".
+  await expect(panel.getByRole("switch", { name: "Code is on" })).toBeHidden();
+  await expect(panel.getByLabel("Join link", { exact: true })).toBeHidden();
+  await panel.getByText("Invite settings").click();
   await expect(panel.getByLabel("Join link", { exact: true })).toHaveValue("https://app.repsy.fit/join/ANNA-7K2Q8M");
+  await expect(panel.getByRole("switch", { name: "Code is on" })).toBeVisible();
   const qr = panel.getByRole("img", { name: /QR code for your join link/ });
+  await expect(qr).toHaveCount(0);
+  const show = panel.getByRole("button", { name: "Show QR code" });
+  await expect(show).toHaveAttribute("aria-expanded", "false");
+  await show.click();
+  await expect(panel.getByRole("button", { name: "Hide QR code" })).toHaveAttribute("aria-expanded", "true");
   await expect(qr).toBeVisible();
   // 38-character link -> version 3 (29 x 29 modules) at level M.
   await expect(qr).toHaveAttribute("data-modules", "29");
@@ -70,6 +81,7 @@ test("shows the code, the link and a scannable-size QR code", async ({ page }) =
 test("copy code and copy link put the right text on the clipboard", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const { panel } = await open(page);
+  await panel.getByText("Invite settings").click();
   await panel.getByRole("button", { name: "Copy code" }).click();
   await expect(panel.getByRole("button", { name: "Copied" })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Copy code" })).toBeVisible({ timeout: 4000 }); // resets after ~2 s
@@ -87,6 +99,7 @@ test("Share uses the device share sheet when there is one", async ({ page }) => 
 
 test("turning the code off and on, and the approval switch", async ({ page }) => {
   const { panel, calls } = await open(page);
+  await panel.getByText("Invite settings").click();
   const on = panel.getByRole("switch", { name: "Code is on" });
   await expect(on).toHaveAttribute("aria-checked", "true");
   await on.click();
@@ -102,6 +115,7 @@ test("turning the code off and on, and the approval switch", async ({ page }) =>
 
 test("making a new code asks first, then shows the new code and link", async ({ page }) => {
   const { panel, calls } = await open(page);
+  await panel.getByText("Invite settings").click();
   await panel.getByRole("button", { name: "Make a new code" }).click();
   const dialog = page.getByRole("dialog", { name: "Make a new join code?" });
   await expect(dialog).toContainText("ANNA-7K2Q8M) will stop working straight away");
@@ -122,11 +136,12 @@ test("a load error shows Retry, which recovers", async ({ page }) => {
   await expect(panel.getByTestId("join-code")).toHaveText("ANNA-7K2Q8M");
 });
 
-test("on a phone the QR code is behind a button", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test("on a phone the bar fits and the QR code is behind a button", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 844 });
   const { panel } = await open(page);
   const qr = panel.getByRole("img", { name: /QR code/ });
   await expect(qr).toBeHidden();
   await panel.getByRole("button", { name: "Show QR code" }).click();
   await expect(qr).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });

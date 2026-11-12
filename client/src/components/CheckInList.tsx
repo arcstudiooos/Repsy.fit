@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteProgressLog, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import type { ProgressLog } from "../types";
+import { formatDay } from "../lib/dates";
 
 type Props = { clientId: string; logs: ProgressLog[] };
 
@@ -30,7 +31,7 @@ export function CheckInList({ clientId, logs }: Props) {
       <ol aria-label="Check-ins" className="mt-2 flex flex-col gap-2">
         {newestFirst.map((log) => (
           <li key={log.id} className="card flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm">
-            <span className="font-semibold text-text">{log.date}</span>
+            <span className="font-semibold text-text">{formatDay(log.date)}</span>
             <span className="text-text">{show(log.weightKg, " kg")}</span>
             <span className="text-text">{show(log.adherence, "%")}</span>
             <span className="text-text">{log.workoutsDone === null ? "-" : `${log.workoutsDone} workouts`}</span>

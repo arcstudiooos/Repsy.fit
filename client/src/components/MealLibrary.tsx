@@ -108,8 +108,7 @@ export function MealLibrary() {
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : all.length === 0 ? (
           <p className="rounded-card bg-surface2 px-4 py-6 text-center text-dim">
-            No meals yet. Add your first one with New meal. Repsy has no food database, barcode scanner or automatic
-            calorie lookup in this version: you type in the values yourself.
+            No meals yet. Add one with New meal - you enter the calories and macros yourself.
           </p>
         ) : shown.length === 0 ? (
           <p className="rounded-card bg-surface2 px-4 py-6 text-center text-dim">No meal matches your search.</p>

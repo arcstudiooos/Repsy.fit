@@ -106,11 +106,12 @@ const list = (page: Page) => page.getByRole("list", { name: "Clients" });
 const pane = (page: Page) => page.getByRole("region", { name: /^Conversation with / });
 const box = (page: Page) => page.getByLabel(/^Message to /);
 
-test("Messages is the 8th tab, after Library, says it is not live, and has no client strip", async ({ page }) => {
+test("Messages is the 8th tab, after Library, has no developer note and no client strip", async ({ page }) => {
   await mockServer(page);
   await openMessages(page);
   await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
-  await expect(page.getByRole("tabpanel")).toContainText("Not live: messages refresh when you open this tab and every 20 seconds.");
+  await expect(page.getByRole("tabpanel")).toContainText("Your conversations with clients.");
+  await expect(page.getByRole("tabpanel")).not.toContainText("Not live");
   await expect(page.getByRole("group", { name: "Select client" })).toHaveCount(0);
 });
 
@@ -129,7 +130,12 @@ test("client list: names, last-message previews, unread dots, search by name", a
   await expect(rows.first()).toContainText("Can we move Friday?");
   await expect(list(page).getByRole("button", { name: /Maya Patel/ })).toContainText("You: How did the session go?");
   await expect(list(page).getByRole("button", { name: /Casey Lin/ })).toContainText("No messages yet");
-  await expect(list(page).getByRole("button", { name: "Arjun Rao, 1 unread" }).getByTestId("unread-dot")).toBeVisible();
+  await expect(list(page).getByRole("button", { name: "Arjun Rao, 1 unread" }).getByTestId("unread-dot")).toHaveText("1");
+  // How long ago the last message was sent.
+  const sent = rows.first().locator("time");
+  await expect(sent).toHaveAttribute("datetime", "2026-11-11T11:00:00.000Z");
+  await expect(sent).toHaveText(/ago$|^just now$|^yesterday$|^[A-Z][a-z]{2}, \d+ [A-Z][a-z]{2}/);
+  await expect(list(page).getByRole("button", { name: /Casey Lin/ }).locator("time")).toHaveCount(0);
 
   await page.getByLabel("Search clients by name").fill("cas");
   await expect(rows).toHaveCount(1);
@@ -372,7 +378,7 @@ test("a long emoji preview is never cut in half", async ({ page }) => {
   const body = "🏋️".repeat(70);
   await mockServer(page, { threads: { "c-maya": [msg({ body })] } });
   await openMessages(page);
-  const preview = await list(page).getByRole("button", { name: /Maya Patel/ }).locator("span span").nth(1).innerText();
+  const preview = await list(page).getByRole("button", { name: /Maya Patel/ }).getByTestId("thread-preview").innerText();
   expect(preview).not.toContain("\uFFFD");
   expect(preview.endsWith("…")).toBe(true);
 });

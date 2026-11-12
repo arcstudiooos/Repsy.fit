@@ -68,8 +68,13 @@ test("Business is the 9th and final tab, and says it is record-keeping only", as
   await mockBusiness(page, []);
   await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
   const panel = page.getByRole("tabpanel");
-  await expect(panel).toContainText("Record-keeping only");
-  await expect(panel).toContainText("Nothing here charges anyone, sends payment links or reminders, or makes invoices");
+  // One short line now (owner, Nov 2026): Repsy takes no payments; these are the coach's own records.
+  await expect(panel).toContainText("Record-keeping only: Repsy doesn't take payments. These are your own records.");
+  // Filter counts use the body font (Geist Mono's zero looked slashed).
+  const allCount = page.getByRole("group", { name: "Filter plans" }).getByRole("button", { name: /^All/ }).locator("span");
+  await expect(allCount).toHaveText("0");
+  await expect(allCount).toHaveClass(/font-body/);
+  await expect(allCount).not.toHaveClass(/font-mono/);
   await expect(panel).toContainText("No plans yet.");
   await expect(page.getByRole("group", { name: "Select client" })).toHaveCount(0);
 });

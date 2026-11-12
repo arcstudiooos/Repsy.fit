@@ -81,14 +81,18 @@ const openProgress = async (page: Page) => {
   await page.getByRole("tab", { name: "Progress" }).click();
 };
 
-test("weight chart: accent line, MM-DD dates, Date and kg axis labels", async ({ page }) => {
+test("weight chart: accent line, '29 Oct' dates, round kg ticks, Date and kg axis labels", async ({ page }) => {
   await mockApi(page, PROMPT_25_LOGS);
   await openProgress(page);
   const weight = chart(page, "Weight");
   await expect(weight.locator(".recharts-line-curve")).toHaveAttribute("stroke", "#FF4A1F");
   await expect(weight.locator(".recharts-cartesian-grid")).toHaveCount(1);
-  for (const tick of ["10-26", "11-02", "11-09"]) await expect(weight.locator(".recharts-xAxis")).toContainText(tick);
+  for (const tick of ["26 Oct", "2 Nov", "9 Nov"]) await expect(weight.locator(".recharts-xAxis")).toContainText(tick);
   await expect(weight.locator(".recharts-xAxis")).not.toContainText("2026");
+  // Weight ticks are whole numbers or halves - never "67.2".
+  const yTicks = await weight.locator(".recharts-yAxis .recharts-cartesian-axis-tick-value").allTextContents();
+  expect(yTicks.length).toBeGreaterThanOrEqual(3);
+  for (const t of yTicks) expect(t).toMatch(/^\d+(\.5)?$/);
   await expect(weight).toContainText("Date");
   await expect(weight).toContainText("kg");
 });
@@ -99,7 +103,7 @@ test("the weight tooltip shows the full date and the weight", async ({ page }) =
   const weight = chart(page, "Weight");
   await weight.locator(".recharts-line-dots circle").nth(1).hover();
   const tooltip = weight.locator(".recharts-tooltip-wrapper");
-  await expect(tooltip).toContainText("2026-11-02");
+  await expect(tooltip).toContainText(/Mon, 2 Nov( 2026)?/);
   await expect(tooltip).toContainText("67.8 kg");
 });
 
@@ -148,12 +152,12 @@ test("the check-in list is newest first with date, weight, adherence, workouts a
   await mockApi(page, PROMPT_25_LOGS);
   await openProgress(page);
   await expect(checkIns(page)).toHaveCount(3);
-  await expect(checkIns(page).nth(0)).toContainText("2026-11-09");
+  await expect(checkIns(page).nth(0)).toContainText(/Mon, 9 Nov( 2026)?/);
   await expect(checkIns(page).nth(0)).toContainText("67.2 kg");
   await expect(checkIns(page).nth(0)).toContainText("86%");
   await expect(checkIns(page).nth(0)).toContainText("4 workouts");
   await expect(checkIns(page).nth(0)).toContainText("On track");
-  await expect(checkIns(page).nth(2)).toContainText("2026-10-26");
+  await expect(checkIns(page).nth(2)).toContainText(/Mon, 26 Oct( 2026)?/);
 });
 
 test("deleting a check-in removes it and the cards and chart follow", async ({ page }) => {

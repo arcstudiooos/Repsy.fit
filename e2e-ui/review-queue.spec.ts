@@ -67,7 +67,7 @@ test("each item shows client, type, summary and date, with Approve and Dismiss",
   await expect(rows.first()).toContainText("Workout");
   await expect(rows.first()).toContainText("Lower-body strength day");
   await expect(rows.first()).toContainText("Adherence climbed from 72% to 86%");
-  await expect(rows.first()).toContainText("11/11/2026");
+  await expect(rows.first()).toContainText(/Wed, 11 Nov( 2026)?/);
   await expect(rows.nth(1)).toContainText("Check-in");
   for (const name of ["Approve", "Dismiss"]) await expect(rows.first().getByRole("button", { name: new RegExp(name) })).toBeVisible();
 });

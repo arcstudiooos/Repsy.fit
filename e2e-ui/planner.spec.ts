@@ -185,7 +185,7 @@ test("cards show source, status, date, line breaks, and no Why line when reasoni
   await expect(card.getByText("Manual", { exact: true })).toBeVisible();
   await expect(card.getByText("AI", { exact: true })).toHaveCount(0);
   await expect(card.getByText("Paused", { exact: true })).toBeVisible();
-  await expect(card).toContainText("2026-11-03");
+  await expect(card).toContainText("Tue, 3 Nov");
   await expect(card).not.toContainText("Why:");
   const details = card.locator(".plan-details");
   expect(await details.innerText()).toBe("Breakfast: oats\nLunch: lentils");
@@ -219,28 +219,41 @@ test("a failed load shows an error with Retry", async ({ page }) => {
   await expect(panel(page)).toContainText("Nothing assigned yet.");
 });
 
-test("Clients tab counts use the real assignments", async ({ page }) => {
-  await mockApi(page, {
-    "c-maya": [
-      assignment("c-maya", { status: "Active" }),
-      assignment("c-maya", { status: "Done" }),
-      assignment("c-maya", { status: "Active" }),
-    ],
+test("client cards show the last check-in and adherence from GET /api/clients (no per-client requests)", async ({ page }) => {
+  await mockApi(page);
+  const d = new Date();
+  d.setDate(d.getDate() - 3);
+  const threeDaysAgo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  await page.route("**/api/clients", (route) =>
+    route.fulfill({
+      json: [
+        { ...CLIENTS[0], lastCheckIn: threeDaysAgo, adherence: 82 },
+        { ...CLIENTS[1], lastCheckIn: null, adherence: null },
+      ],
+    }),
+  );
+  const assignmentGets: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "GET" && /\/assignments$/.test(new URL(r.url()).pathname)) assignmentGets.push(r.url());
   });
   await page.goto("/app");
   await openTab(page, "Clients");
   const maya = panel(page).getByRole("button", { name: "Maya Patel - open in AI Coach" });
-  await expect(maya).toContainText("3 assignments");
-  await expect(maya).toContainText("2 active");
+  await expect(maya).toContainText("Checked in 3 days ago");
+  await expect(maya).toContainText("Adherence 82%");
+  await expect(maya).not.toContainText("assignments");
   const leo = panel(page).getByRole("button", { name: "Leo Brooks - open in AI Coach" });
-  await expect(leo).toContainText("0 assignments");
-});
-
-test("Clients tab counts show '-' when the assignments endpoint is missing (no fake 0)", async ({ page }) => {
-  const mock = await mockApi(page);
-  mock.assignmentsBehaviour = "missing";
-  await page.goto("/app");
-  await openTab(page, "Clients");
-  const maya = panel(page).getByRole("button", { name: "Maya Patel - open in AI Coach" });
-  await expect(maya).toContainText("- assignments");
+  await expect(leo).toContainText("No check-ins yet");
+  await expect(leo).not.toContainText("Adherence");
+  expect(assignmentGets).toEqual([]);
+  // "Client access" stays on the card; Delete moved into the ⋯ menu.
+  await expect(panel(page).getByRole("button", { name: "Client access for Maya Patel" })).toHaveText("Client access");
+  await expect(panel(page).getByRole("button", { name: "Delete Maya Patel" })).toHaveCount(0);
+  const more = panel(page).getByRole("button", { name: "More actions for Maya Patel" });
+  await expect(more).toHaveAttribute("aria-haspopup", "menu");
+  await more.click();
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("menuitem", { name: "Delete" })).toBeFocused();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Delete Maya Patel?");
 });

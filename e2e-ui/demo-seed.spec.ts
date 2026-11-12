@@ -58,29 +58,27 @@ test("the empty-state button seeds 3 clients, refreshes, and selects Maya", asyn
   expect(mock.seeds).toBe(1);
 });
 
-test("the Clients tab 'Load demo' button: first tap adds 3, second tap says already loaded", async ({ page }) => {
+test("Clients tab: the demo buttons show only while there are no clients", async ({ page }) => {
   const mock = await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   // Zero clients: the empty-state button seeds.
+  await expect(page.getByRole("button", { name: "Load 6-month demo (10 clients)" })).toBeVisible();
   await page.getByRole("button", { name: "Load demo clients" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("3 clients");
-  await expect(page.getByRole("button", { name: "Added 3 demo clients" })).toBeVisible();
-
-  await page.getByRole("button", { name: "Added 3 demo clients" }).click();
-  await expect(page.getByRole("button", { name: "Demo already loaded" })).toBeVisible();
-  await expect(page.getByRole("tabpanel")).toContainText("3 clients");
-  expect(mock.seeds).toBe(2);
+  await expect(page.getByRole("status").filter({ hasText: "Added 3 demo clients" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Load demo|6-month demo/ })).toHaveCount(0);
+  expect(mock.seeds).toBe(1);
   expect(mock.clients).toHaveLength(3);
 });
 
-test("with clients already there, 'Load demo' says 'Demo already loaded'", async ({ page }) => {
+test("with clients already there, there are no demo buttons and no demo note", async ({ page }) => {
   await mockApi(page, DEMO.slice(0, 1));
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await page.getByRole("button", { name: "Load demo" }).click();
-  await expect(page.getByRole("button", { name: "Demo already loaded" })).toBeVisible();
   await expect(page.getByRole("tabpanel")).toContainText("1 client");
+  await expect(page.getByRole("button", { name: /Load demo|6-month demo|Demo already loaded/ })).toHaveCount(0);
+  await expect(page.getByRole("tabpanel")).not.toContainText("13 clients");
 });
 
 test("a failed seed shows the error and adds nothing", async ({ page }) => {
@@ -92,21 +90,15 @@ test("a failed seed shows the error and adds nothing", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Load demo clients" })).toBeEnabled();
 });
 
-test("the 6-month button adds 10, then says already loaded; quick demo still adds its 3 for 13 total", async ({ page }) => {
+test("the 6-month button adds 10, says so, and the demo buttons go away", async ({ page }) => {
   const mock = await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText(
-    "Loading both demo sets gives 13 clients in total, because the names do not overlap.",
-  );
   await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
-  await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Added 10 demo clients" })).toBeVisible();
   await expect(page.getByRole("tabpanel")).toContainText("10 clients");
-
-  await page.getByRole("button", { name: "Added 10 demo clients" }).click();
-  await expect(page.getByRole("button", { name: "6-month demo already loaded" })).toBeVisible();
-  expect(mock.sixSeeds).toBe(2);
-
+  await expect(page.getByRole("button", { name: /Load demo|6-month demo/ })).toHaveCount(0);
+  expect(mock.sixSeeds).toBe(1);
 });
 
 test("after the 6-month seed the first new client is selected", async ({ page }) => {
@@ -114,17 +106,7 @@ test("after the 6-month seed the first new client is selected", async ({ page })
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
-  await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Added 10 demo clients" })).toBeVisible();
   await page.getByRole("tab", { name: "AI Coach" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("Selected: Six Month 0");
-});
-
-test("with the 3 quick-demo clients already there, the 6-month demo brings the total to 13", async ({ page }) => {
-  await mockApi(page, DEMO);
-  await page.goto("/app");
-  await page.getByRole("tab", { name: "Clients" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("3 clients");
-  await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
-  await expect(page.getByRole("button", { name: "Added 10 demo clients" })).toBeVisible();
-  await expect(page.getByRole("tabpanel")).toContainText("13 clients");
 });

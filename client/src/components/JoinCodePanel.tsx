@@ -21,6 +21,7 @@ export function JoinCodePanel() {
   }, [copied]);
   const [confirmNew, setConfirmNew] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const store = (data: JoinCode) => queryClient.setQueryData(queryKeys.joinCode, data);
   // Only the latest action's error shows (an old switch error never hides a newer regenerate error).
@@ -54,6 +55,7 @@ export function JoinCodePanel() {
     } catch {
       setCopied(null);
       setCopyFailed(true);
+      setSettingsOpen(true); // the link is in there, to select by hand
     }
   }
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -90,87 +92,98 @@ export function JoinCodePanel() {
     "min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim disabled:opacity-60";
 
   return (
-    <section aria-label="Invite clients" className="card mb-4 p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1 basis-72">
-          <h3 className="text-base">Invite clients</h3>
-          <p className="mt-1 text-sm text-dim">
-            Share your code or link. Clients who sign up with it join you as their coach.
-          </p>
-          <p className={`mt-3 font-mono text-3xl font-bold tracking-wider ${off ? "text-dim line-through" : "text-text"}`} data-testid="join-code">
-            {jc.code}
-          </p>
-          {off && (
-            <p role="status" className="mt-1 text-sm font-semibold text-amber-text">
-              Your code is turned off. Nobody can join with it until you turn it back on.
-            </p>
+    <section aria-label="Invite clients" className="card mb-4 p-4">
+      {/* Compact bar: the code and the three share actions. Settings sit behind "Invite settings". */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h3 className="text-base">Invite clients</h3>
+        <p className={`font-mono text-xl font-bold tracking-wider ${off ? "text-dim line-through" : "text-text"}`} data-testid="join-code">
+          {jc.code}
+        </p>
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <button type="button" className={buttonClass} onClick={() => void copy("link", jc.link)}>
+            {copied === "link" ? "Copied" : "Copy link"}
+          </button>
+          {canShare && (
+            <button type="button" className={buttonClass} onClick={() => void share(jc.link)}>
+              Share
+            </button>
           )}
-          <label htmlFor="join-link" className="mt-3 block text-xs font-bold text-dim">
-            Join link
-          </label>
-          <input
-            id="join-link"
-            readOnly
-            value={jc.link}
-            onFocus={(e) => e.currentTarget.select()}
-            className="mt-1 min-h-11 w-full rounded-lg border border-border bg-surface px-3 font-mono text-xs text-text"
-          />
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" className={buttonClass} onClick={() => void copy("code", jc.code)}>
-              {copied === "code" ? "Copied" : "Copy code"}
-            </button>
-            <button type="button" className={buttonClass} onClick={() => void copy("link", jc.link)}>
-              {copied === "link" ? "Copied" : "Copy link"}
-            </button>
-            {canShare && (
-              <button type="button" className={buttonClass} onClick={() => void share(jc.link)}>
-                Share
-              </button>
-            )}
-            <button type="button" className={`${buttonClass} sm:hidden`} aria-expanded={showQr} onClick={() => setShowQr((v) => !v)}>
-              {showQr ? "Hide QR code" : "Show QR code"}
-            </button>
-          </div>
-          {copyFailed && (
-            <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
-              Couldn't copy. Select the link above and copy it yourself.
-            </p>
-          )}
+          <button type="button" className={buttonClass} aria-expanded={showQr} aria-controls="join-qr" onClick={() => setShowQr((v) => !v)}>
+            {showQr ? "Hide QR code" : "Show QR code"}
+          </button>
         </div>
-        <figure className={`${showQr ? "block" : "hidden"} sm:block`}>
+      </div>
+      {off && (
+        <p role="status" className="mt-2 text-sm font-semibold text-amber-text">
+          Your code is turned off. Nobody can join with it until you turn it back on.
+        </p>
+      )}
+      {copyFailed && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          Couldn't copy. Select the link under Invite settings and copy it yourself.
+        </p>
+      )}
+      {showQr && (
+        <figure id="join-qr" className="mt-3 w-fit">
           <QrCode text={jc.link} label={`QR code for your join link ${jc.link}`} />
           <figcaption className="mt-1 text-center text-xs text-dim">Scan to join</figcaption>
         </figure>
-      </div>
+      )}
 
-      <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
-        <Toggle
-          id="join-active"
-          label="Code is on"
-          hint="Turn it off to stop new sign-ups. Clients who already joined are not affected."
-          checked={jc.active}
-          pending={update.isPending}
-          onChange={(v) => update.mutate({ active: v })}
-        />
-        <Toggle
-          id="join-approve"
-          label="Approve new clients before they join"
-          hint="When on, people who sign up with your code wait in a list until you approve them."
-          checked={jc.approveNewClients}
-          pending={update.isPending}
-          onChange={(v) => update.mutate({ approveNewClients: v })}
-        />
-        <div>
-          <button type="button" className={buttonClass} disabled={regenerate.isPending} onClick={() => setConfirmNew(true)}>
-            {regenerate.isPending ? "Making a new code..." : "Make a new code"}
-          </button>
+      <details
+        open={settingsOpen}
+        onToggle={(e) => setSettingsOpen(e.currentTarget.open)}
+        className="mt-3 border-t border-border pt-2"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-dim hover:text-text">
+          Invite settings
+        </summary>
+        <div className="mt-2 flex flex-col gap-3">
+          <div>
+            <label htmlFor="join-link" className="block text-xs font-bold text-dim">
+              Join link
+            </label>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <input
+                id="join-link"
+                readOnly
+                value={jc.link}
+                onFocus={(e) => e.currentTarget.select()}
+                className="min-h-11 min-w-0 flex-1 basis-60 rounded-lg border border-border bg-surface px-3 font-mono text-xs text-text"
+              />
+              <button type="button" className={buttonClass} onClick={() => void copy("code", jc.code)}>
+                {copied === "code" ? "Copied" : "Copy code"}
+              </button>
+            </div>
+          </div>
+          <Toggle
+            id="join-active"
+            label="Code is on"
+            hint="Off stops new sign-ups. Clients who already joined are not affected."
+            checked={jc.active}
+            pending={update.isPending}
+            onChange={(v) => update.mutate({ active: v })}
+          />
+          <Toggle
+            id="join-approve"
+            label="Approve new clients before they join"
+            hint="New sign-ups wait in a list until you approve them."
+            checked={jc.approveNewClients}
+            pending={update.isPending}
+            onChange={(v) => update.mutate({ approveNewClients: v })}
+          />
+          <div>
+            <button type="button" className={buttonClass} disabled={regenerate.isPending} onClick={() => setConfirmNew(true)}>
+              {regenerate.isPending ? "Making a new code..." : "Make a new code"}
+            </button>
+          </div>
         </div>
-        {actionError != null && (
-          <p role="alert" className="text-sm font-semibold text-amber-text">
-            {plainErrorMessage(actionError)}
-          </p>
-        )}
-      </div>
+      </details>
+      {actionError != null && (
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          {plainErrorMessage(actionError)}
+        </p>
+      )}
 
       {confirmNew && (
         <ConfirmDialog
@@ -184,7 +197,7 @@ export function JoinCodePanel() {
           Your current code and link ({jc.code}) will stop working straight away. Clients who already joined are not affected.
         </ConfirmDialog>
       )}
-      {/* Prompt 84: clients waiting for approval, with Approve / Decline. */}
+      {/* Prompt 84: clients waiting for approval, with Approve / Decline - always shown, never folded away. */}
       <WaitingList />
     </section>
   );

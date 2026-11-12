@@ -5,6 +5,9 @@ const CLIENTS = [
   { id: "c-maya", coachId: "coach-1", name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z" },
 ];
 const today = new Date().toLocaleDateString("en-CA");
+const now = new Date();
+/** Today as the list shows it: "Fri, 13 Nov". */
+const todayLabel = `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][now.getDay()]}, ${now.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()]}`;
 const dayBefore = (n: number) => {
   const d = new Date();
   d.setDate(d.getDate() - n);
@@ -65,6 +68,28 @@ test("Check-ins is the 6th tab, after Progress, and Library the 7th", async ({ p
   await expect(page.getByRole("tabpanel")).toContainText("Selected: Maya Patel");
 });
 
+test("each 1-5 scale shows Low under 1 and High under 5; the buttons keep their names", async ({ page }) => {
+  await openTab(page);
+  const form = page.getByRole("form", { name: "Today's check-in" });
+  for (const label of ["Energy", "Mood", "Recovery"]) {
+    const group = form.getByRole("group", { name: label, exact: true });
+    await expect(group.getByRole("button")).toHaveCount(5);
+    await expect(group.getByRole("button", { name: `${label} 1` })).toBeVisible();
+    const low = group.getByText("Low", { exact: true });
+    const high = group.getByText("High", { exact: true });
+    await expect(low).toBeVisible();
+    await expect(high).toBeVisible();
+    // Visually under the ends: Low lines up with 1, High with 5.
+    const one = (await group.getByRole("button", { name: `${label} 1` }).boundingBox())!;
+    const five = (await group.getByRole("button", { name: `${label} 5` }).boundingBox())!;
+    const lowBox = (await low.boundingBox())!;
+    const highBox = (await high.boundingBox())!;
+    expect(Math.abs(lowBox.x + lowBox.width / 2 - (one.x + one.width / 2))).toBeLessThan(4);
+    expect(Math.abs(highBox.x + highBox.width / 2 - (five.x + five.width / 2))).toBeLessThan(4);
+    expect(lowBox.y).toBeGreaterThan(one.y);
+  }
+});
+
 test("logging today saves energy, mood, water, steps and the food note", async ({ page }) => {
   const { posts } = await openTab(page);
   const form = page.getByRole("form", { name: "Today's check-in" });
@@ -102,7 +127,7 @@ test("the last 14 days list and the energy / mood bars show the loaded days", as
   await openTab(page, [checkIn(), checkIn({ date: dayBefore(1), energy: 2, mood: 2, steps: 4000, foodNote: "" })]);
   const rows = page.getByRole("list", { name: "Daily check-ins" }).getByRole("listitem");
   await expect(rows).toHaveCount(2);
-  await expect(rows.first()).toContainText(today); // newest first
+  await expect(rows.first()).toContainText(todayLabel); // newest first
   await expect(rows.first()).toContainText("Energy 4/5 · Mood 3/5 · 2.5 L · 8000 steps");
   await expect(rows.first()).toContainText("High protein day");
   for (const name of ["Energy by day", "Mood by day"]) await expect(page.getByRole("img", { name })).toBeVisible();

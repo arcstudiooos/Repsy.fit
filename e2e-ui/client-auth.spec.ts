@@ -38,7 +38,7 @@ async function openInvite(page: Page, opts: { emailConfigured: boolean; status?:
   });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await page.getByRole("button", { name: "Client sign-in for Maya Patel" }).click();
+  await page.getByRole("button", { name: "Client access for Maya Patel" }).click();
   const panel = page.getByRole("region", { name: "Client sign-in for Maya Patel" });
   await expect(panel).toBeVisible();
   return { panel, invites };

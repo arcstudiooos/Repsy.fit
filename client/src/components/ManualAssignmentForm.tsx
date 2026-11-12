@@ -220,10 +220,14 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
               aria-pressed={isActive}
               onClick={() => setType(t)}
               className={
-                `rounded-lg px-3 py-1.5 text-sm font-bold ${TYPE_CHIP[t]} ` +
-                (isActive ? "ring-2 ring-text ring-offset-2 ring-offset-surface" : "opacity-50 hover:opacity-75")
+                "inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm font-bold " +
+                (isActive
+                  ? `border-transparent ${TYPE_CHIP[t]} ring-2 ring-text ring-offset-2 ring-offset-surface`
+                  : "border-border bg-surface text-text hover:border-dim")
               }
             >
+              {/* Unselected: outlined with a small dot in the type colour; selected: filled. */}
+              {!isActive && <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${TYPE_DOT[t]}`} />}
               {t}
             </button>
           );
@@ -315,6 +319,13 @@ type DoseRowItemProps = {
   onChange: (change: Partial<Dose>) => void;
   onMove: (by: -1 | 1) => void;
   onRemove: () => void;
+};
+
+const TYPE_DOT: Record<AssignmentType, string> = {
+  Workout: "bg-type-workout",
+  Nutrition: "bg-type-nutrition",
+  Habit: "bg-type-habit",
+  Recovery: "bg-type-recovery",
 };
 
 const smallButton = "rounded-lg border border-border px-2 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40";

@@ -3,7 +3,7 @@
 // Nothing is emailed or scheduled, and the report never shows coach notes or AI chat.
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { downloadClientCsv, getProgressReport } from "../api";
+import { downloadClientCsv, downloadRosterCsv, getProgressReport } from "../api";
 import { ProgressCharts } from "./ProgressCharts";
 import { plainErrorMessage } from "./States";
 import type { Client, ClientExportType, ProgressReport, ReportRange } from "../types";
@@ -57,6 +57,7 @@ export function Reports({ clients }: { clients: Client[] }) {
 
   const report = useMutation({ mutationFn: () => getProgressReport(clientId, range) });
   const csv = useMutation({ mutationFn: (type: ClientExportType) => downloadClientCsv(clientId, type, range) });
+  const roster = useMutation({ mutationFn: downloadRosterCsv });
 
   if (clients.length === 0) {
     return <div className="card mt-4 p-6 text-center text-dim">Add a client to create a report.</div>;
@@ -65,10 +66,7 @@ export function Reports({ clients }: { clients: Client[] }) {
   return (
     <section aria-label="Reports" className="mt-4">
       <div className="no-print">
-        <p className="text-sm text-dim">
-          Make a progress report for one client and print it or save it as a PDF from your browser's print window (that is how
-          PDFs work in this version). The CSV files are one per type. Reports are never emailed or sent automatically.
-        </p>
+        <p className="text-sm text-dim">Print a client's progress report, or save it as a PDF from the print window.</p>
         <div className="mt-3 grid gap-3 rounded-lg bg-surface2 p-3 sm:grid-cols-3">
           <div>
             <label htmlFor="report-client" className={labelClass}>
@@ -137,6 +135,23 @@ export function Reports({ clients }: { clients: Client[] }) {
         {(csv.isError || report.isError) && (
           <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
             {plainErrorMessage(csv.isError ? csv.error : report.error)}
+          </p>
+        )}
+        {/* All clients at once (moved here from the Payments view, Nov 2026). */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-bold">All clients:</span>
+          <button
+            type="button"
+            disabled={roster.isPending}
+            onClick={() => roster.mutate()}
+            className={buttonClass + " disabled:opacity-60"}
+          >
+            Download roster CSV
+          </button>
+        </div>
+        {roster.isError && (
+          <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+            {plainErrorMessage(roster.error)}
           </p>
         )}
       </div>

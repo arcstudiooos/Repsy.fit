@@ -8,10 +8,11 @@ import { addMeasurement, deleteMeasurement, listMeasurements, listProgress, quer
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import type { Measurement, NewMeasurement } from "../types";
+import { formatShortDay } from "../lib/dates";
 
 const ACCENT = "#FF4A1F"; // design-system accent, same as the Progress charts
 const CHART_HEIGHT = 220;
-const shortDate = (date: string) => date.slice(5);
+const shortDate = (date: string) => formatShortDay(date); // "29 Oct"
 
 type TapeKey = "waistCm" | "chestCm" | "armCm" | "hipCm" | "bodyFatPercent";
 const FIELDS: { key: TapeKey; label: string; word: string; unit: string; max: string }[] = [

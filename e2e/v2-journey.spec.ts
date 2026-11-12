@@ -143,7 +143,7 @@ test("6. the coach records a plan and a payment in Business", async () => {
 test("7. the coach invites the client and gets a working invite link", async () => {
   await page.goto("/app");
   await tab(page, "Clients").click();
-  await panel(page).getByRole("button", { name: `Client sign-in for ${CLIENT_NAME}` }).click();
+  await panel(page).getByRole("button", { name: `Client access for ${CLIENT_NAME}` }).click();
   const invite = page.getByRole("region", { name: `Client sign-in for ${CLIENT_NAME}` });
   await invite.getByLabel("Client's email").fill(CLIENT_EMAIL);
   await invite.getByRole("button", { name: "Send invite" }).click();

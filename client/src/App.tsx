@@ -2,7 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from
 import { ThemeSwitch } from "./components/ThemeSwitch";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
-import { ClientStrip } from "./ClientStrip";
+import { ClientStrip, initials } from "./ClientStrip";
+import { MenuButton } from "./components/MenuButton";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./components/States";
 import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
@@ -49,36 +50,24 @@ function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () =>
       <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
         {/* The Repsy logo: gradient R mark + white wordmark, made for the dark header strip. */}
         <img src="/repsy-logo.png" alt="Repsy" width={130} height={36} className="h-9 w-auto shrink-0" />
-        {/* Hidden on phones so the light / dark switch fits the header. */}
-        <div className="hidden leading-tight sm:block">
-          <div className="text-xs text-white/70">Prototype - coach command center</div>
-        </div>
-        {/* Right side (Prompt 46): the signed-in coach and Logout. */}
+        {/* Right side: the light / dark switch, then ONE account menu (Account settings, Log out). */}
         <div className="ml-auto flex min-w-0 items-center gap-3">
           <ThemeSwitch className="text-white" />
-          {/* The name opens the account page (Prompt 47): no extra button, so the header still fits at 375px. */}
-          <a
-            href="/app/account"
-            title="Account"
-            aria-label={`Account: ${coach.name}`}
-            data-testid="coach-name"
-            onClick={(e) => {
-              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-              e.preventDefault();
-              navigate("/app/account");
-            }}
-            className="inline-flex min-h-10 min-w-0 items-center text-sm text-white/70 underline decoration-white/30 underline-offset-4 hover:text-white"
+          <MenuButton
+            label={`Account menu for ${coach.name ?? ""}`.trim()}
+            buttonClassName="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-sm font-bold text-white hover:border-white"
+            header={
+              <span data-testid="coach-name" className="block max-w-56 truncate font-semibold text-text">
+                {coach.name}
+              </span>
+            }
+            items={[
+              { label: "Account settings", onSelect: () => navigate("/app/account") },
+              { label: loggingOut ? "Logging out..." : "Log out", onSelect: onLogout, disabled: loggingOut },
+            ]}
           >
-            <span className="truncate">{coach.name}</span>
-          </a>
-          <button
-            type="button"
-            onClick={onLogout}
-            disabled={loggingOut}
-            className="shrink-0 rounded-lg border border-white/30 px-3 py-1.5 text-sm font-semibold text-white hover:border-white disabled:opacity-60"
-          >
-            Log out
-          </button>
+            <span aria-hidden="true">{initials(coach.name ?? "")}</span>
+          </MenuButton>
         </div>
       </div>
     </header>
@@ -420,9 +409,10 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           aria-labelledby={`tab-${current.id}`}
           className="card rounded-t-none border-t-0 p-6"
         >
-          {seedDemo.message && (
+          {/* The demo buttons vanish once there are clients, so their result is said here. */}
+          {(seedDemo.message ?? seedSixMonth.message) && (
             <p role="status" className="mb-3 text-sm font-semibold text-accent2">
-              {seedDemo.message}
+              {seedDemo.message ?? seedSixMonth.message}
             </p>
           )}
           {panelContent}

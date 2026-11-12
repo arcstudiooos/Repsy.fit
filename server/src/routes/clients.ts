@@ -45,13 +45,45 @@ export const clientsRouter = Router();
 clientsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
+    const coachId = coachIdOf(req);
     const clients = await prisma.client.findMany({
-      where: { coachId: coachIdOf(req), joinStatus: "active" },
+      where: { coachId, joinStatus: "active" },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
-    res.json(clients);
+    if (clients.length === 0) return void res.json(clients);
+    // Client cards (Nov 2026): the last check-in day and recent adherence, from three grouped queries
+    // for the whole roster (never one query per client).
+    const ids = clients.map((c) => c.id);
+    const since = new Date(Date.now() - ADHERENCE_CARD_DAYS * 86_400_000).toISOString().slice(0, 10);
+    const [daily, logs, adherence] = await Promise.all([
+      prisma.dailyCheckIn.groupBy({ by: ["clientId"], where: { coachId, clientId: { in: ids } }, _max: { date: true } }),
+      prisma.progressLog.groupBy({ by: ["clientId"], where: { coachId, clientId: { in: ids } }, _max: { date: true } }),
+      prisma.progressLog.groupBy({
+        by: ["clientId"],
+        where: { coachId, clientId: { in: ids }, adherence: { not: null }, date: { gte: since } },
+        _avg: { adherence: true },
+      }),
+    ]);
+    const lastDaily = new Map(daily.map((r) => [r.clientId, r._max.date]));
+    const lastLog = new Map(logs.map((r) => [r.clientId, r._max.date]));
+    const avg = new Map(adherence.map((r) => [r.clientId, r._avg.adherence]));
+    res.json(
+      clients.map((c) => {
+        const a = lastDaily.get(c.id) ?? null;
+        const b = lastLog.get(c.id) ?? null;
+        const mean = avg.get(c.id);
+        return {
+          ...c,
+          lastCheckIn: a && b ? (a > b ? a : b) : (a ?? b),
+          adherence: mean == null ? null : Math.round(mean),
+        };
+      }),
+    );
   }),
 );
+
+/** Client cards show the average adherence of the progress logs dated within this many days. */
+export const ADHERENCE_CARD_DAYS = 14;
 
 // ---------- Prompt 84: approving clients who joined with the code ----------
 

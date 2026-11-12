@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteAssignment, listAssignments, queryKeys, updateAssignmentStatus } from "../api";
 import { ManualAssignmentForm, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import { MenuButton } from "../components/MenuButton";
+import { formatDay } from "../lib/dates";
 import {
   ASSIGNMENT_STATUSES,
   ASSIGNMENT_TYPES,
@@ -159,7 +161,7 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
         </span>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-dim">
-        <span>{assignment.date}</span>
+        <span>{formatDay(assignment.date)}</span>
         <div role="group" aria-label="Status" className="flex items-center gap-1">
           {isDone && (
             <span title="Done" className="mr-1 font-bold text-accent2">
@@ -185,16 +187,20 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
             );
           })}
         </div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            if (window.confirm("Delete this assignment?")) deleteMutation.mutate();
-          }}
-          className="ml-auto rounded px-1 text-sm text-dim underline-offset-2 hover:text-text hover:underline disabled:opacity-60"
-        >
-          {deleteMutation.isPending ? "Deleting..." : "Delete"}
-        </button>
+        <div className="ml-auto">
+          <MenuButton
+            label={`More actions for ${assignment.title}`}
+            items={[
+              {
+                label: deleteMutation.isPending ? "Deleting..." : "Delete",
+                disabled: busy,
+                onSelect: () => {
+                  if (window.confirm("Delete this assignment?")) deleteMutation.mutate();
+                },
+              },
+            ]}
+          />
+        </div>
       </div>
       {error && (
         <p role="alert" className="mt-2 text-sm font-semibold text-accent">

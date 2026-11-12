@@ -119,11 +119,11 @@ test("lists meals as cards with macros labelled 'Coach-entered values'; search b
   await expect(page.getByText("No meal matches your search.")).toBeVisible();
 });
 
-test("empty state says there is no food database, barcode or automatic lookup", async ({ page }) => {
+test("empty state says the coach enters the values (no lookup)", async ({ page }) => {
   await openMeals(page);
   const empty = page.getByText("No meals yet.");
   await expect(empty).toBeVisible();
-  await expect(empty).toContainText("no food database, barcode scanner or automatic");
+  await expect(empty).toContainText("you enter the calories and macros yourself");
 });
 
 test("creates a meal: checks the numbers, then saves exactly what the coach typed", async ({ page }) => {

@@ -120,7 +120,8 @@ test("account: shows the email, changes the name and the password (needs the cur
   const mock = await mockApi(page);
   mock.signedIn = true;
   await page.goto("/app");
-  await page.getByRole("link", { name: "Account" }).click();
+  await page.getByRole("button", { name: /^Account menu for / }).click();
+  await page.getByRole("menuitem", { name: "Account settings" }).click();
   await expect(page).toHaveURL(/\/app\/account$/);
   await expect(page.getByRole("tab")).toHaveCount(0);
   await expect(page.getByTestId("account-email")).toHaveText("alice@example.com");
@@ -129,7 +130,10 @@ test("account: shows the email, changes the name and the password (needs the cur
   await page.getByLabel("Display name", { exact: true }).fill("Alice B");
   await page.getByRole("button", { name: "Save name" }).click();
   await expect(page.getByText("Name saved.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account menu for Alice B" })).toBeVisible();
+  await page.getByRole("button", { name: "Account menu for Alice B" }).click();
   await expect(page.getByTestId("coach-name")).toHaveText("Alice B");
+  await page.keyboard.press("Escape");
 
   await page.getByLabel("Current password").fill("wrong-password-1");
   await page.getByLabel("New password").fill("a-brand-new-password");

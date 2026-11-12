@@ -87,7 +87,6 @@ const openTab = (page: Page, name: string) => page.getByRole("tab", { name }).cl
 const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem");
 const cardFor = (page: Page, title: string) => cards(page).filter({ hasText: title });
 const statusGroup = (page: Page, title: string) => cardFor(page, title).getByRole("group", { name: "Status" });
-const mayaCard = (page: Page) => panel(page).getByRole("button", { name: "Maya Patel - open in AI Coach" });
 
 test("each card has Active / Done / Paused buttons with the current one highlighted", async ({ page }) => {
   await mockApi(page);
@@ -98,16 +97,13 @@ test("each card has Active / Done / Paused buttons with the current one highligh
   await expect(group.getByRole("button", { name: "Active" })).toHaveAttribute("aria-pressed", "true");
   await expect(group.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "false");
   await expect(group.getByRole("button", { name: "Paused" })).toHaveAttribute("aria-pressed", "false");
-  await expect(cardFor(page, "Squat day").getByRole("button", { name: "Delete" })).toBeVisible();
+  // Delete lives in the card's ⋯ menu.
+  await expect(cardFor(page, "Squat day").getByRole("button", { name: "More actions for Squat day" })).toBeVisible();
 });
 
-test("mark Done, pause, delete: list and Clients tab counts update without a reload", async ({ page }) => {
+test("mark Done, pause, delete: the list updates without a reload", async ({ page }) => {
   const mock = await mockApi(page);
   await page.goto("/app");
-  await openTab(page, "Clients");
-  await expect(mayaCard(page)).toContainText("3 assignments");
-  await expect(mayaCard(page)).toContainText("3 active");
-
   await openTab(page, "Manual Planner");
   let navigations = 0;
   page.on("framenavigated", () => navigations++);
@@ -132,12 +128,14 @@ test("mark Done, pause, delete: list and Clients tab counts update without a rel
     message = d.message();
     void d.dismiss();
   });
-  await cardFor(page, "Mobility flow").getByRole("button", { name: "Delete" }).click();
+  await cardFor(page, "Mobility flow").getByRole("button", { name: "More actions for Mobility flow" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   expect(message).toBe("Delete this assignment?");
   await expect(cards(page)).toHaveCount(3);
 
   page.once("dialog", (d) => void d.accept());
-  await cardFor(page, "Mobility flow").getByRole("button", { name: "Delete" }).click();
+  await cardFor(page, "Mobility flow").getByRole("button", { name: "More actions for Mobility flow" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(cards(page)).toHaveCount(2);
   await expect(cards(page).getByRole("heading")).toHaveText(["Protein plan", "Squat day"]);
 
@@ -147,18 +145,10 @@ test("mark Done, pause, delete: list and Clients tab counts update without a rel
     "DELETE /api/clients/c-maya/assignments/a3",
   ]);
 
-  await openTab(page, "Clients");
-  await expect(mayaCard(page)).toContainText("2 assignments");
-  await expect(mayaCard(page)).toContainText("0 active");
-
-  // Back to Active brings the count back.
-  await openTab(page, "Manual Planner");
+  // Back to Active.
   await statusGroup(page, "Squat day").getByRole("button", { name: "Active" }).click();
   await expect(statusGroup(page, "Squat day").getByRole("button", { name: "Active" })).toHaveAttribute("aria-pressed", "true");
   await expect(cardFor(page, "Squat day").getByRole("heading", { name: "Squat day" })).not.toHaveClass(/text-dim/);
-  await openTab(page, "Clients");
-  await expect(mayaCard(page)).toContainText("1 active");
-
   expect(navigations).toBe(0);
 });
 

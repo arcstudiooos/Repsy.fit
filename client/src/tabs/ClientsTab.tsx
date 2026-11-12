@@ -1,10 +1,12 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteClient, listAssignments, listClients, queryKeys } from "../api";
+import { deleteClient, listClients, queryKeys } from "../api";
 import { initials } from "../ClientStrip";
 import { AddClientForm } from "../components/AddClientForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { DemoSeedError, EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import { MenuButton } from "../components/MenuButton";
+import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import { daysAgo, formatDay } from "../lib/dates";
 import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
 
@@ -116,15 +118,8 @@ export function ClientsTab({
           <h2 className="text-2xl">Clients</h2>
           <span className="text-sm text-dim">{clients.length === 1 ? "1 client" : `${clients.length} clients`}</span>
         </div>
+        {/* The demo-data buttons show only while the client list is empty (owner, Nov 2026). */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={seedDemo.run}
-            disabled={seedDemo.pending}
-            className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
-          >
-            {seedDemo.pending ? "Loading demo..." : (seedDemo.message ?? "Load demo")}
-          </button>
           {!formOpen && (
             <button
               type="button"
@@ -138,10 +133,6 @@ export function ClientsTab({
       </div>
       {/* Prompt 73: the coach is the one who must have permission for the data they type in. */}
       <p className="mb-4 text-sm text-dim">Only add real client data you have permission to store.</p>
-      <div className="mb-4 empty:hidden">
-        <DemoSeedError seed={seedDemo} />
-      </div>
-      <SixMonthDemoControl seed={seedSixMonth} />
       {form}
       <Suspense fallback={<LoadingState />}>
         <JoinCodePanel />
@@ -206,8 +197,8 @@ type CardProps = {
 };
 
 function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError }: CardProps) {
-  const counts = useAssignmentCounts(client.id);
   const statLine = stats(client);
+  const activity = activityLine(client);
 
   return (
     <div
@@ -255,50 +246,43 @@ function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError 
           </div>
         )}
 
-        {/* pr-36 leaves room for the Sign-in and Delete buttons in the corner. */}
-        <div className="mt-auto flex w-full gap-4 border-t border-border pr-36 pt-3 text-sm text-dim">
-          <span>
-            <span className="font-semibold text-text">{counts.total}</span> assignments
-          </span>
-          <span>
-            <span className="font-semibold text-text">{counts.active}</span> active
-          </span>
-        </div>
+        {(activity.checkIn || activity.adherence) && (
+          <div className="mt-auto flex w-full flex-wrap gap-x-3 border-t border-border pt-3 text-sm text-dim" data-testid="client-activity">
+            {activity.checkIn && <span>{activity.checkIn}</span>}
+            {activity.adherence && <span className="font-semibold text-text">{activity.adherence}</span>}
+          </div>
+        )}
       </button>
 
-      <button
-        type="button"
-        onClick={onInvite}
-        aria-label={`Client sign-in for ${client.name}`}
-        className="absolute bottom-4 right-20 rounded px-1 text-sm text-dim underline-offset-2 hover:text-text hover:underline"
-      >
-        Sign-in
-      </button>
-      {/* Calm, small text button - not a loud red block. */}
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label={`Delete ${client.name}`}
-        className="absolute bottom-4 right-4 rounded px-1 text-sm text-dim underline-offset-2 hover:text-text hover:underline"
-      >
-        Delete
-      </button>
+      <div className="flex items-center justify-end gap-1 px-2 pb-2">
+        <button
+          type="button"
+          onClick={onInvite}
+          aria-label={`Client access for ${client.name}`}
+          className="min-h-10 rounded px-2 text-sm text-dim underline-offset-2 hover:text-text hover:underline"
+        >
+          Client access
+        </button>
+        <MenuButton label={`More actions for ${client.name}`} items={[{ label: "Delete", onSelect: onDelete }]} />
+      </div>
     </div>
   );
 }
 
-/**
- * Total and active assignment counts for one client, from the real listAssignments data
- * (same cache as the Manual Planner). Any error shows "-".
- */
-function useAssignmentCounts(clientId: string): { total: number | string; active: number | string } {
-  const q = useQuery({ queryKey: queryKeys.assignments(clientId), queryFn: () => listAssignments(clientId) });
-  if (q.data) return { total: q.data.length, active: q.data.filter((a) => a.status === "Active").length };
-  if (q.isError) return { total: "-", active: "-" };
-  return { total: 0, active: 0 };
+/** "Checked in 3 days ago" / "No check-ins yet", and "Adherence 82%" when there is recent data. */
+function activityLine(client: Client): { checkIn: string | null; adherence: string | null } {
+  // Undefined = the list did not include these fields (e.g. a client just added): show nothing yet.
+  let checkIn: string | null = null;
+  if (client.lastCheckIn === null) checkIn = "No check-ins yet";
+  else if (client.lastCheckIn) {
+    const ago = daysAgo(client.lastCheckIn);
+    checkIn = ago ? `Checked in ${ago}` : `Last check-in ${formatDay(client.lastCheckIn)}`;
+  }
+  const adherence = client.adherence != null ? `Adherence ${client.adherence}%` : null;
+  return { checkIn, adherence };
 }
 
-/** "Load 6-month demo (10 clients)" plus the note on how the two demo sets add up. */
+/** "Load 6-month demo (10 clients)" - shown only while the client list is empty. */
 function SixMonthDemoControl({ seed }: { seed: DemoSeed }) {
   return (
     <div className="mb-5 flex flex-col gap-1">
@@ -312,9 +296,6 @@ function SixMonthDemoControl({ seed }: { seed: DemoSeed }) {
           {seed.pending ? "Loading 6-month demo..." : (seed.message ?? "Load 6-month demo (10 clients)")}
         </button>
       </div>
-      <p className="text-xs text-dim">
-        Loading both demo sets gives 13 clients in total, because the names do not overlap. Load the quick demo first: it only loads into an empty client list.
-      </p>
       {seed.error && (
         <p role="alert" className="text-sm font-semibold text-accent">
           Couldn't load the 6-month demo: {seed.error}

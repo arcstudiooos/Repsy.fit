@@ -44,8 +44,7 @@ export function Engagement() {
   return (
     <section aria-label="Engagement" className="mt-4">
       <p className="text-sm text-dim">
-        Clients are ranked by their check-in streak, then by habit completion over the last 7 days. Workouts done this
-        week are shown but do not change the order. Only you see this; clients see just their own numbers.
+        Ranked by check-in streak, then 7-day habit completion. Only you see the ranking.
       </p>
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">

@@ -118,8 +118,14 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - **Light / dark switch** (owner, Nov 2026): `components/ThemeSwitch.tsx` (role=switch "Dark mode") sits in the
   coach header and the client app header. `lib/theme.ts` keeps the choice in localStorage `repsy-theme` and sets
   `<html data-theme>`; theme.css applies the dark values for `[data-theme=dark]` or for a dark device without a
-  choice. Colours fade during the switch (`html.theme-anim`, off for reduced motion). The coach header subtitle is
-  hidden below 640px so the switch fits. Test: `e2e-ui/theme-switch.spec.ts`.
+  choice. Colours fade during the switch (`html.theme-anim`, off for reduced motion). Test: `e2e-ui/theme-switch.spec.ts`.
+- **Coach header** (owner, Nov 2026): logo, the switch, and ONE account menu button showing the coach's initials
+  ("Account menu for <name>", `components/MenuButton.tsx`: aria-haspopup/expanded, arrow keys, Escape / outside click
+  close) holding the name (`data-testid="coach-name"`), "Account settings" (`/app/account`) and "Log out". No subtitle.
+  Test: `e2e-ui/account-menu.spec.ts`. Card actions use the same menu ("More actions for <title>": plan and client Delete).
+- **Display dates** (owner, Nov 2026): `lib/dates.ts` `formatDay` -> "Thu, 12 Nov" (year only when not this year), chart
+  ticks "29 Oct" (`formatShortDay`), weight ticks whole or .5 (`weightAxis` in ProgressCharts). Display only: values sent to
+  the server, date inputs and accessible names like "Delete check-in 2026-11-09" keep `YYYY-MM-DD`.
 - **AI Coach voice and format** (owner, Nov 2026): the AI talks TO the coach ABOUT the client (third person, first
   name; 'you' = the coach), answers only what was asked under 120 words, cites the client's data, and puts any
   exercises in the suggestion as `N. Name — S sets × R reps · LOAD · Rest Ns` (load in the client's unit or
@@ -250,7 +256,7 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   - `payments`: `paidOn, amount, method, note` (amount is a plain number in the coach's currency)
   - `assignments`: `date, type, title, details, reasoning, source, status`
   - `roster` (all of the coach's clients, A-Z): `name, goal, level, planName, planStatus, billingCycle, priceAmount, nextDueDate` - a client
-    with no plan has `planStatus` "No plan" and the other plan columns empty. The button "Download roster CSV" is on the Business Payments view.
+    with no plan has `planStatus` "No plan" and the other plan columns empty. The button "Download roster CSV" is in Business > Reports (moved from Payments, Nov 2026).
 - **Streaks and leaderboard (Prompt 71).** Nothing is stored: no model, no migration. **Place: the Business tab's "Engagement" view**
   (switch Payments / Schedule / Engagement / Reports; still 9 tabs; no Home card). Rules live in `server/src/engagement.ts`, per client:
   **check-in streak** = consecutive days with a `DailyCheckIn` up to today (today not yet logged does not break it, counting back from
@@ -300,7 +306,7 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   real-time in v2**: no WebSockets or push - the Messages tab (8th tab, after Library, lazy-loaded)
   fetches on open and polls every 20 seconds while the browser tab is visible.
 - **Messages UI (Prompt 64).** The Messages tab has its own client column (search by name, last
-  message preview, unread dot), so the top client strip is hidden on that tab; picking a
+  message preview, how long ago, unread count badge), so the top client strip is hidden on that tab; picking a
   conversation still sets the app-wide selected client. `GET /api/messages/threads` was added
   for that column (the prompt listed UI files only): without it the list would have to open every
   thread, which marks it read. Coach bubbles sit right in teal (`bg-accent2`, white text), client
@@ -437,8 +443,12 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   in `server/src/auth/joinCode.ts`; routes in `server/src/routes/joinCode.ts`.
 - "Make a new code" replaces the code; the old one stops working at once. Turning the code off makes the public
   lookup answer exactly like an unknown code. Clients who already joined are never affected by either.
-- The Clients tab shows the **Invite clients** panel (`components/JoinCodePanel.tsx`, its own lazy chunk): code,
-  link, Copy code / Copy link, Share (only where `navigator.share` exists), a QR code, and the two switches.
+- The Clients tab shows the **Invite clients** panel (`components/JoinCodePanel.tsx`, its own lazy chunk), a compact bar
+  since Nov 2026: code, Copy link, Share (only where `navigator.share` exists), Show QR code; the link + Copy code, the two
+  switches and "Make a new code" sit behind an "Invite settings" disclosure. The waiting list always shows below it.
+- Clients tab (Nov 2026): the demo buttons show only while the coach has no clients. Client cards show "Checked in N days
+  ago" / "No check-ins yet" and "Adherence N%" (from `GET /api/clients`), "Client access" (the sign-in invite) and a ⋯ menu
+  with Delete.
 - QR codes come from `client/src/lib/qr.ts`, a small hand-written encoder (byte mode, level M, versions 1-6; no
   dependency), drawn by `components/QrCode.tsx` as dark ink on `--white` in both themes, since phone cameras
   need dark-on-light. `e2e-ui/qr-encoder.spec.ts` checks it bit for bit against reference matrices.
@@ -643,7 +653,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `api.ts` function | Method | Path | Accepts (JSON body) | Returns |
 | --- | --- | --- | --- | --- |
 | *(health)* | GET | `/api/health` | — | `{ "ok": true }` *(exists)* |
-| `listClients()` | GET | `/api/clients` | — | `Client[]` (oldest first) |
+| `listClients()` | GET | `/api/clients` | — | `Client[]` (oldest first), each plus `lastCheckIn` (newest daily check-in or progress log day, or null) and `adherence` (rounded average of progress logs dated in the last 14 days, or null) - three grouped queries for the whole roster (Nov 2026) |
 | `createClient(input)` | POST | `/api/clients` | `NewClient` | `Client` (201) |
 | `getClient(clientId)` | GET | `/api/clients/:clientId` | — | `Client` |
 | `deleteClient(clientId)` | DELETE | `/api/clients/:clientId` | — | 204, no body (also deletes the client's assignments, AI chat messages, client messages (`thread_messages`) and progress logs) |
@@ -760,7 +770,7 @@ as version 0. Email goes out only through the `SMTP_HOST` / `SMTP_PORT` / `SMTP_
 uses `APP_URL` (else `RENDER_EXTERNAL_URL`). With no provider configured, development logs the link on the
 server console and production logs that email is not set up — a link is never returned by the API or shown in
 the UI. Client: `/forgot-password`, `/reset-password?token=…` (`src/auth/PasswordPages.tsx`) and `/app/account`
-(`src/auth/AccountPage.tsx`, header "Account" link). `server/test/setup.ts` answers the session check "current"
+(`src/auth/AccountPage.tsx`, header account menu > "Account settings"). `server/test/setup.ts` answers the session check "current"
 for mocked tests; tests of the check call `vi.unmock("../src/auth/sessionCheck.js")`.
 
 **Sessions (Prompt 44):** a signed stateless JWT (HS256, `node:crypto`, secret from env `SESSION_SECRET`)

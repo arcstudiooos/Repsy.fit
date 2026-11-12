@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const width of [375, 1280]) {
-  test(`${width}px: the header shows the loaded Repsy logo, 36px tall, beside the subtitle`, async ({ page }) => {
+  test(`${width}px: the header shows the loaded Repsy logo, 36px tall, the switch and the account menu`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.goto("/app");
     const header = page.locator("header");
@@ -16,9 +16,11 @@ for (const width of [375, 1280]) {
     const box = (await logo.boundingBox())!;
     expect(Math.round(box.height)).toBe(36);
     expect(box.width).toBeGreaterThan(100); // wide wordmark, not squashed
-    // The subtitle shows on wider screens; on phones it makes room for the light / dark switch.
-    if (width >= 640) await expect(header).toContainText("Prototype - coach command center");
+    // No subtitle any more (owner, Nov 2026): logo, light / dark switch and the account menu only.
+    await expect(header).not.toContainText("Prototype");
     await expect(header.getByRole("switch", { name: "Dark mode" })).toBeVisible();
+    await expect(header.getByRole("button", { name: /^Account menu for / })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Log out" })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   });
 }

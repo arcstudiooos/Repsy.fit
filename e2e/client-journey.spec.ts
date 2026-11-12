@@ -53,6 +53,8 @@ test("1. a new coach registers and reads their join code", async () => {
 
   await tab(coach, "Clients").click();
   const invite = coach.getByRole("region", { name: "Invite clients" });
+  // The join link sits behind the "Invite settings" disclosure.
+  await invite.getByText("Invite settings").click();
   const link = invite.getByLabel("Join link", { exact: true });
   await expect(link).toHaveValue(/\/join\/[A-Z0-9]+-[A-Z0-9]{6}$/, { timeout: 30_000 });
   // Without APP_URL (CI) the link is a path; on a real deploy it's a full URL.

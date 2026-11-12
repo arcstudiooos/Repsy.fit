@@ -26,6 +26,12 @@ function localDate(offsetDays = 0) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Today as the lists show it: "Fri, 13 Nov". */
+function todayLabel() {
+  const d = new Date();
+  return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()]}, ${d.getDate()} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]}`;
+}
+
 const START: Log[] = [
   { id: "l1", date: localDate(-14), weightKg: 68.4, adherence: 72, workoutsDone: 3, note: "" },
   { id: "l2", date: localDate(-7), weightKg: 67.8, adherence: 81, workoutsDone: 4, note: "" },
@@ -104,7 +110,7 @@ test("a new weight updates the card, chart and list without a refresh; deleting 
 
   await expect(weightCard(page)).toContainText("66.9 kg");
   await expect(weightDots(page)).toHaveCount(3);
-  await expect(checkIns(page).nth(0)).toContainText(localDate());
+  await expect(checkIns(page).nth(0)).toContainText(todayLabel());
   await expect(checkIns(page).nth(0)).toContainText("66.9 kg");
   await expect(checkIns(page).nth(0)).toContainText("Solid week");
   expect(mock.posts).toEqual([{ date: localDate(), weightKg: 66.9, adherence: 85, workoutsDone: 4, note: "Solid week" }]);

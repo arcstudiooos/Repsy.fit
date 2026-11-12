@@ -123,9 +123,12 @@ for (const [label, type] of [
   });
 }
 
-test("the Payments view has a roster CSV download", async ({ page }) => {
+test("the roster CSV download sits with the other exports in Reports (not in Payments)", async ({ page }) => {
   await mockApi(page);
   await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Payments" }).click();
+  await expect(page.getByRole("tabpanel").getByText("Record-keeping only")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Download roster CSV" })).toHaveCount(0);
+  await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Reports" }).click();
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download roster CSV" }).click()]);
   expect(download.suggestedFilename()).toBe("roster-2026-11-11.csv");
 });

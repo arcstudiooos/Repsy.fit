@@ -50,6 +50,10 @@ export interface Client {
   /** Prompt 77/84: "coach" (added by the coach) or "code" (joined with the join code). */
   joinedVia?: string;
   joinStatus?: "active" | "pending" | "declined";
+  /** GET /api/clients only (Nov 2026): newest daily check-in or progress log day ("YYYY-MM-DD"), null = none. */
+  lastCheckIn?: string | null;
+  /** GET /api/clients only: average adherence (%) of progress logs in the last 14 days, null = none. */
+  adherence?: number | null;
 }
 
 /** Prompt 84: a client waiting for approval (or declined), from GET /api/clients/waiting. */

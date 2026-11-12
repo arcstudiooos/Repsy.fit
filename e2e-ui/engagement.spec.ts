@@ -46,7 +46,7 @@ test("Business > Engagement ranks clients with the three numbers beside each ran
   await expect(rows.nth(2)).not.toContainText("Check-in streak");
   expect(seen[0]).toMatch(/^\?date=\d{4}-\d{2}-\d{2}$/);
   // Explained, not a black box; no points or prizes.
-  await expect(page.getByRole("region", { name: "Engagement" })).toContainText("ranked by their check-in streak, then by habit completion");
+  await expect(page.getByRole("region", { name: "Engagement" })).toContainText("Ranked by check-in streak, then 7-day habit completion");
 });
 
 function mockClient(page: import("@playwright/test").Page, streaks: Record<string, unknown>) {

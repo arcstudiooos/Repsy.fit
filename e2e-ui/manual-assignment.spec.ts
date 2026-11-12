@@ -98,26 +98,28 @@ const submit = (page: Page) => form(page).getByRole("button", { name: "Assign pl
 const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem");
 const cardFor = (page: Page, text: string) => cards(page).filter({ hasText: text });
 
-test("type picker: 4 buttons in the type colours, the chosen one ring-highlighted and the others dimmed", async ({ page }) => {
+test("type picker: the chosen type is filled in its colour; the others are outlined with a coloured dot", async ({ page }) => {
   await mockApi(page);
   await openPlanner(page);
   const buttons = typePicker(page).getByRole("button");
   await expect(buttons).toHaveText(["Workout", "Nutrition", "Habit", "Recovery"]);
-  for (const type of ["Workout", "Nutrition", "Habit", "Recovery"]) {
-    await expect(typePicker(page).getByRole("button", { name: type })).toHaveClass(new RegExp(`bg-type-${type.toLowerCase()}`));
-  }
 
   await typePicker(page).getByRole("button", { name: "Nutrition" }).click();
   for (const type of ["Workout", "Nutrition", "Habit", "Recovery"]) {
     const button = typePicker(page).getByRole("button", { name: type });
+    const colour = new RegExp(`bg-type-${type.toLowerCase()}`);
+    await expect(button).not.toHaveClass(/opacity-50/); // never faded
     if (type === "Nutrition") {
       await expect(button).toHaveAttribute("aria-pressed", "true");
+      await expect(button).toHaveClass(colour);
       await expect(button).toHaveClass(/ring-2/);
-      await expect(button).not.toHaveClass(/opacity-50/);
+      await expect(button.locator("span[aria-hidden=true]")).toHaveCount(0);
     } else {
       await expect(button).toHaveAttribute("aria-pressed", "false");
-      await expect(button).toHaveClass(/opacity-50/);
+      await expect(button).toHaveClass(/border-border/);
+      await expect(button).not.toHaveClass(colour);
       await expect(button).not.toHaveClass(/ring-2/);
+      await expect(button.locator("span[aria-hidden=true]")).toHaveClass(colour);
     }
   }
 });
@@ -188,7 +190,7 @@ test("create one Nutrition and one Habit: source manual, form clears, cards show
   const nutrition = cardFor(page, "1800 kcal high-protein day");
   await expect(nutrition.getByText("Manual", { exact: true })).toBeVisible();
   await expect(nutrition.getByText("Nutrition", { exact: true })).toHaveClass(/bg-type-nutrition/);
-  await expect(nutrition).toContainText("2026-11-12");
+  await expect(nutrition).toContainText(/Thu, 12 Nov( 2026)?/);
   await expect(nutrition).toBeInViewport();
 
   // Form cleared (date back to today).

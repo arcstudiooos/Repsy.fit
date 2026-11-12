@@ -10,6 +10,7 @@ import { ErrorState, LoadingState, plainErrorMessage } from "../components/State
 import { HabitTracker } from "../components/HabitTracker";
 import { Measurements } from "../components/Measurements";
 import type { Client, DailyCheckIn, NewDailyCheckIn } from "../types";
+import { formatDay } from "../lib/dates";
 import { localToday } from "./AiCoachTab";
 
 const SCALE = [1, 2, 3, 4, 5] as const;
@@ -205,6 +206,11 @@ function Scale({ label, name, value, onChange }: { label: string; name: string; 
           );
         })}
       </div>
+      {/* End labels for sighted users; the buttons' names already say the number. */}
+      <div aria-hidden="true" className="mt-1 flex w-[14.5rem] justify-between text-xs text-dim">
+        <span className="w-10 text-center">Low</span>
+        <span className="w-10 text-center">High</span>
+      </div>
       <input type="hidden" name={name} value={value} readOnly />
     </div>
   );
@@ -355,7 +361,7 @@ function History({ checkIns }: { checkIns: DailyCheckIn[] }) {
         <ul aria-label="Daily check-ins" className="mt-3 divide-y divide-border">
           {checkIns.map((c) => (
             <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-              <span className="font-mono text-sm text-text">{c.date}</span>
+              <span className="text-sm font-semibold text-text">{formatDay(c.date)}</span>
               <span className="font-mono text-sm text-dim">
                 Energy {scaleText(c.energy)} · Mood {scaleText(c.mood)}
                 {c.waterLiters !== null && ` · ${c.waterLiters} L`}

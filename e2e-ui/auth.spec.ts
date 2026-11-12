@@ -106,8 +106,16 @@ test("login: right password opens the app with the coach's name, Logout and own 
   await page.getByLabel("Password").fill("alice-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText("Alice Coach")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
+  // One account menu (initials) holds Account settings and Log out (owner, Nov 2026).
+  const menu = page.getByRole("button", { name: "Account menu for Alice Coach" });
+  await expect(menu).toHaveText("AC");
+  await menu.click();
+  await expect(page.getByTestId("coach-name")).toHaveText("Alice Coach");
+  await expect(page.getByRole("menuitem", { name: "Account settings" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Log out" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(menu).toBeFocused();
   await expect(page.getByText("Maya Patel").first()).toBeVisible();
 });
 
@@ -138,7 +146,7 @@ test("register: a new coach lands in an empty app", async ({ page }) => {
   await page.getByLabel("Password").fill("carol-password-1");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText("Carol Coach")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account menu for Carol Coach" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No clients yet" })).toBeVisible();
 });
 
@@ -166,7 +174,8 @@ test("logout clears everything: the next coach on the same browser sees nothing 
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page.getByText("Maya Patel").first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Log out" }).click();
+  await page.getByRole("button", { name: /^Account menu for / }).click();
+  await page.getByRole("menuitem", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect(mock.signedIn).toBeNull();
 
@@ -175,10 +184,10 @@ test("logout clears everything: the next coach on the same browser sees nothing 
   await page.getByLabel("Password").fill("bob-password-12");
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText("Bob Coach")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account menu for Bob Coach" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No clients yet" })).toBeVisible();
   await expect(page.getByText("Maya Patel")).toHaveCount(0);
-  await expect(page.getByText("Alice Coach")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Alice Coach/ })).toHaveCount(0);
 });
 
 test("the session is not kept in localStorage or sessionStorage", async ({ page }) => {
@@ -187,7 +196,7 @@ test("the session is not kept in localStorage or sessionStorage", async ({ page 
   await page.getByLabel("Email").fill("alice@example.com");
   await page.getByLabel("Password").fill("alice-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page.getByText("Alice Coach")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account menu for Alice Coach" })).toBeVisible();
   const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
   expect(stored).not.toMatch(/token|jwt|session|alice/i);
 });

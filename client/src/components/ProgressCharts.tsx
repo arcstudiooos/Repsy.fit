@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatDay, formatShortDay } from "../lib/dates";
 import { ASSIGNMENT_TYPES, type Assignment, type AssignmentType, type ProgressLog } from "../types";
 
 // Recharts needs colour values, not CSS classes. These are the design-system values from
@@ -27,7 +28,31 @@ const TYPE_HEX: Record<AssignmentType, string> = {
 
 const NOT_ENOUGH = "Add one more check-in to see the trend.";
 const CHART_HEIGHT = 220;
-const shortDate = (date: string) => date.slice(5); // "2026-11-02" -> "11-02"
+const shortDate = (date: string) => formatShortDay(date); // "2026-10-29" -> "29 Oct"
+
+/**
+ * Round weight-axis ticks: whole numbers or halves (never "70.2"), 3-6 of them, spaced 0.5 / 1 / 2 / 5 / 10...
+ * The axis runs from the tick at or below the lowest weight to the tick at or above the highest.
+ */
+export function weightAxis(values: number[]): { domain: [number, number]; ticks: number[] } {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  for (const step of [0.5, 1, 2, 5, 10, 20, 50, 100]) {
+    let lo = Math.floor(min / step) * step;
+    let hi = Math.ceil(max / step) * step;
+    if (hi === lo) {
+      lo -= step;
+      hi += step;
+    }
+    if ((hi - lo) / step <= 5) {
+      const ticks: number[] = [];
+      for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t * 2) / 2);
+      return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+    }
+  }
+  return { domain: [Math.floor(min), Math.ceil(max)], ticks: [Math.floor(min), Math.ceil(max)] };
+}
+const weightTick = (t: number) => (Number.isInteger(t) ? String(t) : t.toFixed(1));
 
 type Props = {
   logs: Pick<ProgressLog, "date" | "weightKg" | "adherence">[];
@@ -47,6 +72,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
   const adherencePoints = logs
     .filter((l) => l.adherence !== null)
     .map((l) => ({ date: l.date, adherence: l.adherence as number }));
+  const axis = weightPoints.length >= 2 ? weightAxis(weightPoints.map((p) => p.weightKg)) : null;
   const byType = ASSIGNMENT_TYPES.map((type) => ({ type, count: (assignments ?? []).filter((a) => a.type === type).length }));
 
   return (
@@ -65,13 +91,15 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
                 label={{ value: "Date", position: "insideBottom", offset: -8, fill: "var(--dim)" }}
               />
               <YAxis
-                domain={units === "lb" ? ["dataMin - 2", "dataMax + 2"] : ["dataMin - 1", "dataMax + 1"]}
-                allowDecimals={false}
+                domain={axis!.domain}
+                ticks={axis!.ticks}
+                tickFormatter={weightTick}
+                interval={0}
                 width={44}
                 stroke="var(--dim)"
                 label={{ value: units, angle: -90, position: "insideLeft", fill: "var(--dim)" }}
               />
-              <Tooltip labelFormatter={(date) => String(date)} formatter={(value) => [`${value} ${units}`, "Weight"]} />
+              <Tooltip labelFormatter={(date) => formatDay(String(date))} formatter={(value) => [`${value} ${units}`, "Weight"]} />
               <Line type="monotone" dataKey="weightKg" stroke={ACCENT} strokeWidth={2} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -98,7 +126,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
                 stroke="var(--dim)"
                 label={{ value: "%", angle: -90, position: "insideLeft", fill: "var(--dim)" }}
               />
-              <Tooltip labelFormatter={(date) => String(date)} formatter={(value) => [`${value}%`, "Adherence"]} />
+              <Tooltip labelFormatter={(date) => formatDay(String(date))} formatter={(value) => [`${value}%`, "Adherence"]} />
               <Line type="monotone" dataKey="adherence" stroke={TEAL} strokeWidth={2} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>

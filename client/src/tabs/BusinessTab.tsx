@@ -3,11 +3,12 @@
 // invoice. The help line under the heading says so.
 import { lazy, Suspense, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { downloadRosterCsv, getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
+import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Engagement } from "../components/Engagement";
 import { Schedule } from "../components/Schedule";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
+import { formatDay } from "../lib/dates";
 import {
   BILLING_CYCLES,
   PAYMENT_METHODS,
@@ -53,7 +54,7 @@ export function money(amount: number, currency: string): string {
   }
 }
 
-const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
+const dayText = (iso: string) => formatDay(iso);
 
 const VIEWS = ["Payments", "Schedule", "Engagement", "Reports"] as const;
 type View = (typeof VIEWS)[number];
@@ -120,34 +121,16 @@ function PaymentsView({ clients }: { clients: Client[] }) {
     [rows, today],
   );
 
-  const roster = useMutation({ mutationFn: downloadRosterCsv });
-
   return (
     <>
-      <div className="mt-3 flex flex-wrap items-baseline justify-end gap-3">
-        <button
-          type="button"
-          disabled={roster.isPending}
-          onClick={() => roster.mutate()}
-          className="min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
-        >
-          Download roster CSV
-        </button>
+      <div className="mt-3 flex flex-wrap items-baseline justify-end gap-3 empty:hidden">
         {!adding && withoutPlan.length > 0 && query.data && (
           <button type="button" onClick={() => setAdding(true)} className="btn-primary min-h-11 rounded-lg px-4 text-sm">
             Add a plan
           </button>
         )}
       </div>
-      <p className="mt-1 text-sm text-dim">
-        Record-keeping only: log the payments your clients make you. Nothing here charges anyone, sends payment links or
-        reminders, or makes invoices. Export a client's data from Reports.
-      </p>
-      {roster.isError && (
-        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
-          {plainErrorMessage(roster.error)}
-        </p>
-      )}
+      <p className="mt-1 text-xs text-dim">Record-keeping only: Repsy doesn't take payments. These are your own records.</p>
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">
@@ -179,7 +162,7 @@ function PaymentsView({ clients }: { clients: Client[] }) {
                   (filter === f ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
                 }
               >
-                {f} <span className="font-mono font-normal">{counts[f]}</span>
+                {f} <span className="font-body font-normal tabular-nums">{counts[f]}</span>
               </button>
             ))}
           </div>
