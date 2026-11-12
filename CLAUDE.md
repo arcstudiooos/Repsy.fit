@@ -930,4 +930,5 @@ and record it here.
 - **Website enquiries are deleted after 12 months** (`pruneOldLeads`, run at start-up and daily from `index.ts`).
 - **Legal text** (`client/src/legal/content.json`) was rewritten for the client app, India's DPDP Act and GDPR basics.
   Keep the "Google user data" section's meaning (Google approved it). It still needs the operator's legal name,
-  address, a named Grievance Officer and a city for disputes when the owner provides them.
+  address, a named Grievance Officer and a city for disputes when the owner provides them. The AI provider is
+  OpenAI (named in the policy, with its no-training and 30-day API retention terms).

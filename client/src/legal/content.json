@@ -42,11 +42,11 @@
         "body": [
           "To provide the service: storing a coach's client records, plans, progress, schedule and business records; letting a signed-in client see and update their own plans, check-ins, habits, measurements and settings; and carrying messages between a coach and their clients.",
           "To sign people in securely and keep them signed in, and to send account emails such as password-reset links, client invitations and a welcome email when a client joins.",
-          "To provide the AI assistant when a coach asks for it. When a coach asks the AI Coach about a client or requests a weekly summary, we send that client's relevant details to our AI model provider to generate the reply: name, goal, age, height, weight, level, focus, the coach's notes, recent plans, progress logs, and recent weekly and daily check-ins (including sleep, mood and food notes). AI suggestions are drafts; nothing is assigned to a client unless the coach chooses it. Clients do not use the AI assistant and never see the coach's AI conversations.",
+          "To provide the AI assistant when a coach asks for it. When a coach asks the AI Coach about a client or requests a weekly summary, we send that client's relevant details to our AI provider, OpenAI, to generate the reply: name, goal, age, height, weight, level, focus, the coach's notes, recent plans, progress logs, and recent weekly and daily check-ins (including sleep, mood and food notes). AI suggestions are drafts; nothing is assigned to a client unless the coach chooses it. Clients do not use the AI assistant and never see the coach's AI conversations.",
           "To show coaches useful summaries of their own data, such as who needs attention, streaks and new activity from their clients.",
           "To reply to an enquiry sent from our website.",
           "To keep the service secure and working: preventing abuse (for example by rate-limiting sign-in attempts), fixing errors and investigating problems.",
-          "We do not sell personal data, we do not use it for advertising, and we do not use it to train AI models. We only use an AI provider whose terms do not allow it to train its models on the data we send."
+          "We do not sell personal data, we do not use it for advertising, and we do not use it to train AI models. Our AI provider, OpenAI, does not use the data we send through its API to train its models."
         ]
       },
       {
@@ -65,7 +65,7 @@
             "list": [
               "Render (United States): hosts the app and its database.",
               "Resend (United States): sends account emails such as password-reset links, invitations and welcome emails.",
-              "Our AI model provider (United States): generates AI Coach replies and weekly summaries from the client details described above, only when a coach asks for them. Its terms do not allow it to train its models on that data.",
+              "OpenAI (United States): generates AI Coach replies and weekly summaries from the client details described above, only when a coach asks for them. Under OpenAI's API terms it does not use this data to train its models, and it keeps it for at most 30 days for abuse monitoring before deleting it.",
               "Google: provides \"Continue with Google\" sign-in, and serves the web fonts the site uses (your browser requests them from Google's servers, which receive your IP address).",
               "Cloudflare: provides DNS for our domain."
             ]
