@@ -139,3 +139,57 @@
   color: var(--on-accent);
   font-weight: 700;
 }
+
+/* Sign-in screens (coach log in / sign up / password, client sign-in / join / welcome / waiting) wear the
+   landing page's look in light AND dark mode: cream paper, white card, orange pill buttons with the hard
+   ink shadow, rounded fields. Only existing theme values (the light set from theme.css). The apps behind
+   sign-in (/app and /client) still follow the device's light/dark setting. */
+.paper {
+  color-scheme: light;
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --surface2: #f1ede6;
+  --text: #1a1a1a;
+  --dim: #6b6560;
+  --border: #e6e0d6;
+  --tab-inactive: #e9e3d8;
+  --amber-text: #92400e;
+  background-color: var(--bg);
+  color: var(--text);
+}
+.paper .card {
+  border-radius: 24px;
+}
+.paper .btn-primary {
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #141414;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.paper .btn-primary:hover:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #141414;
+}
+.paper input:not([type="checkbox"]):not([type="radio"]),
+.paper select,
+.paper textarea {
+  border-radius: 12px;
+  background-color: var(--surface);
+}
+.paper-logo {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+html.paper-page,
+html.paper-page body {
+  background-color: #faf7f2;
+  color-scheme: light;
+}

@@ -2,6 +2,7 @@
 // Input rules come from the same zod file the server uses (client/src/authSchemas.ts). The session
 // is the server's httpOnly cookie - nothing about it is kept in the browser's storage.
 import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import { PaperFrame } from "./PaperFrame";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ZodTypeAny } from "zod";
 import { login, queryKeys, register } from "../api";
@@ -116,10 +117,9 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
+    <PaperFrame>
       <div className="card w-full max-w-sm p-6 sm:p-8">
-        <img src="/favicon.png" alt="Repsy" width={48} height={48} className="mx-auto h-12 w-12" />
-        <h1 className="mt-4 text-center text-3xl">{isRegister ? "Create your account" : "Log in"}</h1>
+        <h1 className="text-center text-4xl">{isRegister ? "Create your account" : "Log in"}</h1>
         <p className="mt-1 text-center text-sm text-dim">
           {isRegister ? "Start coaching with Repsy." : "Welcome back to Repsy Coach."}
         </p>
@@ -177,7 +177,7 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
           )}
         </p>
       </div>
-    </main>
+    </PaperFrame>
   );
 }
 

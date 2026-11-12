@@ -1,6 +1,7 @@
 // /forgot-password and /reset-password (Prompt 47). Same cream card as the login screens. The reset link
 // itself is only ever sent by email: nothing here (or anywhere in the UI) shows or returns a link.
 import { useState, type FormEvent } from "react";
+import { PaperFrame } from "./PaperFrame";
 import type { ReactNode } from "react";
 import { forgotPassword, resetPassword } from "../api";
 import { ForgotSchema, ResetSchema } from "../authSchemas";
@@ -9,14 +10,13 @@ import { InternalLink, TextField, validate, type FieldErrors } from "./AuthPages
 
 function Shell({ title, intro, children }: { title: string; intro: string; children: ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
+    <PaperFrame>
       <div className="card w-full max-w-sm p-6 sm:p-8">
-        <img src="/favicon.png" alt="Repsy" width={48} height={48} className="mx-auto h-12 w-12" />
-        <h1 className="mt-4 text-center text-3xl">{title}</h1>
+        <h1 className="text-center text-4xl">{title}</h1>
         <p className="mt-1 text-center text-sm text-dim">{intro}</p>
         {children}
       </div>
-    </main>
+    </PaperFrame>
   );
 }
 

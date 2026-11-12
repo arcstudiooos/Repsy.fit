@@ -63,8 +63,27 @@ else if (route === "privacy" || route === "terms") void import("./legal/LegalPag
 
 // In-page navigation (guard redirect, login -> app, logout -> login) fires "popstate"; a history
 // step is treated like Back/Forward so "/" still shows the landing page.
+// Sign-in screens wear the landing's cream paper in light and dark mode (see .paper in index.css);
+// the page behind them is painted cream too, so nothing flashes dark while their chunk loads.
+const PAPER_ROUTES = new Set<Route>([
+  "login",
+  "register",
+  "forgot",
+  "reset",
+  "client-login",
+  "client-set-password",
+  "client-join",
+  "client-welcome",
+  "client-forgot",
+  "client-reset",
+]);
+document.documentElement.classList.toggle("paper-page", PAPER_ROUTES.has(route));
+
 function Root() {
   const [current, setCurrent] = useState<Route>(route);
+  useEffect(() => {
+    document.documentElement.classList.toggle("paper-page", PAPER_ROUTES.has(current));
+  }, [current]);
   useEffect(() => {
     const onNav = () => {
       const next = routeFor(window.location.pathname, { inAppFlow: true, backForward: true });

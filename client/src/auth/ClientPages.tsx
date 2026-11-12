@@ -4,6 +4,7 @@
 // (/api/client-auth) and its own cookie. A client account comes from the coach's invite or from
 // joining with the coach's code; there is no "sign up without a coach".
 import { Suspense, lazy, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { PaperFrame } from "./PaperFrame";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -42,15 +43,14 @@ export const CLIENT_SIGN_IN_TITLE = "Client sign-in - Repsy Coach";
 
 function Shell({ title, intro, children }: { title: string; intro: string; children: ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
+    <PaperFrame>
       <div className="card w-full max-w-sm p-6 sm:p-8">
-        <img src="/favicon.png" alt="Repsy" width={48} height={48} className="mx-auto h-12 w-12" />
-        <p className="mt-4 text-center text-xs font-semibold uppercase tracking-wide text-dim">For clients</p>
-        <h1 className="mt-1 text-center text-3xl">{title}</h1>
+        <p className="text-center text-xs font-semibold uppercase tracking-wide text-dim">For clients</p>
+        <h1 className="mt-1 text-center text-4xl">{title}</h1>
         <p className="mt-1 text-center text-sm text-dim">{intro}</p>
         {children}
       </div>
-    </main>
+    </PaperFrame>
   );
 }
 
@@ -268,9 +268,9 @@ function JoinPage() {
 
   if (info.isPending) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-4">
+      <PaperFrame>
         <LoadingState />
-      </main>
+      </PaperFrame>
     );
   }
   if (info.isError) {
@@ -350,9 +350,9 @@ function WelcomePage() {
   const profile = useQuery({ queryKey: queryKeys.myProfile, queryFn: getMyProfile, retry: false, enabled: me.isSuccess });
   if (me.isPending || signedOut || (me.isSuccess && profile.isPending)) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-4">
+      <PaperFrame>
         <LoadingState />
-      </main>
+      </PaperFrame>
     );
   }
   if (me.isError || profile.isError) {
@@ -694,9 +694,9 @@ function ClientHomePage() {
   }
 
   const loading = (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4">
+    <PaperFrame>
       <LoadingState />
-    </main>
+    </PaperFrame>
   );
   if (me.isPending || signedOut || needsWelcome) return loading;
   if (me.isError) {

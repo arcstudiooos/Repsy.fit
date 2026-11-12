@@ -99,7 +99,7 @@ test("nothing from the dashboard shows until the sign-in check finishes", async 
 test("login: right password opens the app with the coach's name, Logout and own clients", async ({ page }) => {
   await mockApi(page);
   await page.goto("/login");
-  await expect(page.locator('img[alt="Repsy"], img[alt="R"]').first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Repsy home" })).toHaveAttribute("href", "/");
   // Prompt 47 turned the "Forgot password?" link on.
   await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
   await page.getByLabel("Email").fill("alice@example.com");
