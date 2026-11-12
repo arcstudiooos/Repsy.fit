@@ -74,7 +74,7 @@ export function verifySession(token: string): { coachId: string } | null {
   return claims ? { coachId: claims.coachId } : null;
 }
 
-function cookieOptions(): CookieOptions {
+export function cookieOptions(): CookieOptions {
   // Secure whenever this is a real deployment: Render does not set NODE_ENV, so RENDER counts too.
   const deployed = process.env.NODE_ENV === "production" || !!process.env.RENDER;
   return { httpOnly: true, secure: deployed, sameSite: "lax", path: "/" };
@@ -88,7 +88,7 @@ export function clearSessionCookie(res: Response): void {
   res.clearCookie(SESSION_COOKIE, cookieOptions());
 }
 
-function readCookie(req: Request, name: string): string | undefined {
+export function readCookie(req: Request, name: string): string | undefined {
   for (const part of (req.headers.cookie ?? "").split(";")) {
     const i = part.indexOf("=");
     if (i > 0 && part.slice(0, i).trim() === name) {

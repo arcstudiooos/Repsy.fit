@@ -20,6 +20,9 @@ model Coach {
   /// Prompt 68: the one currency all of this coach's plan prices and payments are in (ISO code,
   /// "INR" or "USD"). Data never stores a symbol; the UI formats the amount with this code.
   currency     String   @default("INR")
+  /// "Continue with Google": the Google account's stable id (OIDC `sub`), set on first Google
+  /// sign-in. NULL for coaches who have never used Google. Unique when set.
+  googleSub    String?  @unique
   createdAt    DateTime @default(now())
 
   resetTokens  PasswordResetToken[]

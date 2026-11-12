@@ -75,6 +75,27 @@ below exist. Use the values exactly; do not invent colours.
 | Habit | `#D97706` | `bg-type-habit` / `text-type-habit` |
 | Recovery | `#7C5CFC` | `bg-type-recovery` / `text-type-recovery` |
 
+### Continue with Google (coach sign-in)
+
+- `GET /api/auth/providers` -> `{ google }`; `GET /api/auth/google/start` -> 302 to Google with a
+  random `state` in an httpOnly cookie; `GET /api/auth/callback/google` -> 302 to `/app` signed in,
+  or to `/login?google=cancelled|expired|unverified|failed|off`. Code: `server/src/auth/google.ts`,
+  `server/src/routes/googleAuth.ts`, button in `client/src/auth/AuthPages.tsx`.
+- Built on fetch + node:crypto, no OAuth library. The ID token comes straight from Google's token
+  endpoint over TLS, so its signature is not re-checked (OIDC Core 3.1.3.7); iss, aud, exp and
+  `email_verified` are.
+- Matching (security-reviewed: register never proves email ownership): `Coach.googleSub` first;
+  else the same email ONLY when Google is authoritative for it (Gmail, or Workspace `hd` = domain)
+  and that coach has no other Google link - linking replaces the password and bumps
+  `sessionVersion`, so someone who pre-registered the address loses it; else an existing email ->
+  `?google=link` (log in with the password); else a new coach with an unguessable password ("Forgot
+  password" sets one) who claims the demo data like register. PKCE (S256) + state in a `__Host-`
+  cookie; the flow always runs on the `APP_URL` origin (`/start` hops there first); `APP_URL` is
+  required, no onrender.com fallback.
+- Env (dashboard only): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`; redirect URI =
+  `APP_URL` + `/api/auth/callback/google` and must match Google Cloud exactly. The Google "G" mark's
+  four colours are Google's brand (their branding rules), the one allowed exception to "no new colours".
+
 ### Fonts
 
 Design A1, approved by the user in Nov 2026 for the whole product (landing page and `/app`).

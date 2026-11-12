@@ -116,6 +116,10 @@ describe("every route group requires the right session", () => {
     expect((await send("post", "/api/leads")).status).toBe(400);
     expect((await send("post", "/api/auth/login")).status).toBe(400);
     expect((await send("post", "/api/client-auth/login")).status).toBe(400);
+    // "Continue with Google": reachable signed out (Google is not configured here, so they say so).
+    expect((await send("get", "/api/auth/providers")).body).toEqual({ google: false });
+    expect((await send("get", "/api/auth/google/start")).status).toBe(302);
+    expect((await send("get", "/api/auth/callback/google")).status).toBe(302);
   });
 });
 

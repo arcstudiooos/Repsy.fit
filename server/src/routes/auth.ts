@@ -21,6 +21,7 @@ import { deliverResetEmail } from "../auth/mailer.js";
 import { requireCoach, coachIdOf } from "../auth/requireCoach.js";
 import { appBaseUrl, hashToken, issueResetToken, resetLink } from "../auth/resetToken.js";
 import { asyncHandler } from "./clients.js";
+import { googleAuthRouter } from "./googleAuth.js";
 
 export const FORGOT_REPLY = "If that email exists, a reset link is on its way.";
 export const BAD_RESET = "This reset link is not valid any more. Please ask for a new one.";
@@ -46,6 +47,8 @@ export function secretMissing(res: Response): boolean {
 }
 
 export const authRouter = Router();
+// "Continue with Google": /providers, /google/start, /callback/google.
+authRouter.use(googleAuthRouter);
 
 // POST /api/auth/register { name, email, password } -> 201 coach + session cookie.
 // The first coach ever also claims the unclaimed demo data (same transaction).

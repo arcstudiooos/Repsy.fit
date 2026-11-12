@@ -1,7 +1,7 @@
 // /login and /register (Prompt 46): cream page, one centred card, the R mark, plain-words errors.
 // Input rules come from the same zod file the server uses (client/src/authSchemas.ts). The session
 // is the server's httpOnly cookie - nothing about it is kept in the browser's storage.
-import { useState, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ZodTypeAny } from "zod";
 import { login, queryKeys, register } from "../api";
@@ -123,6 +123,7 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
         <p className="mt-1 text-center text-sm text-dim">
           {isRegister ? "Start coaching with Repsy." : "Welcome back to Repsy Coach."}
         </p>
+        <GoogleSignIn isRegister={isRegister} />
         <form onSubmit={submit} noValidate aria-label={isRegister ? "Create account" : "Log in"} className="mt-6 grid gap-4">
           {isRegister && (
             <TextField id="auth-name" label="Name" autoComplete="name" value={name} onChange={setName} error={errors.name} />
@@ -164,5 +165,73 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
         </p>
       </div>
     </main>
+  );
+}
+
+/** Plain words for each way a Google sign-in can come back (GET /api/auth/callback/google). */
+export const GOOGLE_ERRORS: Record<string, string> = {
+  cancelled: "Google sign-in was cancelled.",
+  expired: "That Google sign-in took too long. Please try again.",
+  unverified: "Your Google account's email is not verified, so it can't be used here.",
+  failed: "Google sign-in didn't work. Please try again, or use your email and password.",
+  off: "Google sign-in is not available right now. Please use your email and password.",
+  link: "An account with this email already exists. Log in with your email and password.",
+};
+
+/**
+ * "Continue with Google" (shown only when the server has Google set up). It is a plain link: the
+ * server redirects to Google and back, then lands on /app signed in.
+ */
+function GoogleSignIn({ isRegister }: { isRegister: boolean }) {
+  const [enabled, setEnabled] = useState(false);
+  const reason = new URLSearchParams(window.location.search).get("google");
+  const error = reason ? (GOOGLE_ERRORS[reason] ?? GOOGLE_ERRORS.failed) : null;
+  useEffect(() => {
+    let live = true;
+    fetch("/api/auth/providers")
+      .then((r) => (r.ok ? r.json() : { google: false }))
+      .then((p: { google?: boolean }) => live && setEnabled(p.google === true))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!enabled && !error) return null;
+  return (
+    <div className="mt-6">
+      {error && (
+        <p role="alert" className="mb-3 text-sm font-semibold text-amber-text">
+          {error}
+        </p>
+      )}
+      {enabled && (
+        <>
+          <a
+            href="/api/auth/google/start"
+            className="flex min-h-11 w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-text hover:bg-surface2"
+          >
+            <GoogleG />
+            {isRegister ? "Sign up with Google" : "Continue with Google"}
+          </a>
+          <p className="mt-5 flex items-center gap-3 text-xs text-dim" aria-hidden="true">
+            <span className="h-px flex-1 bg-border" />
+            or with email
+            <span className="h-px flex-1 bg-border" />
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Google's "G" mark. Its four colours are Google's brand (required by their sign-in branding rules), not Repsy colours. */
+function GoogleG() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
+      <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z" />
+    </svg>
   );
 }

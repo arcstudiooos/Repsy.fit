@@ -338,6 +338,9 @@ export default function AccountPage({ coach }: { coach: Coach }) {
       </section>
       <section className="grid gap-3">
         <h3 className="text-base">Password</h3>
+        <p className="text-sm text-dim">
+          Signed in with Google and never set a password? Use "Forgot password?" on the log-in page to set one first.
+        </p>
         <PasswordForm />
       </section>
       <section className="grid gap-3">
