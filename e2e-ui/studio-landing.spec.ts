@@ -100,6 +100,11 @@ test("hero barbell: four plates per side, one per plan type, labelled with a cli
   await expect(labels).toHaveCount(4);
   for (const n of ["Maya", "Arjun", "Casey", "Leo"]) await expect(labels.filter({ hasText: n })).toHaveCount(1);
   for (const n of ["Workout", "Nutrition", "Habit", "Recovery"]) await expect(labels.filter({ hasText: n })).toHaveCount(1);
+  // The shaft runs shoulder to shoulder only; beyond them there is just the sleeve (no doubled bar end).
+  const d = (await page.locator("[data-bar]").getAttribute("d")) ?? "";
+  const xs = [...d.matchAll(/[MQ ]\s*(-?[\d.]+) -?[\d.]+/g)].map((m) => Number(m[1]));
+  expect(Math.min(...xs)).toBeGreaterThanOrEqual(250);
+  expect(Math.max(...xs)).toBeLessThanOrEqual(710);
 });
 
 test("plan-type toggle swaps the phone between a workout and a nutrition plan, and is announced", async ({ page }) => {

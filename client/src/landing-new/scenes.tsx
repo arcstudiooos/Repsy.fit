@@ -34,10 +34,21 @@ const BAR = {
   plateH: 200,
 };
 
-/** Bar as a path so it can bend: both ends droop by `sag`, the middle stays put. */
+/**
+ * The shaft between the two shoulders, as a curve so it can bend: both ends droop by `sag`, the
+ * middle rises a little. The sleeves beyond the shoulders are rigid and are attached to the
+ * shaft's ends by `sleeveTransform`, so shaft and sleeves always meet.
+ */
 export function barPath(sag: number): string {
-  const { w, y } = BAR;
-  return `M 24 ${y + sag} Q ${w / 2} ${y - sag * 0.6} ${w - 24} ${y + sag}`;
+  const { w, y, sleeve } = BAR;
+  return `M ${sleeve} ${y + sag} Q ${w / 2} ${y - sag * 0.6} ${w - sleeve} ${y + sag}`;
+}
+
+/** Drop the sleeve with the shaft's end and turn it to the shaft's end tangent. */
+export function sleeveTransform(sag: number): string {
+  const { w, y, sleeve } = BAR;
+  const angle = Math.atan2(sag * 1.6, w / 2 - sleeve) * (180 / Math.PI);
+  return `translate(0 ${sag}) rotate(${-angle} ${sleeve} ${y})`;
 }
 
 /** Mix helpers for the shaded faces (tints of the plate's own colour, no new hex values). */
@@ -266,8 +277,7 @@ function Barbell() {
           stroke="url(#ln-knurl)"
           strokeWidth="14"
           strokeLinecap="round"
-          strokeDasharray="150 60 150 1000"
-          strokeDashoffset="-250"
+          strokeDasharray="160 140 160"
           opacity="0.5"
         />
       </g>

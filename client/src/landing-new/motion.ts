@@ -13,7 +13,7 @@
 // screen readers behave normally; scrub values give the scenes their soft, eased follow.
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { barPath } from "./scenes";
+import { barPath, sleeveTransform } from "./scenes";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -59,8 +59,8 @@ export function startMotion(root: HTMLElement): () => void {
           const d = barPath(bend.sag);
           bar.setAttribute("d", d);
           knurl?.setAttribute("d", d);
-          const slope = Math.atan2(1.6 * bend.sag, 456) * (180 / Math.PI);
-          for (const s of sleeves) s.setAttribute("transform", `translate(0 ${bend.sag}) rotate(${-slope} 250 150)`);
+          const tf = sleeveTransform(bend.sag);
+          for (const s of sleeves) s.setAttribute("transform", tf);
         };
         const tl = gsap.timeline({
           defaults: { ease: "power2.inOut" },
