@@ -102,7 +102,22 @@ Prompts 57, 59, 62, 66, 67 and 72 were dropped by the owner and have no commit.
 | 71 | `c9e4d34` | Prompt 71: Engagement - check-in streaks, habit % and weekly workouts, coach-only leaderboard in Business, client My streaks |
 | 73 | `0cf365e` | Prompt 73: security and privacy pass - drop wildcard CORS, hand-written security headers + CSP, rate-limit leads, delete-account with type-to-confirm, Privacy/Terms drafts, bundle secret guard |
 | 74 | `f439038` | Prompt 74: full v2 end-to-end journey (13 named checks), trim duplicated v1 smoke checks, keep the real-server suite at 30 |
-| 75 | `(this commit)` | Prompt 75: deploy v2 and live smoke test, CHANGELOG and README for v2 |
+| 75 | `7979c69` | Prompt 75: deploy v2 and live smoke test, CHANGELOG and README for v2 |
+
+### v3: the client app (Nov 2026)
+
+| Prompt | Commit | Message |
+|---|---|---|
+| 76 | `d6602db` | Prompt 76: coach join code + Invite clients panel (code, link, copy, share, QR, on/off, approval switch) |
+| 77 | `61f6161` | Prompt 77: join by code - client sign-up with email, welcome questions, approval waiting screen, client forgot/reset password |
+| 78 | `41caf04` | Prompt 78: Continue with Google for clients (sign in + join with code) via the shared callback |
+| 79 | `b2d7d0e` | Prompt 79: client app - Today, This week, plan view with checklist + rest timer + Finish workout, Me; coach sees Done by client |
+| 80 | `86fb34d` | Prompt 80: client habits, daily + weekly check-ins, nutrition targets and meals; coach meal picker and save-as-targets |
+| 81 | `3e5eca6` | Prompt 81: client Progress tab - charts in the client's unit (lazy), body measurements (add, delete own), streaks |
+| 82 | `2dad8a5` | Prompt 82: client messages - own thread with their coach, Enter to send, 20 s polling, unread badge |
+| 83 | `9a6f822` | Prompt 83: client Me tab - profile, change password, Google status, timezone, payment history (no amounts), delete my account |
+| 84 | `9c8b03d` | Prompt 84: coach side - waiting-for-approval list with approve/decline, Joined with code badge, Home client activity alerts |
+| 85 | `(this commit)` | Prompt 85: client app end-to-end journey (real server), exhaustive client-route security pass, live smoke, README / CHANGELOG v3 |
 
 Other commits (not one prompt each):
 
@@ -118,3 +133,9 @@ Other commits (not one prompt each):
 | `04ea904` | ci: run mocked UI tests |
 | `fae554f` | docs: record contract notes for prompts 29-32 |
 | `5770460` | fix: review follow-ups for progress, seeds, check-in form and focus |
+| `458044a` | Prompt 77 fix: client-auth DB test expects the new /me and login shape |
+| `71c896d` | Prompt 79 fix: v2 journey step 8 - the client app opens on Today |
+| `e0e7bba` | Prompt 80 fix: one query for a plan + its meal ids; DB test checks the review item directly |
+| `c73c35b` | Prompt 84 fix: DB test checks data access via my-targets |
+| `20a91b0` | Publish the Privacy Policy and Terms for Google OAuth branding (prerendered /privacy and /terms) |
+| `ea6e8ca` | render.yaml: paid plans to match the dashboard |

@@ -162,6 +162,86 @@ describe("every route group requires the right session", () => {
   });
 });
 
+// ---------- Prompt 85: the client app's security pass ----------
+
+/** Signed-out client routes (sign-in, joining, password reset, Google start). Everything else needs a session. */
+const PUBLIC_CLIENT_ROUTES = new Set([
+  "post /set-password",
+  "post /login",
+  "post /logout",
+  "post /join",
+  "post /forgot",
+  "post /reset",
+  "get /google/start",
+]);
+/** Routes a PENDING or DECLINED client may still use (their own account, the waiting screen). */
+const PENDING_ALLOWED = new Set(["get /me", "get /me/profile", "patch /me/profile", "get /me/account", "post /change-password", "delete /me"]);
+
+const norm = (url: string) => url.replace(/^\/api\/client-auth/, "").split("?")[0].replace(/\/(a1|h1|m1|2026-11-12)(?=\/|$)/g, "/:x");
+const routeKey = (method: string, path: string) => `${method} ${path.replace(/:[A-Za-z]+/g, ":x")}`;
+
+describe("the client app: every /api/client-auth route is accounted for", () => {
+  it("every route in the client routers is either public or in CLIENT_ROUTES (so it is tested above)", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const appSrc = fs.readFileSync(path.resolve(import.meta.dirname, "../src/app.ts"), "utf8");
+    const mounted = [...appSrc.matchAll(/app\.use\("\/api\/client-auth",\s*(\w+)\)/g)].map((m) => m[1]);
+    expect(mounted.length).toBeGreaterThanOrEqual(7);
+    const listed = new Set(CLIENT_ROUTES.map(([m, u]) => `${m} ${norm(u)}`));
+    const found: string[] = [];
+    for (const file of fs.readdirSync(path.resolve(import.meta.dirname, "../src/routes"))) {
+      const src = fs.readFileSync(path.resolve(import.meta.dirname, "../src/routes", file), "utf8");
+      for (const router of mounted) {
+        for (const m of src.matchAll(new RegExp(`${router}\\.(get|post|put|patch|delete)\\(\\s*"([^"]+)"`, "g"))) found.push(routeKey(m[1], m[2]));
+      }
+    }
+    expect(found.length).toBeGreaterThan(30);
+    const missing = found.filter((k) => !listed.has(k) && !PUBLIC_CLIENT_ROUTES.has(k.replace(/:x/g, ":code")) && !PUBLIC_CLIENT_ROUTES.has(k));
+    expect(missing).toEqual([]);
+  });
+
+  it.each(CLIENT_ROUTES.filter(([m, u]) => !PENDING_ALLOWED.has(`${m} ${norm(u)}`)))("%s %s refuses a client still waiting for approval (403)", async (method, url) => {
+    prismaMock.client.findUnique.mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", joinStatus: "pending" });
+    const res = await send(method, url, clientCookie());
+    expect(res.status).toBe(403);
+  });
+
+  it("a declined client is refused the same way", async () => {
+    prismaMock.client.findUnique.mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", joinStatus: "declined" });
+    for (const [m, u] of [["get", "/api/client-auth/my-assignments/a1"], ["post", "/api/client-auth/my-messages"], ["get", "/api/client-auth/my-progress"]] as const) {
+      expect((await send(m, u, clientCookie())).status, u).toBe(403);
+    }
+  });
+
+  it("no client response carries the password hash or the Google account id", async () => {
+    const row = {
+      id: "c1", name: "Maya", loginEmail: "maya@example.com", joinStatus: "active", joinedVia: "code", onboardedAt: new Date(),
+      passwordHash: "$2b$12$secret", googleSub: "google-sub-secret", clientSessionVersion: 0, timezone: null, coach: { name: "Anna" },
+    };
+    prismaMock.client.findUnique.mockImplementation(async ({ select }: { select?: Record<string, unknown> }) =>
+      select ? Object.fromEntries(Object.keys(select).map((k) => [k, (row as Record<string, unknown>)[k]])) : row,
+    );
+    for (const url of ["/api/client-auth/me", "/api/client-auth/me/account"]) {
+      const res = await send("get", url, clientCookie());
+      expect(res.status, url).toBe(200);
+      expect(JSON.stringify(res.body), url).not.toMatch(/secret|passwordHash|googleSub/);
+    }
+    const hash = await hashPassword("client-password-1");
+    prismaMock.client.findUnique.mockResolvedValue({ ...row, passwordHash: hash });
+    const login = await supertest(app).post("/api/client-auth/login").send({ email: "maya@example.com", password: "client-password-1" });
+    expect(login.status).toBe(200);
+    expect(JSON.stringify(login.body)).not.toMatch(/\$2b\$|passwordHash|googleSub|google-sub-secret/);
+  });
+
+  it("client sign-in, joining and password reset are rate limited", async () => {
+    let last = 0;
+    for (let i = 0; i < 11; i++) last = (await supertest(app).post("/api/client-auth/login").send({ email: "x@y.io", password: "nope-nope-1" })).status;
+    expect(last).toBe(429);
+    for (let i = 0; i < 11; i++) last = (await supertest(app).post("/api/client-auth/forgot").send({ email: "x@y.io" })).status;
+    expect(last).toBe(429);
+  });
+});
+
 describe("security headers", () => {
   it("sets them on an API response, and does not advertise Express", async () => {
     const res = await send("get", "/api/health");

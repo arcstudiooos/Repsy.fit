@@ -548,6 +548,16 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   waiting screen (`PendingDelete`, lazy); deleting a client also deletes the coach's plan / payment rows for
   them (said in the privacy policy).
 
+### Client app journey and security pass (Prompt 85)
+- `e2e/client-journey.spec.ts` (real server, CI): coach registers -> join code -> client joins + welcome ->
+  workout assigned -> client finishes with effort -> coach sees Done by client + Home alert -> messages both
+  ways -> client weekly check-in in the review queue -> client deletes their account -> coach no longer sees
+  them -> coach deletes their account (cleanup).
+- `server/test/security.test.ts` scans the routers mounted at `/api/client-auth` and fails if a route is not
+  in `CLIENT_ROUTES` (session required, coach session refused) or the small public list; every data route
+  refuses a pending / declined client (403) except the account routes in `PENDING_ALLOWED`; responses never
+  carry `passwordHash` / `googleSub`; client sign-in and reset are rate limited.
+
 ### Coach side of the client app (Prompt 84)
 - `GET /api/clients` lists ACTIVE clients only; pending / declined ones come from `GET /api/clients/waiting`
   (pending first) and never appear in the strip, planner or AI Coach. `POST /api/clients/:id/approve|decline`

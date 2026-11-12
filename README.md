@@ -10,7 +10,7 @@ https://repsy-coach.onrender.com/app, sign in at `/login`, and invited clients u
 **v2 is live.** A live smoke test on 2026-11-12 passed every step: the landing page, the lead form,
 register, log in, create a client, the invite link, the client sign-in and plan page, a chat round
 trip, recording a payment, a CSV export, log out, and signed-out `/app` going to the login page.
-Read the database note under *Known limits of v2* before adding real clients.
+Read the database note under *Known limits* before adding real clients.
 
 ## The 9 tabs
 
@@ -30,17 +30,37 @@ Sign in at `/login` (or create an account at `/register`). Each coach sees only 
 
 A client selector strip above most tabs chooses whose data you see.
 
-## The client area
+## The client app
 
-A coach invites a client from the Clients tab. The client opens the link, sets a password at
-`/client/set-password`, and signs in at `/client/login`. `/client` then shows, read-only:
+Clients get their own phone-first app at `/client` (cream / orange, bottom tabs on phones, header tabs on
+wider screens). How they get in:
 
-- **My plan** - their plan name, status, next due date and last payment date (no amounts);
-- **My sessions** - their upcoming appointments;
-- **My streaks** - their own check-in streak, habit % and workouts this week (never a ranking).
+- **Join code** - each coach has a code, link and QR code (Clients tab -> Invite clients). A client opens
+  `/join/<code>` and signs up with email or **Continue with Google**, answers a few welcome questions (goal,
+  age, height, weight, experience, injuries, kg / lb) and lands in the app. With "Approve new clients" on,
+  they wait until the coach approves them (Clients tab -> Waiting for approval).
+- **Personal invite** - the coach can still invite one client by email; the client sets a password at
+  `/client/set-password`. Forgot / reset password works for clients too.
 
-A client session is separate from a coach session: it gets `401` on every coach route, and a
-client never sees another client's data or the coach's notes. The client area is read-only in v2.
+What a client can do (only ever with their OWN data):
+
+| Tab | What it does |
+|---|---|
+| **Today** | Today's plans by type with Mark done, habits to tick, "How was today?" daily check-in, weekly check-in (on their chosen day), next session, streaks |
+| **Week** | Monday-Sunday with every plan and its done / pending state |
+| **Plan view** | Numbered exercises with sets, reps and rest, a rest timer, the coach's "why"; **Finish workout** with an effort rating (1-10) and a note. Nutrition plans show their calorie / protein targets and the meals the coach picked |
+| **Progress** | Weight and adherence charts (in kg or lb), body measurements (add; delete their own), streaks |
+| **Messages** | Their thread with the coach: Enter to send, refreshed every 20 seconds, unread badge, "Seen" |
+| **Me** | Membership and payment history (dates only, never amounts), sessions in their timezone, profile, kg / lb, change password (or "connected with Google"), weekly check-in day, sign out, **delete my account** |
+
+The coach sees it all straight away: "Done by client" with effort and note on the plan, client check-ins in
+the review queue, client messages in Messages, and a **Client activity** card on Home (waiting for approval,
+new messages, plans finished in the last 24 hours, who joined this week).
+
+A client session is separate from a coach session: it gets `401` on every coach route; a coach session gets
+`401` on every client route; a client waiting for approval gets `403` on every data route. A client never
+sees another client, the coach's notes, the AI Coach chat, at-risk flags or amounts, and can't edit plans.
+`server/test/security.test.ts` lists every `/api/client-auth` route and fails if a new one isn't covered.
 
 ## Landing page
 
@@ -170,21 +190,24 @@ On the Clients tab:
 
 Load the quick demo first, then the 6-month demo, to get all 13 clients.
 
-## Known limits of v2
+## Known limits
 
 - **Hosting is on paid plans** (Nov 2026): web service `starter`, database `basic-256mb` (no expiry,
   with backups). Keep `render.yaml` in step with the dashboard, or a Blueprint sync can change the plan.
 - **No payment gateway.** Payments are records only: nothing charges a card, sends a payment link
   or reminder, or makes an invoice.
-- **No push or email alerts.** Alerts (Needs attention, new check-ins, the review queue) show only
-  when the coach opens Home; nothing is pushed or emailed.
+- **No push or email alerts.** Alerts (Client activity, Needs attention, new check-ins, the review
+  queue) show only when the coach opens Home, and a client sees new messages when they open the app;
+  nothing is pushed or emailed.
 - **Chat by polling.** The Messages tab checks for new messages every 20 seconds while it is open;
   there is no live socket.
 - **Sleep is entered by hand** in daily check-ins; nothing syncs from a watch or phone.
 - **AI is general-wellness only and can be wrong.** It doesn't diagnose; the coach reviews every
   plan before it reaches a client. Without a working AI key you get the fallback answer.
-- **The client area is read-only.** Clients can see their plan, sessions and streaks, but cannot
-  mark work done, file a check-in or reply in chat themselves yet.
+- **Client app limits (v3).** Clients tick exercises and finish workouts but don't log the actual weights
+  lifted. Daily and weekly check-ins can be entered for today or yesterday only. Clients can't change their
+  coach or sign-in email themselves. One coach per client account. Payment history shows dates, never
+  amounts. Deleting a client account also deletes the coach's plan and payment records for that client.
 - **No progress photos.** The app does not store photos.
 - **Password-reset and invite emails need SMTP.** Until the `SMTP_*` variables are set, reset
   emails are not sent and invite links are shown to the coach to pass on by hand.
