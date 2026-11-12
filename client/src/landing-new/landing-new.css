@@ -227,26 +227,6 @@
 }
 
 /* ---------- paper objects ---------- */
-.ln-sheet {
-  background:
-    linear-gradient(90deg, transparent 34px, color-mix(in srgb, var(--orange) 55%, var(--paper)) 34px 35px, transparent 35px),
-    repeating-linear-gradient(to bottom, transparent 0 23px, var(--rule) 23px 24px),
-    var(--paper);
-  background-position: 0 0, 0 6px, 0 0;
-  color: var(--ink);
-  font-family: var(--mono);
-  box-shadow:
-    0 30px 60px -24px color-mix(in srgb, var(--ink) 35%, transparent),
-    0 2px 6px color-mix(in srgb, var(--ink) 8%, transparent);
-  /* Zig-zag torn top and bottom edges. A mask only reads alpha, so ink stands for "opaque". */
-  --zig: 18px;
-  -webkit-mask:
-    conic-gradient(from 135deg at top, transparent, var(--ink) 1deg 89deg, transparent 90deg) top / var(--zig) 51% repeat-x,
-    conic-gradient(from -45deg at bottom, transparent, var(--ink) 1deg 89deg, transparent 90deg) bottom / var(--zig) 51% repeat-x;
-  mask:
-    conic-gradient(from 135deg at top, transparent, var(--ink) 1deg 89deg, transparent 90deg) top / var(--zig) 51% repeat-x,
-    conic-gradient(from -45deg at bottom, transparent, var(--ink) 1deg 89deg, transparent 90deg) bottom / var(--zig) 51% repeat-x;
-}
 .ln-card {
   background: var(--card);
   border-radius: 22px;
@@ -310,20 +290,6 @@
   border-radius: 999px;
   background: var(--paper);
   color: var(--ink);
-}
-
-/* Ruled index card (the hero deck) */
-.ln-index {
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, transparent 32px, color-mix(in srgb, var(--orange) 55%, var(--paper)) 32px 33px, transparent 33px),
-    repeating-linear-gradient(to bottom, transparent 0 23px, var(--rule) 23px 24px),
-    var(--paper);
-  background-position: 0 0, 0 6px, 0 0;
-  border: 1px solid var(--line);
-  box-shadow:
-    0 24px 50px -24px color-mix(in srgb, var(--ink) 35%, transparent),
-    0 2px 4px color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 /* "DONE" stamp on the cards */
@@ -398,27 +364,9 @@
   }
 }
 
-/* ---------- notebook ---------- */
-.ln-notebook {
-  position: relative;
-  background:
-    linear-gradient(90deg, transparent 46px, color-mix(in srgb, var(--orange) 55%, var(--paper)) 46px 47px, transparent 47px),
-    repeating-linear-gradient(to bottom, transparent 0 31px, var(--rule) 31px 32px),
-    var(--paper);
-  background-position: 0 0, 0 42px, 0 0;
-  box-shadow: 0 34px 60px -26px color-mix(in srgb, var(--ink) 40%, transparent);
-  font-family: var(--hand);
-  color: var(--ink);
-}
-.ln-ring {
-  position: absolute;
-  right: 26px;
-  top: 18px;
-  width: 64px;
-  height: 64px;
-  border-radius: 999px;
-  border: 5px solid color-mix(in srgb, var(--ink) 10%, var(--paper));
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 6%, var(--paper));
+/* Pen notes in the hero narrate the loading; without motion there is nothing to narrate. */
+.ln:not(.ln-anim) [data-hero-note] {
+  visibility: hidden;
 }
 
 /* ---------- notebook scene ----------

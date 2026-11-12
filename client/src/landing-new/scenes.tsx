@@ -5,90 +5,103 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import LeadForm from "../landing/LeadForm";
 import {
   BEATS,
-  CARDS,
   CHAOS,
   COMPARE,
   FAQ_CHAT,
   FEED,
   MORE,
   PLANS,
+  PLATES,
   RIBBON,
   ROAD,
+  TANGLE,
 } from "./content";
 import { Icon, PenArrow, Scribble } from "./icons";
 
 /* ======================================================================================
- * HERO: a coach's deck of index cards. On scroll the deck straightens, then deals out into a
- * 2 x 2 spread, one card per client, each stamped DONE.
+ * HERO: the barbell. Repsy's four plan types are the four plates, one per client. On scroll the
+ * plates slide onto the sleeves, the collars lock, the bar whips under the load, and four ticks
+ * land: lifted. Without motion it is shown fully loaded.
  * ==================================================================================== */
 
-function IndexCard({ c, i }: { c: (typeof CARDS)[number]; i: number }) {
-  return (
-    <div className="ln-index relative" aria-hidden={i > 0 ? "true" : undefined}>
-      <div className="flex items-center justify-between pl-11 pr-4 pt-3">
-        <span className="ln-chip" style={{ background: "var(--orange)", color: "var(--ink)" }}>
-          {c.name}
-        </span>
-        <span className="ln-mono text-[11px]" style={{ color: "var(--mute)" }}>
-          Week 3
-        </span>
-      </div>
-      <div className="pb-6 pl-11 pr-5 pt-[14px] text-[12.5px] leading-[24px]">
-        <p className="ln-display text-[26px] leading-[24px]">{c.title}</p>
-        <div className="mt-6 grid grid-cols-[1fr_auto] gap-x-3">
-          {c.rows.map(([move, dose], k) => (
-            <Row key={move} move={`${k + 1}. ${move}`} dose={dose} />
-          ))}
-        </div>
-        <p className="ln-hand mt-6 rotate-[-1.5deg] text-[1.2rem] leading-[24px]" style={{ color: "var(--orange-deep)" }}>
-          why: {c.why}
-        </p>
-      </div>
-      <span data-stamp className="ln-stamp absolute left-1/2 top-[44%] -translate-x-1/2 -rotate-12 opacity-0">
-        Done
-      </span>
-      <span data-strip-chip className="ln-mono absolute -bottom-7 left-0 right-0 text-center text-[12px] font-semibold opacity-0">
-        {c.note}
-      </span>
-    </div>
-  );
+const BAR = { w: 960, h: 270, y: 140, sleeve: 250, plateW: 34, gap: 4, plateH: 196 };
+
+/** Bar as a path so it can bend: both ends droop by `sag`, the middle stays put. */
+export function barPath(sag: number): string {
+  const { w, y } = BAR;
+  return `M 24 ${y + sag} Q ${w / 2} ${y - sag * 0.6} ${w - 24} ${y + sag}`;
 }
 
-function Row({ move, dose }: { move: string; dose: string }) {
+function Barbell() {
+  const { w, h, y, sleeve, plateW, gap, plateH } = BAR;
+  // Plate i sits on both sleeves, innermost first: left of the left shoulder, right of the right one.
+  const slots = PLATES.map((_, i) => sleeve - (i + 1) * (plateW + gap) + gap);
+  const outer = sleeve - PLATES.length * (plateW + gap);
   return (
-    <>
-      <span className="truncate">{move}</span>
-      <span className="ln-mono text-right text-[11.5px] font-semibold">{dose}</span>
-    </>
+    <svg data-barbell viewBox={`0 0 ${w} ${h}`} className="block h-auto w-full overflow-visible" aria-hidden="true">
+      <defs>
+        {/* userSpaceOnUse: a straight (zero-height) path has no bounding box, so a default gradient would vanish. */}
+        <linearGradient id="ln-steel" gradientUnits="userSpaceOnUse" x1="0" y1={y - 12} x2="0" y2={y + 12}>
+          <stop offset="0" stopColor="var(--dark-3)" />
+          <stop offset="0.45" stopColor="var(--ink)" />
+          <stop offset="1" stopColor="var(--dark-2)" />
+        </linearGradient>
+        <pattern id="ln-knurl" width="6" height="6" patternUnits="userSpaceOnUse">
+          <path d="M0 6 6 0M-1 1 1 -1M5 7 7 5" stroke="var(--dark-3)" strokeWidth="0.8" />
+        </pattern>
+      </defs>
+      {/* shaft */}
+      <g data-bar-group>
+        <path data-bar d={barPath(0)} fill="none" stroke="url(#ln-steel)" strokeWidth="14" strokeLinecap="round" />
+        <path data-bar-knurl d={barPath(0)} fill="none" stroke="url(#ln-knurl)" strokeWidth="14" strokeLinecap="round" strokeDasharray="150 60 150 1000" strokeDashoffset="-250" opacity="0.5" />
+      </g>
+      {/* sleeves + shoulders */}
+      {[0, 1].map((side) => {
+        const flip = side === 1;
+        const tx = flip ? `translate(${w} 0) scale(-1 1)` : undefined;
+        return (
+          <g key={side} data-sleeve={side} transform={tx}>
+            <rect x="24" y={y - 11} width={sleeve - 24} height="22" rx="4" fill="url(#ln-steel)" />
+            <rect x={sleeve - 6} y={y - 20} width="14" height="40" rx="3" fill="var(--ink)" />
+            {PLATES.map((p, i) => {
+              const ph = plateH * p.h;
+              return (
+                <g key={p.type} data-plate={flip ? i + 4 : i} data-plate-side={side} data-plate-index={i}>
+                  <rect x={slots[i]} y={y - ph / 2} width={plateW} height={ph} rx="7" fill={p.color} stroke="var(--ink)" strokeWidth="2" />
+                  <rect x={slots[i] + 9} y={y - ph / 2 + 10} width="4" height={ph - 20} rx="2" fill="var(--paper)" opacity="0.35" />
+                  <circle cx={slots[i] + plateW / 2} cy={y} r="6" fill="var(--ink)" />
+                </g>
+              );
+            })}
+            <g data-collar={side}>
+              <rect x={outer - 18} y={y - 15} width="16" height="30" rx="3" fill="var(--ink)" />
+              <rect x={outer - 30} y={y - 8} width="12" height="16" rx="2" fill="var(--dark-3)" />
+            </g>
+          </g>
+        );
+      })}
+      {/* floor shadow */}
+      <ellipse data-bar-shadow cx={w / 2} cy={h - 10} rx={w * 0.4} ry="6" fill="var(--ink)" opacity="0.08" />
+    </svg>
   );
 }
-
-/** The deck at rest: each card a little askew under the one above. */
-const DECK = [
-  { r: 0, x: 0, y: 0 },
-  { r: -3, x: -6, y: 7 },
-  { r: 2.5, x: 7, y: 13 },
-  { r: -1.5, x: -3, y: 19 },
-];
 
 export function Hero() {
   return (
     <section id="top" data-scene="hero" aria-labelledby="ln-hero-title" className="relative">
-      <div data-hero-pin className="ln-wrap flex min-h-[100svh] flex-col justify-center gap-12 pb-24 pt-28 lg:flex-row lg:items-center lg:gap-6 lg:pb-10">
-        <div data-hero-copy className="relative z-10 lg:w-[46%]">
-          <h1 id="ln-hero-title" className="ln-display text-[clamp(3.6rem,8.4vw,7rem)]">
+      <div data-hero-pin className="ln-wrap flex min-h-[100svh] flex-col justify-center gap-8 pb-20 pt-24 lg:gap-4 lg:pb-8">
+        <div data-hero-copy className="relative z-10 max-w-[44rem]">
+          <h1 id="ln-hero-title" className="ln-display text-[clamp(3.2rem,7vw,6rem)]">
             <span className="sr-only">Repsy Coach: </span>
-            Plan it.
+            Load the week.
             <br />
-            Track it.
-            <br />
-            <span className="ln-key">Coached.</span>
+            Watch it get <span className="ln-key">lifted.</span>
           </h1>
-          <p className="ln-lead mt-7 max-w-[30rem] lg:max-w-[22rem] xl:max-w-[30rem]">
-            A card for every client: the week's plan with the reasoning on it. Deal them out on Monday,
-            mark them Done as they train, and the check-ins chart themselves. No spreadsheets. No chasing.
+          <p className="ln-lead mt-5 max-w-[34rem]">
+            Every client's week on one bar: workout, nutrition, habits, recovery. Load it on Monday with the
+            reasoning attached, mark it done as they train, and the check-ins chart themselves.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-6">
+          <div className="mt-6 flex flex-wrap items-center gap-6">
             <a href="#get" className="ln-btn">
               Start free
             </a>
@@ -96,39 +109,50 @@ export function Hero() {
               See how it works
             </a>
           </div>
-          <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-[0.82rem] font-medium" style={{ color: "var(--mute)" }}>
-            {["7-day free trial", "Clients install nothing", "AI suggests, you decide"].map((t) => (
-              <li key={t} className="flex items-center gap-1.5">
-                <Icon name="check" size={14} className="ln-tick" />
-                {t}
+        </div>
+
+        <div data-hero-column className="relative mx-auto w-full max-w-[900px]">
+          <Barbell />
+          {/* plate labels: who each plate is for */}
+          <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-4" aria-label="This week's plans">
+            {PLATES.map((p) => (
+              <li key={p.type} data-plate-label className="flex items-center gap-2.5">
+                <span data-plate-tick className="ln-avatar h-7 w-7 opacity-0" style={{ background: "var(--teal)" }}>
+                  <Icon name="check" size={13} />
+                </span>
+                <span className="h-7 w-2 flex-none rounded-full" style={{ background: p.color }} />
+                <span className="leading-tight">
+                  <span className="block text-[0.9rem] font-bold">
+                    {p.client} <span style={{ color: "var(--mute)" }}>· {p.type}</span>
+                  </span>
+                  <span className="ln-mono block text-[0.72rem]" style={{ color: "var(--mute)" }}>
+                    {p.plan}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>
-        </div>
-
-        <div data-hero-column className="relative flex justify-center lg:w-[54%]">
-          <div data-sheet-stage className="relative w-[min(300px,80vw)] xl:w-[320px]" style={{ transform: "rotate(4deg)" }}>
-            {CARDS.map((c, i) => (
-              <div
-                key={c.name}
-                data-strip={i}
-                className="absolute inset-0 first:relative"
-                style={{ zIndex: CARDS.length - i, transform: `translate(${DECK[i].x}px, ${DECK[i].y}px) rotate(${DECK[i].r}deg)` }}
-              >
-                <IndexCard c={c} i={i} />
-              </div>
-            ))}
-          </div>
-          <p data-hero-note className="ln-hand absolute -right-[2%] top-[2%] hidden rotate-[8deg] text-[1.7rem] lg:block" aria-hidden="true">
-            four clients,
+          <p data-hero-note className="ln-hand absolute right-[12%] -top-8 hidden rotate-[6deg] text-[1.6rem] lg:block" aria-hidden="true">
+            four plan types,
             <br />
-            four cards
+            one bar
           </p>
-          <p data-hero-note className="ln-hand absolute -bottom-12 left-[18%] hidden items-center gap-2 text-[1.55rem] lg:flex" aria-hidden="true">
-            <PenArrow dir="up" className="-ml-2" />
-            the why on every card
+          <p data-hero-note className="ln-hand absolute left-[2%] top-[62%] hidden items-center gap-2 text-[1.5rem] lg:flex" aria-hidden="true">
+            it bends when it's loaded
+            <PenArrow dir="up" />
+          </p>
+          <p data-hero-count className="ln-mono absolute right-[2%] top-[8%] hidden rounded-full px-3 py-1 text-[12px] font-bold lg:block" style={{ background: "var(--paper)", border: "1px solid var(--line)" }} aria-hidden="true">
+            <span data-hero-count-n>4</span> of 4 loaded
           </p>
         </div>
+        <ul className="hidden flex-wrap gap-x-6 gap-y-2 text-[0.82rem] font-medium md:flex" style={{ color: "var(--mute)" }}>
+          {["7-day free trial", "Clients install nothing", "AI suggests, you decide"].map((t) => (
+            <li key={t} className="flex items-center gap-1.5">
+              <Icon name="check" size={14} className="ln-tick" />
+              {t}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -706,52 +730,64 @@ export function Done() {
  * NOTEBOOK: the old way, scribbled over beat by beat, then the page turns into the app.
  * ==================================================================================== */
 
-function Notebook() {
+function Tangle() {
+  // Five app tiles scattered on a 380 x 500 stage, dashed threads between them; the beats add a
+  // missed-day badge and a cloud of numbers; "Enough." pulls everything into the centre.
+  const pos = TANGLE.map((a) => ({ cx: a.x + 14, cy: a.y + 14 }));
+  const threads = [
+    [0, 4],
+    [1, 4],
+    [2, 4],
+    [3, 4],
+    [0, 1],
+    [2, 3],
+  ];
   return (
-    <div className="ln-notebook relative mx-auto h-[500px] w-[min(380px,88vw)] overflow-hidden px-6 pb-6 pl-[62px] pt-7 text-[1.45rem] leading-[32px]">
-      <span className="ln-ring" aria-hidden="true" />
-      <p className="relative mb-[10px] inline-block text-[1.9rem]">
-        Maya - Block 2
-        <svg viewBox="0 0 200 8" className="absolute -bottom-0.5 left-0 w-full" aria-hidden="true">
-          <path d="M2 5 C 60 1, 140 1, 198 5" fill="none" stroke="currentColor" strokeWidth="2" />
-        </svg>
-      </p>
-      {[
-        ["Squat 4×6", "80 kg"],
-        ["Bench 4×8", "50 kg"],
-        ["RDL 3×10", "70 kg"],
-      ].map(([a, b]) => (
-        <p key={a} className="flex justify-between">
-          <span>{a}</span>
-          <span>{b}</span>
-        </p>
-      ))}
-      <p className="relative flex justify-between">
-        <span>Wk 1 ✓ Wk 2 ✓</span>
-        <span data-nb-layer="1">
-          Wk 3 ?
-        </span>
-      </p>
-      {/* Beat 2: Thursday went missing */}
-      <div data-nb-layer="1">
-        <p className="relative">
-          + Thu - ??
-          <span className="absolute -left-[58px] top-1 text-[1rem]">missed!</span>
-        </p>
-      </div>
-      {/* Beat 3: the maths that never quite works */}
-      <div data-nb-layer="2">
-        <p className="mt-2">80 → 82.5 → 80 ??</p>
-        <p>
-          stall? deload?{" "}
-          <span className="inline-block rounded-[50%] border-2 border-current px-2 leading-[28px]">+2.5?</span>
-        </p>
-      </div>
-      {/* Beat 4: enough */}
-      <svg data-nb-x viewBox="0 0 380 500" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
-        <path data-strike d="M 40 40 L 345 470" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-        <path data-strike d="M 340 60 L 70 460" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+    <div className="relative mx-auto h-[500px] w-[min(380px,88vw)]">
+      <svg viewBox="0 0 100 130" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true">
+        {threads.map(([a, b]) => (
+          <line key={`${a}${b}`} data-nb-thread x1={pos[a].cx} y1={pos[a].cy * 1.3} x2={pos[b].cx} y2={pos[b].cy * 1.3} stroke="var(--mute)" strokeWidth="0.5" strokeDasharray="1.5 1.5" vectorEffect="non-scaling-stroke" />
+        ))}
       </svg>
+      {TANGLE.map((a, i) => (
+        <div
+          key={a.name}
+          data-nb-tile={i}
+          className="absolute flex h-[108px] w-[108px] flex-col items-center justify-center gap-2 rounded-[22px]"
+          style={{ left: `${a.x}%`, top: `${a.y}%`, transform: `rotate(${a.r}deg)`, background: "var(--paper)", border: "1px solid var(--line)", boxShadow: "0 18px 40px -22px color-mix(in srgb, var(--ink) 40%, transparent)" }}
+        >
+          <span className="ln-icon" style={{ background: "var(--card)" }}>
+            <Icon name={a.icon} size={22} />
+          </span>
+          <span className="text-[0.74rem] font-semibold">{a.name}</span>
+          {i === 1 && (
+            <span data-nb-layer="1" className="absolute -right-2 -top-2 grid h-7 min-w-7 place-items-center rounded-full px-2 text-[0.72rem] font-bold" style={{ background: "var(--orange)", color: "var(--ink)" }}>
+              47
+            </span>
+          )}
+          {i === 2 && (
+            <span data-nb-layer="1" className="ln-hand absolute -bottom-9 left-1/2 w-max -translate-x-1/2 text-[1.25rem]" style={{ color: "var(--orange-deep)" }}>
+              Thu: nothing?
+            </span>
+          )}
+        </div>
+      ))}
+      {/* beat 3: the numbers that never agree */}
+      <div data-nb-layer="2" className="pointer-events-none absolute inset-0">
+        {[
+          ["80.0", "12%", "76%"],
+          ["82.5", "70%", "18%"],
+          ["79.6 ??", "40%", "92%"],
+          ["+2.5?", "6%", "40%"],
+        ].map(([n, l, tp]) => (
+          <span key={n} className="ln-mono absolute rounded-full px-2.5 py-1 text-[0.8rem] font-bold" style={{ left: l, top: tp, background: "var(--card)" }}>
+            {n}
+          </span>
+        ))}
+      </div>
+      <p className="ln-hand absolute bottom-0 right-2 text-[1.5rem]" aria-hidden="true">
+        for every client
+      </p>
     </div>
   );
 }
@@ -801,7 +837,8 @@ function AppCard() {
 
 export function OldWay() {
   // Without motion (phones, reduced motion, before GSAP loads) this is a still frame: the first
-  // beat, then Repsy and the app card. The pinned, layered scene exists only under `.ln-anim`,
+  // beat, then Repsy and the app card. The pinned, layered scene (the tangle of apps that gets
+  // pulled into one place) exists only under `.ln-anim`,
   // which StudioLanding sets once motion has started (see landing-new.css "notebook scene").
   return (
     <section data-scene="notebook" aria-labelledby="ln-old-title" className="relative">
@@ -851,7 +888,7 @@ export function OldWay() {
         </div>
         <div className="ln-nb-stage relative flex justify-center" style={{ perspective: "1400px" }}>
           <div data-nb-book className="ln-nb-book" aria-hidden="true">
-            <Notebook />
+            <Tangle />
           </div>
           <div data-nb-app>
             <AppCard />

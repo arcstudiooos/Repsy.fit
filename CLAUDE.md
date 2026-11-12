@@ -98,9 +98,11 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   A1 rules above (cream paper, ink, one orange accent, teal for ticks and data, Instrument
   Serif headlines with one *italic orange* key word, Geist body, Geist Mono numbers, orange
   pill buttons with the hard ink shadow). Colours are ONLY `theme.css` tokens plus
-  `color-mix()` tints (a UI test enforces this). Objects are fitness things: a ruled plan
-  sheet torn into client strips, a Workout / Nutrition plan toggle, a check-in chart, a coach's
-  notebook. GSAP is a lazy `motion-*` chunk that loads only on wide screens without reduced
+  `color-mix()` tints (a UI test enforces this). No paper, cards or bills (owner's rule): the
+  hero is an SVG barbell whose four plates are the four plan types in their type colours, one
+  per client, loading and bending on scroll; the "old way" is a tangle of five generic app tiles
+  that gets pulled into one place; plus a Workout / Nutrition plan toggle on a phone and a
+  check-in chart. GSAP is a lazy `motion-*` chunk that loads only on wide screens without reduced
   motion; without it the page is a complete still page. A "Pause motion" button stops the
   marquee and badge. Tests: `e2e-ui/studio-landing.spec.ts`.
 

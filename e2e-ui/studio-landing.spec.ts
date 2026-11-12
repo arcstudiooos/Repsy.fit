@@ -74,7 +74,7 @@ async function contrastOf(page: Page, selector: string) {
 test("one h1, every section in order, nav anchors resolve, footer links to real routes", async ({ page }) => {
   await open(page);
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Plan it.");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Load the week.");
   await expect(page.getByRole("tab")).toHaveCount(0); // not the dashboard
   for (const id of ["how", "why", "pricing", "faq", "get"]) await expect(page.locator(`#${id}`)).toHaveCount(1);
   for (const href of ["#how", "#why", "#pricing", "#faq"]) await expect(page.getByRole("navigation", { name: "Sections" }).locator(`a[href="${href}"]`)).toHaveCount(1);
@@ -92,11 +92,14 @@ test("the default / is unchanged (the Studio page is opt-in)", async ({ page }) 
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 });
 
-test("hero deck: four client cards; only the top card is in the a11y tree", async ({ page }) => {
+test("hero barbell: four plates per side, one per plan type, labelled with a client", async ({ page }) => {
   await open(page);
-  await expect(page.locator("[data-strip]")).toHaveCount(4);
-  await expect(page.locator('[data-strip] > [aria-hidden="true"]')).toHaveCount(3);
-  for (const n of ["Maya", "Arjun", "Casey", "Leo"]) await expect(page.locator("[data-strip] .ln-chip", { hasText: n })).toHaveCount(1);
+  await expect(page.locator("[data-plate]")).toHaveCount(8);
+  await expect(page.locator("[data-collar]")).toHaveCount(2);
+  const labels = page.getByRole("list", { name: "This week's plans" }).getByRole("listitem");
+  await expect(labels).toHaveCount(4);
+  for (const n of ["Maya", "Arjun", "Casey", "Leo"]) await expect(labels.filter({ hasText: n })).toHaveCount(1);
+  for (const n of ["Workout", "Nutrition", "Habit", "Recovery"]) await expect(labels.filter({ hasText: n })).toHaveCount(1);
 });
 
 test("plan-type toggle swaps the phone between a workout and a nutrition plan, and is announced", async ({ page }) => {
@@ -157,7 +160,7 @@ test("reduced motion on a wide screen: no animation chunk, no pins, the whole st
   // The old-way scene's ending (the Repsy beat and the app card) is shown, not left on frame one.
   await expect(page.getByText("Progress.", { exact: true })).toBeVisible();
   await expect(page.locator("[data-nb-app]").getByText("Maya Patel", { exact: true })).toBeVisible();
-  await expect(page.locator("[data-nb-x]")).toBeHidden();
+  await expect(page.locator("[data-nb-tile]").first()).toBeHidden(); // the tangle shows only with motion
   expect(await invisibleText(page)).toEqual([]);
 });
 
@@ -171,27 +174,29 @@ test("with motion on a wide screen: GSAP loads lazily, two scenes pin, and motio
   await expect(page.getByRole("button", { name: "Play motion" })).toBeVisible();
   await expect(page.getByTestId("studio-landing")).toHaveClass(/is-paused/);
   await expect(page.locator(".ln-marquee")).toHaveCSS("animation-play-state", "paused");
-  // Scrolling the hero scene tears the sheet: the stamps become visible.
+  // Scrolling the hero scene loads the bar: the plates become visible.
   await page.mouse.wheel(0, 1400);
-  await expect(page.locator("[data-stamp]").first()).not.toHaveCSS("opacity", "0", { timeout: 5000 });
+  await expect(page.locator("[data-plate]").first()).not.toHaveCSS("opacity", "0", { timeout: 5000 });
   // The chart's scan line sweeps a few times and then stops (WCAG 2.2.2: under 5 seconds).
   await page.locator("[data-scan]").evaluate((e) => e.scrollIntoView({ block: "center" }));
   await expect(page.locator("[data-scan]")).toHaveCSS("opacity", "0", { timeout: 8000 });
 });
 
 for (const width of [1024, 1440]) {
-  test(`hero deal at ${width}px: the dealt cards never cover the text`, async ({ page }) => {
+  test(`hero at ${width}px: scrolling loads the bar - plates arrive, the bar bends, ticks land`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await open(page, { motion: true });
     await expect(page.locator(".pin-spacer")).toHaveCount(2);
-    await page.mouse.wheel(0, 1300);
-    await expect(page.locator("[data-strip-chip]").first()).toHaveCSS("opacity", "1", { timeout: 6000 });
-    const overlap = await page.evaluate(() => {
-      const text = [...document.querySelectorAll("[data-hero-copy] :is(h1,p,a,li)")].map((e) => e.getBoundingClientRect());
-      const strips = [...document.querySelectorAll("[data-strip]")].map((e) => e.getBoundingClientRect());
-      return strips.some((s) => text.some((c) => s.left < c.right && s.right > c.left && s.top < c.bottom && s.bottom > c.top));
-    });
-    expect(overlap).toBe(false);
+    const d0 = await page.locator("[data-bar]").getAttribute("d");
+    await expect(page.locator("[data-plate]").first()).toHaveCSS("opacity", "0");
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel(0, 200);
+      await page.waitForTimeout(120);
+    }
+    await expect(page.locator("[data-plate-tick]").last()).toHaveCSS("opacity", "1", { timeout: 6000 });
+    await expect(page.locator("[data-plate]").last()).toHaveCSS("opacity", "1");
+    expect(await page.locator("[data-bar]").getAttribute("d")).not.toBe(d0); // it bent
+    await expect(page.locator("[data-hero-count-n]")).toHaveText("4");
   });
 }
 

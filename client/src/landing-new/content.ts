@@ -9,14 +9,23 @@ export const NAV = [
   { label: "FAQ", href: "#faq" },
 ];
 
-/** The hero: a coach's deck of index cards, one per client. The top card is in view; on scroll the
- * deck deals out into four, each stamped DONE. Rows use Manual Planner notation. */
-export const CARDS = [
-  { name: "Maya", title: "Push day", rows: [["Bench Press", "4 × 8 · 90s"], ["Overhead Press", "3 × 10 · 90s"], ["Cable Fly", "3 × 15 · 60s"]], why: "bench stalled 3 wks - more volume", note: "Done · Mon" },
-  { name: "Arjun", title: "Leg day", rows: [["Back Squat", "4 × 6 · 120s"], ["Romanian Deadlift", "3 × 10 · 90s"], ["Walking Lunge", "3 × 12 · 60s"]], why: "knee fine now - back to full depth", note: "Done · Mon" },
-  { name: "Casey", title: "Upper pull", rows: [["Pull-up", "4 × AMRAP · 120s"], ["Barbell Row", "4 × 8 · 90s"], ["Face Pull", "3 × 15 · 60s"]], why: "posture goal - pulls 2:1 over pushes", note: "Done · Tue" },
-  { name: "Leo", title: "Conditioning", rows: [["Rower", "6 × 500 m · 90s"], ["Kettlebell Swing", "4 × 15 · 60s"], ["Farmer Carry", "4 × 40 m · 60s"]], why: "fat-loss block - keep it short, hard", note: "Done · Tue" },
-];
+/** The hero barbell: Repsy's four plan types are the four plates (the app's own type colours), one
+ * per client. Plates load innermost first; sizes follow real plate proportions. */
+export const PLATES = [
+  { type: "Workout", color: "var(--orange)", ink: "var(--ink)", client: "Maya", plan: "Push day · 4 moves", h: 1 },
+  { type: "Nutrition", color: "var(--teal)", ink: "var(--paper)", client: "Arjun", plan: "Cut · 2,100 kcal", h: 0.86 },
+  { type: "Habit", color: "var(--amber)", ink: "var(--ink)", client: "Casey", plan: "10k steps · 7 days", h: 0.72 },
+  { type: "Recovery", color: "var(--violet)", ink: "var(--paper)", client: "Leo", plan: "Mobility · 2 × 20 min", h: 0.6 },
+] as const;
+
+/** The old way: five apps per client. Generic glyphs, no logos. */
+export const TANGLE = [
+  { icon: "list", name: "Sheets", x: 8, y: 6, r: -8 },
+  { icon: "inbox", name: "Chat", x: 62, y: 2, r: 6 },
+  { icon: "calendar", name: "Calendar", x: 70, y: 48, r: -5 },
+  { icon: "chart", name: "Calculator", x: 10, y: 56, r: 7 },
+  { icon: "doc", name: "Photos", x: 38, y: 30, r: -3 },
+] as const;
 
 export const RIBBON = "PLANS WITH THE WHY · CLIENTS NEED NO APP · SETS, REPS, REST · CHECK-INS THAT ADD UP · ";
 
@@ -90,10 +99,10 @@ export const FEED = [
 
 /** The old way, beat by beat (left column of the pinned notebook scene). */
 export const BEATS = [
-  { title: "The old way.", body: "A notebook, a pen, and a client's whole month." },
-  { title: "Someone missed Thursday.", body: "Nobody wrote it down. The week doesn't add up." },
-  { title: "Now: is she actually progressing?", body: "Three weeks of numbers and a guess." },
-  { title: "Enough.", body: "Turn the page." },
+  { title: "The old way.", body: "Five apps for one client. A sheet, a chat, a calendar, a calculator and a camera roll." },
+  { title: "Someone missed Thursday.", body: "The calendar says nothing. The chat says \u201csorry!\u201d. Nothing adds it up." },
+  { title: "Now: is she actually progressing?", body: "Three screenshots, a calculator and a guess." },
+  { title: "Enough.", body: "One place." },
 ];
 
 export const PLANS = [

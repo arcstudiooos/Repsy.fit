@@ -3,7 +3,7 @@
 // still page, and this file only animates it on wide screens without reduced motion.
 //
 // Scenes:
-//  - hero: the deck of client cards straightens, then deals out into a 2 x 2 spread, each stamped DONE
+//  - hero: the barbell loads one plate per plan type (and client), the bar whips, four ticks land
 //  - ribbon: the promise slides along the curved band as you scroll
 //  - road: the white road draws itself (stroke-dashoffset) as the section passes
 //  - notebook: pinned; beats change, scribbles appear, a big X strikes through, the page
@@ -13,6 +13,7 @@
 // screen readers behave normally; scrub values give the scenes their soft, eased follow.
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { barPath } from "./scenes";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -39,47 +40,55 @@ export function startMotion(root: HTMLElement): () => void {
     const mm = gsap.matchMedia();
     mmRef = mm;
     mm.add("(min-width: 1024px)", () => {
-      /* ---------- hero: the deck deals out into a 2 x 2 spread, one card per client ---------- */
+      /* ---------- hero: the barbell loads, the collars lock, the bar whips, four ticks land ---------- */
       const hero = root.querySelector<HTMLElement>("[data-scene=hero]");
-      const stage = root.querySelector<HTMLElement>("[data-sheet-stage]");
-      if (hero && stage) {
-        const cards = q("[data-strip]");
-        const stamps = q("[data-stamp]");
-        const chips = q("[data-strip-chip]");
-        const column = root.querySelector<HTMLElement>("[data-hero-column]") ?? stage.parentElement!;
-        // Spread positions in card units; scale so two cards (plus the gap) fit the column.
-        const GAP = 0.08;
-        const spots = [
-          { x: -(0.5 + GAP / 2), y: -(0.5 + GAP / 2), r: -3 },
-          { x: 0.5 + GAP / 2, y: -(0.5 + GAP / 2), r: 2 },
-          { x: -(0.5 + GAP / 2), y: 0.5 + GAP / 2, r: 2.5 },
-          { x: 0.5 + GAP / 2, y: 0.5 + GAP / 2, r: -2 },
-        ];
-        const scale = () => Math.min(0.78, (column.clientWidth - 24) / (stage.offsetWidth * (2 + GAP)));
+      const bar = root.querySelector<SVGPathElement>("[data-bar]");
+      if (hero && bar) {
+        const plates = q<SVGGElement>("[data-plate]");
+        const collars = q<SVGGElement>("[data-collar]");
+        const labels = q("[data-plate-label]");
+        const ticks = q("[data-plate-tick]");
+        const knurl = root.querySelector<SVGPathElement>("[data-bar-knurl]");
+        const countN = root.querySelector<HTMLElement>("[data-hero-count-n]");
+        const sagOf = (n: number) => 4 + n * 3.5; // px of droop per plate loaded
+        const bend = { sag: 0 };
+        const setBar = () => {
+          const d = barPath(bend.sag);
+          bar.setAttribute("d", d);
+          knurl?.setAttribute("d", d);
+        };
         const tl = gsap.timeline({
           defaults: { ease: "power2.inOut" },
-          scrollTrigger: { trigger: hero, start: "top top", end: "+=1300", pin: "[data-hero-pin]", scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true },
+          scrollTrigger: { trigger: hero, start: "top top", end: "+=1500", pin: "[data-hero-pin]", scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true },
         });
-        tl.to(stage, { rotate: 0, duration: 0.5 })
-          .to("[data-hero-note]", { autoAlpha: 0, duration: 0.3 }, "<")
-          .to("[data-hero-copy]", { opacity: 0.25, duration: 0.6 }, "<0.2");
-        cards.forEach((card, i) => {
-          tl.to(
-            card,
-            {
-              x: () => spots[i].x * stage.offsetWidth * scale() * 1.02,
-              y: () => spots[i].y * stage.offsetHeight * scale() * 1.02,
-              rotate: spots[i].r,
-              scale: () => scale(),
-              duration: 1,
-              ease: "power3.inOut",
-            },
-            0.6 + i * 0.08,
-          );
-        });
-        tl.fromTo(stamps, { autoAlpha: 0, scale: 2.4, rotate: -30 }, { autoAlpha: 1, scale: 1, rotate: -12, ease: "back.out(2.6)", stagger: 0.14, duration: 0.35 }, 1.75);
-        tl.fromTo(chips, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, stagger: 0.1, duration: 0.3 }, 1.9);
-        tl.to("[data-hero-copy]", { opacity: 1, duration: 0.4 }, 2.1);
+        // Start: an empty bar. Plates wait beyond the ends of the sleeves (the right sleeve group is
+        // mirrored, so the same -x works for both sides); collars sit tight at the shoulders.
+        gsap.set(plates, { x: -340, opacity: 0 });
+        gsap.set(collars, { x: 4 * (34 + 4) });
+        gsap.set(labels, { autoAlpha: 0, y: 10 });
+        gsap.set(ticks, { autoAlpha: 0, scale: 0.4 });
+        const count = { n: 0 };
+        const setCount = () => {
+          if (countN) countN.textContent = String(Math.round(count.n));
+        };
+        setCount();
+        tl.to("[data-hero-note]", { autoAlpha: 0, duration: 0.25 }, 0);
+        // Load innermost first, both sides together.
+        for (let i = 0; i < 4; i++) {
+          const at = 0.3 + i * 0.5;
+          const pair = plates.filter((p) => p.dataset.plateIndex === String(i));
+          tl.to(pair, { x: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, at);
+          tl.to(bend, { sag: sagOf(i + 1), duration: 0.35, ease: "elastic.out(1, 0.45)", onUpdate: setBar }, at + 0.3);
+          tl.to(collars, { x: (4 - (i + 1)) * (34 + 4), duration: 0.3 }, at + 0.1);
+          tl.to(labels[i], { autoAlpha: 1, y: 0, duration: 0.3 }, at + 0.2);
+          tl.to(count, { n: i + 1, duration: 0.01, onUpdate: setCount, onReverseComplete: setCount }, at + 0.2);
+        }
+        // Lift: the bar comes up a touch, the shadow shrinks, the ticks land.
+        tl.to("[data-barbell]", { y: -18, duration: 0.5, ease: "power2.out" }, 2.6);
+        tl.to("[data-bar-shadow]", { attr: { rx: 300 }, opacity: 0.04, duration: 0.5 }, 2.6);
+        tl.to("[data-hero-count]", { autoAlpha: 0, duration: 0.3 }, 2.8);
+        tl.to(ticks, { autoAlpha: 1, scale: 1, stagger: 0.12, duration: 0.3, ease: "back.out(2.4)" }, 2.75);
+        tl.to({}, { duration: 0.3 });
       }
     });
 
@@ -119,8 +128,8 @@ export function startMotion(root: HTMLElement): () => void {
     const nb = root.querySelector<HTMLElement>("[data-scene=notebook]");
     if (nb) {
       const beats = q("[data-beat]");
-      const strikes = q<SVGPathElement>("[data-strike]");
-      drawPrep(strikes);
+      const tiles = q("[data-nb-tile]");
+      const threads = q<SVGLineElement>("[data-nb-thread]");
       const tl = gsap.timeline({
         defaults: { ease: "power1.inOut" },
         scrollTrigger: { trigger: nb, start: "top top", end: "+=2600", pin: "[data-nb-pin]", scrub: 0.7, anticipatePin: 1 },
@@ -134,8 +143,26 @@ export function startMotion(root: HTMLElement): () => void {
       swap(1, 2, 1.4);
       tl.to("[data-nb-layer='2']", { autoAlpha: 1, duration: 0.3, stagger: 0.1 }, 1.5);
       swap(2, 3, 2.3);
-      tl.to(strikes, { strokeDashoffset: 0, duration: 0.35, stagger: 0.18 }, 2.4);
-      tl.to("[data-nb-book]", { rotateY: -100, transformOrigin: "left center", autoAlpha: 0, duration: 0.6, ease: "power2.in" }, 3.1);
+      // Enough: the threads snap, every tile is pulled into the centre and the tangle is gone.
+      tl.to(threads, { opacity: 0, duration: 0.2, stagger: 0.03 }, 2.4);
+      tl.to("[data-nb-layer]", { autoAlpha: 0, duration: 0.2 }, 2.4);
+      tl.to(
+        tiles,
+        {
+          left: "50%",
+          top: "50%",
+          xPercent: -50,
+          yPercent: -50,
+          rotate: () => gsap.utils.random(-30, 30),
+          scale: 0.1,
+          autoAlpha: 0,
+          duration: 0.6,
+          ease: "power3.in",
+          stagger: 0.05,
+        },
+        2.55,
+      );
+      tl.to("[data-nb-book]", { autoAlpha: 0, duration: 0.2 }, 3.1);
       swap(3, 4, 3.2);
       tl.fromTo("[data-nb-app]", { autoAlpha: 0, rotateY: 40, scale: 0.92 }, { autoAlpha: 1, rotateY: 0, scale: 1, duration: 0.6, ease: "power2.out" }, 3.45);
       tl.to({}, { duration: 0.4 });
