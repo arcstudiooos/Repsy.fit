@@ -70,11 +70,13 @@ describe.skipIf(!process.env.DATABASE_URL)("client invite and sign-in (database)
 
     const login = await supertest(app).post("/api/client-auth/login").send({ email: emailA, password: PASSWORD });
     expect(login.status).toBe(200);
-    expect(login.body).toEqual({ id: clientA, name: "Invite Probe A", loginEmail: emailA });
+    expect(login.body).toEqual({ id: clientA, name: "Invite Probe A", loginEmail: emailA, joinStatus: "active" });
     cookie = clientCookieFrom(login);
 
     const me = await supertest(app).get("/api/client-auth/me").set("Cookie", cookie);
-    expect(me.body).toEqual({ id: clientA, name: "Invite Probe A", loginEmail: emailA });
+    // Prompt 77: plus their join status, their OWN coach's name, and no welcome step (added by the coach).
+    expect(me.body).toMatchObject({ id: clientA, name: "Invite Probe A", loginEmail: emailA, joinStatus: "active", needsWelcome: false });
+    expect(Object.keys(me.body).sort()).toEqual(["coachName", "id", "joinStatus", "loginEmail", "name", "needsWelcome"]);
     expect((await coach.get(`/api/clients/${clientA}/invite`)).body).toMatchObject({ status: "active", loginEmail: emailA });
   });
 
