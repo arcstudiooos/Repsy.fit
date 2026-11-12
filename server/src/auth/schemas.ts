@@ -59,6 +59,34 @@ export const ClientSetPasswordSchema = z.object({
 });
 export const ClientLoginSchema = LoginSchema;
 
+// Joining with a coach's code (Prompt 77): same name, email and password rules as coach sign-up.
+export const ClientJoinSchema = z.object({
+  code: z.string({ required_error: "This join code is not valid. Please ask your coach for a new one." }).max(40),
+  name,
+  email,
+  password: newPassword,
+});
+export const ClientForgotSchema = ForgotSchema;
+export const ClientResetSchema = ResetSchema;
+
+/** Prompt 77: the welcome questions. The same goal/level/number ranges as the coach's client form. */
+export const CLIENT_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
+export const CLIENT_UNITS = ["kg", "lb"] as const;
+export const ClientProfileSchema = z
+  .object({
+    goal: z.string().trim().min(1, "Goal can't be empty.").max(100, "Please keep the goal under 100 characters.").optional(),
+    age: z.number({ invalid_type_error: "Age must be a whole number." }).int("Age must be a whole number.").min(13, "You need to be at least 13.").max(120, "Please enter a real age.").nullable().optional(),
+    heightCm: z.number({ invalid_type_error: "Height must be a number." }).min(50, "Height looks too small.").max(300, "Height looks too big.").nullable().optional(),
+    weightKg: z.number({ invalid_type_error: "Weight must be a number." }).min(20, "Weight looks too small.").max(500, "Weight looks too big.").nullable().optional(),
+    level: z.enum(CLIENT_LEVELS, { errorMap: () => ({ message: "Please pick Beginner, Intermediate or Advanced." }) }).optional(),
+    injuries: z.string().trim().max(1000, "Please keep this under 1000 characters.").optional(),
+    units: z.enum(CLIENT_UNITS, { errorMap: () => ({ message: "Please pick kg or lb." }) }).optional(),
+    /** True for "Skip for now": nothing else is saved, the welcome step just stops showing. */
+    skip: z.boolean().optional(),
+  })
+  .strict("Only the welcome questions can be changed here.");
+export type ClientProfileInput = z.infer<typeof ClientProfileSchema>;
+
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type InviteInput = z.infer<typeof InviteSchema>;
 export type ClientSetPasswordInput = z.infer<typeof ClientSetPasswordSchema>;

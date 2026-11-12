@@ -49,8 +49,9 @@ beforeEach(async () => {
   );
   // The client-session check (is this client token still current?).
   prismaMock.client.findUnique.mockImplementation(({ where, select }: { where: { id?: string; loginEmail?: string }; select?: Record<string, boolean> }) => {
-    if (where.id === "c1" && select?.clientSessionVersion) return Promise.resolve({ clientSessionVersion: 0, passwordHash });
-    if (where.id === "c1") return Promise.resolve({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", passwordHash });
+    if (where.id === "c1" && select?.clientSessionVersion) return Promise.resolve({ clientSessionVersion: 0, passwordHash, joinStatus: "active" });
+    if (where.id === "c1")
+      return Promise.resolve({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", passwordHash, joinStatus: "active", joinedVia: "coach", onboardedAt: null, coach: { name: "Ana" } });
     return Promise.resolve(null);
   });
   prismaMock.client.update.mockResolvedValue(CLIENT);
@@ -95,7 +96,8 @@ describe("coach and client sessions never cross over", () => {
   it("GET /me shows only the client's own account (no coach data, no hash)", async () => {
     const res = await supertest(app).get("/api/client-auth/me").set("Cookie", clientCookie());
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com" });
+    // Prompt 77 adds the client's own join status, their own coach's name and the welcome flag.
+    expect(res.body).toEqual({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active", coachName: "Ana", needsWelcome: false });
   });
 
   it("an old client token stops working once the password is set again (version raised)", async () => {
@@ -221,10 +223,11 @@ describe("POST /api/client-auth/set-password", () => {
 
 describe("POST /api/client-auth/login and /logout", () => {
   it("signs in with the CLIENT cookie only - never the coach cookie", async () => {
-    prismaMock.client.findUnique.mockResolvedValue({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", passwordHash, clientSessionVersion: 0 });
+    prismaMock.client.findUnique.mockResolvedValue({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", passwordHash, clientSessionVersion: 0, joinStatus: "active" });
     const res = await supertest(app).post("/api/client-auth/login").send({ email: "maya@example.com", password: "correct horse battery" });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com" });
+    // Prompt 77 adds the client's own join status.
+    expect(res.body).toEqual({ id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" });
     const cookies = ([] as string[]).concat(res.headers["set-cookie"] ?? []);
     expect(cookies.some((c) => c.startsWith(`${CLIENT_SESSION_COOKIE}=`) && /HttpOnly/i.test(c))).toBe(true);
     expect(cookies.some((c) => c.startsWith(`${SESSION_COOKIE}=`))).toBe(false);
@@ -232,7 +235,7 @@ describe("POST /api/client-auth/login and /logout", () => {
   });
 
   it("wrong password, unknown email, or a client who never set a password: the same 401", async () => {
-    prismaMock.client.findUnique.mockResolvedValue({ id: "c1", name: "Maya", loginEmail: "maya@example.com", passwordHash, clientSessionVersion: 0 });
+    prismaMock.client.findUnique.mockResolvedValue({ id: "c1", name: "Maya", loginEmail: "maya@example.com", passwordHash, clientSessionVersion: 0, joinStatus: "active" });
     const wrong = await supertest(app).post("/api/client-auth/login").send({ email: "maya@example.com", password: "wrong password!!" });
     prismaMock.client.findUnique.mockResolvedValue(null);
     const unknown = await supertest(app).post("/api/client-auth/login").send({ email: "who@example.com", password: "whatever12345" });

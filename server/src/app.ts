@@ -15,6 +15,7 @@ import { habitsRouter } from "./routes/habits.js";
 import { measurementsRouter } from "./routes/measurements.js";
 import { messagesRouter, threadsRouter } from "./routes/messages.js";
 import { clientAuthRouter } from "./routes/clientAuth.js";
+import { clientJoinRouter } from "./routes/clientJoin.js";
 import { clientInviteRouter } from "./routes/clientInvite.js";
 import { businessRouter, clientPlanRouter } from "./routes/business.js";
 import { appointmentsRouter } from "./routes/appointments.js";
@@ -121,6 +122,8 @@ app.use("/api/leads", leadsRouter);
 app.use("/api/auth", authRouter);
 // Client sign-in (Prompt 65): separate from coach auth above.
 app.use("/api/client-auth", clientAuthRouter);
+// Prompt 77: joining with a code, the welcome questions, and client password reset.
+app.use("/api/client-auth", clientJoinRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
 // "Not found" is reserved for missing routes (see API contract in CLAUDE.md).
@@ -155,9 +158,10 @@ if (fs.existsSync(clientDist)) {
     const file = path.join(clientDist, "legal", `${page}.html`);
     app.get(`/${page}`, (_req, res, next) => (fs.existsSync(file) ? res.sendFile(file) : next()));
   }
+  const TOKEN_PAGES = new Set(["/client/set-password", "/reset-password", "/client/reset-password"]);
   app.get("*", (req, res) => {
     // Pages whose URL carries a one-time token (invite, password reset) never send it on as a Referer.
-    if (req.path === "/client/set-password" || req.path === "/reset-password") res.setHeader("Referrer-Policy", "no-referrer");
+    if (TOKEN_PAGES.has(req.path)) res.setHeader("Referrer-Policy", "no-referrer");
     res.sendFile(path.join(clientDist, "index.html"));
   });
 }

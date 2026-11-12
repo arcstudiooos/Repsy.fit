@@ -11,6 +11,11 @@ export type Route =
   | "client-login"
   | "client-set-password"
   | "client-home"
+  // Prompt 77: joining with a coach's code, the welcome questions, and client password reset.
+  | "client-join"
+  | "client-welcome"
+  | "client-forgot"
+  | "client-reset"
   // Privacy and Terms (Prompt 73): DRAFTS for the owner's legal review, not final documents.
   | "privacy"
   | "terms";
@@ -34,6 +39,10 @@ export function routeFor(pathname: string, opts: { inAppFlow: boolean; backForwa
   if (pathname === "/client/login") return "client-login";
   if (pathname === "/client/set-password") return "client-set-password";
   if (pathname === "/client" || pathname === "/client/") return "client-home";
+  if (/^\/join\/[^/]+\/?$/.test(pathname)) return "client-join";
+  if (pathname === "/client/welcome") return "client-welcome";
+  if (pathname === "/client/forgot-password") return "client-forgot";
+  if (pathname === "/client/reset-password") return "client-reset";
   if (pathname === "/privacy") return "privacy";
   if (pathname === "/terms") return "terms";
   if (pathname === "/" && opts.inAppFlow && !opts.backForward) return "redirect-to-app";

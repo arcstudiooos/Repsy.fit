@@ -1,7 +1,8 @@
 // CLIENT sign-in (Prompt 65) - see "API contract" in CLAUDE.md. Separate from coach auth
 // (/api/auth): its own routes, its own cookie and token type (src/auth/clientSession.ts).
 // A signed-in client can read exactly one client record - their own - and nothing else.
-// There is no client registration: an account exists only after the coach invites the client.
+// Accounts come from a coach's invite (Prompt 65) or from joining with the coach's code (Prompt 77,
+// routes/clientJoin.ts). Data routes use requireActiveClient: a pending / declined client gets 403.
 import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
@@ -12,6 +13,7 @@ import { hashToken } from "../auth/resetToken.js";
 import {
   clearClientSessionCookie,
   clientAccountIdOf,
+  requireActiveClient,
   requireClient,
   setClientSessionCookie,
 } from "../auth/clientSession.js";
@@ -26,8 +28,13 @@ export const INVITE_EMAIL_TAKEN = "That email is already used for another client
 export const clientAuthRouter = Router();
 
 /** What a signed-in client may see about themselves. Nothing about the coach or other clients. */
-type PublicClientAccount = { id: string; name: string; loginEmail: string | null };
-const publicAccount = (c: PublicClientAccount): PublicClientAccount => ({ id: c.id, name: c.name, loginEmail: c.loginEmail });
+type PublicClientAccount = { id: string; name: string; loginEmail: string | null; joinStatus: string };
+const publicAccount = (c: PublicClientAccount): PublicClientAccount => ({
+  id: c.id,
+  name: c.name,
+  loginEmail: c.loginEmail,
+  joinStatus: c.joinStatus,
+});
 
 // POST /api/client-auth/set-password { token, password } -> 204. Spends the single-use invite
 // atomically, sets the password, makes the invited address the login email, and ends any older
@@ -116,7 +123,7 @@ clientAuthRouter.post("/logout", (_req, res) => {
 // the date of their own last payment, nothing about any other client.
 clientAuthRouter.get(
   "/my-plan",
-  requireClient,
+  requireActiveClient,
   asyncHandler(async (req, res) => {
     const clientId = clientAccountIdOf(req);
     const [plan, last] = await Promise.all([
@@ -132,7 +139,7 @@ clientAuthRouter.get(
 // The coach's private note, status and coach id are never selected; nothing about other clients.
 clientAuthRouter.get(
   "/my-sessions",
-  requireClient,
+  requireActiveClient,
   asyncHandler(async (req, res) => {
     const sessions = await prisma.appointment.findMany({
       where: { clientId: clientAccountIdOf(req), status: "Booked", endsAt: { gte: new Date() } },
@@ -148,7 +155,7 @@ clientAuthRouter.get(
 // The signed-in client's OWN three numbers only: no rank, no roster, nothing about any other client.
 clientAuthRouter.get(
   "/my-streaks",
-  requireClient,
+  requireActiveClient,
   asyncHandler(async (req, res) => {
     const raw = req.query.date;
     const date = raw === undefined ? new Date().toISOString().slice(0, 10) : typeof raw === "string" && isDateString(raw) ? raw : null;
@@ -168,19 +175,25 @@ clientAuthRouter.get(
 );
 
 // GET /api/client-auth/me -> 200 own account, or 401 when no CLIENT session (a coach session does not count).
+// Prompt 77: also { joinStatus, coachName, needsWelcome } so a pending client sees the waiting screen and a
+// client who joined with the code sees the welcome questions once. coachName is the client's OWN coach.
 clientAuthRouter.get(
   "/me",
   requireClient,
   asyncHandler(async (req, res) => {
     const client = await prisma.client.findUnique({
       where: { id: clientAccountIdOf(req) },
-      select: { id: true, name: true, loginEmail: true },
+      select: { id: true, name: true, loginEmail: true, joinStatus: true, joinedVia: true, onboardedAt: true, coach: { select: { name: true } } },
     });
     if (!client) {
       clearClientSessionCookie(res);
       res.status(401).json({ error: "You are not signed in." });
       return;
     }
-    res.json(publicAccount(client));
+    res.json({
+      ...publicAccount(client),
+      coachName: client.coach?.name ?? null,
+      needsWelcome: client.joinedVia === "code" && client.onboardedAt === null,
+    });
   }),
 );

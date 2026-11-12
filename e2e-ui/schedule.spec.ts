@@ -234,7 +234,7 @@ test("client /client shows My sessions: their own upcoming sessions in local tim
   await page.clock.setFixedTime(NOW);
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } });
+    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: null, lastPaymentDate: null } });
     if (path === "/api/client-auth/my-sessions") {
       return route.fulfill({
@@ -265,7 +265,7 @@ test("client /client shows My sessions: their own upcoming sessions in local tim
 test("client with no sessions sees a plain note", async ({ page }) => {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } });
+    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: null, lastPaymentDate: null } });
     if (path === "/api/client-auth/my-sessions") return route.fulfill({ json: { sessions: [] } });
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });

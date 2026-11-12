@@ -245,11 +245,29 @@ export type InviteResult =
   | { sent: true; loginEmail: string; inviteExpiresAt: string }
   | { sent: false; loginEmail: string; inviteExpiresAt: string; inviteLink: string; note: string };
 /** What a signed-in CLIENT sees about themselves (Prompt 65). */
+export type ClientJoinStatus = "active" | "pending" | "declined";
 export interface ClientAccount {
   id: string;
   name: string;
   loginEmail: string | null;
+  /** Prompt 77: pending / declined clients only see the waiting screen. */
+  joinStatus: ClientJoinStatus;
+  /** Prompt 77 (GET /me only): the client's own coach's name, and whether to show the welcome questions. */
+  coachName?: string | null;
+  needsWelcome?: boolean;
 }
+/** Prompt 77: the welcome questions (GET/PATCH /api/client-auth/me/profile). Weight is always kg. */
+export interface ClientProfile {
+  goal: string;
+  age: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  level: Level;
+  units: "kg" | "lb";
+  injuries: string;
+}
+/** Prompt 77: POST /api/client-auth/join replies 201 (signed in) or 202 (check your email). */
+export type JoinResult = ({ status?: undefined } & ClientAccount) | { status: "check-email"; message: string };
 
 /** Who wrote a coach <-> client message (Prompt 63). */
 export const MESSAGE_SENDERS = ["coach", "client"] as const;

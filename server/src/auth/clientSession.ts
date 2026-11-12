@@ -22,6 +22,8 @@ declare global {
     interface Request {
       /** The signed-in CLIENT's own client id (client sessions only). Never set by a coach session. */
       clientAccountId?: string;
+      /** Prompt 77: the signed-in client's joinStatus ("active" | "pending" | "declined"). */
+      clientJoinStatus?: string;
     }
   }
 }
@@ -92,13 +94,14 @@ function readCookie(req: Request, name: string): string | undefined {
   return undefined;
 }
 
-/** A client token is current while the client still exists, still has a password, and its version matches. */
-async function isClientSessionCurrent(clientId: string, version: number): Promise<boolean> {
+/** A client token is current while the client still exists, still has a password, and its version
+ *  matches. Returns the client's joinStatus when current, else null. */
+async function currentClientStatus(clientId: string, version: number): Promise<{ joinStatus: string } | null> {
   const row = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { clientSessionVersion: true, passwordHash: true },
+    select: { clientSessionVersion: true, passwordHash: true, joinStatus: true },
   });
-  return !!row && row.passwordHash !== null && row.clientSessionVersion === version;
+  return row && row.passwordHash !== null && row.clientSessionVersion === version ? { joinStatus: row.joinStatus } : null;
 }
 
 /** Reads ONLY the client cookie and sets ONLY req.clientAccountId. Never blocks by itself. */
@@ -106,7 +109,11 @@ export async function clientSessionMiddleware(req: Request, _res: Response, next
   try {
     const token = readCookie(req, CLIENT_SESSION_COOKIE);
     const session = token ? verifyClientSession(token) : null;
-    if (session && (await isClientSessionCurrent(session.clientId, session.version))) req.clientAccountId = session.clientId;
+    const status = session ? await currentClientStatus(session.clientId, session.version) : null;
+    if (session && status) {
+      req.clientAccountId = session.clientId;
+      req.clientJoinStatus = status.joinStatus;
+    }
     next();
   } catch (err) {
     next(err);
@@ -117,6 +124,26 @@ export async function clientSessionMiddleware(req: Request, _res: Response, next
 export function requireClient(req: Request, res: Response, next: NextFunction): void {
   if (!req.clientAccountId) {
     res.status(401).json({ error: "You are not signed in." });
+    return;
+  }
+  next();
+}
+
+export const NOT_APPROVED = "Your coach has not approved your account yet.";
+export const DECLINED = "Your coach declined your request to join.";
+
+/**
+ * Prompt 77: guard for every client DATA route. 401 without a client session (as requireClient);
+ * 403 while the coach has not approved the client (or declined them). /me stays reachable so the
+ * waiting screen can show.
+ */
+export function requireActiveClient(req: Request, res: Response, next: NextFunction): void {
+  if (!req.clientAccountId) {
+    res.status(401).json({ error: "You are not signed in." });
+    return;
+  }
+  if (req.clientJoinStatus !== "active") {
+    res.status(403).json({ error: req.clientJoinStatus === "declined" ? DECLINED : NOT_APPROVED });
     return;
   }
   next();

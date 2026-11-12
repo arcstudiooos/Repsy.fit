@@ -142,7 +142,7 @@ describe("GET /api/business/engagement (coach roster)", () => {
 describe("GET /api/client-auth/my-streaks (the client's own numbers only)", () => {
   const cookie = `${CLIENT_SESSION_COOKIE}=${signClientSession("c1", 0)}`;
   beforeEach(() => {
-    prismaMock.client.findUnique.mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", id: "c1", name: "Maya" });
+    prismaMock.client.findUnique.mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", id: "c1", name: "Maya", joinStatus: "active" });
     prismaMock.client.findMany.mockResolvedValue([{ id: "c1", name: "Maya" }]);
   });
 

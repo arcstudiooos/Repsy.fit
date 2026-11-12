@@ -107,6 +107,21 @@ model Payment {
   @@map("payments")
 }
 
+/// Prompt 77: a client's "forgot password" token. Same rules as the coach's PasswordResetToken:
+/// only the SHA-256 hash is stored, 1 hour, single use.
+model ClientPasswordResetToken {
+  id        String    @id @default(cuid())
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([clientId])
+  @@map("client_password_reset_tokens")
+}
+
 /// A single-use invite for a client to set their password (Prompt 65). Only the SHA-256 hash of the
 /// token is stored; the raw token exists only in the emailed / copied link. Lives 48 hours.
 model ClientInvite {
@@ -166,8 +181,18 @@ model Client {
   passwordHash  String?
   /// Raised when the client's password is (re)set, ending every older client session.
   clientSessionVersion Int @default(0)
+  /// Prompt 77: "active" | "pending" (joined with the code while the coach approves new clients) |
+  /// "declined". Pending / declined clients can sign in but every client-data route answers 403.
+  joinStatus    String   @default("active")
+  /// Prompt 77: how the record started: "coach" (added by the coach) or "code" (joined with the code).
+  joinedVia     String   @default("coach")
+  /// Prompt 77: the client's display unit for weight, "kg" or "lb". Weights are always stored in kg.
+  units         String   @default("kg")
+  /// Prompt 77: when the client finished (or skipped) the welcome questions. NULL = not shown yet.
+  onboardedAt   DateTime?
 
   assignments  Assignment[]
+  passwordResets ClientPasswordResetToken[]
   chatMessages ChatMessage[]
   progressLogs ProgressLog[]
   reviewItems  ReviewItem[]

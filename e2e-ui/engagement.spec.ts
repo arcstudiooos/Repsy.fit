@@ -52,7 +52,7 @@ test("Business > Engagement ranks clients with the three numbers beside each ran
 function mockClient(page: import("@playwright/test").Page, streaks: Record<string, unknown>) {
   return page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } });
+    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: null, lastPaymentDate: null } });
     if (path === "/api/client-auth/my-sessions") return route.fulfill({ json: { sessions: [] } });
     if (path === "/api/client-auth/my-streaks") return route.fulfill({ json: streaks });

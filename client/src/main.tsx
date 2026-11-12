@@ -21,6 +21,7 @@ const AuthPages = lazy(() => import("./auth/AuthPages"));
 const PasswordPages = lazy(() => import("./auth/PasswordPages"));
 // Client sign-in pages (Prompt 65): their own lazy chunk, apart from the coach screens.
 const ClientPages = lazy(() => import("./auth/ClientPages"));
+type ClientMode = Extract<Route, `client-${string}`>;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,8 +81,8 @@ function Root() {
         <AuthPages mode={current} />
       ) : current === "forgot" || current === "reset" ? (
         <PasswordPages mode={current} />
-      ) : current === "client-login" || current === "client-set-password" || current === "client-home" ? (
-        <ClientPages mode={current} />
+      ) : current.startsWith("client-") ? (
+        <ClientPages mode={current as ClientMode} />
       ) : current === "privacy" ? (
         <PrivacyPage />
       ) : current === "terms" ? (

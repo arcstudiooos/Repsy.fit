@@ -60,6 +60,8 @@ import type {
   ReviewItem,
   ReviewQueue,
   JoinCode,
+  JoinResult,
+  ClientProfile,
   ThreadMessage,
   ThreadSummary,
   TodayTasks,
@@ -265,6 +267,16 @@ export const clientLogin = (email: string, password: string) =>
   request<ClientAccount>("POST", "/client-auth/login", { email, password });
 export const clientLogout = () => request<void>("POST", "/client-auth/logout");
 export const getClientAccount = () => request<ClientAccount>("GET", "/client-auth/me");
+/** Prompt 77: joining a coach with their code, the welcome questions, and client password reset. */
+export const getJoinInfo = (code: string) => request<{ coachName: string }>("GET", `/join/${enc(code)}`);
+export const clientJoin = (input: { code: string; name: string; email: string; password: string }) =>
+  request<JoinResult>("POST", "/client-auth/join", input);
+export const getMyProfile = () => request<ClientProfile>("GET", "/client-auth/me/profile");
+export const saveMyProfile = (input: Partial<Omit<ClientProfile, "level">> & { level?: string; skip?: boolean }) =>
+  request<void>("PATCH", "/client-auth/me/profile", input);
+export const clientForgotPassword = (email: string) => request<{ message: string }>("POST", "/client-auth/forgot", { email });
+export const clientResetPassword = (token: string, password: string) =>
+  request<void>("POST", "/client-auth/reset", { token, password });
 
 // ----- Client messages (Prompt 63) - NOT the AI Coach chat above -----
 /** Newest page of 50 (or the page before `before`), oldest -> newest. Opening marks client messages read. */
@@ -404,6 +416,8 @@ export const queryKeys = {
   clientAccess: (clientId: string) => ["clients", clientId, "access"] as const,
   clientAccount: ["client-account", "me"] as const,
   myPlan: ["client-account", "my-plan"] as const,
+  myProfile: ["client-account", "profile"] as const,
+  joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,
   mySessions: ["client-account", "my-sessions"] as const,

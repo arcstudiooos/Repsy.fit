@@ -422,6 +422,32 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   dependency), drawn by `components/QrCode.tsx` as dark ink on `--white` in both themes, since phone cameras
   need dark-on-light. `e2e-ui/qr-encoder.spec.ts` checks it bit for bit against reference matrices.
 
+### Joining with a code (Prompt 77)
+- `/join/:code` (public): "Join <coach>'s coaching", name + email + password (coach sign-up rules). `POST
+  /api/client-auth/join` creates a Client under the code's coach (`joinedVia "code"`) and signs in with the CLIENT
+  cookie only. `joinStatus` is `"pending"` when the coach has "Approve new clients" on; pending / declined
+  clients can sign in and read `/me` but every client-data route uses `requireActiveClient` (403). Any new
+  client-data route MUST use `requireActiveClient`, not `requireClient`.
+- **Taking over an existing record needs proof of the inbox.** An address that already signs in -> 409 (generic).
+  An address the coach already invited (exactly one of that coach's clients, no sign-in yet) does NOT attach on
+  the spot: a fresh invite is emailed (202 "check your email") and using it attaches the record via the Prompt 65
+  set-password flow. Otherwise a new client is created. Never attach across coaches.
+- Welcome questions once (`/client/welcome`, skippable) for code-joined clients (`needsWelcome` on `/me`): goal,
+  age, height cm, weight (kg or lb; stored in kg), level, injuries. Injuries go into `Client.notes` as ONE line
+  starting `From client: `, which replaces the client's previous line and never touches the coach's notes; the
+  client only ever reads back that line. `Client.units` keeps kg / lb.
+- Client forgot / reset password (`/client/forgot-password`, `/client/reset-password`): own table
+  `ClientPasswordResetToken` (hash only, 1 hour, single use), same generic reply as the coach's, bumps
+  `clientSessionVersion`. Welcome email after joining (fixed subject; never blocks the join).
+- Decided in review (Prompt 77): any invite of that coach to that email counts (even expired); a live invite
+  younger than 15 minutes is not replaced (no re-send spam, the coach's link keeps working); `/join` is limited
+  per IP AND per email. The welcome email subject stays fixed ("Welcome to Repsy Coach") - a coach-chosen name
+  never goes in a subject line. Self-entered ranges are stricter than the coach form (age 13+, weight 20+ kg).
+  Pending clients may answer the welcome questions (helps the coach decide); declined clients get 403.
+  Records attached through an invite keep `joinedVia "coach"`. `/client/reset-password` sends no Referer.
+- Known limit: join does not verify the email first. Someone could sign up with another person's address under
+  any coach; the owner can still take that account over with "Forgot password", and delete it (Prompt 83).
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -508,6 +534,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getProgressReport(clientId, range)` | GET | `/api/reports/clients/:clientId/progress-report?from=YYYY-MM-DD&to=YYYY-MM-DD` | — (`from` / `to` optional, inclusive) | `ProgressReport` `{ client: { name, goal, age, weightKg, heightCm, level }, range: { from, to }, logs: { date, weightKg, adherence, workoutsDone }[] (oldest first), measurements: { date, waistCm, chestCm, armCm, hipCm, bodyFatPercent }[], assignments: { total, done, byType: { type, count }[] }, checkIns: { count, energy, mood, sleepHours, recoveryScore, waterLiters, steps (averages or null) } }`. No notes, focus, reasoning or chat. 400 `{ error }` for a bad date or `from` after `to`; 404 `Client not found` (also another coach's client). Needs `requireCoach`. (Prompt 70) |
 | `downloadClientCsv(clientId, type, range)` | GET | `/api/reports/clients/:clientId/export/:type?from&to` | — (`type` = `progress` \| `measurements` \| `payments` \| `assignments`) | `text/csv; charset=utf-8` attachment, columns in "Reports and export" above; 400 for another type or a bad range; 404 `Client not found`. Needs `requireCoach`. (Prompt 70) |
 | `downloadRosterCsv()` | GET | `/api/reports/roster` | — | `text/csv` attachment of all the signed-in coach's clients with plan status and next due date. Needs `requireCoach`. (Prompt 70) |
+| `clientJoin(input)` | POST | `/api/client-auth/join` | `{ code, name, email, password }` | 201 `{ id, name, loginEmail, joinStatus }` + CLIENT cookie; 202 `{ status: "check-email", message }` when the coach already invited that email (a fresh invite is emailed; nobody is signed in); 404 bad / off code; 409 `That email already has a client account. Please sign in.`; 400 validation. Rate limited. (Prompt 77) |
+| `getClientAccount()` | GET | `/api/client-auth/me` | — | `{ id, name, loginEmail, joinStatus, coachName, needsWelcome }` (own coach's name only). `requireClient`. (Prompt 65, extended in 77) |
+| `getMyProfile()` / `saveMyProfile(input)` | GET / PATCH | `/api/client-auth/me/profile` | PATCH `{ goal?, age? (13-120), heightCm? (50-300), weightKg? (20-500), level?, units? ("kg"\|"lb"), injuries? (<=1000), skip? }`, nothing else (400 `Only the welcome questions can be changed here.`) | GET `{ goal, age, heightCm, weightKg, level, units, injuries }` (injuries = the client's own "From client:" line only); PATCH 204, sets `onboardedAt`. `requireClient` (pending clients may answer). (Prompt 77) |
+| `clientForgotPassword(email)` / `clientResetPassword(token, password)` | POST | `/api/client-auth/forgot`, `/api/client-auth/reset` | `{ email }` / `{ token, password }` | forgot: always 200 `{ message }`; reset: 204, 400 `This reset link is not valid any more...`. Rate limited. (Prompt 77) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |
 | `regenerateJoinCode()` | POST | `/api/join-code/regenerate` | — | `JoinCode` with a NEW code; the old code stops working at once. Rate limited per coach (20 / 15 min). Needs `requireCoach`. (Prompt 76) |
 | `updateJoinCode(patch)` | PATCH | `/api/join-code` | `{ active?: boolean, approveNewClients?: boolean }` (at least one; nothing else) | `JoinCode`. 400 `Nothing to change.` / `active must be true or false.` / `Only active and approveNewClients can be changed.` Needs `requireCoach`. (Prompt 76) |

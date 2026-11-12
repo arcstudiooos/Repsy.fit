@@ -174,7 +174,7 @@ describe("/api/appointments (coach)", () => {
 describe("GET /api/client-auth/my-sessions (the client's own upcoming sessions)", () => {
   const clientCookie = `${CLIENT_SESSION_COOKIE}=${signClientSession("c1", 0)}`;
   beforeEach(() => {
-    prismaMock.client.findUnique.mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x" });
+    prismaMock.client.findUnique.mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", joinStatus: "active" });
   });
 
   it("needs a client session (a coach session gets 401)", async () => {

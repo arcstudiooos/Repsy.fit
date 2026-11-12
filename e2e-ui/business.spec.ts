@@ -172,7 +172,7 @@ test("prices follow the coach's currency setting (USD)", async ({ page }) => {
 test("the client's own My plan: name, status, next due, last payment date - no amounts", async ({ page }) => {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } });
+    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     if (path === "/api/client-auth/my-plan") {
       return route.fulfill({ json: { plan: { planName: "Monthly coaching", status: "Active", nextDueDate: "2026-12-15" }, lastPaymentDate: "2026-11-15" } });
     }
@@ -190,7 +190,7 @@ test("the client's own My plan: name, status, next due, last payment date - no a
 test("a client with no plan sees a plain note", async ({ page }) => {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } });
+    if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: null, lastPaymentDate: null } });
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });

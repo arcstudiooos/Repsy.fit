@@ -248,7 +248,7 @@ describe("GET /api/client-auth/my-plan (the client's own plan)", () => {
   const clientCookie = `${CLIENT_SESSION_COOKIE}=${signClientSession("c1", 0)}`;
   beforeEach(() => {
     // client-session check: client c1 is current
-    (prismaMock.client as Record<string, unknown>).findUnique = vi.fn().mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x" });
+    (prismaMock.client as Record<string, unknown>).findUnique = vi.fn().mockResolvedValue({ clientSessionVersion: 0, passwordHash: "$2b$12$x", joinStatus: "active" });
   });
 
   it("shows only plan name, status, next due and their own last payment date - no amounts", async () => {

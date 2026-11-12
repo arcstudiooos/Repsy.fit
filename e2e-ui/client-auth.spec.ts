@@ -93,7 +93,7 @@ async function mockClientAuth(page: Page, opts: { loginOk?: boolean; setOk?: boo
     if (path === "/api/client-auth/login") {
       if (opts.loginOk === false) return route.fulfill({ status: 401, json: { error: "That email or password is not right." } });
       signedIn = true;
-      return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } });
+      return route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } });
     }
     if (path === "/api/client-auth/set-password") {
       return opts.setOk === false
@@ -102,7 +102,7 @@ async function mockClientAuth(page: Page, opts: { loginOk?: boolean; setOk?: boo
     }
     if (path === "/api/client-auth/me") {
       return signedIn
-        ? route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com" } })
+        ? route.fulfill({ json: { id: "c-maya", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active" } })
         : route.fulfill({ status: 401, json: { error: "You are not signed in." } });
     }
     if (path === "/api/client-auth/logout") {

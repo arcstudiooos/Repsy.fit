@@ -91,3 +91,27 @@ export async function deliverResetEmail(to: string, link: string): Promise<void>
   ].join("\n");
   await withTimeout(smtpSend(cfg, to, "Reset your Repsy Coach password", text), 20_000);
 }
+
+/**
+ * Prompt 77: welcome email after a client joins with a coach's code. Fixed wording: the coach's name
+ * is the only coach-chosen text, and it never goes in the subject. Throws if sending fails; callers
+ * never let that block the join.
+ */
+export async function deliverWelcomeEmail(to: string, coachName: string, signInLink: string): Promise<void> {
+  const cfg = smtpConfig();
+  if (!cfg) return;
+  const text = [
+    "Hello,",
+    "",
+    `You've joined ${coachName}'s coaching on Repsy Coach. Sign in any time here:`,
+    signInLink,
+    "",
+    "If you did not sign up, reply to this email and we'll remove the account.",
+  ].join("\n");
+  await withTimeout(smtpSend(cfg, to, "Welcome to Repsy Coach", text), 20_000);
+}
+
+/** Prompt 77: a CLIENT's password reset link (same wording as the coach's, its own page). */
+export async function deliverClientResetEmail(to: string, link: string): Promise<void> {
+  return deliverResetEmail(to, link);
+}
