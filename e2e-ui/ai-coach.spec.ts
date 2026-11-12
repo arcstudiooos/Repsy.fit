@@ -266,6 +266,7 @@ test("a suggested plan shows day headings and each exercise as a row with sets x
     "Day 1 — Push",
     "1. Bench Press — 4 sets × 6 reps · 60 kg · Rest 120s",
     "2. Dips — 3 sets × 10 reps · bodyweight · Rest 90s",
+    "3. Incline Dumbbell Press — 3 sets × 8 reps · 25 kg each arm · Rest 90s",
     "Day 2 — Pull",
     "1. Deadlift — 3 sets × 5 reps · 100 kg · Rest 180s",
   ].join("\n");
@@ -276,10 +277,11 @@ test("a suggested plan shows day headings and each exercise as a row with sets x
   await expect(card.getByText("Day 1 — Push")).toBeVisible();
   await expect(card.getByText("Day 2 — Pull")).toBeVisible();
   const rows = card.locator('[data-plan-line="exercise"]');
-  await expect(rows).toHaveCount(3);
+  await expect(rows).toHaveCount(4);
   await expect(rows.nth(0)).toContainText("Bench Press");
   await expect(rows.nth(0)).toContainText("4 × 6 · 60 kg · 120s");
   await expect(rows.nth(1)).toContainText("3 × 10 · bodyweight · 90s");
-  await expect(rows.nth(2)).toContainText("3 × 5 · 100 kg · 180s");
+  await expect(rows.nth(2)).toContainText("3 × 8 · 25 kg each arm · 90s");
+  await expect(rows.nth(3)).toContainText("3 × 5 · 100 kg · 180s");
   SUGGESTION_OVERRIDE.details = null;
 });

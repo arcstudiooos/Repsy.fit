@@ -7,7 +7,7 @@
 // Everything comes from the client's OWN /api/client-auth routes; a client can only mark a plan done or
 // not done - never change what the coach wrote.
 import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { PlanDetails } from "../components/FormattedText";
+import { PlanDetails, inline } from "../components/FormattedText";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, getMyUnreadCount, markMyAssignment, queryKeys } from "../api";
@@ -583,7 +583,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
       {plan.reasoning.trim() !== "" && (
         <section aria-label="Why this plan" className="mt-5 rounded-lg border border-border bg-surface2 p-4">
           <h2 className="font-body text-base font-bold">Why this plan</h2>
-          <p className="mt-1 text-sm text-text">{plan.reasoning}</p>
+          <p className="mt-1 text-sm text-text">{inline(plan.reasoning)}</p>
         </section>
       )}
 

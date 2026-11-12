@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { FormattedText, PlanDetails } from "../components/FormattedText";
+import { FormattedText, PlanDetails, inline } from "../components/FormattedText";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -258,7 +258,7 @@ function AutoAssignedCard({
       <div className="mt-2">
         <PlanDetails details={assignment.details} />
       </div>
-      {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {assignment.reasoning}</p>}
+      {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {inline(assignment.reasoning)}</p>}
       <button type="button" onClick={onOpenPlanner} className="mt-3 text-sm font-semibold text-accent2 underline">
         View in Manual Planner
       </button>
@@ -315,7 +315,7 @@ function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: Sugg
         <PlanDetails details={suggestion.details} />
       </div>
       {suggestion.reasoning.trim() !== "" && (
-        <p className="mt-2 text-sm text-dim">Why: {suggestion.reasoning}</p>
+        <p className="mt-2 text-sm text-dim">Why: {inline(suggestion.reasoning)}</p>
       )}
       {park.isSuccess && !assign.isSuccess ? (
         <p className="mt-3 text-sm font-bold text-accent2">✓ Sent to the review queue on Home</p>

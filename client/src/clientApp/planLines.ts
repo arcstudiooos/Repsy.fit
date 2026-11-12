@@ -21,7 +21,7 @@ export type PlanLine =
 
 // "1. Back Squat — 4 sets × 6 reps · Rest 120s" or, with a load, "1. Back Squat — 4 sets × 6 reps · 60 kg · Rest 120s".
 const EXERCISE =
-  /^(\d+)\.\s+(.+?)\s+[—–-]\s+(\d+)\s+sets?\s+[×x]\s+(.+?)\s+reps?(?:\s+[·•\-–—]\s+((?:\d+(?:\.\d+)?\s*(?:kg|lb)s?)|bodyweight|BW))?\s+[·•\-–—]\s+Rest\s+(\d+)\s*s\s*$/i;
+  /^(\d+)\.\s+(.+?)\s+[—–-]\s+(\d+)\s+sets?\s+[×x]\s+(.+?)\s+reps?(?:\s+[·•\-–—]\s+((?:\d+(?:\.\d+)?\s*(?:kg|lb)s?(?:\s+(?:each|per)\s+(?:arm|hand|side|leg|dumbbell))?)|bodyweight|BW))?\s+[·•\-–—]\s+Rest\s+(\d+)\s*s\s*$/i;
 // "Day 1 — Push" / "Day 3: Rest" / "**Day 2 (Pull)**"
 const DAY = /^\**\s*(Day\s+\d+\b.*?)\s*\**$/i;
 
@@ -34,7 +34,7 @@ export function parsePlanLines(details: string): PlanLine[] {
     const m = EXERCISE.exec(line);
     if (m) {
       seq += 1;
-      const load = m[5] ? (/^bw$/i.test(m[5]) ? "bodyweight" : m[5].replace(/\s*(kg|lb)s?$/i, (_, u: string) => ` ${u.toLowerCase()}`)) : undefined;
+      const load = m[5] ? (/^bw$/i.test(m[5]) ? "bodyweight" : m[5].replace(/\s*(kg|lb)s?\b/i, (_, u: string) => ` ${u.toLowerCase()}`)) : undefined;
       out.push({ kind: "exercise", n: Number(m[1]), seq, name: m[2], sets: Number(m[3]), reps: m[4], load, restSec: Number(m[6]) });
       continue;
     }
