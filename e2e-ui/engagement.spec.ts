@@ -57,6 +57,7 @@ function mockClient(page: import("@playwright/test").Page, streaks: Record<strin
     if (path === "/api/client-auth/my-sessions") return route.fulfill({ json: { sessions: [] } });
     if (path === "/api/client-auth/my-streaks") return route.fulfill({ json: streaks });
     if (path === "/api/client-auth/my-progress" || path === "/api/client-auth/my-measurements") return route.fulfill({ json: [] });
+    if (path === "/api/client-auth/my-messages/unread") return route.fulfill({ json: { count: 0 } });
     if (path === "/api/client-auth/me/profile") return route.fulfill({ json: { goal: "", age: null, heightCm: null, weightKg: null, level: "", units: "kg", injuries: "", weeklyCheckInDay: 0 } });
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });

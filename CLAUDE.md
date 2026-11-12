@@ -518,6 +518,20 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   made strict, plus client-route-only checks: no date after the client's today and at least one value and deletes only `createdBy: "client"` rows (404 otherwise).
   The coach's measurement table marks client-added rows "Added by client."
 
+### Client messages (Prompt 82)
+- `server/src/routes/clientMessages.ts`: the client's side of `thread_messages` (same table as the coach's
+  Messages tab). Sender is always "client", set server-side, into the client's own thread with their own
+  coach (strict body: `{ body }` only, 1-2000 chars, 60 per 15 min per client). Opening the thread marks only
+  the COACH's shown unread messages read; `GET /my-messages/unread` is read-only (the tab badge).
+- Client app: `/client/messages` (5th tab, `clientApp/MessagesView.tsx`), newest 100, polled every 20 s while
+  open (no websockets/push); the badge polls every 20 s on other tabs. Failed sends stay with Retry/Discard.
+  The client sees "Seen" on their messages the coach has opened.
+- Decided in review (Prompt 82): opening the thread marks every coach message up to the newest shown as
+  read (older ones too); a client with no coach gets `{ messages: [], hasCoach: false }` / `{ count: 0 }` and
+  409 on POST (composer hidden); 429 says "You're sending messages too fast..." (`rateLimit` takes a
+  `message`). The box scrolls itself (never the page) and only when the reader is at the bottom. Like the
+  coach side, a send that times out after saving can be sent twice by Retry (no idempotency key in v2).
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -615,6 +629,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getMyCheckIn(date)` / `saveMyCheckIn(date, body)` | GET / PUT | `/api/client-auth/my-checkins/:date` | the coach's check-in fields minus `date` (strict) | GET `{ checkIn \| null }`; PUT 201 new / 200 updated; today / yesterday only. (Prompt 80) |
 | `getMyProgress()` / `addMyProgress(body)` | GET / POST | `/api/client-auth/my-progress` | `{ date, weightKg?, adherence?, workoutsDone?, note? (<= 500) }` (strict) | GET own logs oldest first; POST 201, queued for the coach's review; today / yesterday only. (Prompt 80) |
 | `getMyMeasurements()` / `addMyMeasurement(body)` / `deleteMyMeasurement(id)` | GET / POST / DELETE | `/api/client-auth/my-measurements[/:id]` | POST: the coach route's fields (strict) | GET own, newest first, with `createdBy`; POST 201 (`createdBy: "client"`); DELETE 204, 404 for a coach-added / unknown row. `requireActiveClient`. (Prompt 81) |
+| `getMyMessages()` / `getMyUnreadCount()` / `sendMyMessage(body)` | GET / GET / POST | `/api/client-auth/my-messages`, `/my-messages/unread` | POST `{ body }` (strict, 1-2000) | GET `{ messages }` newest 100 oldest first (marks the coach's shown messages read); `{ count }`; POST 201 sender "client"; 429 over 60 / 15 min. `requireActiveClient`. (Prompt 82) |
 | `getMyTargets()` | GET | `/api/client-auth/my-targets` | — | `{ calorieTarget, proteinTargetG, weeklyCheckInDay }`. (Prompt 80) |
 | `saveClientTargets(clientId, body)` | PATCH | `/api/clients/:clientId/targets` | `{ calorieTarget?: 300-15000 \| null, proteinTargetG?: 0-1000 \| null }` (strict) | the client; 404 another coach's client. `requireCoach`. (Prompt 80) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |

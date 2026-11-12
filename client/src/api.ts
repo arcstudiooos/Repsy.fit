@@ -66,6 +66,7 @@ import type {
   MyProgressLog,
   MyTargets,
   MyMeasurement,
+  MyMessage,
   ClientAssignment,
   ClientProfile,
   ThreadMessage,
@@ -307,6 +308,10 @@ export const getMyMeasurements = () => request<MyMeasurement[]>("GET", "/client-
 export const addMyMeasurement = (body: Omit<MyMeasurement, "id" | "createdBy" | "createdAt">) =>
   request<MyMeasurement>("POST", "/client-auth/my-measurements", body);
 export const deleteMyMeasurement = (id: string) => request<void>("DELETE", `/client-auth/my-measurements/${enc(id)}`);
+/** Prompt 82: the client's thread with their coach (opening it marks the coach's messages read). */
+export const getMyMessages = () => request<{ messages: MyMessage[]; hasCoach: boolean }>("GET", "/client-auth/my-messages");
+export const getMyUnreadCount = () => request<{ count: number }>("GET", "/client-auth/my-messages/unread");
+export const sendMyMessage = (body: string) => request<MyMessage>("POST", "/client-auth/my-messages", { body });
 export const getMyTargets = () => request<MyTargets>("GET", "/client-auth/my-targets");
 /** Prompt 80 (coach): save the macro calculator's result as the client's daily targets. */
 export const saveClientTargets = (clientId: string, body: { calorieTarget?: number | null; proteinTargetG?: number | null }) =>
@@ -461,6 +466,8 @@ export const queryKeys = {
   myProgress: ["client-account", "progress"] as const,
   myTargets: ["client-account", "targets"] as const,
   myMeasurements: ["client-account", "measurements"] as const,
+  myMessages: ["client-account", "messages"] as const,
+  myUnread: ["client-account", "messages-unread"] as const,
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,

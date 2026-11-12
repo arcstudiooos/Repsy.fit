@@ -8,7 +8,7 @@
 // not done - never change what the coach wrote.
 import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, markMyAssignment, queryKeys } from "../api";
+import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, getMyUnreadCount, markMyAssignment, queryKeys } from "../api";
 import { addDays, dayHeading, localDateKey, timeRangeText, weekStartOf } from "../lib/schedule";
 import { TYPE_CHIP } from "../lib/typeChip";
 import { LoadingState, plainErrorMessage } from "../components/States";
@@ -17,12 +17,13 @@ import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../
 import { MyPlanSection, MySessionsSection } from "./sections";
 import { parsePlanLines } from "./planLines";
 import { RestTimer } from "./RestTimer";
+import { MessagesView, CLIENT_MESSAGES_POLL_MS } from "./MessagesView";
 import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, WeeklyPage } from "./Tracking";
 
 // Prompt 81: the charts (recharts) load only when the Progress tab opens.
 const ProgressView = lazy(() => import("./ProgressView"));
 
-type Page = { tab: "today" | "week" | "progress" | "me"; planId?: string; sub?: "checkin" | "weekly" };
+type Page = { tab: "today" | "week" | "progress" | "messages" | "me"; planId?: string; sub?: "checkin" | "weekly" };
 
 function pageOf(pathname: string): Page {
   const plan = /^\/client\/plan\/([^/]+)\/?$/.exec(pathname);
@@ -32,6 +33,7 @@ function pageOf(pathname: string): Page {
   if (/^\/client\/weekly\/?$/.test(pathname)) return { tab: "today", sub: "weekly" };
   if (/^\/client\/me\/?$/.test(pathname)) return { tab: "me" };
   if (/^\/client\/progress\/?$/.test(pathname)) return { tab: "progress" };
+  if (/^\/client\/messages\/?$/.test(pathname)) return { tab: "messages" };
   return { tab: "today" };
 }
 
@@ -50,10 +52,11 @@ const TABS: { tab: Page["tab"]; label: string; href: string; icon: ReactNode }[]
   { tab: "today", label: "Today", href: "/client", icon: <path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" /> },
   { tab: "week", label: "Week", href: "/client/week", icon: <path d="M4 6h16M4 6v13h16V6M8 3v4m8-4v4M4 10h16" /> },
   { tab: "progress", label: "Progress", href: "/client/progress", icon: <path d="M4 19h16M6 16l4-5 3 3 5-7" /> },
+  { tab: "messages", label: "Messages", href: "/client/messages", icon: <path d="M4 5h16v11H8l-4 4V5z" /> },
   { tab: "me", label: "Me", href: "/client/me", icon: <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 9a7 7 0 0 1 14 0" /> },
 ];
 
-function TabLink({ t, current, compact }: { t: (typeof TABS)[number]; current: boolean; compact: boolean }) {
+function TabLink({ t, current, compact, badge = 0 }: { t: (typeof TABS)[number]; current: boolean; compact: boolean; badge?: number }) {
   return (
     <a
       href={t.href}
@@ -70,11 +73,16 @@ function TabLink({ t, current, compact }: { t: (typeof TABS)[number]; current: b
       }
     >
       {compact && (
+        <span className="relative">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           {t.icon}
         </svg>
+          {badge > 0 && <span aria-hidden="true" className="absolute -right-2 -top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] leading-4 text-on-accent">{badge > 9 ? "9+" : badge}</span>}
+        </span>
       )}
       {t.label}
+      {!compact && badge > 0 && <span aria-hidden="true" className="ml-1.5 rounded-full bg-accent px-1.5 text-xs text-on-accent">{badge > 9 ? "9+" : badge}</span>}
+      {badge > 0 && <span className="sr-only">, {badge} unread</span>}
     </a>
   );
 }
@@ -82,9 +90,20 @@ function TabLink({ t, current, compact }: { t: (typeof TABS)[number]; current: b
 export default function ClientApp({ account, onSignOut, signingOut }: { account: ClientAccount; onSignOut: () => void; signingOut: boolean }) {
   const page = usePage();
   useEffect(() => {
-    document.title = page.sub === "checkin" ? "Daily check-in - Repsy" : page.sub === "weekly" ? "Weekly check-in - Repsy" : page.planId ? "Plan - Repsy" : page.tab === "week" ? "This week - Repsy" : page.tab === "me" ? "Me - Repsy" : page.tab === "progress" ? "Progress - Repsy" : "Today - Repsy";
+    document.title = page.sub === "checkin" ? "Daily check-in - Repsy" : page.sub === "weekly" ? "Weekly check-in - Repsy" : page.planId ? "Plan - Repsy" : page.tab === "week" ? "This week - Repsy" : page.tab === "me" ? "Me - Repsy" : page.tab === "progress" ? "Progress - Repsy" : page.tab === "messages" ? "Messages - Repsy" : "Today - Repsy";
     window.scrollTo(0, 0);
   }, [page.tab, page.planId, page.sub]);
+  // Prompt 82: unread coach messages on the Messages tab (polled like the thread; the thread itself
+  // zeroes it when open).
+  const onMessages = page.tab === "messages" && !page.planId && !page.sub;
+  const unread = useQuery({
+    queryKey: queryKeys.myUnread,
+    queryFn: getMyUnreadCount,
+    refetchInterval: onMessages ? false : CLIENT_MESSAGES_POLL_MS,
+    refetchIntervalInBackground: false,
+    enabled: !onMessages,
+  });
+  const badgeFor = (tab: Page["tab"]) => (tab === "messages" && !onMessages ? (unread.data?.count ?? 0) : 0);
   return (
     <div className="min-h-screen bg-bg pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-8">
       <header className="border-b border-border bg-surface">
@@ -96,7 +115,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
           </div>
           <nav aria-label="Client app" className="hidden gap-1 sm:flex">
             {TABS.map((t) => (
-              <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact={false} />
+              <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact={false} badge={badgeFor(t.tab)} />
             ))}
           </nav>
         </div>
@@ -114,6 +133,8 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
           <Suspense fallback={<LoadingState />}>
             <ProgressView />
           </Suspense>
+        ) : page.tab === "messages" ? (
+          <MessagesView coachName={account.coachName ?? null} />
         ) : page.tab === "me" ? (
           <MeView account={account} onSignOut={onSignOut} signingOut={signingOut} />
         ) : (
@@ -122,7 +143,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
       </main>
       <nav aria-label="Client app tabs" className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden">
         {TABS.map((t) => (
-          <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact />
+          <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact badge={badgeFor(t.tab)} />
         ))}
       </nav>
     </div>

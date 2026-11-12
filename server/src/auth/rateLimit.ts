@@ -15,7 +15,7 @@ export function resetRateLimits(): void {
  * Counts every request (successful or not) against the caller's IP; the 11th gets 429.
  * `keyOf` limits per something else (e.g. per signed-in coach), `max` changes the allowance.
  */
-export function rateLimit(name: string, opts: { keyOf?: (req: Request) => string; max?: number } = {}) {
+export function rateLimit(name: string, opts: { keyOf?: (req: Request) => string; max?: number; message?: string } = {}) {
   const max = opts.max ?? RATE_LIMIT_MAX;
   return (req: Request, res: Response, next: NextFunction): void => {
     const now = Date.now();
@@ -26,7 +26,7 @@ export function rateLimit(name: string, opts: { keyOf?: (req: Request) => string
     buckets.set(key, bucket);
     if (bucket.count > max) {
       res.setHeader("Retry-After", String(Math.ceil((bucket.resetAt - now) / 1000)));
-      res.status(429).json({ error: "Too many attempts. Please wait 15 minutes and try again." });
+      res.status(429).json({ error: opts.message ?? "Too many attempts. Please wait 15 minutes and try again." });
       return;
     }
     next();

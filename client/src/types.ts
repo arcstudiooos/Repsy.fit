@@ -126,6 +126,8 @@ export interface MyMeasurement {
   createdBy: "coach" | "client";
   createdAt: string;
 }
+/** Prompt 82: a message in the client's own thread with their coach. */
+export type MyMessage = Pick<ThreadMessage, "id" | "sender" | "body" | "createdAt" | "readAt">;
 export interface MyTargets {
   calorieTarget: number | null;
   proteinTargetG: number | null;

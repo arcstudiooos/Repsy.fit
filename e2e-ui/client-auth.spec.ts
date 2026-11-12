@@ -139,7 +139,7 @@ test("client signs in with the CLIENT endpoint, lands on /client, and signs out"
   await expect(page.getByText("Hi, Maya Patel")).toBeVisible();
   expect(calls).toContain("POST /api/client-auth/login");
   expect(calls.some((c) => c.startsWith("POST /api/auth/"))).toBe(false); // never the coach login
-  await page.getByRole("navigation", { name: "Client app", exact: true }).getByRole("link", { name: "Me" }).click();
+  await page.getByRole("navigation", { name: "Client app", exact: true }).getByRole("link", { name: "Me", exact: true }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/client\/login$/);
   expect(calls).toContain("POST /api/client-auth/logout");
