@@ -69,7 +69,8 @@ seedRouter.post(
     const created = await prisma.$transaction(async (tx) => {
       // Serialise seeds so two quick taps can't both see "no clients" and seed twice.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SEED_LOCK_KEY})`;
-      if ((await tx.client.count({ where: { coachId } })) > 0) return [];
+      // Prompt 84: people waiting for approval don't count (the coach still sees the "no clients" screen).
+      if ((await tx.client.count({ where: { coachId, joinStatus: "active" } })) > 0) return [];
 
       const clients = [];
       for (const [i, demo] of DEMO_CLIENTS.entries()) {

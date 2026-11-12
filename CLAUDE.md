@@ -548,6 +548,24 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   waiting screen (`PendingDelete`, lazy); deleting a client also deletes the coach's plan / payment rows for
   them (said in the privacy policy).
 
+### Coach side of the client app (Prompt 84)
+- `GET /api/clients` lists ACTIVE clients only; pending / declined ones come from `GET /api/clients/waiting`
+  (pending first) and never appear in the strip, planner or AI Coach. `POST /api/clients/:id/approve|decline`
+  is one conditional update on `joinStatus: "pending"` (409 otherwise, 404 another coach's client).
+- The waiting list (`components/WaitingList.tsx`) sits inside the Invite clients panel on the Clients tab:
+  Approve / Decline, and a collapsed "Declined" list with Remove (deletes the client). Client cards show a
+  "Joined with code" badge.
+- `GET /api/alerts` (`routes/alerts.ts`): waiting count, joined with the code in 7 days, plans a client
+  finished in 24 h (effort + note), unread client messages per client. Home's "Client activity" card polls it
+  every minute; message rows open that client's thread, plan rows the Planner, the waiting row the Clients tab.
+  No email or push. "Done by client" on assignments shipped in Prompt 79.
+- Decided in review (Prompt 84): every coach-wide roster query (today tasks, at-risk, engagement, reports
+  roster, weekly AI summary facts, demo seed check, alerts) filters `joinStatus: "active"`; per-client routes
+  (`findClient`) still accept a pending id on purpose (harmless, and the client must exist to be approved).
+  With no active clients, the Clients tab still shows the Invite panel / waiting list and the empty screen
+  shows a "waiting for you to approve" banner. Decline asks first (it can't be undone; Remove lets them
+  rejoin). Indexes: thread_messages (coachId, sender, readAt), assignments (coachId, completedAt).
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -650,6 +668,9 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `changeMyPassword(current, next)` | POST | `/api/client-auth/change-password` | `{ currentPassword, newPassword }` | 204 + fresh cookie, other sessions end; 400 wrong current / Google-only. (Prompt 83) |
 | `getMyPayments()` | GET | `/api/client-auth/my-payments` | — | `[{ id, paidOn, method, planName }]` own, newest first, no amounts. `requireActiveClient`. (Prompt 83) |
 | `deleteMyAccount(body)` | DELETE | `/api/client-auth/me` | `{ password?, confirm: "DELETE" }` (strict) | 204 + cookie cleared; 400 wrong word / password; 403 Google sign-in older than 5 min. (Prompt 83) |
+| `listWaitingClients()` | GET | `/api/clients/waiting` | — | `[{ id, name, loginEmail, joinStatus, joinedVia, createdAt }]` pending then declined. `requireCoach`. (Prompt 84) |
+| `approveClient(id)` / `declineClient(id)` | POST | `/api/clients/:clientId/approve`, `/decline` | — | the client; 409 not pending; 404 another coach's. (Prompt 84) |
+| `getAlerts()` | GET | `/api/alerts` | — | `{ waiting, joined[], finished[], unread[] }` from 7-day / 24-hour windows. (Prompt 84) |
 | `getMyTargets()` | GET | `/api/client-auth/my-targets` | — | `{ calorieTarget, proteinTargetG, weeklyCheckInDay }`. (Prompt 80) |
 | `saveClientTargets(clientId, body)` | PATCH | `/api/clients/:clientId/targets` | `{ calorieTarget?: 300-15000 \| null, proteinTargetG?: 0-1000 \| null }` (strict) | the client; 404 another coach's client. `requireCoach`. (Prompt 80) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |

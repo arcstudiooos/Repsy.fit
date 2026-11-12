@@ -77,7 +77,7 @@ tasksRouter.get(
       text: `${a.type}: ${a.title}`,
     }));
     const clients = await prisma.client.findMany({
-      where: { coachId },
+      where: { coachId, joinStatus: "active" }, // Prompt 84: not people still waiting for approval
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: { id: true, name: true },
     });

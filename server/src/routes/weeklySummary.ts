@@ -56,7 +56,7 @@ async function aiSummaryText(facts: WeeklyFacts): Promise<string | null> {
 async function loadFacts(coachId: string, date: string): Promise<WeeklyFacts> {
   const weekStart = weekStartOf(date);
   const [clients, logs, assignments] = await Promise.all([
-    prisma.client.findMany({ where: { coachId }, select: { id: true, name: true, goal: true, createdAt: true } }),
+    prisma.client.findMany({ where: { coachId, joinStatus: "active" }, select: { id: true, name: true, goal: true, createdAt: true } }),
     prisma.progressLog.findMany({ where: { coachId }, select: { clientId: true, date: true, weightKg: true, adherence: true } }),
     prisma.assignment.findMany({ where: { coachId }, select: { clientId: true, date: true, status: true } }),
   ]);

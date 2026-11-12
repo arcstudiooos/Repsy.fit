@@ -23,7 +23,7 @@ atRiskRouter.get(
     }
     const coachId = coachIdOf(req);
     const clients = await prisma.client.findMany({
-      where: { coachId },
+      where: { coachId, joinStatus: "active" }, // Prompt 84
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: { id: true, name: true, goal: true, createdAt: true },
     });

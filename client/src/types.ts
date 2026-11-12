@@ -47,6 +47,27 @@ export interface Client {
   createdAt: string;
   /** Client sign-in email once invited (Prompt 65). The password hash is never sent. */
   loginEmail?: string | null;
+  /** Prompt 77/84: "coach" (added by the coach) or "code" (joined with the join code). */
+  joinedVia?: string;
+  joinStatus?: "active" | "pending" | "declined";
+}
+
+/** Prompt 84: a client waiting for approval (or declined), from GET /api/clients/waiting. */
+export interface WaitingClient {
+  id: string;
+  name: string;
+  loginEmail: string | null;
+  joinStatus: "pending" | "declined";
+  joinedVia: string;
+  createdAt: string;
+}
+
+/** Prompt 84: Home alerts about clients. */
+export interface CoachAlerts {
+  waiting: number;
+  joined: { clientId: string; name: string; at: string }[];
+  finished: { clientId: string; clientName: string; assignmentId: string; title: string; type: AssignmentType; effort: number | null; note: string; at: string }[];
+  unread: { clientId: string; name: string; count: number }[];
 }
 
 export interface Assignment {

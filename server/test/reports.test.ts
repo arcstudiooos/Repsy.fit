@@ -106,7 +106,7 @@ describe("GET /api/reports/roster", () => {
         "Maya Patel,Fat loss,Intermediate,Monthly,Active,Monthly,4999,2026-12-01\r\n" +
         "Arjun Rao,Muscle gain,Beginner,,No plan,,,\r\n",
     );
-    expect(prismaMock.client.findMany.mock.calls[0][0].where).toEqual({ coachId: "coach-1" });
+    expect(prismaMock.client.findMany.mock.calls[0][0].where).toEqual({ coachId: "coach-1", joinStatus: "active" });
   });
 
   it("signed out is 401", async () => {

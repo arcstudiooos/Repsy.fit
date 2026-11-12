@@ -46,7 +46,7 @@ describe("GET /api/tasks/today", () => {
 
   it("scopes every query to the signed-in coach", async () => {
     await request(app).get("/api/tasks/today?date=2026-11-11");
-    expect(prisma.client.findMany.mock.calls[0][0].where).toEqual({ coachId: TEST_COACH_ID });
+    expect(prisma.client.findMany.mock.calls[0][0].where).toEqual({ coachId: TEST_COACH_ID, joinStatus: "active" });
     expect(prisma.assignment.findMany.mock.calls[0][0].where).toMatchObject({ coachId: TEST_COACH_ID });
   });
 

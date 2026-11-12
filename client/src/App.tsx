@@ -26,6 +26,7 @@ const MessagesTab = lazy(() => import("./tabs/MessagesTab").then((m) => ({ defau
 const BusinessTab = lazy(() => import("./tabs/BusinessTab").then((m) => ({ default: m.BusinessTab })));
 // Type-only: erased at build time, so the Messages code stays in its own lazy chunk.
 import type { ChatState } from "./tabs/MessagesTab";
+import { WaitingBanner } from "./components/WaitingBanner";
 
 type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library" | "messages" | "business";
 
@@ -300,7 +301,12 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   } else if (clientsQuery.isError) {
     panelContent = <ErrorState error={clientsQuery.error} onRetry={() => void clientsQuery.refetch()} />;
   } else if (clients.length === 0) {
-    panelContent = <EmptyState onAddClient={() => setActiveTab("clients")} seedDemo={seedDemo} />;
+    panelContent = (
+      <>
+        <WaitingBanner onOpen={() => setActiveTab("clients")} />
+        <EmptyState onAddClient={() => setActiveTab("clients")} seedDemo={seedDemo} />
+      </>
+    );
   } else {
     panelContent = (
       <>
@@ -321,6 +327,11 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
               setSelectedClientId(clientId);
               setActiveTab("progress");
             }}
+            onOpenThread={(clientId) => {
+              setSelectedClientId(clientId);
+              setActiveTab("messages");
+            }}
+            onOpenClients={() => setActiveTab("clients")}
           />
         ) : current.id === "ai" ? (
           <AiCoachTab

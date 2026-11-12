@@ -98,7 +98,8 @@ export async function loadEngagement(scope: { coachId: string } | { clientId: st
   const week = weekBounds(today);
   const habitFrom = addDays(today, -(GRID_DAYS - 1));
   const clients = await prisma.client.findMany({
-    where: "coachId" in scope ? { coachId: scope.coachId } : { id: scope.clientId },
+    // Prompt 84: the coach's leaderboard counts approved clients only (a client always sees their own).
+    where: "coachId" in scope ? { coachId: scope.coachId, joinStatus: "active" } : { id: scope.clientId },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true, name: true },
   });

@@ -67,6 +67,8 @@ import type {
   MyTargets,
   MyMeasurement,
   MyMessage,
+  WaitingClient,
+  CoachAlerts,
   MyAccount,
   MyPayment,
   ClientAssignment,
@@ -142,6 +144,11 @@ const enc = encodeURIComponent;
 export const listClients = () => request<Client[]>("GET", "/clients");
 export const createClient = (input: NewClient) => request<Client>("POST", "/clients", input);
 export const getClient = (clientId: string) => request<Client>("GET", `/clients/${enc(clientId)}`);
+/** Prompt 84: clients waiting for approval (and declined ones), approve / decline, Home alerts. */
+export const listWaitingClients = () => request<WaitingClient[]>("GET", "/clients/waiting");
+export const approveClient = (clientId: string) => request<WaitingClient>("POST", `/clients/${enc(clientId)}/approve`);
+export const declineClient = (clientId: string) => request<WaitingClient>("POST", `/clients/${enc(clientId)}/decline`);
+export const getAlerts = () => request<CoachAlerts>("GET", "/alerts");
 export const deleteClient = (clientId: string) => request<void>("DELETE", `/clients/${enc(clientId)}`);
 
 // ----- Assignments (per client) -----
@@ -464,6 +471,8 @@ export const queryKeys = {
   dailyCheckIns: (clientId: string) => ["clients", clientId, "checkins"] as const,
   messages: (clientId: string) => ["clients", clientId, "messages"] as const,
   threads: ["messages", "threads"] as const,
+  waitingClients: ["clients", "waiting"] as const,
+  alerts: ["alerts"] as const,
   clientAccess: (clientId: string) => ["clients", clientId, "access"] as const,
   clientAccount: ["client-account", "me"] as const,
   myPlan: ["client-account", "my-plan"] as const,

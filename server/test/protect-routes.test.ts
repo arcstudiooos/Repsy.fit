@@ -91,7 +91,7 @@ describe("queries are scoped to the signed-in coach", () => {
     const a = asCoach(app, "coach-A");
 
     await a.get("/api/clients");
-    expect(prisma.client.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { coachId: "coach-A" } }));
+    expect(prisma.client.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { coachId: "coach-A", joinStatus: "active" } }));
 
     const read = await a.get("/api/clients/b-client");
     expect(read.status).toBe(404);

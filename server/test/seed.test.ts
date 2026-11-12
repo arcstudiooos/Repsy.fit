@@ -42,7 +42,7 @@ describe("POST /api/seed/demo", () => {
     expect(res.status).toBe(201);
     expect(res.body.map((c: { name: string }) => c.name)).toEqual(["Maya Patel", "Arjun Mehta", "Casey Jordan"]);
     expect(tx.$executeRaw).toHaveBeenCalledTimes(1); // advisory lock: two seeds can't interleave
-    expect(tx.client.count).toHaveBeenCalledWith({ where: { coachId: TEST_COACH_ID } });
+    expect(tx.client.count).toHaveBeenCalledWith({ where: { coachId: TEST_COACH_ID, joinStatus: "active" } });
 
     const [maya, arjun, casey] = createdData();
     expect(maya).toMatchObject({

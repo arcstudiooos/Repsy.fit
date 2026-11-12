@@ -1,17 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ApiError,
-  approveReviewItem,
-  dismissReviewItem,
-  generateWeeklySummary,
-  getAtRiskClients,
-  getRecentCheckIns,
-  getReviewQueue,
-  getTodayTasks,
-  getWeeklySummary,
-  queryKeys,
-} from "../api";
+import { ApiError, approveReviewItem, dismissReviewItem, generateWeeklySummary, getAlerts, getAtRiskClients, getRecentCheckIns, getReviewQueue, getTodayTasks, getWeeklySummary, queryKeys } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
@@ -25,12 +14,16 @@ type Props = {
   onOpenTask: (clientId: string, target: TaskTarget) => void;
   /** Selects that client and opens the Progress tab. */
   onOpenCheckIn: (clientId: string) => void;
+  /** Prompt 84: selects that client and opens their Messages thread. */
+  onOpenThread: (clientId: string) => void;
+  /** Prompt 84: opens the Clients tab (where the waiting list is). */
+  onOpenClients: () => void;
 };
 
 // Home tab (Prompt 48): the Today's Tasks card. Every row comes from the server's real records
 // (GET /api/tasks/today): today's appointments first (Prompt 69), then plans due today, then clients
 // with no plan in 7+ days.
-export function HomeTab({ onOpenTask, onOpenCheckIn }: Props) {
+export function HomeTab({ onOpenTask, onOpenCheckIn, onOpenThread, onOpenClients }: Props) {
   const date = localToday();
   const query = useQuery({ queryKey: queryKeys.todayTasks(date), queryFn: () => getTodayTasks(date) });
 
@@ -58,6 +51,11 @@ export function HomeTab({ onOpenTask, onOpenCheckIn }: Props) {
         <h3 className="text-base">Today's Tasks</h3>
         <div className="mt-3">{body}</div>
       </section>
+      <ClientActivity
+        onOpenThread={onOpenThread}
+        onOpenPlans={(clientId) => onOpenTask(clientId, "planner")}
+        onOpenClients={onOpenClients}
+      />
       <NewCheckIns onOpenCheckIn={onOpenCheckIn} />
       <NeedsAttention date={date} onOpenClient={onOpenCheckIn} />
       <ReviewQueueCard date={date} />
@@ -439,6 +437,85 @@ function ReviewQueueCard({ date }: { date: string }) {
           )}
         </div>
       )}
+    </section>
+  );
+}
+
+/**
+ * Client activity (Prompt 84): people waiting for approval, who joined with the code (7 days), plans a
+ * client finished (24 hours, with effort and note) and unread client messages - each row opens the place
+ * to act. Polled every minute while Home is open; no email or push.
+ */
+function ClientActivity({
+  onOpenThread,
+  onOpenPlans,
+  onOpenClients,
+}: {
+  onOpenThread: (clientId: string) => void;
+  onOpenPlans: (clientId: string) => void;
+  onOpenClients: () => void;
+}) {
+  const query = useQuery({ queryKey: queryKeys.alerts, queryFn: getAlerts, refetchInterval: 60_000, refetchIntervalInBackground: false });
+  if (query.isPending) return null;
+  if (query.isError) {
+    return (
+      <section aria-label="Client activity" className="card mt-4 p-5">
+        <h3 className="text-base">Client activity</h3>
+        <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
+          Couldn't load client activity.{" "}
+          <button type="button" onClick={() => void query.refetch()} className="min-h-11 px-1 text-accent2 underline underline-offset-4">
+            Try again
+          </button>
+        </p>
+      </section>
+    );
+  }
+  const a = query.data;
+  if (!a || !Array.isArray(a.joined) || !Array.isArray(a.finished) || !Array.isArray(a.unread)) return null;
+  const empty = a.waiting === 0 && a.joined.length === 0 && a.finished.length === 0 && a.unread.length === 0;
+  if (empty) return null;
+  const rowButton = "w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-surface2 min-h-11";
+  return (
+    <section aria-label="Client activity" className="card mt-4 p-5">
+      <h3 className="text-base">Client activity</h3>
+      <ul aria-label="Client alerts" className="mt-2 divide-y divide-border">
+        {a.waiting > 0 && (
+          <li>
+            <button type="button" onClick={onOpenClients} className={rowButton}>
+              <span className="font-semibold text-accent">{plural(a.waiting, "client")} waiting for approval</span>
+              <span className="text-dim"> - approve or decline in Clients</span>
+            </button>
+          </li>
+        )}
+        {a.unread.map((u) => (
+          <li key={`m:${u.clientId}`}>
+            <button type="button" onClick={() => onOpenThread(u.clientId)} className={rowButton}>
+              <span className="font-semibold text-text">{u.name}</span>
+              <span className="text-dim"> sent {plural(u.count, "new message")}</span>
+            </button>
+          </li>
+        ))}
+        {a.finished.map((f) => (
+          <li key={`f:${f.assignmentId}`}>
+            <button type="button" onClick={() => onOpenPlans(f.clientId)} className={rowButton}>
+              <span className="font-semibold text-text">{f.clientName}</span>
+              <span className="text-text"> finished {f.title}</span>
+              {f.effort !== null && <span className="text-dim"> · effort {f.effort}/10</span>}
+              <span className="text-dim"> · {timeAgo(f.at)}</span>
+              {f.note && <span className="block break-words text-xs text-dim">"{f.note}"</span>}
+            </button>
+          </li>
+        ))}
+        {a.joined.map((j) => (
+          <li key={`j:${j.clientId}`}>
+            <button type="button" onClick={() => onOpenPlans(j.clientId)} className={rowButton}>
+              <span className="font-semibold text-text">{j.name}</span>
+              <span className="text-text"> joined</span>
+              <span className="text-dim"> with your code · {timeAgo(j.at)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

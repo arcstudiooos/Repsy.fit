@@ -100,7 +100,9 @@ test("a missing tasks endpoint shows an error with Retry, not made-up tasks", as
   await mockApi(page, "missing");
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
-  await expect(panel(page).getByRole("alert")).toBeVisible();
-  await expect(panel(page).getByRole("button", { name: "Retry" })).toBeVisible();
+  // Scoped to Today's Tasks: with every endpoint missing, the Client activity card (Prompt 84) errors too.
+  const tasks = panel(page).getByRole("region", { name: "Today's Tasks" });
+  await expect(tasks.getByRole("alert")).toBeVisible();
+  await expect(tasks.getByRole("button", { name: "Retry" })).toBeVisible();
   await expect(panel(page).getByRole("listitem")).toHaveCount(0);
 });

@@ -280,6 +280,8 @@ model Assignment {
 
   @@index([clientId])
   @@index([coachId])
+  /// Prompt 84: Home alerts (plans a client finished in the last 24 h).
+  @@index([coachId, completedAt])
   @@map("assignments")
 }
 
@@ -300,6 +302,8 @@ model ThreadMessage {
 
   @@index([clientId, createdAt])
   @@index([coachId])
+  /// Prompt 84: Home alerts count unread client messages per coach every minute.
+  @@index([coachId, sender, readAt])
   @@map("thread_messages")
 }
 

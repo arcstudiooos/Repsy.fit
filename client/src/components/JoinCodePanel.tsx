@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { WaitingList } from "./WaitingList";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getJoinCode, queryKeys, regenerateJoinCode, updateJoinCode } from "../api";
 import type { JoinCode } from "../types";
@@ -183,6 +184,8 @@ export function JoinCodePanel() {
           Your current code and link ({jc.code}) will stop working straight away. Clients who already joined are not affected.
         </ConfirmDialog>
       )}
+      {/* Prompt 84: clients waiting for approval, with Approve / Decline. */}
+      <WaitingList />
     </section>
   );
 }

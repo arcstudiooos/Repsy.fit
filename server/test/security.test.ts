@@ -71,6 +71,11 @@ const COACH_ROUTES: [string, string][] = [
   ["patch", "/api/auth/currency"],
   ["post", "/api/auth/change-password"],
   ["patch", "/api/clients/c1/targets"],
+  // Prompt 84: approvals and alerts.
+  ["get", "/api/clients/waiting"],
+  ["post", "/api/clients/c1/approve"],
+  ["post", "/api/clients/c1/decline"],
+  ["get", "/api/alerts"],
   // Prompt 76: the coach's join code.
   ["get", "/api/join-code"],
   ["post", "/api/join-code/regenerate"],

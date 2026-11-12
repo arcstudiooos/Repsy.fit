@@ -100,6 +100,11 @@ export function ClientsTab({
         </div>
         <SixMonthDemoControl seed={seedSixMonth} />
         {form}
+        {/* Prompt 84: people who joined with the code and are waiting for approval aren't in the client list
+            yet, so the Invite panel (with the waiting list) must show here too. */}
+        <Suspense fallback={<LoadingState />}>
+          <JoinCodePanel />
+        </Suspense>
       </>
     );
   }
@@ -234,6 +239,9 @@ function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError 
           <div className="min-w-0 flex-1">
             <div className="break-words font-semibold text-text">{client.name}</div>
             <div className="break-words text-sm text-dim">{client.goal}</div>
+            {client.joinedVia === "code" && (
+              <span className="mt-1 inline-block rounded-full border border-accent2 px-2 py-0.5 text-xs font-semibold text-accent2">Joined with code</span>
+            )}
           </div>
           <span className="shrink-0 rounded-full bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-text">
             {client.level}

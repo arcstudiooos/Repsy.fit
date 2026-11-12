@@ -59,7 +59,7 @@ reportsRouter.get(
   "/roster",
   asyncHandler(async (req, res) => {
     const clients = await prisma.client.findMany({
-      where: { coachId: coachIdOf(req) },
+      where: { coachId: coachIdOf(req), joinStatus: "active" }, // Prompt 84
       orderBy: [{ name: "asc" }, { id: "asc" }],
       select: {
         name: true,

@@ -39,17 +39,57 @@ export function findClient(clientId: string, coachId: string) {
 
 export const clientsRouter = Router();
 
-// GET /api/clients - this coach's clients, oldest first.
+// GET /api/clients - this coach's ACTIVE clients, oldest first. Clients waiting for approval or declined
+// (Prompt 84) are listed separately by GET /api/clients/waiting, so they never show up in the planner,
+// AI Coach or client strip by accident.
 clientsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const clients = await prisma.client.findMany({
-      where: { coachId: coachIdOf(req) },
+      where: { coachId: coachIdOf(req), joinStatus: "active" },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
     res.json(clients);
   }),
 );
+
+// ---------- Prompt 84: approving clients who joined with the code ----------
+
+export const ONLY_PENDING = "Only a client who is waiting for approval can be approved or declined.";
+const WAITING_SELECT = { id: true, name: true, loginEmail: true, joinStatus: true, joinedVia: true, createdAt: true } as const;
+
+// GET /api/clients/waiting -> [{ id, name, loginEmail, joinStatus: "pending" | "declined", joinedVia, createdAt }]
+// Pending first (oldest first, so nobody waits longest), then declined.
+clientsRouter.get(
+  "/waiting",
+  asyncHandler(async (req, res) => {
+    const rows = await prisma.client.findMany({
+      where: { coachId: coachIdOf(req), joinStatus: { in: ["pending", "declined"] } },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: WAITING_SELECT,
+    });
+    res.json([...rows.filter((r) => r.joinStatus === "pending"), ...rows.filter((r) => r.joinStatus === "declined")]);
+  }),
+);
+
+/** POST /api/clients/:clientId/approve | /decline -> the client. Only a pending client of this coach. */
+function decide(to: "active" | "declined") {
+  return asyncHandler(async (req, res) => {
+    const { clientId } = req.params as { clientId: string };
+    // One conditional update: a double click or two tabs can't flip a decided client again.
+    const { count } = await prisma.client.updateMany({
+      where: { id: clientId, coachId: coachIdOf(req), joinStatus: "pending" },
+      data: { joinStatus: to },
+    });
+    if (count === 0) {
+      const exists = await prisma.client.findFirst({ where: { id: clientId, coachId: coachIdOf(req) }, select: { id: true } });
+      return void res.status(exists ? 409 : 404).json({ error: exists ? ONLY_PENDING : "Client not found" });
+    }
+    res.json(await prisma.client.findUnique({ where: { id: clientId }, select: WAITING_SELECT }));
+  });
+}
+clientsRouter.post("/:clientId/approve", decide("active"));
+clientsRouter.post("/:clientId/decline", decide("declined"));
 
 // POST /api/clients - create a client. coachId is always set by the server.
 clientsRouter.post(
