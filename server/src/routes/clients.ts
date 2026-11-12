@@ -95,3 +95,42 @@ clientsRouter.delete(
     res.status(204).end();
   }),
 );
+
+// PATCH /api/clients/:clientId/targets { calorieTarget, proteinTargetG } (Prompt 80) -> the client.
+// The coach saves the macro calculator's result as the client's daily targets; null clears one. The ranges
+// cover everything the calculator can produce (Prompt 80 review).
+const TargetsSchema = z
+  .object({
+    calorieTarget: z
+      .number({ invalid_type_error: "calorieTarget must be a whole number from 300 to 15000." })
+      .int("calorieTarget must be a whole number from 300 to 15000.")
+      .min(300, "calorieTarget must be a whole number from 300 to 15000.")
+      .max(15000, "calorieTarget must be a whole number from 300 to 15000.")
+      .nullable()
+      .optional(),
+    proteinTargetG: z
+      .number({ invalid_type_error: "proteinTargetG must be a number from 0 to 1000." })
+      .min(0, "proteinTargetG must be a number from 0 to 1000.")
+      .max(1000, "proteinTargetG must be a number from 0 to 1000.")
+      .nullable()
+      .optional(),
+  })
+  .strict("Only calorieTarget and proteinTargetG can be changed here.")
+  .refine((v) => v.calorieTarget !== undefined || v.proteinTargetG !== undefined, "Nothing to change.");
+
+clientsRouter.patch(
+  "/:clientId/targets",
+  asyncHandler(async (req, res) => {
+    const parsed = TargetsSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const client = await findClient(String(req.params.clientId), coachIdOf(req));
+    if (!client) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+    res.json(await prisma.client.update({ where: { id: client.id }, data: parsed.data }));
+  }),
+);

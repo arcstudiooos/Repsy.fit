@@ -66,7 +66,18 @@ clientAppRouter.get(
       select: CLIENT_ASSIGNMENT_SELECT,
     });
     if (!a) return void res.status(404).json({ error: NOT_FOUND });
-    res.json(a);
+    // Prompt 80: a Nutrition plan's meals, from the plan's own coach's library only.
+    const ids = (await prisma.assignment.findUnique({ where: { id: a.id }, select: { mealIds: true, coachId: true } })) ?? { mealIds: [], coachId: null };
+    const meals =
+      ids.mealIds.length > 0 && ids.coachId
+        ? await prisma.meal.findMany({
+            where: { id: { in: ids.mealIds }, coachId: ids.coachId },
+            select: { id: true, name: true, mealType: true, calories: true, proteinG: true, carbsG: true, fatG: true },
+          })
+        : [];
+    // Keep the coach's order.
+    meals.sort((x, y) => ids.mealIds.indexOf(x.id) - ids.mealIds.indexOf(y.id));
+    res.json({ ...a, meals });
   }),
 );
 

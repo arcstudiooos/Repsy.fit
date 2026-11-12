@@ -26,6 +26,8 @@ const NewAssignmentSchema = z.object({
   reasoning: z.string().trim().default(""),
   source: z.enum(ASSIGNMENT_SOURCES).default("manual"),
   status: z.enum(ASSIGNMENT_STATUSES).default("Active"),
+  /** Prompt 80: meals from the coach's own library, for Nutrition plans only (checked against the coach). */
+  mealIds: z.array(z.string().min(1).max(40), { invalid_type_error: "mealIds must be a list of meal ids." }).max(10, "Attach at most 10 meals.").optional(),
   date: z
     .string()
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form.")
@@ -97,8 +99,22 @@ assignmentsRouter.post(
       res.status(404).json({ error: "Client not found" });
       return;
     }
+    const mealIds = [...new Set(parsed.data.mealIds ?? [])];
+    if (mealIds.length > 0) {
+      if (parsed.data.type !== "Nutrition") {
+        res.status(400).json({ error: "Meals can only be attached to a Nutrition plan." });
+        return;
+      }
+      // Only this coach's own meals: another coach's meal id is the same 400 as an unknown one.
+      const owned = await prisma.meal.count({ where: { id: { in: mealIds }, coachId } });
+      if (owned !== mealIds.length) {
+        res.status(400).json({ error: "One of the meals was not found in your library." });
+        return;
+      }
+    }
+    const { mealIds: _ignored, ...fields } = parsed.data;
     const assignment = await prisma.assignment.create({
-      data: { ...parsed.data, clientId: client.id, coachId },
+      data: { ...fields, ...(mealIds.length > 0 ? { mealIds } : {}), clientId: client.id, coachId },
     });
     res.status(201).json(assignment);
   }),

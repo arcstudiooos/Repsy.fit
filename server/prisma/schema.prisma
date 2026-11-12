@@ -196,6 +196,11 @@ model Client {
   /// Prompt 78: the last Google sign-in (Prompt 83 lets a Google-only client delete their account
   /// within 5 minutes of a fresh one).
   lastGoogleAuthAt DateTime?
+  /// Prompt 80: the client's daily targets, set by the coach from the macro calculator. NULL = none set.
+  calorieTarget  Int?
+  proteinTargetG Float?
+  /// Prompt 80: the weekday (0 = Sunday ... 6 = Saturday) the client is asked for their weekly check-in.
+  weeklyCheckInDay Int @default(0)
 
   assignments  Assignment[]
   passwordResets ClientPasswordResetToken[]
@@ -266,6 +271,8 @@ model Assignment {
   /// Prompt 79: the client's own "how hard was it" (1-10) and note when THEY finished it.
   clientEffort Int?
   clientNote   String   @default("")
+  /// Prompt 80: meals from the coach's library attached to a Nutrition plan (the coach's own meals only).
+  mealIds      String[] @default([])
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
@@ -325,6 +332,8 @@ model ProgressLog {
   adherence    Int?
   workoutsDone Int?
   note         String   @default("")
+  /// Prompt 80: "coach" or "client" (a client's weekly check-in).
+  enteredBy    String   @default("coach")
   createdAt    DateTime @default(now())
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -356,6 +365,8 @@ model DailyCheckIn {
   waterLiters   Float?
   steps         Int?
   foodNote      String   @default("")
+  /// Prompt 80: who saved this day: "coach" or "client". A client never overwrites a coach-entered day.
+  enteredBy     String   @default("coach")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
 
@@ -391,6 +402,8 @@ model HabitLog {
   /// YYYY-MM-DD
   date    String
   done    Boolean @default(true)
+  /// Prompt 80: who ticked it: "coach" or "client". A client never changes a coach's tick.
+  enteredBy String @default("coach")
 
   @@unique([habitId, date])
   @@map("habit_logs")

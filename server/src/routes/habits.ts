@@ -175,8 +175,8 @@ habitsRouter.put(
     const { done } = parsed.data;
     const log = await prisma.habitLog.upsert({
       where: { habitId_date: { habitId: habit.id, date } },
-      create: { habitId: habit.id, date, done },
-      update: { done },
+      create: { habitId: habit.id, date, done, enteredBy: "coach" },
+      update: { done, enteredBy: "coach" },
     });
     res.json({ habitId: log.habitId, date: log.date, done: log.done });
   }),

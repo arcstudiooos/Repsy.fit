@@ -487,6 +487,28 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   effort or note would be lost. Progress / Messages tabs arrive with Prompts 81 / 82 (no empty placeholders).
   Desktop tabs sit in the header, not a left rail, because of the no-side-menu rule. Effort uses native radios.
 
+### Client tracking (Prompt 80)
+- Routes in `server/src/routes/clientTracking.ts` (`requireActiveClient`, own records only): habits (tick),
+  daily check-in, weekly check-in (a ProgressLog under the client's coach that goes to the coach's review
+  queue, title "Check-in <date> (from client)"), targets. Validation reuses the coach's `CheckInSchema` and
+  `NewProgressLogSchema` (exported), made strict.
+- "Today or yesterday" is the client's own calendar: every API request sends `X-Client-Date` (the browser's
+  local day); the server trusts it only within UTC today +-1 (`clientToday`), then allows exactly that day and
+  the day before (`isRecentDay`). Nothing older, ever.
+- Decided in review (Prompt 80): `enteredBy` ("coach" | "client") on `DailyCheckIn`, `HabitLog` and
+  `ProgressLog`. A client gets 409 "Your coach already logged this day..." instead of overwriting a
+  coach-entered day or tick (coach saves always set "coach"). One client weekly check-in per date (409).
+  Client weights are stored in kg to 2 decimals and shown back in their unit. Targets accept 300-15000 kcal /
+  0-1000 g so every macro-calculator result saves. The weekly note is capped at 500 for clients only.
+- Coach: `PATCH /api/clients/:clientId/targets` (`Client.calorieTarget`, `proteinTargetG`; "Save as <client>'s
+  daily targets" on the macro result) and `mealIds` on a NEW Nutrition plan (the coach's own meals only, max 10;
+  "Add meals from library" in the Manual Planner). The client's plan view shows the targets and the meals'
+  macros; `GET /my-assignments/:id` adds `meals` (from the plan's own coach's library, in the coach's order).
+- `Client.weeklyCheckInDay` (0 = Sunday, default) - set by the client on the Me tab (profile PATCH); Today
+  highlights the weekly check-in on that day. Weekly weight is entered in the client's unit, stored in kg.
+- Pages: `/client/checkin`, `/client/weekly` (`clientApp/Tracking.tsx`). Habit ticks use local state set in the
+  click handler so the box changes at once (an async optimistic update lost races under load).
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -580,6 +602,11 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getMyAssignments(from, to)` | GET | `/api/client-auth/my-assignments?from&to` | — | `ClientAssignment[]` `{ id, type, title, details, reasoning, status ("Active"\|"Done"), date, completedAt, completedBy, clientEffort, clientNote }`, oldest first; 400 bad dates / `from` after `to` / over 62 days. `requireActiveClient`. (Prompt 79) |
 | `getMyAssignment(id)` | GET | `/api/client-auth/my-assignments/:id` | — | `ClientAssignment`; 404 `Plan not found` (also Paused or another client's). `requireActiveClient`. (Prompt 79) |
 | `markMyAssignment(id, body)` | POST | `/api/client-auth/my-assignments/:id/done` | `{ done: boolean, effort?: 1-10 \| null, note?: string <= 500 }` (strict) | the updated `ClientAssignment`; 404 as above; 400 validation. Rate limited per client. `requireActiveClient`. (Prompt 79) |
+| `getMyHabits(date)` / `tickMyHabit(id, date, done)` | GET / PUT | `/api/client-auth/my-habits?date`, `/api/client-auth/my-habits/:habitId/:date` | PUT `{ done }` (strict) | GET `{ date, days, habits: [{ id, name, week, currentStreak, bestStreak }] }` (own active habits); PUT `{ habitId, date, done }`; 400 `You can only log today or yesterday.`; 404 `Habit not found`. `requireActiveClient`. (Prompt 80) |
+| `getMyCheckIn(date)` / `saveMyCheckIn(date, body)` | GET / PUT | `/api/client-auth/my-checkins/:date` | the coach's check-in fields minus `date` (strict) | GET `{ checkIn \| null }`; PUT 201 new / 200 updated; today / yesterday only. (Prompt 80) |
+| `getMyProgress()` / `addMyProgress(body)` | GET / POST | `/api/client-auth/my-progress` | `{ date, weightKg?, adherence?, workoutsDone?, note? (<= 500) }` (strict) | GET own logs oldest first; POST 201, queued for the coach's review; today / yesterday only. (Prompt 80) |
+| `getMyTargets()` | GET | `/api/client-auth/my-targets` | — | `{ calorieTarget, proteinTargetG, weeklyCheckInDay }`. (Prompt 80) |
+| `saveClientTargets(clientId, body)` | PATCH | `/api/clients/:clientId/targets` | `{ calorieTarget?: 300-15000 \| null, proteinTargetG?: 0-1000 \| null }` (strict) | the client; 404 another coach's client. `requireCoach`. (Prompt 80) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |
 | `regenerateJoinCode()` | POST | `/api/join-code/regenerate` | — | `JoinCode` with a NEW code; the old code stops working at once. Rate limited per coach (20 / 15 min). Needs `requireCoach`. (Prompt 76) |
 | `updateJoinCode(patch)` | PATCH | `/api/join-code` | `{ active?: boolean, approveNewClients?: boolean }` (at least one; nothing else) | `JoinCode`. 400 `Nothing to change.` / `active must be true or false.` / `Only active and approveNewClients can be changed.` Needs `requireCoach`. (Prompt 76) |

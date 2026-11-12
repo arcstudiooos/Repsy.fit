@@ -81,6 +81,8 @@ export const ClientProfileSchema = z
     level: z.enum(CLIENT_LEVELS, { errorMap: () => ({ message: "Please pick Beginner, Intermediate or Advanced." }) }).optional(),
     injuries: z.string().trim().max(1000, "Please keep this under 1000 characters.").optional(),
     units: z.enum(CLIENT_UNITS, { errorMap: () => ({ message: "Please pick kg or lb." }) }).optional(),
+    /** Prompt 80: the weekday for the weekly check-in, 0 = Sunday ... 6 = Saturday. */
+    weeklyCheckInDay: z.number({ invalid_type_error: "Please pick a day of the week." }).int("Please pick a day of the week.").min(0, "Please pick a day of the week.").max(6, "Please pick a day of the week.").optional(),
     /** True for "Skip for now": nothing else is saved, the welcome step just stops showing. */
     skip: z.boolean().optional(),
   })

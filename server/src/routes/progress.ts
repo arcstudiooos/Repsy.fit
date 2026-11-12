@@ -6,7 +6,7 @@ import { isDateString } from "./assignments.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
-const NewProgressLogSchema = z.object({
+export const NewProgressLogSchema = z.object({
   date: z
     .string({ required_error: "date is required." })
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
@@ -54,7 +54,7 @@ progressRouter.get(
 );
 
 /** Short plain-words line for the review queue: what was logged. */
-function checkInSummary(log: { weightKg: number | null; adherence: number | null; workoutsDone: number | null; note: string }): string {
+export function checkInSummary(log: { weightKg: number | null; adherence: number | null; workoutsDone: number | null; note: string }): string {
   const parts: string[] = [];
   if (log.weightKg !== null) parts.push(`${log.weightKg} kg`);
   if (log.adherence !== null) parts.push(`${log.adherence}% adherence`);

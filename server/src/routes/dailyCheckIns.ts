@@ -23,7 +23,7 @@ const oneToFive = (field: string) =>
 
 const SLEEP_MESSAGE = "sleepHours must be a number of hours from 0 to 16, with at most one decimal.";
 
-const CheckInSchema = z.object({
+export const CheckInSchema = z.object({
   date: z
     .string({ required_error: "date is required." })
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
@@ -110,8 +110,8 @@ dailyCheckInsRouter.post(
     const existing = await prisma.dailyCheckIn.findUnique({ where: { clientId_date: { clientId: client.id, date } } });
     const saved = await prisma.dailyCheckIn.upsert({
       where: { clientId_date: { clientId: client.id, date } },
-      create: { clientId: client.id, coachId, date, ...values },
-      update: values,
+      create: { clientId: client.id, coachId, date, ...values, enteredBy: "coach" },
+      update: { ...values, enteredBy: "coach" },
     });
     res.status(existing ? 200 : 201).json(saved);
   }),

@@ -1,6 +1,6 @@
 import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createAssignment, queryKeys } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createAssignment, listMeals, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import { localToday, TYPE_CHIP } from "../tabs/AiCoachTab";
 import {
@@ -167,6 +167,8 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
   const [date, setDate] = useState(() => prefill?.date || localToday());
   // Picked exercises with their dose (Workout only). Kept while the type changes; saved as the details.
   const [exercises, setExercises] = useState<DoseRow[]>(() => (prefill ? rowsFromTemplate(prefill.template.exercises) : []));
+  // Prompt 80: meals from the library on a Nutrition plan (the client sees them with their macros).
+  const [mealIds, setMealIds] = useState<string[]>([]);
 
   const mutation = useMutation({
     mutationFn: (input: NewAssignment) => createAssignment(clientId, input),
@@ -178,6 +180,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
       setReasoning("");
       setDate(localToday());
       setExercises([]);
+      setMealIds([]);
       onCreated(saved);
     },
   });
@@ -200,6 +203,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
       source: "manual",
     };
     if (date) input.date = date;
+    if (type === "Nutrition" && mealIds.length > 0) input.mealIds = mealIds;
     mutation.mutate(input);
   }
 
@@ -242,6 +246,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
           />
         </div>
         {type === "Workout" && <ExercisePicker rows={exercises} onRowsChange={setExercises} />}
+        {type === "Nutrition" && <MealPicker selected={mealIds} onChange={setMealIds} />}
         <div>
           <label htmlFor="assignment-details" className="mb-1 block text-sm font-semibold text-text">
             {fromExercises ? "Extra notes (optional)" : "Details"}
@@ -449,5 +454,39 @@ function NumberInput({ label, value, min, max, onChange, className }: NumberInpu
         onChange(clampWhole(e.target.value, min, max));
       }}
     />
+  );
+}
+
+/** Prompt 80: "Add meals from library" for a Nutrition plan (up to 10, in the order picked). */
+function MealPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
+  const meals = useQuery({ queryKey: queryKeys.meals, queryFn: listMeals });
+  const list = meals.data ?? [];
+  const toggle = (id: string) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : selected.length >= 10 ? selected : [...selected, id]);
+  return (
+    <fieldset>
+      <legend className="mb-1 text-sm font-semibold text-text">Add meals from library (optional)</legend>
+      {meals.isPending ? (
+        <p className="text-sm text-dim">Loading meals...</p>
+      ) : meals.isError ? (
+        <p role="alert" className="text-sm font-semibold text-amber-text">
+          Couldn't load your meals.
+        </p>
+      ) : list.length === 0 ? (
+        <p className="text-sm text-dim">No meals in your library yet. Add some in the Library tab.</p>
+      ) : (
+        <ul className="grid max-h-56 gap-1 overflow-y-auto rounded-lg border border-border p-2 sm:grid-cols-2">
+          {list.map((m) => (
+            <li key={m.id}>
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded px-2 text-sm hover:bg-surface2">
+                <input type="checkbox" checked={selected.includes(m.id)} onChange={() => toggle(m.id)} className="h-4 w-4" />
+                <span className="min-w-0 flex-1 truncate text-text">{m.name}</span>
+                <span className="font-mono text-xs text-dim">{m.calories} kcal</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      {selected.length > 0 && <p className="mt-1 text-xs text-dim">{selected.length} meal{selected.length === 1 ? "" : "s"} attached. Your client sees their calories and macros.</p>}
+    </fieldset>
   );
 }

@@ -67,6 +67,8 @@ export interface Assignment {
   completedBy?: "coach" | "client" | null;
   clientEffort?: number | null;
   clientNote?: string;
+  /** Prompt 80: meals from the coach's library on a Nutrition plan. */
+  mealIds?: string[];
 }
 
 /** Prompt 79: what a CLIENT sees of one of their assignments (no coach id, no AI / manual source). */
@@ -82,6 +84,39 @@ export interface ClientAssignment {
   completedBy: "coach" | "client" | null;
   clientEffort: number | null;
   clientNote: string;
+  /** Prompt 80: only on GET one plan - a Nutrition plan's meals from the coach's library. */
+  meals?: { id: string; name: string; mealType: string; calories: number; proteinG: number; carbsG: number; fatG: number }[];
+}
+
+/** Prompt 80: the client's own tracking. */
+export interface MyHabits {
+  date: DateString;
+  days: DateString[];
+  habits: { id: string; name: string; week: boolean[]; currentStreak: number; bestStreak: number }[];
+}
+export interface MyCheckIn {
+  date: DateString;
+  energy: number | null;
+  mood: number | null;
+  sleepHours: number | null;
+  recoveryScore: number | null;
+  waterLiters: number | null;
+  steps: number | null;
+  foodNote: string;
+}
+export interface MyProgressLog {
+  id: string;
+  date: DateString;
+  weightKg: number | null;
+  adherence: number | null;
+  workoutsDone: number | null;
+  note: string;
+  createdAt: string;
+}
+export interface MyTargets {
+  calorieTarget: number | null;
+  proteinTargetG: number | null;
+  weeklyCheckInDay: number;
 }
 
 export interface ChatMessage {
@@ -113,7 +148,10 @@ export type NewClient = Pick<Client, "name"> &
 
 /** Server defaults: reasoning "", source "manual", status "Active", date today. */
 export type NewAssignment = Pick<Assignment, "type" | "title" | "details"> &
-  Partial<Pick<Assignment, "reasoning" | "source" | "status" | "date">>;
+  Partial<Pick<Assignment, "reasoning" | "source" | "status" | "date">> & {
+    /** Prompt 80: meals from the coach's library (Nutrition plans only). */
+    mealIds?: string[];
+  };
 
 /** Auto-assign body: the plan type; date defaults to today (UTC). */
 export type AutoAssignInput = { type: AssignmentType; date?: DateString };
@@ -285,6 +323,8 @@ export interface ClientProfile {
   level: Level;
   units: "kg" | "lb";
   injuries: string;
+  /** Prompt 80: 0 = Sunday ... 6 = Saturday. */
+  weeklyCheckInDay?: number;
 }
 /** Prompt 77: POST /api/client-auth/join replies 201 (signed in) or 202 (check your email). */
 export type JoinResult = ({ status?: undefined } & ClientAccount) | { status: "check-email"; message: string };

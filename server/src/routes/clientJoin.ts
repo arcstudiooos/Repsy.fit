@@ -123,12 +123,12 @@ clientJoinRouter.get(
   asyncHandler(async (req, res) => {
     const c = await prisma.client.findUnique({
       where: { id: clientAccountIdOf(req) },
-      select: { goal: true, age: true, heightCm: true, weightKg: true, level: true, units: true, notes: true },
+      select: { goal: true, age: true, heightCm: true, weightKg: true, level: true, units: true, notes: true, weeklyCheckInDay: true },
     });
     if (!c) return void res.status(404).json({ error: "Your account was not found. Please ask your coach." });
     const line = c.notes.split("\n").find((l) => l.startsWith(FROM_CLIENT));
     // Only the client's OWN line from notes - never the coach's private notes.
-    res.json({ goal: c.goal, age: c.age, heightCm: c.heightCm, weightKg: c.weightKg, level: c.level, units: c.units, injuries: line ? line.slice(FROM_CLIENT.length) : "" });
+    res.json({ goal: c.goal, age: c.age, heightCm: c.heightCm, weightKg: c.weightKg, level: c.level, units: c.units, weeklyCheckInDay: c.weeklyCheckInDay, injuries: line ? line.slice(FROM_CLIENT.length) : "" });
   }),
 );
 

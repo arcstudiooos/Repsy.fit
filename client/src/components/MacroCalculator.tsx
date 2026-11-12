@@ -3,7 +3,7 @@
 // Adults only: the form stops with a plain message when the age is under 18.
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { calculateMacros, createAssignment, listClients, queryKeys } from "../api";
+import { calculateMacros, createAssignment, listClients, queryKeys, saveClientTargets } from "../api";
 import { plainErrorMessage } from "./States";
 import { localToday } from "../tabs/AiCoachTab";
 import { ACTIVITY_LEVELS, GOALS, SEXES, type ActivityLevel, type Client, type MacroInput, type Sex } from "../types";
@@ -41,6 +41,12 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
   const [pending, setPending] = useState(initialClientId);
 
   const calc = useMutation({ mutationFn: (input: MacroInput) => calculateMacros(input) });
+  // Prompt 80: the result as the client's daily targets (shown in their Nutrition view).
+  const saveTargets = useMutation({
+    mutationFn: (v: { clientId: string; calories: number; proteinG: number }) =>
+      saveClientTargets(v.clientId, { calorieTarget: v.calories, proteinTargetG: v.proteinG }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.clients }),
+  });
   const save = useMutation({
     mutationFn: (v: { clientId: string; result: NonNullable<typeof calc.data>; input: MacroInput }) =>
       createAssignment(v.clientId, {
@@ -88,6 +94,7 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
     setFormError(null);
     calc.reset();
     save.reset();
+    saveTargets.reset();
     setSaveError(null);
   };
 
@@ -274,6 +281,19 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
             >
               {save.isPending ? "Saving..." : "Save as Nutrition assignment"}
             </button>
+            <button
+              type="button"
+              disabled={saveTargets.isPending}
+              onClick={() => {
+                if (!calc.data) return;
+                if (clientId === "") return setSaveError("Choose a client to save this for.");
+                setSaveError(null);
+                saveTargets.mutate({ clientId, calories: calc.data.calories, proteinG: calc.data.proteinG });
+              }}
+              className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+            >
+              {saveTargets.isPending ? "Saving..." : clientName ? `Save as ${clientName}'s daily targets` : "Save as daily targets"}
+            </button>
           </div>
           {saveError && (
             <p role="alert" className="mt-2 text-sm font-semibold text-accent">
@@ -283,6 +303,16 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
           {save.isError && (
             <p role="alert" className="mt-2 text-sm font-semibold text-accent">
               {plainErrorMessage(save.error)}
+            </p>
+          )}
+          {saveTargets.isError && (
+            <p role="alert" className="mt-2 text-sm font-semibold text-accent">
+              {plainErrorMessage(saveTargets.error)}
+            </p>
+          )}
+          {saveTargets.isSuccess && (
+            <p role="status" className="mt-2 text-sm font-semibold text-accent2">
+              Saved as {clientName}'s daily targets: {calc.data.calories} kcal, {calc.data.proteinG} g protein.
             </p>
           )}
           {save.isSuccess && (

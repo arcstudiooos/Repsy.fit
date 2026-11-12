@@ -70,6 +70,7 @@ const COACH_ROUTES: [string, string][] = [
   ["patch", "/api/auth/me"],
   ["patch", "/api/auth/currency"],
   ["post", "/api/auth/change-password"],
+  ["patch", "/api/clients/c1/targets"],
   // Prompt 76: the coach's join code.
   ["get", "/api/join-code"],
   ["post", "/api/join-code/regenerate"],
@@ -89,6 +90,14 @@ const CLIENT_ROUTES: [string, string][] = [
   ["get", "/api/client-auth/my-assignments?from=2026-11-10&to=2026-11-16"],
   ["get", "/api/client-auth/my-assignments/a1"],
   ["post", "/api/client-auth/my-assignments/a1/done"],
+  // Prompt 80: the client's tracking.
+  ["get", "/api/client-auth/my-habits"],
+  ["put", "/api/client-auth/my-habits/h1/2026-11-12"],
+  ["get", "/api/client-auth/my-checkins/2026-11-12"],
+  ["put", "/api/client-auth/my-checkins/2026-11-12"],
+  ["get", "/api/client-auth/my-progress"],
+  ["post", "/api/client-auth/my-progress"],
+  ["get", "/api/client-auth/my-targets"],
 ];
 
 const send = (method: string, url: string, cookie?: string) => {

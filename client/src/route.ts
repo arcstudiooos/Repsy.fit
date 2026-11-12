@@ -39,7 +39,7 @@ export function routeFor(pathname: string, opts: { inAppFlow: boolean; backForwa
   if (pathname === "/client/login") return "client-login";
   if (pathname === "/client/set-password") return "client-set-password";
   // Prompt 79: the client app's own pages all render inside client-home.
-  if (/^\/client(\/(week|me|plan\/[^/]+))?\/?$/.test(pathname)) return "client-home";
+  if (/^\/client(\/(week|me|checkin|weekly|plan\/[^/]+))?\/?$/.test(pathname)) return "client-home";
   if (/^\/join\/[^/]+\/?$/.test(pathname)) return "client-join";
   if (pathname === "/client/welcome") return "client-welcome";
   if (pathname === "/client/forgot-password") return "client-forgot";

@@ -17,13 +17,16 @@ import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../
 import { MyPlanSection, MySessionsSection, MyStreaksSection } from "./sections";
 import { parsePlanLines } from "./planLines";
 import { RestTimer } from "./RestTimer";
+import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, WeeklyPage } from "./Tracking";
 
-type Page = { tab: "today" | "week" | "me"; planId?: string };
+type Page = { tab: "today" | "week" | "me"; planId?: string; sub?: "checkin" | "weekly" };
 
 function pageOf(pathname: string): Page {
   const plan = /^\/client\/plan\/([^/]+)\/?$/.exec(pathname);
   if (plan) return { tab: "today", planId: decodeURIComponent(plan[1]) };
   if (/^\/client\/week\/?$/.test(pathname)) return { tab: "week" };
+  if (/^\/client\/checkin\/?$/.test(pathname)) return { tab: "today", sub: "checkin" };
+  if (/^\/client\/weekly\/?$/.test(pathname)) return { tab: "today", sub: "weekly" };
   if (/^\/client\/me\/?$/.test(pathname)) return { tab: "me" };
   return { tab: "today" };
 }
@@ -74,9 +77,9 @@ function TabLink({ t, current, compact }: { t: (typeof TABS)[number]; current: b
 export default function ClientApp({ account, onSignOut, signingOut }: { account: ClientAccount; onSignOut: () => void; signingOut: boolean }) {
   const page = usePage();
   useEffect(() => {
-    document.title = page.planId ? "Plan - Repsy" : page.tab === "week" ? "This week - Repsy" : page.tab === "me" ? "Me - Repsy" : "Today - Repsy";
+    document.title = page.sub === "checkin" ? "Daily check-in - Repsy" : page.sub === "weekly" ? "Weekly check-in - Repsy" : page.planId ? "Plan - Repsy" : page.tab === "week" ? "This week - Repsy" : page.tab === "me" ? "Me - Repsy" : "Today - Repsy";
     window.scrollTo(0, 0);
-  }, [page.tab, page.planId]);
+  }, [page.tab, page.planId, page.sub]);
   return (
     <div className="min-h-screen bg-bg pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-8">
       <header className="border-b border-border bg-surface">
@@ -88,7 +91,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
           </div>
           <nav aria-label="Client app" className="hidden gap-1 sm:flex">
             {TABS.map((t) => (
-              <TabLink key={t.tab} t={t} current={!page.planId && page.tab === t.tab} compact={false} />
+              <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact={false} />
             ))}
           </nav>
         </div>
@@ -96,6 +99,10 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
       <main className="mx-auto max-w-3xl px-4 py-5">
         {page.planId ? (
           <PlanDetail key={page.planId} id={page.planId} />
+        ) : page.sub === "checkin" ? (
+          <CheckInPage />
+        ) : page.sub === "weekly" ? (
+          <WeeklyPage />
         ) : page.tab === "week" ? (
           <WeekView />
         ) : page.tab === "me" ? (
@@ -106,7 +113,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
       </main>
       <nav aria-label="Client app tabs" className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden">
         {TABS.map((t) => (
-          <TabLink key={t.tab} t={t} current={!page.planId && page.tab === t.tab} compact />
+          <TabLink key={t.tab} t={t} current={!page.planId && !page.sub && page.tab === t.tab} compact />
         ))}
       </nav>
     </div>
@@ -272,6 +279,10 @@ function TodayView() {
           </>
         )}
       </section>
+      <div className="mt-5 grid gap-3">
+        <TodayHabits today={today} />
+        <CheckInPrompts today={today} />
+      </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <section aria-label="Next session" className="card p-4">
           <h2 className="font-body text-base font-bold">Next session</h2>
@@ -521,6 +532,8 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
         <p className="mt-5 whitespace-pre-wrap text-base text-text">{plan.details}</p>
       )}
 
+      {plan.type === "Nutrition" && <NutritionExtras plan={plan} />}
+
       {rest && (
         <div className="mt-5">
           <RestTimer seconds={rest.sec} label={rest.label} nonce={rest.nonce} />
@@ -656,6 +669,7 @@ function MeView({ account, onSignOut, signingOut }: { account: ClientAccount; on
       <MyPlanSection />
       <MySessionsSection />
       <MyStreaksSection />
+      <CheckInDaySetting />
       <div className="mt-6">
         <button
           type="button"

@@ -143,8 +143,8 @@ describe("PUT /api/clients/:clientId/habits/:habitId/logs/:date", () => {
     expect(prismaMock.habitLog.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { habitId_date: { habitId: "h1", date: "2026-11-11" } },
-        create: { habitId: "h1", date: "2026-11-11", done: true },
-        update: { done: true },
+        create: { habitId: "h1", date: "2026-11-11", done: true, enteredBy: "coach" },
+        update: { done: true, enteredBy: "coach" },
       }),
     );
   });

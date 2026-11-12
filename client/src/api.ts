@@ -61,6 +61,10 @@ import type {
   ReviewQueue,
   JoinCode,
   JoinResult,
+  MyHabits,
+  MyCheckIn,
+  MyProgressLog,
+  MyTargets,
   ClientAssignment,
   ClientProfile,
   ThreadMessage,
@@ -92,7 +96,9 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
   try {
     res = await fetch(`/api${path}`, {
       method,
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+      // X-Client-Date: the browser's local calendar day, so "today / yesterday" on the client's own
+      // logging routes means the client's day, not the server's (Prompt 80).
+      headers: { "X-Client-Date": localDay(), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -281,6 +287,24 @@ export const getMyAssignments = (from: string, to: string) =>
 export const getMyAssignment = (id: string) => request<ClientAssignment>("GET", `/client-auth/my-assignments/${enc(id)}`);
 export const markMyAssignment = (id: string, body: { done: boolean; effort?: number | null; note?: string }) =>
   request<ClientAssignment>("POST", `/client-auth/my-assignments/${enc(id)}/done`, body);
+/** Prompt 80: the client's habits, daily / weekly check-ins and targets. */
+function localDay(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+export const getMyHabits = (date: string) => request<MyHabits>("GET", `/client-auth/my-habits?date=${enc(date)}`);
+export const tickMyHabit = (habitId: string, date: string, done: boolean) =>
+  request<{ habitId: string; date: string; done: boolean }>("PUT", `/client-auth/my-habits/${enc(habitId)}/${enc(date)}`, { done });
+export const getMyCheckIn = (date: string) => request<{ checkIn: MyCheckIn | null }>("GET", `/client-auth/my-checkins/${enc(date)}`);
+export const saveMyCheckIn = (date: string, body: Partial<Omit<MyCheckIn, "date">>) =>
+  request<MyCheckIn>("PUT", `/client-auth/my-checkins/${enc(date)}`, body);
+export const getMyProgress = () => request<MyProgressLog[]>("GET", "/client-auth/my-progress");
+export const addMyProgress = (body: { date: string; weightKg?: number | null; adherence?: number | null; workoutsDone?: number | null; note?: string }) =>
+  request<MyProgressLog>("POST", "/client-auth/my-progress", body);
+export const getMyTargets = () => request<MyTargets>("GET", "/client-auth/my-targets");
+/** Prompt 80 (coach): save the macro calculator's result as the client's daily targets. */
+export const saveClientTargets = (clientId: string, body: { calorieTarget?: number | null; proteinTargetG?: number | null }) =>
+  request<Client>("PATCH", `/clients/${enc(clientId)}/targets`, body);
 export const clientForgotPassword = (email: string) => request<{ message: string }>("POST", "/client-auth/forgot", { email });
 export const clientResetPassword = (token: string, password: string) =>
   request<void>("POST", "/client-auth/reset", { token, password });
@@ -426,6 +450,10 @@ export const queryKeys = {
   myProfile: ["client-account", "profile"] as const,
   myAssignments: (from: string, to: string) => ["client-account", "assignments", from, to] as const,
   myAssignment: (id: string) => ["client-account", "assignment", id] as const,
+  myHabits: (date: string) => ["client-account", "habits", date] as const,
+  myCheckIn: (date: string) => ["client-account", "checkin", date] as const,
+  myProgress: ["client-account", "progress"] as const,
+  myTargets: ["client-account", "targets"] as const,
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,

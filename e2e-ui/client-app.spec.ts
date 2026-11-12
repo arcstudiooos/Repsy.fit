@@ -53,6 +53,9 @@ async function mock(page: Page, opts: { plans?: Plan[]; failPlansOnce?: boolean 
       return route.fulfill({ json: { sessions: [{ id: "s1", title: "Form check", type: "Session", startsAt: "2099-01-05T10:00:00.000Z", endsAt: "2099-01-05T10:30:00.000Z", location: "" }] } });
     }
     if (path === "/api/client-auth/my-streaks") return route.fulfill({ json: { date: TODAY, checkInStreak: 3, habitPercent: 50, workoutsThisWeek: 2, enoughData: true } });
+    if (path === "/api/client-auth/my-habits") return route.fulfill({ json: { date: TODAY, days: [], habits: [] } });
+    if (path.startsWith("/api/client-auth/my-checkins/")) return route.fulfill({ json: { checkIn: null } });
+    if (path === "/api/client-auth/my-targets") return route.fulfill({ json: { calorieTarget: null, proteinTargetG: null, weeklyCheckInDay: 0 } });
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: { planName: "Monthly", status: "Active", nextDueDate: "2026-12-01" }, lastPaymentDate: null } });
     if (path === "/api/client-auth/logout") return route.fulfill({ status: 204 });
     return route.fulfill({ status: 404, json: { error: "Not found" } });
