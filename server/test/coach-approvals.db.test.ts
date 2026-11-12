@@ -18,9 +18,11 @@ describe.skipIf(!process.env.DATABASE_URL)("approving clients (database)", () =>
 
   it("pending -> approved shows in the list; declined loses data access; rules hold", async () => {
     const [a, b] = await Promise.all(emails.map((email, i) => prisma.coach.create({ data: { email, name: `Coach ${i}`, passwordHash: "x" } })));
-    const [pat, dee] = await Promise.all(
-      ["pat", "dee"].map((n) => prisma.client.create({ data: { coachId: a.id, name: n, loginEmail: `${n}-84-${stamp}@example.com`, passwordHash: "$2b$12$x", joinStatus: "pending", joinedVia: "code" } })),
-    );
+    // One after the other: the waiting list is oldest first, so their order must be fixed.
+    const make = (n: string) => prisma.client.create({ data: { coachId: a.id, name: n, loginEmail: `${n}-84-${stamp}@example.com`, passwordHash: "$2b$12$x", joinStatus: "pending", joinedVia: "code" } });
+    const pat = await make("pat");
+    await new Promise((r) => setTimeout(r, 5));
+    const dee = await make("dee");
     const names = async () => (await asCoach(app, a.id).get("/api/clients")).body.map((c: { name: string }) => c.name);
     expect(await names()).toEqual([]);
     expect((await asCoach(app, a.id).get("/api/clients/waiting")).body.map((c: { name: string }) => c.name)).toEqual(["pat", "dee"]);
