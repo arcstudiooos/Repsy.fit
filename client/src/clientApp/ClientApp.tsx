@@ -9,14 +9,15 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, getMyUnreadCount, markMyAssignment, queryKeys } from "../api";
-import { addDays, dayHeading, localDateKey, timeRangeText, weekStartOf } from "../lib/schedule";
+import { addDays, localDateKey, weekStartOf } from "../lib/schedule";
 import { TYPE_CHIP } from "../lib/typeChip";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
 import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../types";
-import { MyPlanSection, MySessionsSection } from "./sections";
+import { fmtDay, fmtTime, MyPlanSection, MySessionsSection } from "./sections";
 import { parsePlanLines } from "./planLines";
 import { RestTimer } from "./RestTimer";
+import { MeSettings } from "./MeSettings";
 import { MessagesView, CLIENT_MESSAGES_POLL_MS } from "./MessagesView";
 import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, WeeklyPage } from "./Tracking";
 
@@ -326,7 +327,10 @@ function TodayView() {
             <p className="mt-2 text-sm text-text">
               <span className="font-semibold">{next.title}</span>
               <br />
-              {dayHeading(new Date(next.startsAt))} · <span className="font-mono">{timeRangeText(next.startsAt, next.endsAt)}</span>
+              {fmtDay(next.startsAt, sessions.data?.timezone ?? undefined)} ·{" "}
+              <span className="font-mono">
+                {fmtTime(next.startsAt, sessions.data?.timezone ?? undefined)} - {fmtTime(next.endsAt, sessions.data?.timezone ?? undefined)}
+              </span>
             </p>
           )}
         </section>
@@ -699,6 +703,7 @@ function MeView({ account, onSignOut, signingOut }: { account: ClientAccount; on
       <MyPlanSection />
       <MySessionsSection />
       <CheckInDaySetting />
+      <MeSettings />
       <div className="mt-6">
         <button
           type="button"

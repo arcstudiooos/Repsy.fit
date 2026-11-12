@@ -195,6 +195,7 @@ describe("GET /api/client-auth/my-sessions (the client's own upcoming sessions)"
     expect(q.select.note).toBeUndefined();
     expect(res.body).toEqual({
       sessions: [{ id: "ap1", title: "Strength session", type: "Session", startsAt: "2026-11-12T04:30:00.000Z", endsAt: "2026-11-12T05:30:00.000Z", location: "Gym 2" }],
+      timezone: null, // Prompt 83: no override set
     });
   });
 });

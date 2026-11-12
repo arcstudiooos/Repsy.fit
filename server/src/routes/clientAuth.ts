@@ -142,13 +142,17 @@ clientAuthRouter.get(
   "/my-sessions",
   requireActiveClient,
   asyncHandler(async (req, res) => {
-    const sessions = await prisma.appointment.findMany({
-      where: { clientId: clientAccountIdOf(req), status: "Booked", endsAt: { gte: new Date() } },
-      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
-      take: 50,
-      select: { id: true, title: true, type: true, startsAt: true, endsAt: true, location: true },
-    });
-    res.json({ sessions });
+    const [sessions, me] = await Promise.all([
+      prisma.appointment.findMany({
+        where: { clientId: clientAccountIdOf(req), status: "Booked", endsAt: { gte: new Date() } },
+        orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+        take: 50,
+        select: { id: true, title: true, type: true, startsAt: true, endsAt: true, location: true },
+      }),
+      prisma.client.findUnique({ where: { id: clientAccountIdOf(req) }, select: { timezone: true } }),
+    ]);
+    // Prompt 83: the client's timezone override (null = show in the device's timezone).
+    res.json({ sessions, timezone: me?.timezone ?? null });
   }),
 );
 

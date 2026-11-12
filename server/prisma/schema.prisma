@@ -193,6 +193,8 @@ model Client {
   /// Prompt 78: the Google account ("sub") this client signs in with. Separate from Coach.googleSub:
   /// a coach's Google account never signs in as a client, and the other way round.
   googleSub     String?  @unique
+  /// Prompt 83: the client's own timezone override (IANA name, e.g. "Asia/Kolkata"); null = the device's.
+  timezone      String?
   /// Prompt 78: the last Google sign-in (Prompt 83 lets a Google-only client delete their account
   /// within 5 minutes of a fresh one).
   lastGoogleAuthAt DateTime?

@@ -67,6 +67,8 @@ import type {
   MyTargets,
   MyMeasurement,
   MyMessage,
+  MyAccount,
+  MyPayment,
   ClientAssignment,
   ClientProfile,
   ThreadMessage,
@@ -252,7 +254,7 @@ export const updateAppointment = (appointmentId: string, input: Partial<NewAppoi
   request<Appointment>("PATCH", `/appointments/${enc(appointmentId)}`, input);
 export const deleteAppointment = (appointmentId: string) => request<void>("DELETE", `/appointments/${enc(appointmentId)}`);
 /** The signed-in CLIENT's own upcoming Booked sessions, soonest first (read-only). */
-export const getMySessions = () => request<{ sessions: MySession[] }>("GET", "/client-auth/my-sessions");
+export const getMySessions = () => request<{ sessions: MySession[]; timezone?: string | null }>("GET", "/client-auth/my-sessions");
 
 // ----- Engagement (Prompt 71): streaks and the coach's leaderboard; `date` is the viewer's local day -----
 /** The coach's roster, ranked by check-in streak then habit % (clients with nothing logged have rank null). */
@@ -312,6 +314,13 @@ export const deleteMyMeasurement = (id: string) => request<void>("DELETE", `/cli
 export const getMyMessages = () => request<{ messages: MyMessage[]; hasCoach: boolean }>("GET", "/client-auth/my-messages");
 export const getMyUnreadCount = () => request<{ count: number }>("GET", "/client-auth/my-messages/unread");
 export const sendMyMessage = (body: string) => request<MyMessage>("POST", "/client-auth/my-messages", { body });
+/** Prompt 83: the client's own account. */
+export const getMyAccount = () => request<MyAccount>("GET", "/client-auth/me/account");
+export const saveMyAccount = (body: { name?: string; timezone?: string | null }) => request<void>("PATCH", "/client-auth/me/account", body);
+export const changeMyPassword = (currentPassword: string, newPassword: string) =>
+  request<void>("POST", "/client-auth/change-password", { currentPassword, newPassword });
+export const getMyPayments = () => request<MyPayment[]>("GET", "/client-auth/my-payments");
+export const deleteMyAccount = (body: { password?: string; confirm: string }) => request<void>("DELETE", "/client-auth/me", body);
 export const getMyTargets = () => request<MyTargets>("GET", "/client-auth/my-targets");
 /** Prompt 80 (coach): save the macro calculator's result as the client's daily targets. */
 export const saveClientTargets = (clientId: string, body: { calorieTarget?: number | null; proteinTargetG?: number | null }) =>
@@ -468,6 +477,8 @@ export const queryKeys = {
   myMeasurements: ["client-account", "measurements"] as const,
   myMessages: ["client-account", "messages"] as const,
   myUnread: ["client-account", "messages-unread"] as const,
+  myAccount: ["client-account", "account"] as const,
+  myPayments: ["client-account", "payments"] as const,
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,

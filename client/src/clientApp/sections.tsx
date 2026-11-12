@@ -2,7 +2,7 @@
 // client app (Prompt 79) and the next session / streak also on Today.
 import { useQuery } from "@tanstack/react-query";
 import { getMyPlan, getMySessions, getMyStreaks, queryKeys } from "../api";
-import { dayHeading, localDateKey, timeRangeText, viewerTimeZone } from "../lib/schedule";
+import { localDateKey, viewerTimeZone } from "../lib/schedule";
 import { plainErrorMessage } from "../components/States";
 
 const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: "medium" });
@@ -48,8 +48,14 @@ export function MyPlanSection() {
  * "My sessions" (Prompt 69): the client's OWN upcoming booked sessions, read-only (no booking, no
  * calendar sync, no coach notes). Times arrive as UTC and are shown in this browser's timezone.
  */
+/** Session day / time in the client's timezone override (Prompt 83), else this browser's timezone. */
+export const fmtDay = (iso: string, timeZone?: string) => new Date(iso).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", timeZone });
+export const fmtTime = (iso: string, timeZone?: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZone });
+
 export function MySessionsSection() {
   const sessions = useQuery({ queryKey: queryKeys.mySessions, queryFn: getMySessions, retry: false });
+  // Prompt 83: the client's timezone override, else the device's.
+  const tz = sessions.data?.timezone ?? undefined;
   return (
     <section aria-label="My sessions" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
       <h2 className="text-base">My sessions</h2>
@@ -68,13 +74,13 @@ export function MySessionsSection() {
               <li key={s.id} className="py-2 text-sm">
                 <p className="font-semibold text-text">{s.title}</p>
                 <p className="text-dim">
-                  {dayHeading(new Date(s.startsAt))} · <span className="font-mono text-text">{timeRangeText(s.startsAt, s.endsAt)}</span> · {s.type}
+                  {fmtDay(s.startsAt, tz)} · <span className="font-mono text-text">{fmtTime(s.startsAt, tz)} - {fmtTime(s.endsAt, tz)}</span> · {s.type}
                 </p>
                 {s.location && <p className="break-words text-dim">{s.location}</p>}
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-dim">Times are shown in your timezone ({viewerTimeZone()}).</p>
+          <p className="mt-2 text-xs text-dim">Times are shown in your timezone ({tz ?? viewerTimeZone()}).</p>
         </>
       )}
     </section>

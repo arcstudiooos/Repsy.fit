@@ -90,6 +90,7 @@
         "heading": "Deleting your data and your rights",
         "body": [
           "A coach can delete any client from the Clients tab. This removes the client and every record belonging to them.",
+          "A client can delete their own account from the Me tab in the client app (with their password, or a fresh Google sign-in). This removes their account and every record belonging to them, including the membership and payment records their coach kept for them, and their coach no longer sees them.",
           "A coach can delete their whole account from Account settings. This permanently removes the coach, every client they added and all related records, including any Google account information.",
           "A client who wants their data changed or removed can ask their coach, or contact us directly at hello@repsy.fit.",
           "Depending on where you live, you may have the right to access, correct, delete or export your data, to object to or restrict how we use it, and to withdraw consent. Coaches can export their data as CSV files from Reports at any time. To make any request, email hello@repsy.fit; we reply within 30 days. You also have the right to complain to your local data protection authority."

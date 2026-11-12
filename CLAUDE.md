@@ -532,6 +532,22 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   `message`). The box scrolls itself (never the page) and only when the reader is at the bottom. Like the
   coach side, a send that times out after saving can be sent twice by Retry (no idempotency key in v2).
 
+### Client account (Prompt 83)
+- `server/src/routes/clientAccount.ts`: `/me/account` (GET name, loginEmail, googleConnected, timezone; PATCH
+  name / timezone only - never email or coach), `/change-password` (bumps `clientSessionVersion`, re-issues this
+  session's cookie), `/my-payments` (own, read-only, dates / plan / method - NO amounts, same rule as
+  `/my-plan`), `DELETE /me` (deletes the Client row; every child table cascades).
+- Clients have Google OR a password, never both (linking Google sets an unguessable password; invite / reset
+  removes the Google link), so `googleSub !== null` means "Google-only": change password says "Use Forgot
+  password to set one", and deleting needs a Google sign-in within 5 minutes (`lastGoogleAuthAt`) plus DELETE.
+- `Client.timezone` (IANA, validated with Intl; null = the device's). `/my-sessions` returns it and the app
+  formats session times in it. Me tab sections live in `clientApp/MeSettings.tsx`.
+- Decided in review (Prompt 83): the Google 5-minute check also needs THIS session to come from that sign-in
+  (cookie `iat` >= `lastGoogleAuthAt`, `req.clientSessionIssuedAt`); timezones are stored in Intl's canonical
+  form; client names allow 100 chars (same as the coach form); pending / declined clients can delete from the
+  waiting screen (`PendingDelete`, lazy); deleting a client also deletes the coach's plan / payment rows for
+  them (said in the privacy policy).
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -630,6 +646,10 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getMyProgress()` / `addMyProgress(body)` | GET / POST | `/api/client-auth/my-progress` | `{ date, weightKg?, adherence?, workoutsDone?, note? (<= 500) }` (strict) | GET own logs oldest first; POST 201, queued for the coach's review; today / yesterday only. (Prompt 80) |
 | `getMyMeasurements()` / `addMyMeasurement(body)` / `deleteMyMeasurement(id)` | GET / POST / DELETE | `/api/client-auth/my-measurements[/:id]` | POST: the coach route's fields (strict) | GET own, newest first, with `createdBy`; POST 201 (`createdBy: "client"`); DELETE 204, 404 for a coach-added / unknown row. `requireActiveClient`. (Prompt 81) |
 | `getMyMessages()` / `getMyUnreadCount()` / `sendMyMessage(body)` | GET / GET / POST | `/api/client-auth/my-messages`, `/my-messages/unread` | POST `{ body }` (strict, 1-2000) | GET `{ messages }` newest 100 oldest first (marks the coach's shown messages read); `{ count }`; POST 201 sender "client"; 429 over 60 / 15 min. `requireActiveClient`. (Prompt 82) |
+| `getMyAccount()` / `saveMyAccount(body)` | GET / PATCH | `/api/client-auth/me/account` | PATCH `{ name?, timezone?: IANA \| null }` (strict) | GET `{ name, loginEmail, googleConnected, timezone }`; PATCH 204. (Prompt 83) |
+| `changeMyPassword(current, next)` | POST | `/api/client-auth/change-password` | `{ currentPassword, newPassword }` | 204 + fresh cookie, other sessions end; 400 wrong current / Google-only. (Prompt 83) |
+| `getMyPayments()` | GET | `/api/client-auth/my-payments` | — | `[{ id, paidOn, method, planName }]` own, newest first, no amounts. `requireActiveClient`. (Prompt 83) |
+| `deleteMyAccount(body)` | DELETE | `/api/client-auth/me` | `{ password?, confirm: "DELETE" }` (strict) | 204 + cookie cleared; 400 wrong word / password; 403 Google sign-in older than 5 min. (Prompt 83) |
 | `getMyTargets()` | GET | `/api/client-auth/my-targets` | — | `{ calorieTarget, proteinTargetG, weeklyCheckInDay }`. (Prompt 80) |
 | `saveClientTargets(clientId, body)` | PATCH | `/api/clients/:clientId/targets` | `{ calorieTarget?: 300-15000 \| null, proteinTargetG?: 0-1000 \| null }` (strict) | the client; 404 another coach's client. `requireCoach`. (Prompt 80) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |

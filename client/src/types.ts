@@ -128,6 +128,20 @@ export interface MyMeasurement {
 }
 /** Prompt 82: a message in the client's own thread with their coach. */
 export type MyMessage = Pick<ThreadMessage, "id" | "sender" | "body" | "createdAt" | "readAt">;
+/** Prompt 83: the client's own account summary. */
+export interface MyAccount {
+  name: string;
+  loginEmail: string | null;
+  googleConnected: boolean;
+  timezone: string | null;
+}
+/** Prompt 83: one of the client's own payments (no amounts). */
+export interface MyPayment {
+  id: string;
+  paidOn: DateString;
+  method: string;
+  planName: string;
+}
 export interface MyTargets {
   calorieTarget: number | null;
   proteinTargetG: number | null;

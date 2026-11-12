@@ -106,6 +106,12 @@ const CLIENT_ROUTES: [string, string][] = [
   ["get", "/api/client-auth/my-messages"],
   ["get", "/api/client-auth/my-messages/unread"],
   ["post", "/api/client-auth/my-messages"],
+  // Prompt 83: account.
+  ["get", "/api/client-auth/me/account"],
+  ["patch", "/api/client-auth/me/account"],
+  ["post", "/api/client-auth/change-password"],
+  ["get", "/api/client-auth/my-payments"],
+  ["delete", "/api/client-auth/me"],
 ];
 
 const send = (method: string, url: string, cookie?: string) => {

@@ -24,6 +24,8 @@ declare global {
       clientAccountId?: string;
       /** Prompt 77: the signed-in client's joinStatus ("active" | "pending" | "declined"). */
       clientJoinStatus?: string;
+      /** Prompt 83: when the current client session cookie was issued (ms). */
+      clientSessionIssuedAt?: number;
     }
   }
 }
@@ -46,6 +48,16 @@ export function signClientSession(clientId: string, version: number, now = Date.
     JSON.stringify({ sub: clientId, aud: AUDIENCE, v: version, iat: Math.floor(now / 1000), exp: Math.floor((now + CLIENT_SESSION_MS) / 1000) }),
   );
   return `${HEADER}.${payload}.${sign(`${HEADER}.${payload}`, key)}`;
+}
+
+/** When a (verified) client token was issued, in ms; 0 if it has no iat. */
+export function clientTokenIssuedAt(token: string): number {
+  try {
+    const p = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as { iat?: unknown };
+    return typeof p.iat === "number" ? p.iat * 1000 : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** Client id + version of a valid, unexpired CLIENT token; null for anything else (coach tokens included). */
@@ -113,6 +125,7 @@ export async function clientSessionMiddleware(req: Request, _res: Response, next
     if (session && status) {
       req.clientAccountId = session.clientId;
       req.clientJoinStatus = status.joinStatus;
+      req.clientSessionIssuedAt = clientTokenIssuedAt(token as string);
     }
     next();
   } catch (err) {

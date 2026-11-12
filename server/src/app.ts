@@ -20,6 +20,7 @@ import { clientGoogleRouter } from "./routes/clientGoogle.js";
 import { clientAppRouter } from "./routes/clientApp.js";
 import { clientTrackingRouter } from "./routes/clientTracking.js";
 import { clientMessagesRouter } from "./routes/clientMessages.js";
+import { clientAccountRouter } from "./routes/clientAccount.js";
 import { clientInviteRouter } from "./routes/clientInvite.js";
 import { businessRouter, clientPlanRouter } from "./routes/business.js";
 import { appointmentsRouter } from "./routes/appointments.js";
@@ -135,6 +136,7 @@ app.use("/api/client-auth", clientAppRouter);
 // Prompt 80: the client's habits, daily / weekly check-ins, targets.
 app.use("/api/client-auth", clientTrackingRouter);
 app.use("/api/client-auth", clientMessagesRouter);
+app.use("/api/client-auth", clientAccountRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
 // "Not found" is reserved for missing routes (see API contract in CLAUDE.md).

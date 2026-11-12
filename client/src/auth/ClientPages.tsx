@@ -36,6 +36,7 @@ const CLIENT_GOOGLE_ERRORS: Record<string, string> = {
 
 // Prompt 79: the client app itself (Today, Week, plans, Me) is its own lazy chunk.
 const ClientApp = lazy(() => import("../clientApp/ClientApp"));
+const PendingDelete = lazy(() => import("../clientApp/MeSettings").then((m) => ({ default: m.PendingDelete })));
 
 export const CLIENT_SIGN_IN_TITLE = "Client sign-in - Repsy Coach";
 
@@ -69,6 +70,7 @@ function ClientLoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const justSet = new URLSearchParams(window.location.search).get("set") === "1";
+  const justDeleted = new URLSearchParams(window.location.search).get("deleted") === "1";
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -95,6 +97,11 @@ function ClientLoginPage() {
       {justSet && (
         <p role="status" className="mt-6 text-center text-sm font-semibold text-accent2">
           Your password is set. Sign in with it below.
+        </p>
+      )}
+      {justDeleted && (
+        <p role="status" className="mt-6 text-center text-sm font-semibold text-accent2">
+          Your account has been deleted.
         </p>
       )}
       <GoogleButton href="/api/client-auth/google/start" label="Continue with Google" errors={CLIENT_GOOGLE_ERRORS} />
@@ -700,6 +707,10 @@ function ClientHomePage() {
             : `${coach} approves new clients before they join. You'll see your plans here as soon as they do - check back soon.`}
         </p>
         {signOut}
+        {/* Prompt 83: a waiting or declined client can still delete their account. */}
+        <Suspense fallback={null}>
+          <PendingDelete />
+        </Suspense>
       </Shell>
     );
   }
