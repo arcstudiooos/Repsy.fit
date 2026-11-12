@@ -224,6 +224,31 @@ test("the road draws gradually with scroll (not a jump from nothing to all)", as
   expect(off).toBeLessThan(850); // ... and part still to come
 });
 
+test("the road ends just above 'It does more than plan.' and that section reveals when it arrives", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page, { motion: true });
+  await expect(page.locator(".pin-spacer")).toHaveCount(2);
+  const head = page.locator("[data-road-end]");
+  // Lands centred, a few px above the heading.
+  const geo = await page.evaluate(() => {
+    const dot = document.querySelector("[data-road-dot]")!.getBoundingClientRect();
+    const h = document.querySelector("[data-road-end]")!.getBoundingClientRect();
+    return { gap: h.top - dot.bottom, dx: Math.abs(dot.left + dot.width / 2 - (h.left + h.width / 2)) };
+  });
+  expect(geo.gap).toBeGreaterThanOrEqual(0);
+  expect(geo.gap).toBeLessThan(40);
+  expect(geo.dx).toBeLessThan(3);
+  // Before arrival the tiles are hidden; scrolling there deals them out.
+  await expect(page.locator("[data-more-tile]").first()).toHaveCSS("opacity", "0");
+  const top = await head.evaluate((e) => e.getBoundingClientRect().top + window.scrollY);
+  for (let y = 0; y <= top - 300; y += 300) {
+    await page.evaluate((v) => window.scrollTo(0, v), y);
+    await page.waitForTimeout(40);
+  }
+  await expect(page.locator("[data-more-tile]").last()).toHaveCSS("opacity", "1", { timeout: 5000 });
+  await expect(page.locator("[data-more-line]").first()).toBeInViewport();
+});
+
 test("tablet width (900px): the hero stays a still sheet, only the notebook scene pins", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 900 });
   await open(page, { motion: true });

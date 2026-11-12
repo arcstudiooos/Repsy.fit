@@ -777,13 +777,14 @@ const MOCKS = {
   checkins: CheckinMock,
 } as const;
 
-const ROAD_OVERRUN = 420;
-
 export function Road() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [geom, setGeom] = useState<{ w: number; h: number; d: string } | null>(
-    null,
-  );
+  const [geom, setGeom] = useState<{
+    w: number;
+    h: number;
+    d: string;
+    end: number;
+  } | null>(null);
 
   // The road is drawn from the real layout: one bend per feature row, so it always meets the cards.
   useLayoutEffect(() => {
@@ -806,18 +807,37 @@ export function Road() {
           const mid = (y + next) / 2;
           d += ` C ${from} ${mid}, ${to} ${mid}, ${to} ${next}`;
         } else {
-          // After the last card the road swings back to the middle and runs on out of the section,
-          // under the next one, instead of stopping in mid-air.
-          const exit = h + ROAD_OVERRUN;
-          d += ` C ${from} ${y + (exit - y) * 0.45}, ${w * 0.5} ${y + (exit - y) * 0.55}, ${w * 0.5} ${exit}`;
+          // After the last card the road swings back to the middle and runs on down, between the
+          // plan-type columns, until it touches the top of the "It does more than plan." heading.
+          const exit = endY(h);
+          // The straight run sits a little right of centre (more room beside the text than beside
+          // the phone), then eases back to the centre to land on the heading.
+          const run = w * 0.5 + 32;
+          d += ` C ${from} ${y + (exit - y) * 0.3}, ${run} ${y + (exit - y) * 0.35}, ${run} ${y + (exit - y) * 0.6}`;
+          d += ` L ${run} ${exit - 140} C ${run} ${exit - 70}, ${w * 0.5} ${exit - 70}, ${w * 0.5} ${exit}`;
         }
       });
-      setGeom({ w, h: h + ROAD_OVERRUN, d });
+      const end = endY(h);
+      setGeom({ w, h: end + 40, d, end });
+    };
+    /** Where the road stops: just above the target heading, measured from this section's top. */
+    const endY = (h: number) => {
+      const target = document.querySelector<HTMLElement>("[data-road-end]");
+      if (!target) return h + 420;
+      return Math.round(target.getBoundingClientRect().top - el.getBoundingClientRect().top - 26);
     };
     build();
     const ro = new ResizeObserver(build);
     ro.observe(el);
-    return () => ro.disconnect();
+    // Anything between here and the heading (the plan-type section) changing height moves the end.
+    const between = document.querySelector<HTMLElement>("[data-road-end]")?.closest("section")?.previousElementSibling;
+    if (between) ro.observe(between);
+    window.addEventListener("load", build);
+    document.fonts?.ready.then(build);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("load", build);
+    };
   }, []);
 
   return (
@@ -851,6 +871,9 @@ export function Road() {
             strokeWidth="3"
             clipPath="url(#ln-road-clip)"
           />
+          {/* where the road arrives: a pin that pulses when the lane reaches it */}
+          <circle data-road-ripple cx={geom.w * 0.5} cy={geom.end} r="23" fill="none" stroke="var(--orange)" strokeWidth="3" opacity="0" />
+          <circle data-road-dot cx={geom.w * 0.5} cy={geom.end} r="9" fill="var(--orange)" stroke="var(--paper)" strokeWidth="4" />
         </svg>
       )}
       <h2 id="ln-how-title" className="sr-only">
@@ -1070,14 +1093,22 @@ const STICKER = [
 export function More() {
   return (
     <section className="ln-wrap py-24 md:py-28">
-      <h2 data-rise className="ln-h2 text-center">
-        It does more than plan.
-        <br />
-        <span className="ln-dim">The bits you find later.</span>
+      {/* The road ends on this heading; motion.ts reveals the lines and deals the tiles out from here. */}
+      <h2 data-road-end className="ln-h2 text-center">
+        <span className="block overflow-hidden pb-[0.08em]">
+          <span data-more-line className="block">
+            It does more than plan.
+          </span>
+        </span>
+        <span className="block overflow-hidden pb-[0.08em]">
+          <span data-more-line className="ln-dim block">
+            The bits you find later.
+          </span>
+        </span>
       </h2>
-      <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div data-more-grid className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {MORE.map((m, i) => (
-          <article key={m.title} data-rise className="ln-white p-6">
+          <article key={m.title} data-more-tile className="ln-white p-6">
             <div className="flex items-center justify-between">
               <span
                 className="ln-sticker"

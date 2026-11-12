@@ -123,13 +123,44 @@ export function startMotion(root: HTMLElement): () => void {
       gsap.to(road, {
         strokeDashoffset: 0,
         ease: "none",
-        scrollTrigger: { trigger: "[data-scene=road]", start: "top 70%", end: "bottom 80%", scrub: 0.5 },
+        // Draws from when the section enters until the road's end (the "more" heading) is 72% down.
+        scrollTrigger: { trigger: "[data-scene=road]", start: "top 70%", endTrigger: "[data-road-end]", end: "top 72%", scrub: 0.5 },
         onUpdate() {
           if (!clip) return;
           const p = road.getPointAtLength(road.getTotalLength() * this.progress());
           clip.setAttribute("height", String(Math.max(0, p.y + 24)));
         },
       });
+    }
+
+    /* ---------- the road arrives at "It does more than plan.": pin pulses, lines rise, tiles deal out ---------- */
+    const moreHead = root.querySelector<HTMLElement>("[data-road-end]");
+    if (moreHead) {
+      const dot = root.querySelector("[data-road-dot]");
+      const ripple = root.querySelector("[data-road-ripple]");
+      const lines = q("[data-more-line]");
+      const tiles = q("[data-more-tile]");
+      gsap.set(lines, { yPercent: 110 });
+      gsap.set(tiles, { autoAlpha: 0, y: -60, scale: 0.6, transformOrigin: "50% 0%" });
+      if (dot) gsap.set(dot, { scale: 0, transformOrigin: "50% 50%" });
+      const tl = gsap.timeline({ scrollTrigger: { trigger: moreHead, start: "top 72%", toggleActions: "play none none reverse" } });
+      if (dot) tl.to(dot, { scale: 1, duration: 0.35, ease: "back.out(3)" });
+      if (ripple)
+        tl.fromTo(ripple, { attr: { r: 12 }, opacity: 0.9 }, { attr: { r: 70 }, opacity: 0, duration: 0.8, ease: "power2.out" }, "<");
+      tl.to(lines, { yPercent: 0, duration: 0.8, stagger: 0.12, ease: "power4.out" }, "<0.05");
+      // Tiles fall out of the road's end point and settle into the grid, centre column first.
+      tl.to(
+        tiles,
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.7,
+          ease: "back.out(1.4)",
+          stagger: { each: 0.08, from: "center", grid: "auto" },
+        },
+        "<0.25",
+      );
     }
 
     /* ---------- notebook: pinned old way -> Repsy ---------- */
