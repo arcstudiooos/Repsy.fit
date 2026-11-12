@@ -4,7 +4,8 @@ services:
   - type: web
     name: repsy-coach
     runtime: node
-    plan: free
+    # Paid since Nov 2026: $7/mo, 0.5 CPU / 512 MB, never sleeps. Keep in step with the dashboard.
+    plan: starter
     region: virginia
     branch: main
     # Deploy a commit on main only after its GitHub checks (the CI workflow) pass.
@@ -57,5 +58,6 @@ services:
 databases:
   - name: repsy-db
     databaseName: repsy
-    plan: free
+    # Paid since Nov 2026: $6/mo, 0.1 CPU / 256 MB, no expiry, with backups.
+    plan: basic-256mb
     region: virginia

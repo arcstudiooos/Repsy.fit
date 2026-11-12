@@ -172,10 +172,8 @@ Load the quick demo first, then the 6-month demo, to get all 13 clients.
 
 ## Known limits of v2
 
-- **The free database expires.** `repsy-db` is on Render's free Postgres plan. Render deletes free
-  databases 30 days after creation, plus a 14-day grace period, along with all of their data, and
-  free databases have no backups. Upgrade `repsy-db` to a paid plan in the Render dashboard (check
-  its expiry date there) **before** storing real client data.
+- **Hosting is on paid plans** (Nov 2026): web service `starter`, database `basic-256mb` (no expiry,
+  with backups). Keep `render.yaml` in step with the dashboard, or a Blueprint sync can change the plan.
 - **No payment gateway.** Payments are records only: nothing charges a card, sends a payment link
   or reminder, or makes an invoice.
 - **No push or email alerts.** Alerts (Needs attention, new check-ins, the review queue) show only
