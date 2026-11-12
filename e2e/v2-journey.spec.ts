@@ -171,8 +171,12 @@ test("8. the client sets a password, signs in, and sees ONLY their own plan", as
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/client\/?$/, { timeout: 30_000 });
 
-  // Their own plan, sessions and streaks - and no coach UI anywhere.
-  await expect(page.getByRole("region", { name: "My plan" })).toContainText("Monthly coaching");
+  // Prompt 79: the client app opens on Today, with the workout the coach assigned for today.
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("region", { name: "Today's plans" })).toContainText("Journey leg day", { timeout: 30_000 });
+  // Their own plan, sessions and streaks live on the Me tab - and no coach UI anywhere.
+  await page.goto("/client/me");
+  await expect(page.getByRole("region", { name: "My plan" })).toContainText("Monthly coaching", { timeout: 30_000 });
   await expect(page.getByRole("region", { name: "My sessions" })).toBeVisible();
   await expect(page.getByRole("region", { name: "My streaks" })).toBeVisible();
   await expect(page.getByRole("tab")).toHaveCount(0);
