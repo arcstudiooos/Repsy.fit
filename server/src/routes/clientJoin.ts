@@ -223,7 +223,9 @@ clientJoinRouter.post(
         if (claimed.count !== 1) throw new InvalidResetToken();
         const row = await tx.clientPasswordResetToken.findUnique({ where: { tokenHash } });
         if (!row) throw new InvalidResetToken();
-        await tx.client.update({ where: { id: row.clientId }, data: { passwordHash, clientSessionVersion: { increment: 1 } } });
+        // Prompt 78: proving the inbox also removes any Google sign-in linked to the account, so whoever
+        // linked it (possibly not the inbox owner, for an address Google does not own) is locked out.
+        await tx.client.update({ where: { id: row.clientId }, data: { passwordHash, googleSub: null, clientSessionVersion: { increment: 1 } } });
         await tx.clientPasswordResetToken.deleteMany({ where: { clientId: row.clientId, usedAt: null } });
       });
     } catch (err) {

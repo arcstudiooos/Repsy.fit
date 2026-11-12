@@ -183,9 +183,17 @@ export const GOOGLE_ERRORS: Record<string, string> = {
  * server redirects to Google and back, then lands on /app signed in.
  */
 function GoogleSignIn({ isRegister }: { isRegister: boolean }) {
+  return <GoogleButton href="/api/auth/google/start" label={isRegister ? "Sign up with Google" : "Continue with Google"} />;
+}
+
+/**
+ * The "Continue with Google" link + the message for a failed attempt (?google=<reason>). Shared by the
+ * coach screens and, with their own href and messages, the client sign-in and join pages (Prompt 78).
+ */
+export function GoogleButton({ href, label, errors = GOOGLE_ERRORS }: { href: string; label: string; errors?: Record<string, string> }) {
   const [enabled, setEnabled] = useState(false);
   const reason = new URLSearchParams(window.location.search).get("google");
-  const error = reason ? (GOOGLE_ERRORS[reason] ?? GOOGLE_ERRORS.failed) : null;
+  const error = reason ? (errors[reason] ?? errors.failed ?? GOOGLE_ERRORS.failed) : null;
   useEffect(() => {
     let live = true;
     fetch("/api/auth/providers")
@@ -207,11 +215,11 @@ function GoogleSignIn({ isRegister }: { isRegister: boolean }) {
       {enabled && (
         <>
           <a
-            href="/api/auth/google/start"
+            href={href}
             className="flex min-h-11 w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-text hover:bg-surface2"
           >
             <GoogleG />
-            {isRegister ? "Sign up with Google" : "Continue with Google"}
+            {label}
           </a>
           <p className="mt-5 flex items-center gap-3 text-xs text-dim" aria-hidden="true">
             <span className="h-px flex-1 bg-border" />

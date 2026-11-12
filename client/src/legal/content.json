@@ -21,7 +21,7 @@
           "Training and tracking records entered in the app: workout, nutrition, habit and recovery plans, workout templates and meals, progress logs (weight, adherence, workouts done), body measurements, daily check-ins (mood, energy, sleep hours, recovery), habits and habit ticks, and scheduled sessions. We do not collect or store progress photos.",
           "Messages: messages between a coach and a client inside the app, and a coach's conversations with the in-app AI assistant.",
           "Business records a coach types in: plan names, prices, due dates and payments the coach records by hand. We do not collect or store any card or bank details, because Repsy does not take payments.",
-          "Client sign-in data: for a client their coach invites, the email address they sign in with and a one-way hash of their password.",
+          "Client account data: for a client who is invited by their coach or joins with their coach's join code, their name, the email address they sign in with, a one-way hash of their password, their preferred weight unit and, if they sign in with Google, their Google account ID. If a client answers the optional welcome questions (goal, age, height, weight, training experience, injuries), those answers are added to their record so their coach can plan for them.",
           "Enquiries from our public website: the name and email address you give us when you ask to start a free trial.",
           "Technical data needed to run the service: a session cookie that keeps you signed in, a short-lived security cookie used during Google sign-in, and server logs (which include IP addresses and the pages and API routes requested). We do not use advertising or analytics trackers."
         ]

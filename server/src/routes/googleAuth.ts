@@ -28,15 +28,17 @@ import {
   googleAuthUrl,
   googleConfig,
   googleOrigin,
+  attemptFor,
+  CLIENT_STATE_PREFIX,
   newAttempt,
-  verifierFor,
   type GoogleIdentity,
 } from "../auth/google.js";
+import { clientFail, finishClientGoogle } from "./clientGoogle.js";
 import { asyncHandler } from "./clients.js";
 
 export const googleAuthRouter = Router();
 
-/** Where a failed attempt lands: the login page shows a plain message for each reason. */
+/** Where a failed coach attempt lands: the login page shows a plain message for each reason. */
 const fail = (reason: string) => `/login?google=${reason}`;
 
 /** The URLs carry a one-time code and state: never cache them or leak them in a Referer. */
@@ -101,11 +103,17 @@ googleAuthRouter.get(
   rateLimit("google-callback", { max: 30 }),
   asyncHandler(async (req, res) => {
     const cfg = googleConfig();
-    const verifier = verifierFor(readCookie(req, GOOGLE_STATE_COOKIE), req.query.state);
+    const attempt = attemptFor(readCookie(req, GOOGLE_STATE_COOKIE), req.query.state);
     res.clearCookie(GOOGLE_STATE_COOKIE, cookieOptions());
+    // Prompt 78: client attempts (sign-in or join) fail back to the client pages, never the coach login.
+    // Without a valid cookie, the state's own prefix still says whether this was a client attempt.
+    const kind = attempt?.kind ?? (typeof req.query.state === "string" && req.query.state.startsWith(CLIENT_STATE_PREFIX) ? "client" : "coach");
+    const joinCode = kind.startsWith("join:") ? kind.slice(5) : null;
+    const fail = (reason: string) => (kind === "coach" ? `/login?google=${reason}` : clientFail(reason, joinCode));
     if (!cfg || !sessionSecret()) return res.redirect(302, fail("off"));
     if (typeof req.query.error === "string") return res.redirect(302, fail("cancelled"));
-    if (!verifier) return res.redirect(302, fail("expired"));
+    if (!attempt) return res.redirect(302, fail("expired"));
+    const verifier = attempt.verifier;
     const code = req.query.code;
     if (typeof code !== "string" || !code) return res.redirect(302, fail("failed"));
 
@@ -119,6 +127,8 @@ googleAuthRouter.get(
       }
       throw err;
     }
+
+    if (kind !== "coach") return finishClientGoogle(res, who, kind);
 
     let result: Awaited<ReturnType<typeof coachFor>>;
     try {

@@ -185,6 +185,8 @@ describe("POST /api/client-auth/set-password", () => {
     const data = prismaMock.client.update.mock.calls[0][0].data;
     expect(data.passwordHash).toMatch(/^\$2[aby]\$12\$/);
     expect(data.clientSessionVersion).toEqual({ increment: 1 });
+    // Prompt 78: using the invite proves the inbox, so a Google sign-in linked by someone else is removed.
+    expect(data.googleSub).toBeNull();
   });
 
   it("a used, expired or unknown invite is refused in plain words", async () => {

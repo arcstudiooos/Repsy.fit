@@ -65,7 +65,8 @@ clientAuthRouter.post(
         if (!client) throw new InvalidInvite();
         await tx.client.update({
           where: { id: client.id },
-          data: { passwordHash, loginEmail: invite.email, clientSessionVersion: { increment: 1 } },
+          // Prompt 78: using the invite proves the inbox; any linked Google sign-in is removed.
+          data: { passwordHash, loginEmail: invite.email, googleSub: null, clientSessionVersion: { increment: 1 } },
         });
         await tx.clientInvite.deleteMany({ where: { clientId: client.id, usedAt: null } });
       });

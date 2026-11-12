@@ -448,6 +448,25 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - Known limit: join does not verify the email first. Someone could sign up with another person's address under
   any coach; the owner can still take that account over with "Forgot password", and delete it (Prompt 83).
 
+### Continue with Google for clients (Prompt 78)
+- `GET /api/client-auth/google/start` (sign in) and `?code=<JOINCODE>` (join). Google allows only the ONE
+  registered redirect URI, so clients share `/api/auth/callback/google` with coaches: the state cookie carries
+  the kind (`coach` | `client` | `join:<CODE>`; a cookie without one is a coach attempt) and the callback hands
+  client kinds to `finishClientGoogle` (`routes/clientGoogle.ts`). Client failures go back to `/client/login`
+  or `/join/<CODE>` with `?google=<reason>` (`noaccount`, `link`, `badcode`, plus the coach reasons).
+- Rules: `Client.googleSub` first; else, only when Google owns the address (Gmail / Workspace hd), link the
+  client with that login email (new unguessable password, `clientSessionVersion` + 1) or, when joining,
+  attach the ONE client this coach invited at that address with no sign-in yet; else an address that already
+  signs in -> `link`; else join creates a client (pending if the coach approves); else `noaccount`.
+- Coach and client Google accounts never cross: separate columns (`Coach.googleSub` / `Client.googleSub`) and
+  separate cookies. `Client.lastGoogleAuthAt` is set on every client Google sign-in (Prompt 83 uses it).
+- Decided in review (Prompt 78): only a MISSING cookie kind means coach; an unknown or malformed kind is an
+  expired attempt. Client states start with `k~`, so a client whose cookie is gone still lands on the client
+  pages. The join code is re-validated (and encoded) before it goes into any redirect. On a join link, an
+  existing client account of ANOTHER coach is not signed in silently (`?google=othercoach`). A client password
+  reset or a used invite sets `googleSub = null` (inbox proof beats a Google link for an address Google does
+  not own). The attach-by-invite path runs in one transaction.
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints

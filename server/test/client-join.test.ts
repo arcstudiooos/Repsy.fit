@@ -336,6 +336,8 @@ describe("client password reset", () => {
     const upd = prismaMock.client.update.mock.calls[0][0];
     expect(upd.where).toEqual({ id: "c1" });
     expect(upd.data.clientSessionVersion).toEqual({ increment: 1 });
+    // Prompt 78: proving the inbox removes any linked Google sign-in.
+    expect(upd.data.googleSub).toBeNull();
     expect(await verifyPassword("new password 123", upd.data.passwordHash)).toBe(true);
     const again = await supertest(app).post("/api/client-auth/reset").send({ token: "tok", password: "new password 123" });
     expect(again.status).toBe(400);

@@ -27,7 +27,16 @@ import { dayHeading, localDateKey, timeRangeText, viewerTimeZone } from "../lib/
 import { ClientForgotSchema, ClientJoinSchema, ClientLoginSchema, ClientResetSchema, ClientSetPasswordSchema } from "../authSchemas";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
-import { InternalLink, TextField, inputClass, validate, type FieldErrors } from "./AuthPages";
+import { GOOGLE_ERRORS, GoogleButton, InternalLink, TextField, inputClass, validate, type FieldErrors } from "./AuthPages";
+
+/** Prompt 78: plain words for a client's Google attempt that came back without signing in. */
+const CLIENT_GOOGLE_ERRORS: Record<string, string> = {
+  ...GOOGLE_ERRORS,
+  link: "A client account with this email already exists. Sign in with your email and password.",
+  noaccount: "No client account for this Google account. Ask your coach for their join link.",
+  othercoach: "This Google account already has a Repsy client account with another coach. Sign in from the client sign-in page.",
+  badcode: "This join code is not valid. Please ask your coach for a new one.",
+};
 
 export const CLIENT_SIGN_IN_TITLE = "Client sign-in - Repsy Coach";
 
@@ -89,6 +98,7 @@ function ClientLoginPage() {
           Your password is set. Sign in with it below.
         </p>
       )}
+      <GoogleButton href="/api/client-auth/google/start" label="Continue with Google" errors={CLIENT_GOOGLE_ERRORS} />
       <form onSubmit={submit} noValidate aria-label={CLIENT_SIGN_IN_TITLE} className="mt-6 grid gap-4">
         <TextField id="client-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={errors.email} />
         <TextField
@@ -282,27 +292,34 @@ function JoinPage() {
           {checkEmail}
         </p>
       ) : (
-        <form onSubmit={submit} noValidate aria-label="Create your client account" className="mt-6 grid gap-4">
-          <TextField id="join-name" label="Your name" autoComplete="name" value={name} onChange={setName} error={errors.name} />
-          <TextField id="join-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={errors.email} />
-          <TextField
-            id="join-password"
-            label="Password (at least 10 characters)"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={setPassword}
-            error={errors.password}
+        <>
+          <GoogleButton
+            href={`/api/client-auth/google/start?code=${encodeURIComponent(code.toUpperCase())}`}
+            label="Continue with Google"
+            errors={CLIENT_GOOGLE_ERRORS}
           />
-          <ServerError message={serverError} />
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
-            {busy ? "Please wait..." : "Create account"}
-          </button>
-          <p className="text-center text-xs text-dim">
-            By creating an account you agree to the <a className="underline" href="/terms">Terms</a> and{" "}
+          <form onSubmit={submit} noValidate aria-label="Create your client account" className="mt-6 grid gap-4">
+            <TextField id="join-name" label="Your name" autoComplete="name" value={name} onChange={setName} error={errors.name} />
+            <TextField id="join-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={errors.email} />
+            <TextField
+              id="join-password"
+              label="Password (at least 10 characters)"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={setPassword}
+              error={errors.password}
+            />
+            <ServerError message={serverError} />
+            <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+              {busy ? "Please wait..." : "Create account"}
+            </button>
+          </form>
+          <p className="mt-3 text-center text-xs text-dim">
+            By creating an account (with Google or email) you agree to the <a className="underline" href="/terms">Terms</a> and{" "}
             <a className="underline" href="/privacy">Privacy Policy</a>.
           </p>
-        </form>
+        </>
       )}
       <p className="mt-5 text-center text-sm">
         <InternalLink to="/client/login">Already have an account? Sign in</InternalLink>

@@ -42,21 +42,47 @@ export function googleOrigin(cfg: GoogleConfig): string {
   return new URL(cfg.redirectUri).origin;
 }
 
-/** A fresh attempt: `state` (login-CSRF) and a PKCE `verifier` (RFC 7636), kept together in the cookie. */
-export function newAttempt(): { state: string; verifier: string; cookie: string } {
-  const state = crypto.randomBytes(24).toString("base64url");
+/**
+ * Who started the attempt (Prompt 78). Google only allows the ONE registered redirect URI, so coaches and
+ * clients share the callback; the kind travels in the server-set state cookie (__Host-, httpOnly):
+ *   "coach"         - the coach sign-in (Prompt 61 rules)
+ *   "client"        - a client signing in to an existing client account
+ *   "join:<CODE>"   - a client joining the coach whose join code this is (re-checked at the callback)
+ */
+export type AttemptKind = "coach" | "client" | `join:${string}`;
+
+/** Client attempts' `state` starts with this (base64url never contains "~"), so even when the state cookie
+ *  is gone the callback knows to send a CLIENT back to the client pages, never to the coach login. */
+export const CLIENT_STATE_PREFIX = "k~";
+
+/** A fresh attempt: `state` (login-CSRF), a PKCE `verifier` (RFC 7636) and the kind, kept together in the cookie. */
+export function newAttempt(kind: AttemptKind = "coach"): { state: string; verifier: string; cookie: string } {
+  const state = (kind === "coach" ? "" : CLIENT_STATE_PREFIX) + crypto.randomBytes(24).toString("base64url");
   const verifier = crypto.randomBytes(32).toString("base64url");
-  return { state, verifier, cookie: `${state}.${verifier}` };
+  return { state, verifier, cookie: `${state}.${verifier}.${kind}` };
 }
 
-/** The PKCE verifier from the cookie when the state Google echoed back matches it (constant time); else null. */
-export function verifierFor(cookie: string | undefined, fromQuery: unknown): string | null {
+const JOIN_KIND = /^join:[A-Z]{4}-[2-9A-HJKMNP-Z]{6}$/;
+
+/**
+ * The PKCE verifier and kind from the cookie when the state Google echoed back matches it (constant time);
+ * else null. Only a MISSING kind means coach (cookies from before Prompt 78); an unknown kind is refused.
+ */
+export function attemptFor(cookie: string | undefined, fromQuery: unknown): { verifier: string; kind: AttemptKind } | null {
   if (!cookie || typeof fromQuery !== "string" || !fromQuery) return null;
-  const [state, verifier] = cookie.split(".");
-  if (!state || !verifier) return null;
+  const [state, verifier, rawKind, extra] = cookie.split(".");
+  if (!state || !verifier || extra !== undefined) return null;
   const a = Buffer.from(state);
   const b = Buffer.from(fromQuery);
-  return a.length === b.length && crypto.timingSafeEqual(a, b) ? verifier : null;
+  if (!(a.length === b.length && crypto.timingSafeEqual(a, b))) return null;
+  if (rawKind === undefined || rawKind === "coach") return { verifier, kind: "coach" };
+  if (rawKind === "client" || JOIN_KIND.test(rawKind)) return { verifier, kind: rawKind as AttemptKind };
+  return null;
+}
+
+/** The PKCE verifier only (coach flow and older callers). */
+export function verifierFor(cookie: string | undefined, fromQuery: unknown): string | null {
+  return attemptFor(cookie, fromQuery)?.verifier ?? null;
 }
 
 export function googleAuthUrl(cfg: GoogleConfig, state: string, verifier: string): string {
