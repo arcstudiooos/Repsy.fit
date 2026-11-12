@@ -163,10 +163,14 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   deliberately left alone. If you ever write the deletes by hand instead, note that `Client.coachId`,
   `Assignment.coachId`, `ChatMessage.coachId` and `ProgressLog.coachId` are NULLABLE (null = unclaimed
   demo data), so a `deleteMany({ where: { coachId } })` would miss rows - match on the client ids too.
-- **Privacy and Terms (Prompt 73)** live at `/privacy` and `/terms` (`client/src/legal/LegalPages.tsx`,
-  their own lazy chunk, linked from the landing footer). They are **drafts for the owner's legal
-  review**, labelled as such at the top of the page and in the footer, with every gap marked
-  "To complete:". Do NOT present them as final legal documents or fill the gaps with invented claims.
+- **Privacy Policy and Terms of Service** live at `/privacy` and `/terms`. The text is in
+  `client/src/legal/content.json` (the one source). `LegalPages.tsx` renders it in the app, and
+  `client/scripts/prerender-legal.mjs` (run by `npm run build`) renders the same JSON to static
+  `dist/legal/privacy.html` / `terms.html`, which the server sends for those paths, so crawlers
+  (Google's OAuth branding review) see the full text without JavaScript. Published Nov 2026, with
+  a "Google user data" section (scopes, use, no selling/ads/AI training, the Limited Use statement)
+  that Google requires for "Continue with Google". Contact: `hello@repsy.fit`. Every claim must match
+  the app: if a feature or a provider changes, change content.json and the "Last updated" date.
 
 
 - **Business: plans and payments (Prompt 68) are RECORD-KEEPING ONLY.** No payment gateway,

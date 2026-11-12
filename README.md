@@ -192,7 +192,7 @@ Load the quick demo first, then the 6-month demo, to get all 13 clients.
   emails are not sent and invite links are shown to the coach to pass on by hand.
 - **Rate limits are per server process.** They reset when the server restarts, which is fine for
   one Render instance but would need a shared store to scale out.
-- **Privacy and Terms are drafts** at `/privacy` and `/terms`, pending the owner's legal review.
+- **Privacy Policy and Terms** at `/privacy` and `/terms` are published (Nov 2026) but have not been reviewed by a lawyer.
 - **CI takes about 8 minutes**, above the 5-minute target.
 - **Demo data is sample data.** Names and numbers are made up; delete any client at any time. It
   counts exactly like real entries, so a seeded client can top the Engagement leaderboard.

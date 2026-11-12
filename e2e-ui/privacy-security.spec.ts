@@ -1,4 +1,4 @@
-// Prompt 73: the Privacy and Terms drafts, the Clients permission line, the Account data note, and
+// Prompt 73 (+ published Nov 2026): the Privacy Policy and Terms, the Clients permission line, the Account data note, and
 // the type-to-confirm delete. Mocked API.
 import { expect, test, type Page } from "@playwright/test";
 
@@ -26,22 +26,47 @@ async function mockApp(page: Page, onDelete?: (body: unknown) => { status: numbe
   return sent;
 }
 
-test("the Privacy draft says what data, why, who sees it and how to delete it - and is labelled a draft", async ({ page }) => {
+test("the Privacy Policy covers data, Google user data, sharing, retention, deletion and contact", async ({ page }) => {
   await page.goto("/privacy");
-  await expect(page.getByRole("heading", { level: 1, name: "Privacy" })).toBeVisible();
-  // Labelled a draft at the top AND in the footer, so it can never read as a final legal document.
-  await expect(page.getByRole("note")).toContainText("Draft for legal review");
-  await expect(page.locator("footer")).toContainText("Draft, pending legal review");
-  for (const heading of ["What data is stored", "Why it is stored", "Who can see it", "How to get data deleted", "Security"]) {
+  await expect(page.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeVisible();
+  for (const heading of [
+    "The data we collect",
+    "Google user data",
+    "How we use data",
+    "Who we share data with",
+    "How long we keep data",
+    "Deleting your data and your rights",
+    "Security",
+    "Contact",
+  ]) {
     await expect(page.getByRole("heading", { level: 2, name: heading })).toBeVisible();
   }
-  // Gaps a lawyer must fill are marked, not quietly invented.
-  expect(await page.getByText("To complete:").count()).toBeGreaterThan(3);
-  // It must not claim a guarantee the app cannot keep.
-  await expect(page.locator("main")).toContainText("No security measure is perfect");
-  await expect(page.locator("main")).toContainText("No card or bank details are collected");
-  // It must not describe data the app never collects: there is no photo feature.
-  await expect(page.locator("main")).toContainText("The app does not store progress photos.");
+  const main = page.locator("main");
+  // What Google's OAuth review looks for: the scopes, the use, no selling, and the Limited Use statement.
+  await expect(main).toContainText("openid, email and profile");
+  await expect(main).toContainText("Limited Use requirements");
+  await expect(main.getByRole("link", { name: "myaccount.google.com/permissions" })).toHaveAttribute("href", "https://myaccount.google.com/permissions");
+  // No promises the app cannot keep, and no data the app never collects.
+  await expect(main).toContainText("we cannot guarantee absolute security");
+  await expect(main).toContainText("We do not collect or store any card or bank details");
+  await expect(main).toContainText("We do not collect or store progress photos");
+  // No draft placeholders left on a published page.
+  await expect(page.getByText("To complete:")).toHaveCount(0);
+  await expect(main.getByRole("link", { name: "hello@repsy.fit" }).first()).toHaveAttribute("href", "mailto:hello@repsy.fit");
+});
+
+test("the prerendered Privacy and Terms HTML is complete without JavaScript (what crawlers see)", async ({ browser }) => {
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  const page = await ctx.newPage();
+  await page.goto("/legal/privacy.html");
+  await expect(page.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Google user data" })).toBeVisible();
+  await expect(page.locator("main")).toContainText("Limited Use requirements");
+  expect(await page.locator("main h2").count()).toBeGreaterThanOrEqual(12);
+  await page.goto("/legal/terms.html");
+  await expect(page.getByRole("heading", { level: 1, name: "Terms of Service" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Acceptable use" })).toBeVisible();
+  await ctx.close();
 });
 
 /** Relative luminance contrast ratio, so "readable" is measured, not assumed. */
@@ -70,27 +95,26 @@ async function contrast(page: Page, selector: string): Promise<number> {
   }, selector);
 }
 
-test("the legal pages are readable: light theme, and the draft notice meets WCAG AA", async ({ page }) => {
+test("the legal pages are readable: light theme, and text meets WCAG AA", async ({ page }) => {
   for (const path of ["/privacy", "/terms"]) {
     await page.goto(path);
     // The pages use the landing page's cream theme, not the dashboard's dark one.
     await expect(page.locator("div.landing-cream").first()).toHaveCSS("background-color", "rgb(250, 247, 242)");
-    // The draft label is the whole point of the page: it must be clearly legible (AA body text = 4.5).
-    expect(await contrast(page, "[role=note]"), `draft notice contrast on ${path}`).toBeGreaterThan(4.5);
+    expect(await contrast(page, "main section p"), `body contrast on ${path}`).toBeGreaterThan(4.5);
     expect(await contrast(page, "h1"), `heading contrast on ${path}`).toBeGreaterThan(4.5);
   }
 });
 
-test("the Terms draft is a draft, and does not invent liability or pricing claims", async ({ page }) => {
+test("the Terms say what Repsy is and is not, without inventing a price", async ({ page }) => {
   await page.goto("/terms");
-  await expect(page.getByRole("heading", { level: 1, name: "Terms" })).toBeVisible();
-  await expect(page.getByRole("note")).toContainText("Draft for legal review");
-  await expect(page.locator("footer")).toContainText("Draft, pending legal review");
-  await expect(page.getByRole("heading", { level: 2, name: "Liability and the rest" })).toBeVisible();
-  // The liability and paid-plan sections are explicitly left for a lawyer.
-  await expect(page.locator("main")).toContainText("must be drafted by a lawyer");
-  await expect(page.locator("main")).toContainText("The app does not take payments today");
-  await expect(page.locator("main")).toContainText("It is not a payment service");
+  await expect(page.getByRole("heading", { level: 1, name: "Terms of Service" })).toBeVisible();
+  for (const heading of ["Your account", "Acceptable use", "Disclaimers and liability", "Contact"]) {
+    await expect(page.getByRole("heading", { level: 2, name: heading })).toBeVisible();
+  }
+  const main = page.locator("main");
+  await expect(main).toContainText("Repsy is not a payment service");
+  await expect(main).toContainText("you will not be charged without agreeing to them");
+  await expect(page.getByText("To complete:")).toHaveCount(0);
 });
 
 test("the landing footer links to both pages (no more 'coming soon')", async ({ page }) => {
@@ -99,7 +123,7 @@ test("the landing footer links to both pages (no more 'coming soon')", async ({ 
   await expect(legal.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
   await expect(legal.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
   await legal.getByRole("link", { name: "Privacy" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Privacy" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeVisible();
 });
 
 test("Clients carries the permission line", async ({ page }) => {

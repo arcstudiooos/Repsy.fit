@@ -144,6 +144,12 @@ if (fs.existsSync(clientDist)) {
       },
     }),
   );
+  // Privacy and Terms are sent as prerendered HTML (client/scripts/prerender-legal.mjs), so crawlers
+  // such as Google's OAuth branding review read the full text without running JavaScript.
+  for (const page of ["privacy", "terms"]) {
+    const file = path.join(clientDist, "legal", `${page}.html`);
+    app.get(`/${page}`, (_req, res, next) => (fs.existsSync(file) ? res.sendFile(file) : next()));
+  }
   app.get("*", (req, res) => {
     // Pages whose URL carries a one-time token (invite, password reset) never send it on as a Referer.
     if (req.path === "/client/set-password" || req.path === "/reset-password") res.setHeader("Referrer-Policy", "no-referrer");
