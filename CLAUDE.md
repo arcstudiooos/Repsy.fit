@@ -112,7 +112,8 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - **Landing colours:** the tokens above, plus tints and mixes of them made with `rgba()` /
   `color-mix()` (graph-paper lines from `--border`, paper tones mixed from `--amber` and
   `#141414`). No new hex colours. Rules in `client/src/landing/DESIGN.md`.
-- **Studio landing** (`client/src/landing-new/`, Nov 2026, preview at `/?design=studio`): the
+- **Studio landing** (`client/src/landing-new/`, Nov 2026): the DEFAULT `/` since the owner switched it on (the
+  A1 clipboard landing stays at `/?design=classic`, its 3D hero at `/?hero=3d`). The
   owner asked for a page with the scroll scenes and motion of a reference site (bharpai.app),
   then for it to be restyled in Repsy's own theme. It copies the reference's layout and motion
   only, never its words, logo, story or art; every claim is a shipped Repsy feature. Theme: the

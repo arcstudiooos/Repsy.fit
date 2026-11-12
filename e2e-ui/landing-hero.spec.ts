@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const hero = (page: Page) => page.locator("section[aria-labelledby=hero-title]");
 
-async function open(page: Page, path = "/") {
+async function open(page: Page, path = "/?design=classic") {
   const scripts: string[] = [];
   page.on("request", (req) => {
     if (req.resourceType() === "script") scripts.push(new URL(req.url()).pathname);

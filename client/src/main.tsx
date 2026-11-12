@@ -9,9 +9,12 @@ import "./index.css";
 // Each side is its own lazy chunk, so the landing page's 3D / animation code never loads in /app.
 const App = lazy(() => import("./App"));
 const Landing = lazy(() => import("./landing/Landing"));
-// The "Studio" landing (Nov 2026), previewed at /?design=studio. Its own lazy chunk.
+// The "Studio" landing (Nov 2026) is the default "/" since the owner switched it on. The earlier A1
+// clipboard landing stays reachable at /?design=classic (and /?hero=3d for its 3D hero). Each is its
+// own lazy chunk.
 const StudioLanding = lazy(() => import("./landing-new/StudioLanding"));
-const studio = new URLSearchParams(window.location.search).get("design") === "studio";
+const landingParams = new URLSearchParams(window.location.search);
+const studio = landingParams.get("design") !== "classic" && !landingParams.has("hero");
 // Privacy / Terms (Prompt 73): drafts for legal review, their own lazy chunk.
 const PrivacyPage = lazy(() => import("./legal/LegalPages").then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import("./legal/LegalPages").then((m) => ({ default: m.TermsPage })));

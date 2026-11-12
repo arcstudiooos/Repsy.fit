@@ -40,7 +40,7 @@ const panel = (page: Page) => page.getByRole("tabpanel");
 const tab = (page: Page, name: string) => page.getByRole("tab", { name });
 
 test("1. the landing page loads (3D or fallback) and the lead form saves", async () => {
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   // Either the real 3D canvas or the poster fallback - both are a pass, neither may be missing.
   const hero = page.locator("section[aria-labelledby=hero-title]");

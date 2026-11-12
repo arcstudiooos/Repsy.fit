@@ -18,7 +18,7 @@ async function open(page: Page): Promise<Mock> {
     }
     return route.fulfill({ json: [] });
   });
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await expect(page.locator("#pricing").getByTestId("plan")).toHaveCount(3);
   return mock;
 }

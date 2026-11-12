@@ -18,7 +18,7 @@ async function open(page: Page) {
     }
   });
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
-  await page.goto("/#demo");
+  await page.goto("/?design=classic#demo");
   await expect(widget(page)).toBeVisible();
   return network;
 }

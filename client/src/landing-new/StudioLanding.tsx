@@ -106,7 +106,7 @@ function Footer() {
           </p>
         </div>
         {cols.map(([h, links]) => (
-          <div key={h}>
+          <nav key={h} aria-label={h}>
             <p className="text-[0.72rem] font-bold uppercase tracking-wider" style={{ color: "var(--mute)" }}>
               {h}
             </p>
@@ -119,7 +119,7 @@ function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </nav>
         ))}
       </div>
       <p

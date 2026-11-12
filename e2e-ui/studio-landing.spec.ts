@@ -85,9 +85,12 @@ test("one h1, every section in order, nav anchors resolve, footer links to real 
   for (let i = 1; i < levels.length; i++) expect(levels[i] - levels[i - 1]).toBeLessThanOrEqual(1);
 });
 
-test("the default / is unchanged (the Studio page is opt-in)", async ({ page }) => {
+test("the default / is the Studio page; the classic landing stays at /?design=classic", async ({ page }) => {
   await page.route("**/api/**", (r) => r.fulfill({ json: [] }));
   await page.goto("/");
+  await expect(page.getByTestId("studio-landing")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await page.goto("/?design=classic");
   await expect(page.getByTestId("studio-landing")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 });

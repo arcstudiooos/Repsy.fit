@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function open(page: Page) {
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await expect(page.locator("#pricing")).toBeAttached();
 }
 

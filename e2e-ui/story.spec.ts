@@ -6,7 +6,7 @@ const WEIGHT = "74.1 kg";
 
 async function open(page: Page) {
   await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await expect(story(page).locator("[data-story=progress]")).toBeAttached();
 }
 

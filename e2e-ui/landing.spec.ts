@@ -21,7 +21,7 @@ function trackScripts(page: Page) {
 
 test("/ is the landing page: one h1, sticky header with logo, nav, Start free, cream sections, footer", async ({ page }) => {
   const apiCalls = await mockApi(page);
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("tab")).toHaveCount(0); // not the dashboard
 
@@ -64,7 +64,7 @@ test("/ is the landing page: one h1, sticky header with logo, nav, Start free, c
 
 test("landing copy sticks to shipped features: no testimonials, logos or user counts", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await expect(page.locator("#features")).toContainText("Plan by hand");
   const text = (await page.locator("body").textContent()) ?? "";
   for (const fact of ["AI Coach, with the reasoning shown", "Plan by hand", "sets, reps and rest", "Progress you can see", "sample client"]) {
@@ -77,7 +77,7 @@ test("landing copy sticks to shipped features: no testimonials, logos or user co
 
 test("Start free opens the dashboard at /app with all 9 tabs", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/");
+  await page.goto("/?design=classic");
   await page.locator("header").getByRole("link", { name: "Start free" }).click();
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
