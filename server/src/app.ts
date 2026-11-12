@@ -17,6 +17,7 @@ import { messagesRouter, threadsRouter } from "./routes/messages.js";
 import { clientAuthRouter } from "./routes/clientAuth.js";
 import { clientJoinRouter } from "./routes/clientJoin.js";
 import { clientGoogleRouter } from "./routes/clientGoogle.js";
+import { clientAppRouter } from "./routes/clientApp.js";
 import { clientInviteRouter } from "./routes/clientInvite.js";
 import { businessRouter, clientPlanRouter } from "./routes/business.js";
 import { appointmentsRouter } from "./routes/appointments.js";
@@ -127,6 +128,8 @@ app.use("/api/client-auth", clientAuthRouter);
 app.use("/api/client-auth", clientJoinRouter);
 // Prompt 78: Continue with Google for clients (the callback is shared: routes/googleAuth.ts).
 app.use("/api/client-auth", clientGoogleRouter);
+// Prompt 79: the client app - the client's own plans, and marking them done.
+app.use("/api/client-auth", clientAppRouter);
 
 // Unknown API routes return JSON 404 instead of the client page.
 // "Not found" is reserved for missing routes (see API contract in CLAUDE.md).

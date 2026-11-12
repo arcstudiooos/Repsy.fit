@@ -85,6 +85,10 @@ const CLIENT_ROUTES: [string, string][] = [
   // Prompt 77: the welcome questions.
   ["get", "/api/client-auth/me/profile"],
   ["patch", "/api/client-auth/me/profile"],
+  // Prompt 79: the client's own plans.
+  ["get", "/api/client-auth/my-assignments?from=2026-11-10&to=2026-11-16"],
+  ["get", "/api/client-auth/my-assignments/a1"],
+  ["post", "/api/client-auth/my-assignments/a1/done"],
 ];
 
 const send = (method: string, url: string, cookie?: string) => {

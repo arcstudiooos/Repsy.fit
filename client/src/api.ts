@@ -61,6 +61,7 @@ import type {
   ReviewQueue,
   JoinCode,
   JoinResult,
+  ClientAssignment,
   ClientProfile,
   ThreadMessage,
   ThreadSummary,
@@ -274,6 +275,12 @@ export const clientJoin = (input: { code: string; name: string; email: string; p
 export const getMyProfile = () => request<ClientProfile>("GET", "/client-auth/me/profile");
 export const saveMyProfile = (input: Partial<Omit<ClientProfile, "level">> & { level?: string; skip?: boolean }) =>
   request<void>("PATCH", "/client-auth/me/profile", input);
+/** Prompt 79: the client's own plans, and marking one done (with effort 1-10 and a note) or not done. */
+export const getMyAssignments = (from: string, to: string) =>
+  request<ClientAssignment[]>("GET", `/client-auth/my-assignments?from=${enc(from)}&to=${enc(to)}`);
+export const getMyAssignment = (id: string) => request<ClientAssignment>("GET", `/client-auth/my-assignments/${enc(id)}`);
+export const markMyAssignment = (id: string, body: { done: boolean; effort?: number | null; note?: string }) =>
+  request<ClientAssignment>("POST", `/client-auth/my-assignments/${enc(id)}/done`, body);
 export const clientForgotPassword = (email: string) => request<{ message: string }>("POST", "/client-auth/forgot", { email });
 export const clientResetPassword = (token: string, password: string) =>
   request<void>("POST", "/client-auth/reset", { token, password });
@@ -417,6 +424,8 @@ export const queryKeys = {
   clientAccount: ["client-account", "me"] as const,
   myPlan: ["client-account", "my-plan"] as const,
   myProfile: ["client-account", "profile"] as const,
+  myAssignments: (from: string, to: string) => ["client-account", "assignments", from, to] as const,
+  myAssignment: (id: string) => ["client-account", "assignment", id] as const,
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,

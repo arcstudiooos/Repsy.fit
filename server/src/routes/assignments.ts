@@ -118,7 +118,14 @@ assignmentsRouter.patch(
     if (!assignment) return;
     const updated = await prisma.assignment.update({
       where: { id: assignment.id },
-      data: { status: parsed.data.status },
+      // Prompt 79: record who completed it. Re-marking Done keeps the original completion (and the
+      // client's effort / note); moving it out of Done clears who / when and the client's effort / note.
+      data:
+        parsed.data.status === "Done"
+          ? assignment.status === "Done"
+            ? { status: "Done" }
+            : { status: "Done", completedAt: new Date(), completedBy: "coach" }
+          : { status: parsed.data.status, completedAt: null, completedBy: null, clientEffort: null, clientNote: "" },
     });
     res.json(updated);
   }),

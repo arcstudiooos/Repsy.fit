@@ -101,7 +101,7 @@ test("welcome questions: lb converts to kg, injuries are sent, then the client h
   await page.getByLabel("Training experience").selectOption("Intermediate");
   await page.getByLabel("Injuries or anything your coach should know").fill("Left knee");
   await page.getByRole("button", { name: "Save and continue" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Hi, Maya Patel" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
   expect(sent.at(-1)).toEqual({
     path: "/api/client-auth/me/profile",
     body: { goal: "Muscle gain", age: 29, heightCm: 165, weightKg: 68, level: "Intermediate", units: "lb", injuries: "Left knee" },
@@ -118,7 +118,7 @@ test("welcome questions check ranges, and Skip for now saves nothing else", asyn
   await expect(page.getByText("Enter your weight in kg (20 to 500).")).toBeVisible();
   expect(sent).toEqual([]);
   await page.getByRole("button", { name: "Skip for now" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Hi, Maya Patel" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
   expect(sent).toEqual([{ path: "/api/client-auth/me/profile", body: { skip: true } }]);
 });
 

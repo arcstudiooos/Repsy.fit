@@ -62,6 +62,26 @@ export interface Assignment {
   status: AssignmentStatus;
   date: DateString;
   createdAt: string;
+  /** Prompt 79: when it was marked Done and by whom; the client's effort (1-10) and note if THEY did. */
+  completedAt?: string | null;
+  completedBy?: "coach" | "client" | null;
+  clientEffort?: number | null;
+  clientNote?: string;
+}
+
+/** Prompt 79: what a CLIENT sees of one of their assignments (no coach id, no AI / manual source). */
+export interface ClientAssignment {
+  id: string;
+  type: AssignmentType;
+  title: string;
+  details: string;
+  reasoning: string;
+  status: "Active" | "Done";
+  date: DateString;
+  completedAt: string | null;
+  completedBy: "coach" | "client" | null;
+  clientEffort: number | null;
+  clientNote: string;
 }
 
 export interface ChatMessage {

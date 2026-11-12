@@ -467,6 +467,26 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   reset or a used invite sets `googleSub = null` (inbox proof beats a Google link for an address Google does
   not own). The attach-by-invite path runs in one transaction.
 
+### The client app (Prompt 79)
+- `/client` (Today), `/client/week`, `/client/plan/:id`, `/client/me` - all render `clientApp/ClientApp.tsx`
+  (its own lazy chunk) inside the `client-home` route. Phone: a bottom tab bar; wider: the same tabs in the
+  header (the no-side-menu rule holds). My plan / My sessions / My streaks moved to the Me tab
+  (`clientApp/sections.tsx`).
+- Plans come only from the client's own routes (`/api/client-auth/my-assignments...`, `requireActiveClient`):
+  Active and Done only (never Paused), at most 62 days per request, no `coachId` / `source` in the reply.
+- A client can only mark a plan done / not done, with an optional effort (1-10) and note (<= 500). The body
+  is strict: any other field is a 400. `Assignment.completedAt / completedBy ("coach" | "client") /
+  clientEffort / clientNote`. The coach's status PATCH sets `completedBy "coach"` when it moves a plan INTO
+  Done, keeps an existing completion when re-marking Done, and clears who / when when leaving Done. The
+  Manual Planner card shows "Done by client" with the effort and note.
+- Plan detail reads the Manual Planner lines (`1. Name — 4 sets × 6 reps · Rest 120s`, `clientApp/planLines.ts`)
+  into a checklist (kept in localStorage only) and a rest timer (wall-clock based, "Rest over" via aria-live).
+  Other text (AI plans) shows as written. `TYPE_CHIP` now lives in `lib/typeChip.ts`.
+- Decided in review (Prompt 79): marking done only completes a still-Active plan (an already-Done plan keeps
+  who finished it); leaving Done (coach or client) clears the effort and note too; Undo asks first when an
+  effort or note would be lost. Progress / Messages tabs arrive with Prompts 81 / 82 (no empty placeholders).
+  Desktop tabs sit in the header, not a left rail, because of the no-side-menu rule. Effort uses native radios.
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -557,6 +577,9 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getClientAccount()` | GET | `/api/client-auth/me` | — | `{ id, name, loginEmail, joinStatus, coachName, needsWelcome }` (own coach's name only). `requireClient`. (Prompt 65, extended in 77) |
 | `getMyProfile()` / `saveMyProfile(input)` | GET / PATCH | `/api/client-auth/me/profile` | PATCH `{ goal?, age? (13-120), heightCm? (50-300), weightKg? (20-500), level?, units? ("kg"\|"lb"), injuries? (<=1000), skip? }`, nothing else (400 `Only the welcome questions can be changed here.`) | GET `{ goal, age, heightCm, weightKg, level, units, injuries }` (injuries = the client's own "From client:" line only); PATCH 204, sets `onboardedAt`. `requireClient` (pending clients may answer). (Prompt 77) |
 | `clientForgotPassword(email)` / `clientResetPassword(token, password)` | POST | `/api/client-auth/forgot`, `/api/client-auth/reset` | `{ email }` / `{ token, password }` | forgot: always 200 `{ message }`; reset: 204, 400 `This reset link is not valid any more...`. Rate limited. (Prompt 77) |
+| `getMyAssignments(from, to)` | GET | `/api/client-auth/my-assignments?from&to` | — | `ClientAssignment[]` `{ id, type, title, details, reasoning, status ("Active"\|"Done"), date, completedAt, completedBy, clientEffort, clientNote }`, oldest first; 400 bad dates / `from` after `to` / over 62 days. `requireActiveClient`. (Prompt 79) |
+| `getMyAssignment(id)` | GET | `/api/client-auth/my-assignments/:id` | — | `ClientAssignment`; 404 `Plan not found` (also Paused or another client's). `requireActiveClient`. (Prompt 79) |
+| `markMyAssignment(id, body)` | POST | `/api/client-auth/my-assignments/:id/done` | `{ done: boolean, effort?: 1-10 \| null, note?: string <= 500 }` (strict) | the updated `ClientAssignment`; 404 as above; 400 validation. Rate limited per client. `requireActiveClient`. (Prompt 79) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |
 | `regenerateJoinCode()` | POST | `/api/join-code/regenerate` | — | `JoinCode` with a NEW code; the old code stops working at once. Rate limited per coach (20 / 15 min). Needs `requireCoach`. (Prompt 76) |
 | `updateJoinCode(patch)` | PATCH | `/api/join-code` | `{ active?: boolean, approveNewClients?: boolean }` (at least one; nothing else) | `JoinCode`. 400 `Nothing to change.` / `active must be true or false.` / `Only active and approveNewClients can be changed.` Needs `requireCoach`. (Prompt 76) |

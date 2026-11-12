@@ -178,7 +178,7 @@ test("the client's own My plan: name, status, next due, last payment date - no a
     }
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });
-  await page.goto("/client");
+  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
   const mine = page.getByRole("region", { name: "My plan" });
   await expect(mine).toContainText("Monthly coaching");
   await expect(mine).toContainText("Active");
@@ -194,7 +194,7 @@ test("a client with no plan sees a plain note", async ({ page }) => {
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: null, lastPaymentDate: null } });
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });
-  await page.goto("/client");
+  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
   await expect(page.getByRole("region", { name: "My plan" })).toContainText("Your coach has not set up a plan for you yet.");
 });
 

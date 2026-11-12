@@ -248,7 +248,7 @@ test("client /client shows My sessions: their own upcoming sessions in local tim
     }
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });
-  await page.goto("/client");
+  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
   const mine = page.getByRole("region", { name: "My sessions" });
   const rows = mine.getByRole("listitem");
   await expect(rows).toHaveCount(2);
@@ -270,7 +270,7 @@ test("client with no sessions sees a plain note", async ({ page }) => {
     if (path === "/api/client-auth/my-sessions") return route.fulfill({ json: { sessions: [] } });
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });
-  await page.goto("/client");
+  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
   await expect(page.getByRole("region", { name: "My sessions" })).toContainText("No upcoming sessions.");
 });
 

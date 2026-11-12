@@ -12,6 +12,7 @@ import {
 } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { Assignment, AssignmentType, ChatMessage, Client } from "../types";
+import { TYPE_CHIP } from "../lib/typeChip";
 
 type Props = { client: Client | null; onOpenPlanner: () => void };
 
@@ -24,13 +25,8 @@ const QUICK_PROMPTS = [
   "Make a nutrition plan",
 ];
 
-// Chip background in the type colour; text picked per colour for readable contrast.
-export const TYPE_CHIP: Record<AssignmentType, string> = {
-  Workout: "bg-type-workout text-on-accent",
-  Nutrition: "bg-type-nutrition text-white",
-  Habit: "bg-type-habit text-on-accent",
-  Recovery: "bg-type-recovery text-white",
-};
+// The type chip colours live in lib/typeChip.ts (shared with the client app); re-exported for old imports.
+export { TYPE_CHIP };
 
 const secondaryButton =
   "rounded-lg border border-border bg-surface2 px-3 py-1.5 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60";

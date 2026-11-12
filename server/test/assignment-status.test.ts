@@ -46,12 +46,17 @@ describe("PATCH /api/clients/:clientId/assignments/:assignmentId", () => {
     expect(prisma.assignment.findFirst).toHaveBeenCalledWith({
       where: { id: stored.id, clientId: client.id, coachId: TEST_COACH_ID },
     });
-    expect(prisma.assignment.update).toHaveBeenCalledWith({ where: { id: stored.id }, data: { status } });
+    // Prompt 79: Done also records who completed it and when; leaving Done clears them.
+    const data = prisma.assignment.update.mock.calls[0][0].data;
+    expect(prisma.assignment.update.mock.calls[0][0].where).toEqual({ id: stored.id });
+    if (status === "Done") expect(data).toEqual({ status, completedAt: expect.any(Date), completedBy: "coach" });
+    else expect(data).toEqual({ status, completedAt: null, completedBy: null, clientEffort: null, clientNote: "" });
   });
 
   it("changes only the status, even when other fields are sent", async () => {
     await request(app).patch(path).send({ status: "Done", title: "Hacked", clientId: "other", coachId: "other" });
-    expect(prisma.assignment.update.mock.calls[0][0].data).toEqual({ status: "Done" });
+    // Only the status (plus who / when completed it - Prompt 79): never the title, client or coach.
+    expect(prisma.assignment.update.mock.calls[0][0].data).toEqual({ status: "Done", completedAt: expect.any(Date), completedBy: "coach" });
   });
 
   it.each([

@@ -260,6 +260,12 @@ model Assignment {
   /// YYYY-MM-DD
   date      String
   createdAt DateTime @default(now())
+  /// Prompt 79: when it was marked Done, and by whom ("coach" | "client"). NULL while not done.
+  completedAt  DateTime?
+  completedBy  String?
+  /// Prompt 79: the client's own "how hard was it" (1-10) and note when THEY finished it.
+  clientEffort Int?
+  clientNote   String   @default("")
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 

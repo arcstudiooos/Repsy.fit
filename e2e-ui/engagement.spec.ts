@@ -62,7 +62,7 @@ function mockClient(page: import("@playwright/test").Page, streaks: Record<strin
 
 test("/client shows My streaks with the client's own three numbers, and no rank", async ({ page }) => {
   await mockClient(page, { date: "2026-11-12", checkInStreak: 4, habitPercent: 57, workoutsThisWeek: 2, enoughData: true });
-  await page.goto("/client");
+  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
   const mine = page.getByRole("region", { name: "My streaks" });
   await expect(mine).toContainText("Check-in streak 4 days");
   await expect(mine).toContainText("57%");
@@ -72,6 +72,6 @@ test("/client shows My streaks with the client's own three numbers, and no rank"
 
 test("/client My streaks says Not enough data yet for a new client", async ({ page }) => {
   await mockClient(page, { date: "2026-11-12", checkInStreak: 0, habitPercent: null, workoutsThisWeek: 0, enoughData: false });
-  await page.goto("/client");
+  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
   await expect(page.getByRole("region", { name: "My streaks" })).toContainText("Not enough data yet");
 });

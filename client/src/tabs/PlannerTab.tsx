@@ -200,6 +200,16 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
           {plainErrorMessage(error)}
         </p>
       )}
+      {/* Prompt 79: the client finished it themselves, from their app. */}
+      {isDone && assignment.completedBy === "client" && (
+        <div className="mt-2 rounded-lg border border-border bg-surface2 px-3 py-2 text-sm">
+          <p className="font-semibold text-accent2">
+            Done by client
+            {assignment.clientEffort != null && <span className="font-normal text-text"> · Effort {assignment.clientEffort}/10</span>}
+          </p>
+          {assignment.clientNote && <p className="mt-1 whitespace-pre-wrap text-text">“{assignment.clientNote}”</p>}
+        </div>
+      )}
       <p className="mt-2 whitespace-pre-wrap text-sm text-text">{assignment.details}</p>
       {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {assignment.reasoning}</p>}
     </li>
