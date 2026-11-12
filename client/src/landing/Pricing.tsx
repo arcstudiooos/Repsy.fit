@@ -8,7 +8,7 @@ const PLANS = [
     features: [
       "AI Coach answers with each client's context",
       "Suggested plans with reasoning - you approve each one",
-      "Auto-assign Workout, Nutrition, Habit and Recovery plans",
+      "AI drafts of Workout, Nutrition, Habit and Recovery plans you review",
       "Manual Planner with exercise library, sets, reps and rest",
       "Weekly check-ins and progress charts",
     ],

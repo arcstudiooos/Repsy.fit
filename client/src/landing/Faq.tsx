@@ -2,7 +2,7 @@
 export const FAQS: [string, string][] = [
   [
     "What does Repsy Coach do?",
-    "It's a dashboard for coaching many clients. Ask the AI Coach about a client and it answers using their goal, level, plans and check-ins. It can suggest or auto-assign Workout, Nutrition, Habit and Recovery plans with the reasoning attached, and the Progress tab charts each client's weekly check-ins.",
+    "It's a dashboard for coaching many clients. Ask the AI Coach about a client and it answers using their goal, level, plans and check-ins. It drafts Workout, Nutrition, Habit and Recovery plans with the reasoning attached, which you assign as-is or edit first, and the Progress tab charts each client's weekly check-ins.",
   ],
   [
     "Who is it for?",

@@ -653,7 +653,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `deleteAssignment(clientId, assignmentId)` | DELETE | `/api/clients/:clientId/assignments/:assignmentId` | — | 204, no body |
 | `listChat(clientId)` | GET | `/api/clients/:clientId/chat` | — | `ChatMessage[]` |
 | `askAI(clientId, question)` | POST | `/api/clients/:clientId/chat` | `{ "question": string }` | `{ "question": ChatMessage, "reply": ChatMessage, "suggestion": AiSuggestion \| null }` (201) |
-| `autoAssign(clientId, input)` | POST | `/api/clients/:clientId/auto-assign` | `AutoAssignInput` (`{ "type": AssignmentType, "date"?: "YYYY-MM-DD" }`) | `Assignment[]` (201; the ONE new saved assignment) |
+| `autoAssign(clientId, input)` | POST | `/api/clients/:clientId/auto-assign` | `AutoAssignInput` (`{ "type": AssignmentType, "date"?: "YYYY-MM-DD" }`) | `{ draft: { type, title, details, reasoning, date } }` (200; NOTHING saved - the coach assigns it, as-is or edited, with `createAssignment`; owner's rule since Nov 2026) |
 | `listProgress(clientId)` | GET | `/api/clients/:clientId/progress` | — | `ProgressLog[]` |
 | `addProgressLog(clientId, input)` | POST | `/api/clients/:clientId/progress` | `NewProgressLog` | `ProgressLog` |
 | `deleteProgressLog(clientId, logId)` | DELETE | `/api/clients/:clientId/progress/:logId` | — | 204, no body |
@@ -819,12 +819,13 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   an assignment that is not this client's (or does not exist) -> `404 {"error":"Assignment not found"}`.
 - **Nothing from the AI is auto-saved.** A suggestion becomes an assignment only when the coach
   taps "Assign to client" (`source: "ai"`, today's local date); "Dismiss" saves nothing.
-  The one exception is auto-assign below, which the coach requests explicitly per type.
+  No exceptions (owner, Nov 2026): the type buttons make drafts too.
 - `POST /api/clients/:clientId/auto-assign` (body `{ type, date? }`, `date` default today UTC; the UI
   sends today's local date): asks the AI for ONE complete plan of that type with the same client
-  context as chat, SAVES it (`source: "ai"`, status Active) and replies 201 `[assignment]`. If the
-  AI is not configured or its call / JSON fails it saves nothing and replies
-  `502 {"error":"The AI couldn't create a plan right now. Nothing was saved - please try again."}`.
+  context as chat and replies 200 `{ draft: { type, title, details, reasoning, date } }`, saving NOTHING.
+  The AI Coach tab shows it in the suggestion card (Assign to client / Edit / Review later / Dismiss);
+  Edit changes title, details and why before assigning. If the AI is not configured or its call / JSON
+  fails it replies `502 {"error":"The AI couldn't create a plan right now. Please try again."}`.
   No chat messages are written.
 - **Chat messages have no public write route.** They are saved only server-side with
   `saveMessage(clientId, role, content, coachId)` (`server/src/routes/chat.ts`), which the ask endpoint

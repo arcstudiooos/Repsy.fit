@@ -19,7 +19,7 @@ Sign in at `/login` (or create an account at `/register`). Each coach sees only 
 | Tab | What it does |
 |---|---|
 | **Home** | Today's Tasks (today's appointments first, then plans due today), new check-ins, **Needs attention** (the smart alerts, each with its reason: low adherence, no recent check-in, weight moving against the goal, or poor sleep), the AI weekly summary, and the review queue of parked AI suggestions and new check-ins. |
-| **AI Coach** | Chat with the AI about the selected client, with their profile, recent plans and check-ins as context. A suggestion card you can assign in one tap, or park in the review queue, and one-tap auto-assign for a Workout, Nutrition, Habit or Recovery plan. |
+| **AI Coach** | Chat with the AI about the selected client, with their profile, recent plans and check-ins as context. A suggestion card you can assign in one tap, or park in the review queue, and one-tap AI drafts of a Workout, Nutrition, Habit or Recovery plan that you assign as-is, edit first, or dismiss. |
 | **Clients** | All clients as cards: add, open in the AI Coach, delete (everything that belongs to them goes too), and invite a client to sign in. Demo data buttons. |
 | **Manual Planner** | The client's plans, newest first, filterable by type. Build a plan by hand or from a Library template; for a Workout, search the exercise library and set sets, reps and rest. Mark plans Active, Done or Paused. |
 | **Progress** | Stat cards, weight and adherence charts, assignments by type, a weekly check-in form and the history. |
@@ -143,7 +143,7 @@ built client and the API, and applies migrations on start).
 | `NODE_ENV` | Recommended in production | Set it to `production` in the Render dashboard. Session cookies are marked `Secure` when `NODE_ENV=production` **or** Render's own `RENDER` variable is set, so they are secure on Render either way. |
 
 Without the AI values the app still works: the AI Coach gives a fallback answer built from the
-client's data, and auto-assign says "Nothing was saved".
+client's data, and the AI draft buttons show an error (nothing is saved).
 
 ## Tests
 

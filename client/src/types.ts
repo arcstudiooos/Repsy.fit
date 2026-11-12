@@ -205,7 +205,7 @@ export type NewAssignment = Pick<Assignment, "type" | "title" | "details"> &
     mealIds?: string[];
   };
 
-/** Auto-assign body: the plan type; date defaults to today (UTC). */
+/** AI draft request body: the plan type; date defaults to today (UTC). Nothing is saved. */
 export type AutoAssignInput = { type: AssignmentType; date?: DateString };
 
 /** One row of Today's Tasks (Home tab): a plan due today, or a client with no plan in 7+ days. */

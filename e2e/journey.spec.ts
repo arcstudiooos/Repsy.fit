@@ -79,13 +79,17 @@ test("3. assign from the AI suggestion", async ({ page, request }) => {
   await expect.poll(async () => (await counts(request, idA)).assignments, { timeout: 30_000 }).toBe(1);
 });
 
-test("4. auto-assign a Nutrition plan", async ({ page, request }) => {
-  test.skip(!aiWorks, "Auto-assign needs a working AI; without it the app correctly shows 'Nothing was saved'.");
+test("4. draft a Nutrition plan with AI, then assign it", async ({ page, request }) => {
+  test.skip(!aiWorks, "AI drafts need a working AI; without it the app correctly shows an error and saves nothing.");
   const before = (await counts(request, idA)).assignments;
   await page.goto("/app");
   await selectClient(page, A);
-  await panel(page).getByRole("group", { name: "Auto-assign" }).getByRole("button", { name: /Nutrition/ }).click();
-  await expect(panel(page).getByRole("region", { name: "Auto-assigned plan" })).toBeVisible({ timeout: 90_000 });
+  await panel(page).getByRole("group", { name: "Draft a plan with AI" }).getByRole("button", { name: /Nutrition/ }).click();
+  const draft = panel(page).getByRole("region", { name: "AI draft" });
+  await expect(draft).toBeVisible({ timeout: 90_000 });
+  // A draft is not saved until the coach assigns it.
+  expect((await counts(request, idA)).assignments).toBe(before);
+  await draft.getByRole("button", { name: "Assign to client" }).click();
   await expect.poll(async () => (await counts(request, idA)).assignments, { timeout: 30_000 }).toBe(before + 1);
 });
 

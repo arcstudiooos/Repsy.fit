@@ -165,6 +165,8 @@ export const deleteAssignment = (clientId: string, assignmentId: string) =>
 export const listChat = (clientId: string) => request<ChatMessage[]>("GET", `/clients/${enc(clientId)}/chat`);
 /** A plan the AI suggests with its answer (not saved as an assignment). */
 export type AiSuggestion = { type: AssignmentType; title: string; details: string; reasoning: string };
+/** An AI plan draft from the type buttons (not saved; `date` is the day it would be assigned for). */
+export type AiDraft = AiSuggestion & { date: string };
 /** Sends the coach's question; returns the saved coach message, the AI reply and an optional suggestion. */
 export const askAI = (clientId: string, question: string) =>
   request<{ question: ChatMessage; reply: ChatMessage; suggestion: AiSuggestion | null }>(
@@ -172,9 +174,10 @@ export const askAI = (clientId: string, question: string) =>
     `/clients/${enc(clientId)}/chat`,
     { question },
   );
-/** Asks the AI for one complete plan of this type, SAVES it (source ai) and returns [the new assignment]. */
+/** Asks the AI for one complete plan of this type and returns it as a DRAFT - nothing is saved until the
+ *  coach assigns it (as-is or edited). */
 export const autoAssign = (clientId: string, input: AutoAssignInput) =>
-  request<Assignment[]>("POST", `/clients/${enc(clientId)}/auto-assign`, input);
+  request<{ draft: AiDraft }>("POST", `/clients/${enc(clientId)}/auto-assign`, input);
 
 // ----- Progress (per client) -----
 export const listProgress = (clientId: string) =>

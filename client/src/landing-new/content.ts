@@ -132,7 +132,7 @@ export const FAQ_CHAT: { who: string; q: string; a: string }[] = [
   {
     who: "Dev",
     q: "Does the AI replace me?",
-    a: "No. The AI suggests, you decide: no AI plan is assigned unless you tap Assign or Auto-assign, and you can plan by hand instead. Its advice is general wellness only and can be wrong, so check every plan.",
+    a: "No. The AI suggests, you decide: no AI plan reaches a client until you assign it (as written or edited), and you can plan by hand instead. Its advice is general wellness only and can be wrong, so check every plan.",
   },
   {
     who: "Sam",

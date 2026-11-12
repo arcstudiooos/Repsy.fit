@@ -9,10 +9,11 @@ import {
   createAssignment,
   listChat,
   queryKeys,
+  type AiDraft,
   type AiSuggestion,
 } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
-import type { Assignment, AssignmentType, ChatMessage, Client } from "../types";
+import type { AssignmentType, ChatMessage, Client } from "../types";
 import { TYPE_CHIP } from "../lib/typeChip";
 
 type Props = { client: Client | null; onOpenPlanner: () => void };
@@ -181,21 +182,22 @@ export function localToday() {
 }
 
 const AUTO_ASSIGN_BUTTONS: [AssignmentType, string][] = [
-  ["Workout", "Auto-assign Workout"],
+  ["Workout", "Workout"],
   ["Nutrition", "Nutrition"],
   ["Habit", "Habit"],
   ["Recovery", "Recovery"],
 ];
 
-// One-tap generators: the AI writes ONE complete plan of the chosen type and the server
-// SAVES it (the coach asked for it explicitly). If the AI fails, nothing is saved.
+// One-tap drafts: the AI writes ONE complete plan of the chosen type. Nothing is saved - the draft opens
+// in the same card as a chat suggestion, where the coach assigns it, edits it first, parks it or discards it.
 function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlanner: () => void }) {
-  const queryClient = useQueryClient();
   // Blocks a second request before the disabled state has re-rendered (fast double click).
   const running = useRef(false);
+  const [draft, setDraft] = useState<{ plan: AiDraft; key: number } | null>(null);
   const generate = useMutation({
     mutationFn: (type: AssignmentType) => autoAssign(client.id, { type, date: localToday() }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.assignments(client.id) }),
+    onMutate: () => setDraft(null),
+    onSuccess: (res) => setDraft((d) => ({ plan: res.draft, key: (d?.key ?? 0) + 1 })),
     onSettled: () => {
       running.current = false;
     },
@@ -207,11 +209,10 @@ function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlan
     generate.mutate(type);
   };
 
-  const saved = generate.isSuccess ? generate.data[0] : undefined;
-
   return (
     <section className="mt-4">
-      <div role="group" aria-label="Auto-assign" className="flex flex-wrap gap-2">
+      <p className="mb-2 text-sm text-dim">Draft a plan with AI - you review it before anything reaches {client.name}.</p>
+      <div role="group" aria-label="Draft a plan with AI" className="flex flex-wrap gap-2">
         {AUTO_ASSIGN_BUTTONS.map(([type, label]) => (
           <button
             key={type}
@@ -220,73 +221,70 @@ function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlan
             onClick={() => run(type)}
             className={`rounded-lg px-3 py-1.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60 ${TYPE_CHIP[type]}`}
           >
-            {generate.isPending && generate.variables === type ? "Generating..." : label}
+            {generate.isPending && generate.variables === type ? "Drafting..." : label}
           </button>
         ))}
       </div>
       {generate.isError && (
         <p role="alert" className="mt-3 rounded-card border border-border bg-surface2 px-4 py-2.5 text-text">
-          {/* A failed generation (502) carries the server's own message, which says nothing was saved. */}
           {generate.error instanceof ApiError && generate.error.status === 502
             ? generate.error.message
             : plainErrorMessage(generate.error)}
         </p>
       )}
-      {saved && <AutoAssignedCard assignment={saved} clientName={client.name} onOpenPlanner={onOpenPlanner} />}
-    </section>
-  );
-}
-
-function AutoAssignedCard({
-  assignment,
-  clientName,
-  onOpenPlanner,
-}: {
-  assignment: Assignment;
-  clientName: string;
-  onOpenPlanner: () => void;
-}) {
-  return (
-    <section aria-label="Auto-assigned plan" className="card mt-3 p-4">
-      <p className="text-sm font-bold text-accent2">✓ Saved to {clientName}'s plans</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <h3 className="text-lg">{assignment.title}</h3>
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[assignment.type]}`}>
-          {assignment.type}
-        </span>
-      </div>
-      <div className="mt-2">
-        <PlanDetails details={assignment.details} />
-      </div>
-      {assignment.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {inline(assignment.reasoning)}</p>}
-      <button type="button" onClick={onOpenPlanner} className="mt-3 text-sm font-semibold text-accent2 underline">
-        View in Manual Planner
-      </button>
+      {draft && (
+        <div className="mt-3">
+          <SuggestionCard
+            key={draft.key}
+            label="AI draft"
+            clientId={client.id}
+            clientName={client.name}
+            suggestion={draft.plan}
+            date={draft.plan.date}
+            onDismiss={() => setDraft(null)}
+            onOpenPlanner={onOpenPlanner}
+          />
+        </div>
+      )}
     </section>
   );
 }
 
 type SuggestionCardProps = {
   clientId: string;
+  clientName?: string;
   suggestion: AiSuggestion;
+  /** The day it is assigned for (default today). */
+  date?: string;
+  /** The card's accessible name. */
+  label?: string;
   onDismiss: () => void;
   onOpenPlanner: () => void;
 };
 
-// RULE: nothing is EVER auto-saved. An AI suggestion becomes an assignment only when the
-// coach taps "Assign to client"; "Dismiss" (or asking again) discards it without saving.
-function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: SuggestionCardProps) {
+// RULE: nothing is EVER auto-saved. An AI suggestion or draft becomes an assignment only when the coach
+// taps "Assign to client" (as written, or after "Edit"); "Dismiss" (or asking again) drops it unsaved.
+function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI suggestion", onDismiss, onOpenPlanner }: SuggestionCardProps) {
   const queryClient = useQueryClient();
+  const [plan, setPlan] = useState({ title: suggestion.title, details: suggestion.details, reasoning: suggestion.reasoning });
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const edited = plan.title !== suggestion.title || plan.details !== suggestion.details || plan.reasoning !== suggestion.reasoning;
+  const valid = () => {
+    if (plan.title.trim() === "") return "Give the plan a title.";
+    if (plan.details.trim() === "") return "The plan needs some details.";
+    return null;
+  };
   const park = useMutation({
     mutationFn: () =>
       addReviewItem({
         clientId,
         kind: "suggestion",
-        title: suggestion.title,
-        summary: suggestion.reasoning,
+        title: plan.title.trim(),
+        summary: plan.reasoning.trim(),
         type: suggestion.type,
-        details: suggestion.details,
-        reasoning: suggestion.reasoning,
+        details: plan.details.trim(),
+        reasoning: plan.reasoning.trim(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.reviewQueue("pending") }),
   });
@@ -294,34 +292,92 @@ function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: Sugg
     mutationFn: () =>
       createAssignment(clientId, {
         type: suggestion.type,
-        title: suggestion.title,
-        details: suggestion.details,
-        reasoning: suggestion.reasoning,
+        title: plan.title.trim(),
+        details: plan.details.trim(),
+        reasoning: plan.reasoning.trim(),
         source: "ai",
-        date: localToday(),
+        date: date ?? localToday(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.assignments(clientId) }),
   });
+  const act = (m: { mutate: () => void }) => {
+    const problem = valid();
+    setEditError(problem);
+    if (problem) {
+      setEditing(true);
+      return;
+    }
+    setEditing(false);
+    m.mutate();
+  };
+  const busy = assign.isPending || park.isPending;
+  const field = "w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text";
 
   return (
-    <section aria-label="AI suggestion" className="card p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-lg">{suggestion.title}</h3>
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[suggestion.type]}`}>
-          {suggestion.type}
-        </span>
-      </div>
-      <div className="mt-3">
-        <PlanDetails details={suggestion.details} />
-      </div>
-      {suggestion.reasoning.trim() !== "" && (
-        <p className="mt-2 text-sm text-dim">Why: {inline(suggestion.reasoning)}</p>
+    <section aria-label={label} className="card p-4">
+      {editing ? (
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[suggestion.type]}`}>{suggestion.type}</span>
+            <span className="text-sm text-dim">Editing - nothing is saved until you assign it.</span>
+          </div>
+          <div>
+            <label htmlFor={`${label}-title`} className="mb-1 block text-sm font-semibold">
+              Title
+            </label>
+            <input id={`${label}-title`} value={plan.title} maxLength={200} onChange={(e) => setPlan({ ...plan, title: e.target.value })} className={field} />
+          </div>
+          <div>
+            <label htmlFor={`${label}-details`} className="mb-1 block text-sm font-semibold">
+              Plan details
+            </label>
+            <textarea
+              id={`${label}-details`}
+              value={plan.details}
+              rows={Math.min(18, Math.max(6, plan.details.split("\n").length + 1))}
+              maxLength={6000}
+              onChange={(e) => setPlan({ ...plan, details: e.target.value })}
+              className={`${field} font-mono`}
+            />
+            <p className="mt-1 text-xs text-dim">Exercise lines: 1. Bench Press — 4 sets × 6 reps · 60 kg · Rest 120s</p>
+          </div>
+          <div>
+            <label htmlFor={`${label}-why`} className="mb-1 block text-sm font-semibold">
+              Why this plan
+            </label>
+            <textarea
+              id={`${label}-why`}
+              value={plan.reasoning}
+              rows={3}
+              maxLength={2000}
+              onChange={(e) => setPlan({ ...plan, reasoning: e.target.value })}
+              className={field}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg">{plan.title}</h3>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[suggestion.type]}`}>{suggestion.type}</span>
+            {edited && <span className="text-xs font-semibold text-dim">Edited</span>}
+          </div>
+          <div className="mt-3">
+            <PlanDetails details={plan.details} />
+          </div>
+          {plan.reasoning.trim() !== "" && <p className="mt-2 text-sm text-dim">Why: {inline(plan.reasoning)}</p>}
+        </>
+      )}
+      {editError && (
+        <p role="alert" className="mt-2 rounded-lg bg-surface2 px-3 py-2 text-sm text-text">
+          {editError}
+        </p>
       )}
       {park.isSuccess && !assign.isSuccess ? (
         <p className="mt-3 text-sm font-bold text-accent2">✓ Sent to the review queue on Home</p>
       ) : assign.isSuccess ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-bold text-accent2">✓ Assigned</span>
+          <span className="text-sm font-bold text-accent2">✓ Assigned{clientName ? ` to ${clientName}` : ""}</span>
           <button type="button" onClick={onOpenPlanner} className="text-sm font-semibold text-accent2 underline">
             View in Manual Planner
           </button>
@@ -331,27 +387,38 @@ function SuggestionCard({ clientId, suggestion, onDismiss, onOpenPlanner }: Sugg
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={assign.isPending}
-              onClick={() => assign.mutate()}
+              disabled={busy}
+              onClick={() => act(assign)}
               className="btn-primary rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {assign.isPending ? "Assigning..." : "Assign to client"}
             </button>
             <button
               type="button"
-              disabled={assign.isPending || park.isPending}
-              onClick={() => park.mutate()}
+              disabled={busy}
+              aria-pressed={editing}
+              onClick={() => {
+                if (editing) {
+                  const problem = valid();
+                  setEditError(problem);
+                  if (problem) return;
+                }
+                setEditing(!editing);
+              }}
               className={secondaryButton}
             >
+              {editing ? "Done editing" : "Edit"}
+            </button>
+            <button type="button" disabled={busy} onClick={() => act(park)} className={secondaryButton}>
               {park.isPending ? "Sending..." : "Review later"}
             </button>
-            <button type="button" disabled={assign.isPending || park.isPending} onClick={onDismiss} className={secondaryButton}>
+            <button type="button" disabled={busy} onClick={onDismiss} className={secondaryButton}>
               Dismiss
             </button>
           </div>
-          {assign.isError && (
+          {(assign.isError || park.isError) && (
             <p role="alert" className="mt-2 rounded-lg bg-surface2 px-3 py-2 text-sm text-text">
-              {plainErrorMessage(assign.error)}
+              {plainErrorMessage(assign.error ?? park.error)}
             </p>
           )}
         </>

@@ -103,40 +103,17 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     expect(prisma.assignment.create).not.toHaveBeenCalled();
   });
 
-  it("asks the AI with the client context and saves ONE ai assignment of that type", async () => {
+  it("asks the AI with the client context and returns ONE draft of that type - saving NOTHING", async () => {
     const fetchSpy = stubProvider(JSON.stringify(plan));
 
     const response = await post({ type: "Workout", date: "2026-11-09" });
 
-    expect(response.status).toBe(201);
-    expect(response.body).toEqual([
-      expect.objectContaining({
-        id: "assignment-new",
-        clientId: client.id,
-        coachId: TEST_COACH_ID,
-        type: "Workout",
-        title: plan.title,
-        details: plan.details,
-        reasoning: plan.reasoning,
-        source: "ai",
-        status: "Active",
-        date: "2026-11-09",
-      }),
-    ]);
-    expect(prisma.assignment.create).toHaveBeenCalledOnce();
-    expect(prisma.assignment.create).toHaveBeenCalledWith({
-      data: {
-        clientId: client.id,
-        coachId: TEST_COACH_ID,
-        type: "Workout",
-        title: plan.title,
-        details: plan.details,
-        reasoning: plan.reasoning,
-        source: "ai",
-        status: "Active",
-        date: "2026-11-09",
-      },
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      draft: { type: "Workout", title: plan.title, details: plan.details, reasoning: plan.reasoning, date: "2026-11-09" },
     });
+    // The coach decides: assigning (as-is or edited) is a separate POST /assignments.
+    expect(prisma.assignment.create).not.toHaveBeenCalled();
 
     const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string) as {
       messages: { role: string; content: string }[];
@@ -164,16 +141,16 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     ]) {
       expect(user).toContain(fact);
     }
-    // No chat messages are written by auto-assign.
+    // No chat messages are written by the draft buttons.
     expect(prisma.chatMessage.create).not.toHaveBeenCalled();
   });
 
   it("defaults the date to today (UTC)", async () => {
     stubProvider(JSON.stringify(plan));
     const response = await post({ type: "Recovery" });
-    expect(response.status).toBe(201);
-    expect(response.body[0].date).toBe(new Date().toISOString().slice(0, 10));
-    expect(response.body[0].type).toBe("Recovery");
+    expect(response.status).toBe(200);
+    expect(response.body.draft.date).toBe(new Date().toISOString().slice(0, 10));
+    expect(response.body.draft.type).toBe("Recovery");
   });
 
   it.each([
@@ -183,7 +160,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
   ])("gives type-specific detail rules for %s", async (type, phrases) => {
     const fetchSpy = stubProvider(JSON.stringify(plan));
     const response = await post({ type });
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
     const system = (JSON.parse(fetchSpy.mock.calls[0][1]?.body as string) as { messages: { content: string }[] })
       .messages[0].content;
     expect(system).toContain(`ONE complete, ready-to-use ${type} assignment`);
@@ -200,7 +177,7 @@ describe("POST /api/clients/:clientId/auto-assign", () => {
     const response = await post({ type: "Workout" });
 
     expect(response.status).toBe(502);
-    expect(response.body).toEqual({ error: expect.stringContaining("Nothing was saved") });
+    expect(response.body).toEqual({ error: "The AI couldn't create a plan right now. Please try again." });
     expect(prisma.assignment.create).not.toHaveBeenCalled();
     expect(logError.mock.calls.flat().join(" ")).not.toContain("test-key-not-a-real-secret");
   });

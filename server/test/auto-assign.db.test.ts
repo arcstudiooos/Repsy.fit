@@ -32,7 +32,7 @@ describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
     await prisma.$disconnect();
   });
 
-  it("saves 4 distinct, client-specific ai assignments - one per type", async () => {
+  it("drafts 4 distinct, client-specific plans - one per type - and saves none until the coach assigns one", async () => {
     vi.stubEnv("AI_BASE_URL", "https://ai.example/v1");
     vi.stubEnv("AI_API_KEY", "test-key-not-a-real-secret");
     vi.stubEnv("AI_MODEL", "test-model");
@@ -69,20 +69,26 @@ describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
     expect(created.status).toBe(201);
     const clientId: string = created.body.id;
 
+    const drafts: { type: string; title: string; details: string; reasoning: string; date: string }[] = [];
     for (const type of TYPES) {
       const res = await api.post(`/api/clients/${clientId}/auto-assign`).send({ type });
-      expect(res.status).toBe(201);
-      expect(res.body).toHaveLength(1);
+      expect(res.status).toBe(200);
+      expect(res.body.draft).toMatchObject({ type, title: `${type} plan for Auto Test` });
+      expect(res.body.draft.reasoning).toContain("Muscle gain");
+      drafts.push(res.body.draft);
     }
+    // Drafting saved nothing.
+    expect((await api.get(`/api/clients/${clientId}/assignments`)).body).toEqual([]);
 
+    // The coach edits one and assigns it: only that one is saved, with the edit.
+    const { date, ...habit } = drafts.find((d) => d.type === "Habit")!;
+    const assigned = await api
+      .post(`/api/clients/${clientId}/assignments`)
+      .send({ ...habit, title: "Edited habit plan", source: "ai", date });
+    expect(assigned.status).toBe(201);
     const list = await api.get(`/api/clients/${clientId}/assignments`);
-    expect(list.body).toHaveLength(4);
-    expect(new Set(list.body.map((a: { type: string }) => a.type))).toEqual(new Set(TYPES));
-    expect(new Set(list.body.map((a: { title: string }) => a.title)).size).toBe(4);
-    for (const a of list.body) {
-      expect(a).toMatchObject({ clientId, coachId, source: "ai", status: "Active" });
-      expect(a.reasoning).toContain("Muscle gain");
-    }
+    expect(list.body).toHaveLength(1);
+    expect(list.body[0]).toMatchObject({ clientId, coachId, type: "Habit", title: "Edited habit plan", source: "ai", status: "Active" });
   });
 
   it("saves nothing when the AI fails", async () => {

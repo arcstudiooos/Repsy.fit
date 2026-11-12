@@ -1,10 +1,9 @@
-// One-tap auto-assign (Prompt 18) - see "API contract" in CLAUDE.md.
-// The coach asked for a plan explicitly with this button, so it is SAVED directly
-// (source "ai", status Active). If the AI fails, nothing is saved - a generic plan is never
-// saved as if it were personalised.
+// One-tap AI plan drafts (Prompt 18; drafts since Nov 2026) - see "API contract" in CLAUDE.md.
+// The AI writes ONE plan of the chosen type for this client and the server returns it as a DRAFT:
+// nothing is saved. The coach then assigns it as-is, edits it first, parks it for review, or
+// discards it (owner's rule: the coach always decides before a plan reaches a client).
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../db.js";
 import { ASSIGNMENT_TYPES, PlanGenerationError, generatePlan, loadClientContext } from "./ai.js";
 import { isDateString, today } from "./assignments.js";
 import { coachIdOf } from "../auth/requireCoach.js";
@@ -21,8 +20,8 @@ const AutoAssignSchema = z.object({
 // Mounted at /api/clients/:clientId/auto-assign
 export const autoAssignRouter = Router({ mergeParams: true });
 
-// POST /api/clients/:clientId/auto-assign - body { type, date? }. Asks the AI for one plan
-// of that type for this client, saves it and returns [the new assignment] (201).
+// POST /api/clients/:clientId/auto-assign - body { type, date? }. Asks the AI for one plan of that
+// type for this client and returns 200 { draft: { type, title, details, reasoning, date } }. Saves nothing.
 autoAssignRouter.post(
   "/",
   asyncHandler(async (req, res) => {
@@ -46,22 +45,9 @@ autoAssignRouter.post(
     if (!plan) {
       res
         .status(502)
-        .json({ error: "The AI couldn't create a plan right now. Nothing was saved - please try again." });
+        .json({ error: "The AI couldn't create a plan right now. Please try again." });
       return;
     }
-    const assignment = await prisma.assignment.create({
-      data: {
-        clientId: client.id,
-        coachId,
-        type,
-        title: plan.title,
-        details: plan.details,
-        reasoning: plan.reasoning,
-        source: "ai",
-        status: "Active",
-        date,
-      },
-    });
-    res.status(201).json([assignment]);
+    res.json({ draft: { type, title: plan.title, details: plan.details, reasoning: plan.reasoning, date } });
   }),
 );

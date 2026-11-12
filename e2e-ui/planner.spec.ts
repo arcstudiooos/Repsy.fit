@@ -1,5 +1,5 @@
 // Assignments list in the Manual Planner (Prompt 19). Every /api call is mocked in the
-// browser, so these run without a database or AI key. Auto-assign saves into the mock, and
+// browser, so these run without a database or AI key. AI drafts are assigned into the mock, and
 // the assignments list returns newest first, like the server.
 import { expect, test, type Page, type Route } from "./fixtures";
 
@@ -63,18 +63,25 @@ async function mockApi(page: Page, initial: Record<string, Assignment[]> = {}): 
 
     const auto = path.match(/^\/api\/clients\/([^/]+)\/auto-assign$/);
     if (auto && req.method() === "POST") {
-      const clientId = decodeURIComponent(auto[1]);
       const body = req.postDataJSON() as { type: string; date: string };
-      const saved = assignment(clientId, {
-        type: body.type,
-        title: `${body.type} plan for Maya`,
-        details: `${body.type} step 1\n${body.type} step 2`,
-        reasoning: `Maya's goal is fat loss + strength (${body.type}).`,
-        source: "ai",
-        date: body.date,
+      return route.fulfill({
+        json: {
+          draft: {
+            type: body.type,
+            title: `${body.type} plan for Maya`,
+            details: `${body.type} step 1\n${body.type} step 2`,
+            reasoning: `Maya's goal is fat loss + strength (${body.type}).`,
+            date: body.date,
+          },
+        },
       });
+    }
+    if (list && req.method() === "POST") {
+      const clientId = decodeURIComponent(list[1]);
+      const body = req.postDataJSON() as Partial<Assignment>;
+      const saved = assignment(clientId, body);
       (mock.assignments[clientId] ??= []).push(saved);
-      return route.fulfill({ status: 201, json: [saved] });
+      return route.fulfill({ status: 201, json: saved });
     }
 
     return route.fulfill({ status: 404, json: { error: "Not found" } });
@@ -92,10 +99,13 @@ const cardFor = (page: Page, title: string) => cards(page).filter({ hasText: tit
 test("the 4 auto-assigned plans appear newest first with type chips, AI labels and Why lines", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
-  const autoRow = panel(page).getByRole("group", { name: "Auto-assign" });
-  for (const label of ["Auto-assign Workout", "Nutrition", "Habit", "Recovery"]) {
+  const autoRow = panel(page).getByRole("group", { name: "Draft a plan with AI" });
+  for (const label of ["Workout", "Nutrition", "Habit", "Recovery"]) {
     await autoRow.getByRole("button", { name: label, exact: true }).click();
-    await expect(panel(page).getByRole("region", { name: "Auto-assigned plan" })).toContainText("plan for Maya");
+    const draft = panel(page).getByRole("region", { name: "AI draft" });
+    await expect(draft).toContainText(`${label} plan for Maya`);
+    await draft.getByRole("button", { name: "Assign to client" }).click();
+    await expect(draft).toContainText("✓ Assigned");
   }
 
   await panel(page).getByRole("button", { name: "View in Manual Planner" }).click();
