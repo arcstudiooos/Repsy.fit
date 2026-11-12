@@ -9,30 +9,13 @@ export const NAV = [
   { label: "FAQ", href: "#faq" },
 ];
 
-/** The template sheet in the hero: Manual Planner notation, exactly as the app saves it. */
-export const SHEET = {
-  title: "PUSH DAY",
-  meta: ["Library template", "Used for 4 clients"],
-  rows: [
-    ["Bench Press", "4 × 8", "90s"],
-    ["Overhead Press", "3 × 10", "90s"],
-    ["Incline DB Press", "3 × 12", "75s"],
-    ["Cable Fly", "3 × 15", "60s"],
-    ["Triceps Pushdown", "3 × 12", "60s"],
-  ],
-  totals: [
-    ["Sets", "16"],
-    ["Est. time", "55 min"],
-  ],
-  why: "WHY: bench stalled 3 wks - more volume at RPE 7",
-};
-
-/** Who each torn strip goes to. */
-export const STRIPS = [
-  { name: "Maya", note: "Done · Mon" },
-  { name: "Arjun", note: "Done · Mon" },
-  { name: "Casey", note: "Done · Tue" },
-  { name: "Leo", note: "Done · Tue" },
+/** The hero: a coach's deck of index cards, one per client. The top card is in view; on scroll the
+ * deck deals out into four, each stamped DONE. Rows use Manual Planner notation. */
+export const CARDS = [
+  { name: "Maya", title: "Push day", rows: [["Bench Press", "4 × 8 · 90s"], ["Overhead Press", "3 × 10 · 90s"], ["Cable Fly", "3 × 15 · 60s"]], why: "bench stalled 3 wks - more volume", note: "Done · Mon" },
+  { name: "Arjun", title: "Leg day", rows: [["Back Squat", "4 × 6 · 120s"], ["Romanian Deadlift", "3 × 10 · 90s"], ["Walking Lunge", "3 × 12 · 60s"]], why: "knee fine now - back to full depth", note: "Done · Mon" },
+  { name: "Casey", title: "Upper pull", rows: [["Pull-up", "4 × AMRAP · 120s"], ["Barbell Row", "4 × 8 · 90s"], ["Face Pull", "3 × 15 · 60s"]], why: "posture goal - pulls 2:1 over pushes", note: "Done · Tue" },
+  { name: "Leo", title: "Conditioning", rows: [["Rower", "6 × 500 m · 90s"], ["Kettlebell Swing", "4 × 15 · 60s"], ["Farmer Carry", "4 × 40 m · 60s"]], why: "fat-loss block - keep it short, hard", note: "Done · Tue" },
 ];
 
 export const RIBBON = "PLANS WITH THE WHY · CLIENTS NEED NO APP · SETS, REPS, REST · CHECK-INS THAT ADD UP · ";

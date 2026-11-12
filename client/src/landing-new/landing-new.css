@@ -312,7 +312,21 @@
   color: var(--ink);
 }
 
-/* "DONE" stamp on the torn strips */
+/* Ruled index card (the hero deck) */
+.ln-index {
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, transparent 32px, color-mix(in srgb, var(--orange) 55%, var(--paper)) 32px 33px, transparent 33px),
+    repeating-linear-gradient(to bottom, transparent 0 23px, var(--rule) 23px 24px),
+    var(--paper);
+  background-position: 0 0, 0 6px, 0 0;
+  border: 1px solid var(--line);
+  box-shadow:
+    0 24px 50px -24px color-mix(in srgb, var(--ink) 35%, transparent),
+    0 2px 4px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+/* "DONE" stamp on the cards */
 .ln-stamp {
   display: inline-block;
   padding: 4px 10px 2px;

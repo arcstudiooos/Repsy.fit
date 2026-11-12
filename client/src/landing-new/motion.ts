@@ -3,7 +3,7 @@
 // still page, and this file only animates it on wide screens without reduced motion.
 //
 // Scenes:
-//  - hero: the plan sheet straightens, scales, tears into 4 strips that fan out, each stamped DONE
+//  - hero: the deck of client cards straightens, then deals out into a 2 x 2 spread, each stamped DONE
 //  - ribbon: the promise slides along the curved band as you scroll
 //  - road: the white road draws itself (stroke-dashoffset) as the section passes
 //  - notebook: pinned; beats change, scribbles appear, a big X strikes through, the page
@@ -39,48 +39,47 @@ export function startMotion(root: HTMLElement): () => void {
     const mm = gsap.matchMedia();
     mmRef = mm;
     mm.add("(min-width: 1024px)", () => {
-      /* ---------- hero: one sheet, four strips, four DONE stamps ---------- */
+      /* ---------- hero: the deck deals out into a 2 x 2 spread, one card per client ---------- */
       const hero = root.querySelector<HTMLElement>("[data-scene=hero]");
       const stage = root.querySelector<HTMLElement>("[data-sheet-stage]");
       if (hero && stage) {
-        const strips = q("[data-strip]");
-        const labels = q("[data-strip-label]");
+        const cards = q("[data-strip]");
         const stamps = q("[data-stamp]");
         const chips = q("[data-strip-chip]");
+        const column = root.querySelector<HTMLElement>("[data-hero-column]") ?? stage.parentElement!;
+        // Spread positions in card units; scale so two cards (plus the gap) fit the column.
+        const GAP = 0.08;
+        const spots = [
+          { x: -(0.5 + GAP / 2), y: -(0.5 + GAP / 2), r: -3 },
+          { x: 0.5 + GAP / 2, y: -(0.5 + GAP / 2), r: 2 },
+          { x: -(0.5 + GAP / 2), y: 0.5 + GAP / 2, r: 2.5 },
+          { x: 0.5 + GAP / 2, y: 0.5 + GAP / 2, r: -2 },
+        ];
+        const scale = () => Math.min(0.78, (column.clientWidth - 24) / (stage.offsetWidth * (2 + GAP)));
         const tl = gsap.timeline({
           defaults: { ease: "power2.inOut" },
           scrollTrigger: { trigger: hero, start: "top top", end: "+=1300", pin: "[data-hero-pin]", scrub: 0.8, anticipatePin: 1, invalidateOnRefresh: true },
         });
-        tl.to(stage, { rotate: 0, scale: 1.04, x: 48, duration: 0.6 })
+        tl.to(stage, { rotate: 0, duration: 0.5 })
           .to("[data-hero-note]", { autoAlpha: 0, duration: 0.3 }, "<")
           .to("[data-hero-copy]", { opacity: 0.25, duration: 0.6 }, "<0.2");
-        const spread = [-1.5, -0.5, 0.5, 1.5];
-        const copy = root.querySelector<HTMLElement>("[data-hero-copy]");
-        const column = stage.parentElement!;
-        // How far apart the strips fan (fraction of the sheet's width per step), from the real room
-        // between the text column and the sheet, so the left strip never covers the copy. Measured
-        // on untransformed elements; re-run on every refresh (invalidateOnRefresh).
-        const fan = () => {
-          const W = stage.offsetWidth;
-          const col = column.getBoundingClientRect();
-          const c = copy?.getBoundingClientRect();
-          const sheetLeft = col.left + (col.width - W) / 2 + 48;
-          // The outer strips tilt 6.75deg, which widens their footprint by about H * sin(6.75deg) / 2.
-          const tilt = stage.offsetHeight * 0.06;
-          const limit = (c && c.right <= col.left + 1 ? c.right + 24 : 16) + tilt;
-          return Math.max(0, Math.min(0.25, (sheetLeft - limit) / (1.5 * W)));
-        };
-        strips.forEach((s, i) => {
-          tl.to(s, { xPercent: () => spread[i] * fan() * 100, y: i % 2 ? 26 : -18, rotate: spread[i] * 4.5, duration: 1 }, 0.7);
+        cards.forEach((card, i) => {
+          tl.to(
+            card,
+            {
+              x: () => spots[i].x * stage.offsetWidth * scale() * 1.02,
+              y: () => spots[i].y * stage.offsetHeight * scale() * 1.02,
+              rotate: spots[i].r,
+              scale: () => scale(),
+              duration: 1,
+              ease: "power3.inOut",
+            },
+            0.6 + i * 0.08,
+          );
         });
-        // Strips are full-width layers (clipped), so xPercent moves them by the sheet's width. The
-        // labels are quarter-width, so they get the same offset in pixels to stay on their strip.
-        labels.forEach((l, i) => {
-          tl.to(l, { x: () => stage.offsetWidth * spread[i] * fan(), y: i % 2 ? 26 : -18, rotate: spread[i] * 4.5, duration: 1 }, 0.7);
-        });
-        tl.fromTo(stamps, { autoAlpha: 0, scale: 2.4, rotate: -30 }, { autoAlpha: 1, scale: 1, rotate: -12, ease: "back.out(2.6)", stagger: 0.14, duration: 0.35 }, 1.55);
-        tl.fromTo(chips, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, stagger: 0.1, duration: 0.3 }, 1.7);
-        tl.to("[data-hero-copy]", { opacity: 1, duration: 0.4 }, 1.9);
+        tl.fromTo(stamps, { autoAlpha: 0, scale: 2.4, rotate: -30 }, { autoAlpha: 1, scale: 1, rotate: -12, ease: "back.out(2.6)", stagger: 0.14, duration: 0.35 }, 1.75);
+        tl.fromTo(chips, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, stagger: 0.1, duration: 0.3 }, 1.9);
+        tl.to("[data-hero-copy]", { opacity: 1, duration: 0.4 }, 2.1);
       }
     });
 

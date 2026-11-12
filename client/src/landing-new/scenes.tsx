@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import LeadForm from "../landing/LeadForm";
 import {
   BEATS,
+  CARDS,
   CHAOS,
   COMPARE,
   FAQ_CHAT,
@@ -13,80 +14,62 @@ import {
   PLANS,
   RIBBON,
   ROAD,
-  SHEET,
-  STRIPS,
 } from "./content";
 import { Icon, PenArrow, Scribble } from "./icons";
 
-const STRIP_COUNT = STRIPS.length;
-
 /* ======================================================================================
- * HERO: a plan sheet that, on scroll, straightens up and tears into one strip per client,
- * each stamped DONE.
+ * HERO: a coach's deck of index cards. On scroll the deck straightens, then deals out into a
+ * 2 x 2 spread, one card per client, each stamped DONE.
  * ==================================================================================== */
 
-function SheetBody() {
+function IndexCard({ c, i }: { c: (typeof CARDS)[number]; i: number }) {
   return (
-    <div className="pb-8 pl-12 pr-6 pt-[30px] text-[12.5px] leading-[24px]">
-      <p className="ln-display text-[26px] leading-[24px]">{SHEET.title}</p>
-      {SHEET.meta.map((m) => (
-        <p key={m} className="text-[11px]" style={{ color: "var(--mute)" }}>
-          {m}
+    <div className="ln-index relative" aria-hidden={i > 0 ? "true" : undefined}>
+      <div className="flex items-center justify-between pl-11 pr-4 pt-3">
+        <span className="ln-chip" style={{ background: "var(--orange)", color: "var(--ink)" }}>
+          {c.name}
+        </span>
+        <span className="ln-mono text-[11px]" style={{ color: "var(--mute)" }}>
+          Week 3
+        </span>
+      </div>
+      <div className="pb-6 pl-11 pr-5 pt-[14px] text-[12.5px] leading-[24px]">
+        <p className="ln-display text-[26px] leading-[24px]">{c.title}</p>
+        <div className="mt-6 grid grid-cols-[1fr_auto] gap-x-3">
+          {c.rows.map(([move, dose], k) => (
+            <Row key={move} move={`${k + 1}. ${move}`} dose={dose} />
+          ))}
+        </div>
+        <p className="ln-hand mt-6 rotate-[-1.5deg] text-[1.2rem] leading-[24px]" style={{ color: "var(--orange-deep)" }}>
+          why: {c.why}
         </p>
-      ))}
-      <div className="mt-6 grid grid-cols-[1fr_auto_auto] gap-x-3">
-        {SHEET.rows.map(([move, dose, rest], i) => (
-          <Row key={move} move={`${i + 1}. ${move}`} dose={dose} rest={rest} />
-        ))}
       </div>
-      <div className="mt-6">
-        {SHEET.totals.map(([k, v]) => (
-          <p key={k} className="flex justify-between text-[12px]" style={{ color: "var(--mute)" }}>
-            <span>{k}</span>
-            <span>{v}</span>
-          </p>
-        ))}
-      </div>
-      <p className="ln-hand mt-6 rotate-[-1.5deg] text-[1.25rem] leading-[24px]" style={{ color: "var(--orange-deep)" }}>
-        {SHEET.why}
-      </p>
+      <span data-stamp className="ln-stamp absolute left-1/2 top-[44%] -translate-x-1/2 -rotate-12 opacity-0">
+        Done
+      </span>
+      <span data-strip-chip className="ln-mono absolute -bottom-7 left-0 right-0 text-center text-[12px] font-semibold opacity-0">
+        {c.note}
+      </span>
     </div>
   );
 }
 
-function Row({ move, dose, rest }: { move: string; dose: string; rest: string }) {
+function Row({ move, dose }: { move: string; dose: string }) {
   return (
     <>
-      <span>{move}</span>
-      <span className="text-right font-bold">{dose}</span>
-      <span className="text-right" style={{ color: "var(--mute)" }}>
-        {rest}
-      </span>
+      <span className="truncate">{move}</span>
+      <span className="ln-mono text-right text-[11.5px] font-semibold">{dose}</span>
     </>
   );
 }
 
-/** Deterministic tear jitter, so strip i's right edge matches strip i+1's left edge exactly. */
-function tearEdge(edge: number): number[] {
-  const out: number[] = [];
-  for (let k = 0; k <= 24; k++) out.push(Math.sin(edge * 12.9898 + k * 78.233) * 43758.5453 % 1 * 1.6);
-  return out;
-}
-function stripClip(i: number): string {
-  const x0 = (i * 100) / STRIP_COUNT;
-  const x1 = ((i + 1) * 100) / STRIP_COUNT;
-  const pts: string[] = [`${x0}% 0%`, `${x1}% 0%`];
-  if (i < STRIP_COUNT - 1) {
-    const j = tearEdge(i + 1);
-    for (let k = 1; k < 24; k++) pts.push(`${x1 + j[k]}% ${(k * 100) / 24}%`);
-  }
-  pts.push(`${x1}% 100%`, `${x0}% 100%`);
-  if (i > 0) {
-    const j = tearEdge(i);
-    for (let k = 23; k > 0; k--) pts.push(`${x0 + j[k]}% ${(k * 100) / 24}%`);
-  }
-  return `polygon(${pts.join(",")})`;
-}
+/** The deck at rest: each card a little askew under the one above. */
+const DECK = [
+  { r: 0, x: 0, y: 0 },
+  { r: -3, x: -6, y: 7 },
+  { r: 2.5, x: 7, y: 13 },
+  { r: -1.5, x: -3, y: 19 },
+];
 
 export function Hero() {
   return (
@@ -102,8 +85,8 @@ export function Hero() {
             <span className="ln-key">Coached.</span>
           </h1>
           <p className="ln-lead mt-7 max-w-[30rem] lg:max-w-[22rem] xl:max-w-[30rem]">
-            Write a workout once, with the reasoning attached, and reuse it for every client. Mark it Done
-            as they train and the check-ins chart themselves. No spreadsheets. No chasing.
+            A card for every client: the week's plan with the reasoning on it. Deal them out on Monday,
+            mark them Done as they train, and the check-ins chart themselves. No spreadsheets. No chasing.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-6">
             <a href="#get" className="ln-btn">
@@ -123,44 +106,27 @@ export function Hero() {
           </ul>
         </div>
 
-        <div className="relative flex justify-center lg:w-[54%]">
-          <div data-sheet-stage className="relative w-[min(330px,82vw)] xl:w-[370px]" style={{ transform: "rotate(4deg)" }}>
-            {/* One sheet drawn four times, each clipped to its strip: together they read as one page. */}
-            {STRIPS.map((s, i) => (
-              <div key={s.name} data-strip={i} className="absolute inset-0 first:relative" style={{ clipPath: stripClip(i) }}>
-                <div className="ln-sheet" aria-hidden={i > 0 ? "true" : undefined}>
-                  <SheetBody />
-                </div>
-              </div>
-            ))}
-            {STRIPS.map((s, i) => (
+        <div data-hero-column className="relative flex justify-center lg:w-[54%]">
+          <div data-sheet-stage className="relative w-[min(300px,80vw)] xl:w-[320px]" style={{ transform: "rotate(4deg)" }}>
+            {CARDS.map((c, i) => (
               <div
-                key={s.name}
-                data-strip-label={i}
-                className="pointer-events-none absolute top-0 flex h-full flex-col items-center"
-                style={{ left: `${(i * 100) / STRIP_COUNT}%`, width: `${100 / STRIP_COUNT}%` }}
-                aria-hidden="true"
+                key={c.name}
+                data-strip={i}
+                className="absolute inset-0 first:relative"
+                style={{ zIndex: CARDS.length - i, transform: `translate(${DECK[i].x}px, ${DECK[i].y}px) rotate(${DECK[i].r}deg)` }}
               >
-                <span data-stamp className="ln-stamp mt-[42%] -rotate-12 opacity-0">
-                  DONE
-                </span>
-                <span data-strip-chip className="absolute -bottom-16 flex flex-col items-center gap-1 opacity-0">
-                  <span className="ln-chip" style={{ background: "var(--orange)", color: "var(--ink)" }}>
-                    {s.name}
-                  </span>
-                  <span className="ln-mono text-[12px] font-semibold">{s.note}</span>
-                </span>
+                <IndexCard c={c} i={i} />
               </div>
             ))}
           </div>
           <p data-hero-note className="ln-hand absolute -right-[2%] top-[2%] hidden rotate-[8deg] text-[1.7rem] lg:block" aria-hidden="true">
-            one template,
+            four clients,
             <br />
-            four clients
+            four cards
           </p>
           <p data-hero-note className="ln-hand absolute -bottom-12 left-[18%] hidden items-center gap-2 text-[1.55rem] lg:flex" aria-hidden="true">
             <PenArrow dir="up" className="-ml-2" />
-            16 sets each, the why on top
+            the why on every card
           </p>
         </div>
       </div>
@@ -365,6 +331,8 @@ function CheckinMock() {
 
 const MOCKS = { ai: AiMock, dose: DoseMock, live: LiveMock, checkins: CheckinMock } as const;
 
+const ROAD_OVERRUN = 420;
+
 export function Road() {
   const sectionRef = useRef<HTMLElement>(null);
   const [geom, setGeom] = useState<{ w: number; h: number; d: string } | null>(null);
@@ -381,13 +349,20 @@ export function Road() {
       const right = w * 0.88;
       let d = `M ${w * 0.5} 0 C ${w * 0.5} ${rows[0] * 0.4}, ${right} ${rows[0] * 0.5}, ${right} ${rows[0]}`;
       rows.forEach((y, i) => {
-        const next = rows[i + 1] ?? h;
         const from = i % 2 === 0 ? right : left;
         const to = i % 2 === 0 ? left : right;
-        const mid = (y + next) / 2;
-        d += ` C ${from} ${mid}, ${to} ${mid}, ${to} ${next === h ? h - 40 : next}`;
+        if (i < rows.length - 1) {
+          const next = rows[i + 1];
+          const mid = (y + next) / 2;
+          d += ` C ${from} ${mid}, ${to} ${mid}, ${to} ${next}`;
+        } else {
+          // After the last card the road swings back to the middle and runs on out of the section,
+          // under the next one, instead of stopping in mid-air.
+          const exit = h + ROAD_OVERRUN;
+          d += ` C ${from} ${y + (exit - y) * 0.45}, ${w * 0.5} ${y + (exit - y) * 0.55}, ${w * 0.5} ${exit}`;
+        }
       });
-      setGeom({ w, h, d });
+      setGeom({ w, h: h + ROAD_OVERRUN, d });
     };
     build();
     const ro = new ResizeObserver(build);
@@ -398,7 +373,7 @@ export function Road() {
   return (
     <section id="how" ref={sectionRef} data-scene="road" aria-labelledby="ln-how-title" className="relative scroll-mt-24 pb-24">
       {geom && (
-        <svg className="ln-road pointer-events-none absolute inset-0 hidden md:block" width={geom.w} height={geom.h} viewBox={`0 0 ${geom.w} ${geom.h}`} aria-hidden="true">
+        <svg className="ln-road pointer-events-none absolute left-0 top-0 hidden md:block" width={geom.w} height={geom.h} viewBox={`0 0 ${geom.w} ${geom.h}`} aria-hidden="true">
           {/* The lane draws on scroll (motion.ts). The dashed centre line is clipped to a rectangle
               that motion.ts keeps level with the lane's drawing tip, so it appears as the lane does.
               Without motion the rectangle covers everything and the whole line shows. */}

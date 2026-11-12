@@ -92,11 +92,11 @@ test("the default / is unchanged (the Studio page is opt-in)", async ({ page }) 
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
 });
 
-test("hero sheet: four strips, each with a client, the hidden copies stay out of the a11y tree", async ({ page }) => {
+test("hero deck: four client cards; only the top card is in the a11y tree", async ({ page }) => {
   await open(page);
   await expect(page.locator("[data-strip]")).toHaveCount(4);
-  await expect(page.locator('[data-strip][aria-hidden="true"], [data-strip] [aria-hidden="true"]')).toHaveCount(3);
-  for (const n of ["Maya", "Arjun", "Casey", "Leo"]) await expect(page.locator("[data-strip-chip]", { hasText: n })).toHaveCount(1);
+  await expect(page.locator('[data-strip] > [aria-hidden="true"]')).toHaveCount(3);
+  for (const n of ["Maya", "Arjun", "Casey", "Leo"]) await expect(page.locator("[data-strip] .ln-chip", { hasText: n })).toHaveCount(1);
 });
 
 test("plan-type toggle swaps the phone between a workout and a nutrition plan, and is announced", async ({ page }) => {
@@ -180,7 +180,7 @@ test("with motion on a wide screen: GSAP loads lazily, two scenes pin, and motio
 });
 
 for (const width of [1024, 1440]) {
-  test(`hero tear at ${width}px: the fanned strips never cover the text`, async ({ page }) => {
+  test(`hero deal at ${width}px: the dealt cards never cover the text`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await open(page, { motion: true });
     await expect(page.locator(".pin-spacer")).toHaveCount(2);
@@ -188,7 +188,7 @@ for (const width of [1024, 1440]) {
     await expect(page.locator("[data-strip-chip]").first()).toHaveCSS("opacity", "1", { timeout: 6000 });
     const overlap = await page.evaluate(() => {
       const text = [...document.querySelectorAll("[data-hero-copy] :is(h1,p,a,li)")].map((e) => e.getBoundingClientRect());
-      const strips = [...document.querySelectorAll("[data-strip-label]")].map((e) => e.getBoundingClientRect());
+      const strips = [...document.querySelectorAll("[data-strip]")].map((e) => e.getBoundingClientRect());
       return strips.some((s) => text.some((c) => s.left < c.right && s.right > c.left && s.top < c.bottom && s.bottom > c.top));
     });
     expect(overlap).toBe(false);
