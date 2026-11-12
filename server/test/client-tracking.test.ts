@@ -185,12 +185,13 @@ describe("targets and plan meals (client)", () => {
     expect((await as("get", "/api/client-auth/my-targets")).body).toEqual({ calorieTarget: 2100, proteinTargetG: 140, weeklyCheckInDay: 0 });
   });
   it("a plan's meals come only from the plan's own coach's library, in the coach's order", async () => {
-    prismaMock.assignment.findFirst.mockResolvedValue({ id: "a1", type: "Nutrition", title: "Day", details: "", reasoning: "", status: "Active", date: TODAY });
-    prismaMock.assignment.findUnique.mockResolvedValue({ mealIds: ["m2", "m1"], coachId: "coach-1" });
+    prismaMock.assignment.findFirst.mockResolvedValue({ id: "a1", type: "Nutrition", title: "Day", details: "", reasoning: "", status: "Active", date: TODAY, mealIds: ["m2", "m1"], coachId: "coach-1" });
     prismaMock.meal.findMany.mockResolvedValue([{ id: "m1", name: "Oats" }, { id: "m2", name: "Eggs" }]);
     const res = await as("get", "/api/client-auth/my-assignments/a1");
     expect(prismaMock.meal.findMany.mock.calls[0][0].where).toEqual({ id: { in: ["m2", "m1"] }, coachId: "coach-1" });
     expect(res.body.meals.map((m: { name: string }) => m.name)).toEqual(["Eggs", "Oats"]);
+    expect(res.body).not.toHaveProperty("mealIds");
+    expect(res.body).not.toHaveProperty("coachId");
   });
 });
 

@@ -49,8 +49,9 @@ describe.skipIf(!process.env.DATABASE_URL)("client tracking (database)", () => {
     const log = await c("post", "/api/client-auth/my-progress").send({ date: today, weightKg: 68, adherence: 85 });
     expect(log.status).toBe(201);
     expect((await c("post", "/api/client-auth/my-progress").send({ date: today, weightKg: 68 })).status).toBe(409);
+    expect(await prisma.reviewItem.count({ where: { coachId: coach.id, clientId: maya.id, kind: "checkin", sourceId: log.body.id, status: "Pending" } })).toBe(1);
     const queue = await asCoach(app, coach.id).get("/api/review-queue");
-    expect(JSON.stringify(queue.body)).toContain(log.body.id);
+    expect(queue.body.pendingCount).toBe(1);
 
     // Targets set by the coach show to the client; meals attach from the coach's library.
     await asCoach(app, coach.id).patch(`/api/clients/${maya.id}/targets`).send({ calorieTarget: 2100, proteinTargetG: 140 });
