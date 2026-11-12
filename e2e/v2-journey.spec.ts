@@ -178,8 +178,12 @@ test("8. the client sets a password, signs in, and sees ONLY their own plan", as
   await page.goto("/client/me");
   await expect(page.getByRole("region", { name: "My plan" })).toContainText("Monthly coaching", { timeout: 30_000 });
   await expect(page.getByRole("region", { name: "My sessions" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "My streaks" })).toBeVisible();
   await expect(page.getByRole("tab")).toHaveCount(0);
+  // Prompt 81: the streak summary lives on the Progress tab.
+  await page.goto("/client/progress");
+  await expect(page.getByRole("region", { name: "My streaks" })).toBeVisible({ timeout: 30_000 });
+  await page.goto("/client/me");
+  await expect(page.getByRole("region", { name: "My plan" })).toContainText("Monthly coaching", { timeout: 30_000 });
   // No amounts and no other client's name are ever shown to a client.
   const text = await page.locator("body").innerText();
   expect(text).not.toContain("4999");

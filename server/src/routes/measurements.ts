@@ -20,7 +20,7 @@ const tape = (name: string) =>
     .nullable()
     .optional();
 
-const NewMeasurementSchema = z.object({
+export const NewMeasurementSchema = z.object({
   date: z
     .string({ required_error: "date is required." })
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
@@ -75,7 +75,7 @@ measurementsRouter.post(
     const client = await clientOr404(req, res);
     if (!client) return;
     const item = await prisma.measurement.create({
-      data: { ...parsed.data, clientId: client.id, coachId: coachIdOf(req) },
+      data: { ...parsed.data, clientId: client.id, coachId: coachIdOf(req), createdBy: "coach" },
     });
     res.status(201).json(item);
   }),

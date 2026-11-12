@@ -509,6 +509,15 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 - Pages: `/client/checkin`, `/client/weekly` (`clientApp/Tracking.tsx`). Habit ticks use local state set in the
   click handler so the box changes at once (an async optimistic update lost races under load).
 
+### Client progress (Prompt 81)
+- `/client/progress` (a 4th tab): the coach's `ProgressCharts` (weight + adherence; `assignments` omitted hides the
+  by-type chart; `units` shows lb) from the client's own logs, lazy-loaded in `clientApp/ProgressView.tsx` so
+  recharts stays out of the client app chunk; body measurements; the streak summary. No at-risk flags, rank or
+  coach notes.
+- `Measurement.createdBy` ("coach" | "client"). The client adds with the coach route's `NewMeasurementSchema`
+  made strict, plus client-route-only checks: no date after the client's today and at least one value and deletes only `createdBy: "client"` rows (404 otherwise).
+  The coach's measurement table marks client-added rows "Added by client."
+
 ## API contract
 
 **Source of truth: `client/src/api.ts`** (types in `client/src/types.ts`). Server endpoints
@@ -605,6 +614,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `getMyHabits(date)` / `tickMyHabit(id, date, done)` | GET / PUT | `/api/client-auth/my-habits?date`, `/api/client-auth/my-habits/:habitId/:date` | PUT `{ done }` (strict) | GET `{ date, days, habits: [{ id, name, week, currentStreak, bestStreak }] }` (own active habits); PUT `{ habitId, date, done }`; 400 `You can only log today or yesterday.`; 404 `Habit not found`. `requireActiveClient`. (Prompt 80) |
 | `getMyCheckIn(date)` / `saveMyCheckIn(date, body)` | GET / PUT | `/api/client-auth/my-checkins/:date` | the coach's check-in fields minus `date` (strict) | GET `{ checkIn \| null }`; PUT 201 new / 200 updated; today / yesterday only. (Prompt 80) |
 | `getMyProgress()` / `addMyProgress(body)` | GET / POST | `/api/client-auth/my-progress` | `{ date, weightKg?, adherence?, workoutsDone?, note? (<= 500) }` (strict) | GET own logs oldest first; POST 201, queued for the coach's review; today / yesterday only. (Prompt 80) |
+| `getMyMeasurements()` / `addMyMeasurement(body)` / `deleteMyMeasurement(id)` | GET / POST / DELETE | `/api/client-auth/my-measurements[/:id]` | POST: the coach route's fields (strict) | GET own, newest first, with `createdBy`; POST 201 (`createdBy: "client"`); DELETE 204, 404 for a coach-added / unknown row. `requireActiveClient`. (Prompt 81) |
 | `getMyTargets()` | GET | `/api/client-auth/my-targets` | — | `{ calorieTarget, proteinTargetG, weeklyCheckInDay }`. (Prompt 80) |
 | `saveClientTargets(clientId, body)` | PATCH | `/api/clients/:clientId/targets` | `{ calorieTarget?: 300-15000 \| null, proteinTargetG?: 0-1000 \| null }` (strict) | the client; 404 another coach's client. `requireCoach`. (Prompt 80) |
 | `getJoinCode()` | GET | `/api/join-code` | — | `JoinCode` `{ code, active, approveNewClients, link }`. The code (e.g. `ANNA-7K2Q8M`) is made on first use; `link` = `APP_URL` (else the Render URL, else the request origin) + `/join/<code>`. Needs `requireCoach`. (Prompt 76) |

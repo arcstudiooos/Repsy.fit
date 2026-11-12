@@ -98,6 +98,10 @@ const CLIENT_ROUTES: [string, string][] = [
   ["get", "/api/client-auth/my-progress"],
   ["post", "/api/client-auth/my-progress"],
   ["get", "/api/client-auth/my-targets"],
+  // Prompt 81: measurements.
+  ["get", "/api/client-auth/my-measurements"],
+  ["post", "/api/client-auth/my-measurements"],
+  ["delete", "/api/client-auth/my-measurements/m1"],
 ];
 
 const send = (method: string, url: string, cookie?: string) => {

@@ -65,6 +65,7 @@ import type {
   MyCheckIn,
   MyProgressLog,
   MyTargets,
+  MyMeasurement,
   ClientAssignment,
   ClientProfile,
   ThreadMessage,
@@ -301,6 +302,11 @@ export const saveMyCheckIn = (date: string, body: Partial<Omit<MyCheckIn, "date"
 export const getMyProgress = () => request<MyProgressLog[]>("GET", "/client-auth/my-progress");
 export const addMyProgress = (body: { date: string; weightKg?: number | null; adherence?: number | null; workoutsDone?: number | null; note?: string }) =>
   request<MyProgressLog>("POST", "/client-auth/my-progress", body);
+/** Prompt 81: the client's own body measurements (delete only the ones they added). */
+export const getMyMeasurements = () => request<MyMeasurement[]>("GET", "/client-auth/my-measurements");
+export const addMyMeasurement = (body: Omit<MyMeasurement, "id" | "createdBy" | "createdAt">) =>
+  request<MyMeasurement>("POST", "/client-auth/my-measurements", body);
+export const deleteMyMeasurement = (id: string) => request<void>("DELETE", `/client-auth/my-measurements/${enc(id)}`);
 export const getMyTargets = () => request<MyTargets>("GET", "/client-auth/my-targets");
 /** Prompt 80 (coach): save the macro calculator's result as the client's daily targets. */
 export const saveClientTargets = (clientId: string, body: { calorieTarget?: number | null; proteinTargetG?: number | null }) =>
@@ -454,6 +460,7 @@ export const queryKeys = {
   myCheckIn: (date: string) => ["client-account", "checkin", date] as const,
   myProgress: ["client-account", "progress"] as const,
   myTargets: ["client-account", "targets"] as const,
+  myMeasurements: ["client-account", "measurements"] as const,
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,

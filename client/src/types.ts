@@ -113,6 +113,19 @@ export interface MyProgressLog {
   note: string;
   createdAt: string;
 }
+/** Prompt 81: a body measurement as the client sees it. */
+export interface MyMeasurement {
+  id: string;
+  date: DateString;
+  waistCm: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  hipCm: number | null;
+  bodyFatPercent: number | null;
+  note: string;
+  createdBy: "coach" | "client";
+  createdAt: string;
+}
 export interface MyTargets {
   calorieTarget: number | null;
   proteinTargetG: number | null;
@@ -400,6 +413,8 @@ export interface Measurement {
   /** above 0, up to 75 */
   bodyFatPercent: number | null;
   note: string;
+  /** Prompt 81: who added it. */
+  createdBy?: "coach" | "client";
   createdAt: string;
 }
 export type NewMeasurement = Pick<Measurement, "date"> &

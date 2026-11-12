@@ -7,6 +7,7 @@
 // X-Client-Date header, which the server accepts only within UTC today -1 ... +1 (every real timezone).
 // Allowed dates are exactly that day and the day before. Without the header, UTC today is used.
 // A client never edits or deletes a coach-entered record, and never back-fills further.
+// Prompt 81 adds the client's body measurements (any past date; delete only their own).
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
@@ -14,7 +15,8 @@ import { clientAccountIdOf, requireActiveClient } from "../auth/clientSession.js
 import { rateLimit } from "../auth/rateLimit.js";
 import { addDays, GRID_DAYS, habitStreaks, lastDays } from "../habits.js";
 import { isDateString } from "./assignments.js";
-import { asyncHandler } from "./clients.js";
+import { asyncHandler, validationMessage } from "./clients.js";
+import { NewMeasurementSchema } from "./measurements.js";
 import { CheckInSchema } from "./dailyCheckIns.js";
 import { checkInSummary, NewProgressLogSchema } from "./progress.js";
 
@@ -38,7 +40,7 @@ export function isRecentDay(date: string, today: string): boolean {
 
 export const clientTrackingRouter = Router();
 clientTrackingRouter.use(
-  ["/my-habits", "/my-checkins", "/my-progress", "/my-targets"],
+  ["/my-habits", "/my-checkins", "/my-progress", "/my-targets", "/my-measurements"],
   requireActiveClient,
   rateLimit("client-tracking", { keyOf: (req) => `client:${req.clientAccountId}`, max: 300 }),
 );
@@ -232,5 +234,68 @@ clientTrackingRouter.get(
     });
     if (!c) return void res.status(404).json({ error: "Your account was not found. Please ask your coach." });
     res.json(c);
+  }),
+);
+
+// ---------- Prompt 81: body measurements ----------
+
+const MEASUREMENT_SELECT = {
+  id: true,
+  date: true,
+  waistCm: true,
+  chestCm: true,
+  armCm: true,
+  hipCm: true,
+  bodyFatPercent: true,
+  note: true,
+  createdBy: true,
+  createdAt: true,
+} as const;
+const ClientMeasurementSchema = NewMeasurementSchema.strict("Only date, waistCm, chestCm, armCm, hipCm, bodyFatPercent and note can be sent.");
+export const MEASUREMENT_NOT_FOUND = "Measurement not found";
+
+// GET /api/client-auth/my-measurements -> the client's own measurements, newest first.
+clientTrackingRouter.get(
+  "/my-measurements",
+  asyncHandler(async (req, res) => {
+    const items = await prisma.measurement.findMany({
+      where: { clientId: clientAccountIdOf(req) },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      select: MEASUREMENT_SELECT,
+    });
+    res.json(items);
+  }),
+);
+
+// POST /api/client-auth/my-measurements -> 201, saved under the client's coach as createdBy "client".
+// Same fields and validation as the coach route; any past date is fine (a tape measure log, not a check-in).
+clientTrackingRouter.post(
+  "/my-measurements",
+  asyncHandler(async (req, res) => {
+    const parsed = ClientMeasurementSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return void res.status(400).json({ error: validationMessage(parsed.error) });
+    if (parsed.data.date > clientToday(req)) return void res.status(400).json({ error: "date can't be in the future." });
+    const values = [parsed.data.waistCm, parsed.data.chestCm, parsed.data.armCm, parsed.data.hipCm, parsed.data.bodyFatPercent];
+    if (values.every((v) => v == null)) return void res.status(400).json({ error: "Enter at least one measurement." });
+    const me = await coachOf(req, res);
+    if (!me) return;
+    const item = await prisma.measurement.create({
+      data: { ...parsed.data, clientId: me.id, coachId: me.coachId, createdBy: "client" },
+      select: MEASUREMENT_SELECT,
+    });
+    res.status(201).json(item);
+  }),
+);
+
+// DELETE /api/client-auth/my-measurements/:id -> 204; only a measurement this client added (404 otherwise,
+// including the coach's own entries - the same answer as an unknown id).
+clientTrackingRouter.delete(
+  "/my-measurements/:id",
+  asyncHandler(async (req, res) => {
+    const { count } = await prisma.measurement.deleteMany({
+      where: { id: String(req.params.id), clientId: clientAccountIdOf(req), createdBy: "client" },
+    });
+    if (count === 0) return void res.status(404).json({ error: MEASUREMENT_NOT_FOUND });
+    res.status(204).end();
   }),
 );

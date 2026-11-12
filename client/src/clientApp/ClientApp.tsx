@@ -6,7 +6,7 @@
 //   /client/me       My plan (membership), my sessions, my streaks, sign out
 // Everything comes from the client's OWN /api/client-auth routes; a client can only mark a plan done or
 // not done - never change what the coach wrote.
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, markMyAssignment, queryKeys } from "../api";
 import { addDays, dayHeading, localDateKey, timeRangeText, weekStartOf } from "../lib/schedule";
@@ -14,12 +14,15 @@ import { TYPE_CHIP } from "../lib/typeChip";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
 import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../types";
-import { MyPlanSection, MySessionsSection, MyStreaksSection } from "./sections";
+import { MyPlanSection, MySessionsSection } from "./sections";
 import { parsePlanLines } from "./planLines";
 import { RestTimer } from "./RestTimer";
 import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, WeeklyPage } from "./Tracking";
 
-type Page = { tab: "today" | "week" | "me"; planId?: string; sub?: "checkin" | "weekly" };
+// Prompt 81: the charts (recharts) load only when the Progress tab opens.
+const ProgressView = lazy(() => import("./ProgressView"));
+
+type Page = { tab: "today" | "week" | "progress" | "me"; planId?: string; sub?: "checkin" | "weekly" };
 
 function pageOf(pathname: string): Page {
   const plan = /^\/client\/plan\/([^/]+)\/?$/.exec(pathname);
@@ -28,6 +31,7 @@ function pageOf(pathname: string): Page {
   if (/^\/client\/checkin\/?$/.test(pathname)) return { tab: "today", sub: "checkin" };
   if (/^\/client\/weekly\/?$/.test(pathname)) return { tab: "today", sub: "weekly" };
   if (/^\/client\/me\/?$/.test(pathname)) return { tab: "me" };
+  if (/^\/client\/progress\/?$/.test(pathname)) return { tab: "progress" };
   return { tab: "today" };
 }
 
@@ -45,6 +49,7 @@ function usePage(): Page {
 const TABS: { tab: Page["tab"]; label: string; href: string; icon: ReactNode }[] = [
   { tab: "today", label: "Today", href: "/client", icon: <path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" /> },
   { tab: "week", label: "Week", href: "/client/week", icon: <path d="M4 6h16M4 6v13h16V6M8 3v4m8-4v4M4 10h16" /> },
+  { tab: "progress", label: "Progress", href: "/client/progress", icon: <path d="M4 19h16M6 16l4-5 3 3 5-7" /> },
   { tab: "me", label: "Me", href: "/client/me", icon: <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 9a7 7 0 0 1 14 0" /> },
 ];
 
@@ -77,7 +82,7 @@ function TabLink({ t, current, compact }: { t: (typeof TABS)[number]; current: b
 export default function ClientApp({ account, onSignOut, signingOut }: { account: ClientAccount; onSignOut: () => void; signingOut: boolean }) {
   const page = usePage();
   useEffect(() => {
-    document.title = page.sub === "checkin" ? "Daily check-in - Repsy" : page.sub === "weekly" ? "Weekly check-in - Repsy" : page.planId ? "Plan - Repsy" : page.tab === "week" ? "This week - Repsy" : page.tab === "me" ? "Me - Repsy" : "Today - Repsy";
+    document.title = page.sub === "checkin" ? "Daily check-in - Repsy" : page.sub === "weekly" ? "Weekly check-in - Repsy" : page.planId ? "Plan - Repsy" : page.tab === "week" ? "This week - Repsy" : page.tab === "me" ? "Me - Repsy" : page.tab === "progress" ? "Progress - Repsy" : "Today - Repsy";
     window.scrollTo(0, 0);
   }, [page.tab, page.planId, page.sub]);
   return (
@@ -105,6 +110,10 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
           <WeeklyPage />
         ) : page.tab === "week" ? (
           <WeekView />
+        ) : page.tab === "progress" ? (
+          <Suspense fallback={<LoadingState />}>
+            <ProgressView />
+          </Suspense>
         ) : page.tab === "me" ? (
           <MeView account={account} onSignOut={onSignOut} signingOut={signingOut} />
         ) : (
@@ -668,7 +677,6 @@ function MeView({ account, onSignOut, signingOut }: { account: ClientAccount; on
       <p className="mt-1 text-sm text-dim">Signed in as {account.loginEmail ?? account.name}.</p>
       <MyPlanSection />
       <MySessionsSection />
-      <MyStreaksSection />
       <CheckInDaySetting />
       <div className="mt-6">
         <button

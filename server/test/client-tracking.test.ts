@@ -13,6 +13,7 @@ const prismaMock = vi.hoisted(() => {
     reviewItem: { create: vi.fn() },
     assignment: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
     meal: { findMany: vi.fn(), count: vi.fn() },
+    measurement: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
   };
   mock.$transaction = vi.fn((fn: (tx: unknown) => unknown) => Promise.resolve(fn(mock)));
   return mock;
@@ -23,14 +24,14 @@ process.env.SESSION_SECRET = "test-secret-test-secret-test-secret";
 const { app } = await import("../src/app.js");
 const { CLIENT_SESSION_COOKIE, signClientSession } = await import("../src/auth/clientSession.js");
 const { resetRateLimits } = await import("../src/auth/rateLimit.js");
-const { isRecentDay, clientToday, TOO_FAR_BACK, COACH_ENTERED, ALREADY_SENT } = await import("../src/routes/clientTracking.js");
+const { isRecentDay, clientToday, TOO_FAR_BACK, COACH_ENTERED, ALREADY_SENT, MEASUREMENT_NOT_FOUND } = await import("../src/routes/clientTracking.js");
 const signedIn = (await import("./helpers/authedRequest.js")).default;
 
 const utc = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
 const TODAY = utc(0);
 let status = "active";
 const cookie = () => `${CLIENT_SESSION_COOKIE}=${signClientSession("c1", 0)}`;
-const as = (m: "get" | "put" | "post", url: string) => (supertest(app) as any)[m](url).set("Cookie", cookie());
+const as = (m: "get" | "put" | "post" | "delete", url: string) => (supertest(app) as any)[m](url).set("Cookie", cookie());
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -234,5 +235,58 @@ describe("coach: targets and meals on Nutrition plans", () => {
     expect(foreign.body).toEqual({ error: "One of the meals was not found in your library." });
     const wrongType = await signedIn(app).post("/api/clients/c1/assignments").send({ ...base, type: "Workout", mealIds: ["m1"] });
     expect(wrongType.body).toEqual({ error: "Meals can only be attached to a Nutrition plan." });
+  });
+});
+
+describe("Prompt 81: the client's body measurements", () => {
+  beforeEach(() => {
+    prismaMock.measurement.findMany.mockResolvedValue([]);
+    prismaMock.measurement.create.mockImplementation(async ({ data }: { data: object }) => ({ id: "ms1", ...data }));
+    prismaMock.measurement.deleteMany.mockResolvedValue({ count: 1 });
+  });
+  it("lists only the client's own, newest first, without coach-only fields", async () => {
+    await as("get", "/api/client-auth/my-measurements");
+    const arg = prismaMock.measurement.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ clientId: "c1" });
+    expect(arg.orderBy[0]).toEqual({ date: "desc" });
+    expect(Object.keys(arg.select)).not.toContain("coachId");
+  });
+  it("adds one under the client's coach, marked as the client's", async () => {
+    const res = await as("post", "/api/client-auth/my-measurements").send({ date: TODAY, waistCm: 80, note: " am " });
+    expect(res.status).toBe(201);
+    expect(prismaMock.measurement.create.mock.calls[0][0].data).toEqual({ date: TODAY, waistCm: 80, note: "am", clientId: "c1", coachId: "coach-1", createdBy: "client" });
+  });
+  it.each([
+    [{ date: TODAY, waistCm: 0 }, "waistCm must be more than 0 and at most 300."],
+    [{ date: TODAY, bodyFatPercent: 80 }, "bodyFatPercent must be more than 0 and at most 75."],
+    [{ date: TODAY }, "Enter at least one measurement."],
+    [{ date: "2099-01-01", waistCm: 80 }, "date can't be in the future."],
+    [{ date: TODAY, waistCm: 80, createdBy: "coach" }, "Only date, waistCm, chestCm, armCm, hipCm, bodyFatPercent and note can be sent."],
+    [{ date: TODAY, waistCm: 80, clientId: "c2" }, "Only date, waistCm, chestCm, armCm, hipCm, bodyFatPercent and note can be sent."],
+    [{ date: TODAY, waistCm: 80, coachId: "coach-2" }, "Only date, waistCm, chestCm, armCm, hipCm, bodyFatPercent and note can be sent."],
+  ])("validates like the coach route: %j", async (body, error) => {
+    const res = await as("post", "/api/client-auth/my-measurements").send(body);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain(error);
+    expect(prismaMock.measurement.create).not.toHaveBeenCalled();
+  });
+  it("the future is the client's calendar: tomorrow for them is refused even when it is today in UTC", async () => {
+    const res = await as("post", "/api/client-auth/my-measurements").set("X-Client-Date", utc(-1)).send({ date: TODAY, waistCm: 80 });
+    expect(res.body).toEqual({ error: "date can't be in the future." });
+    const ok = await as("post", "/api/client-auth/my-measurements").set("X-Client-Date", utc(1)).send({ date: utc(1), waistCm: 80 });
+    expect(ok.status).toBe(201);
+  });
+  it("deletes only a measurement the client added (a coach's entry or another client's = 404)", async () => {
+    expect((await as("delete", "/api/client-auth/my-measurements/ms1")).status).toBe(204);
+    expect(prismaMock.measurement.deleteMany.mock.calls[0][0].where).toEqual({ id: "ms1", clientId: "c1", createdBy: "client" });
+    prismaMock.measurement.deleteMany.mockResolvedValueOnce({ count: 0 });
+    const res = await as("delete", "/api/client-auth/my-measurements/coach-entry");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: MEASUREMENT_NOT_FOUND });
+  });
+  it("a pending client gets 403", async () => {
+    status = "pending";
+    expect((await as("get", "/api/client-auth/my-measurements")).status).toBe(403);
+    expect((await as("post", "/api/client-auth/my-measurements").send({ date: TODAY, waistCm: 80 })).status).toBe(403);
   });
 });

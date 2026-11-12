@@ -56,13 +56,15 @@ function mockClient(page: import("@playwright/test").Page, streaks: Record<strin
     if (path === "/api/client-auth/my-plan") return route.fulfill({ json: { plan: null, lastPaymentDate: null } });
     if (path === "/api/client-auth/my-sessions") return route.fulfill({ json: { sessions: [] } });
     if (path === "/api/client-auth/my-streaks") return route.fulfill({ json: streaks });
+    if (path === "/api/client-auth/my-progress" || path === "/api/client-auth/my-measurements") return route.fulfill({ json: [] });
+    if (path === "/api/client-auth/me/profile") return route.fulfill({ json: { goal: "", age: null, heightCm: null, weightKg: null, level: "", units: "kg", injuries: "", weeklyCheckInDay: 0 } });
     return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
   });
 }
 
 test("/client shows My streaks with the client's own three numbers, and no rank", async ({ page }) => {
   await mockClient(page, { date: "2026-11-12", checkInStreak: 4, habitPercent: 57, workoutsThisWeek: 2, enoughData: true });
-  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
+  await page.goto("/client/progress"); // Prompt 81: the streak summary lives on the Progress tab
   const mine = page.getByRole("region", { name: "My streaks" });
   await expect(mine).toContainText("Check-in streak 4 days");
   await expect(mine).toContainText("57%");
@@ -72,6 +74,6 @@ test("/client shows My streaks with the client's own three numbers, and no rank"
 
 test("/client My streaks says Not enough data yet for a new client", async ({ page }) => {
   await mockClient(page, { date: "2026-11-12", checkInStreak: 0, habitPercent: null, workoutsThisWeek: 0, enoughData: false });
-  await page.goto("/client/me"); // Prompt 79: these sections live on the Me tab
+  await page.goto("/client/progress"); // Prompt 81: the streak summary lives on the Progress tab
   await expect(page.getByRole("region", { name: "My streaks" })).toContainText("Not enough data yet");
 });

@@ -29,17 +29,25 @@ const NOT_ENOUGH = "Add one more check-in to see the trend.";
 const CHART_HEIGHT = 220;
 const shortDate = (date: string) => date.slice(5); // "2026-11-02" -> "11-02"
 
-type Props = { logs: Pick<ProgressLog, "date" | "weightKg" | "adherence">[]; assignments: Pick<Assignment, "type">[] };
+type Props = {
+  logs: Pick<ProgressLog, "date" | "weightKg" | "adherence">[];
+  /** Omit to hide the "Assignments by type" chart (the client app, Prompt 81). */
+  assignments?: Pick<Assignment, "type">[];
+  /** Weight unit to show; stored values are always kg (Prompt 81: the client's own unit). */
+  units?: "kg" | "lb";
+};
+const LB_PER_KG = 2.20462262;
 
 /** Weight, adherence and assignments-by-type charts, fed only by real data. logs: oldest first. */
-export function ProgressCharts({ logs, assignments }: Props) {
+export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
+  const toUnit = (kg: number) => (units === "lb" ? Math.round(kg * LB_PER_KG * 10) / 10 : kg);
   const weightPoints = logs
     .filter((l) => l.weightKg !== null)
-    .map((l) => ({ date: l.date, weightKg: l.weightKg as number }));
+    .map((l) => ({ date: l.date, weightKg: toUnit(l.weightKg as number) }));
   const adherencePoints = logs
     .filter((l) => l.adherence !== null)
     .map((l) => ({ date: l.date, adherence: l.adherence as number }));
-  const byType = ASSIGNMENT_TYPES.map((type) => ({ type, count: assignments.filter((a) => a.type === type).length }));
+  const byType = ASSIGNMENT_TYPES.map((type) => ({ type, count: (assignments ?? []).filter((a) => a.type === type).length }));
 
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -57,13 +65,13 @@ export function ProgressCharts({ logs, assignments }: Props) {
                 label={{ value: "Date", position: "insideBottom", offset: -8, fill: "var(--dim)" }}
               />
               <YAxis
-                domain={["dataMin - 1", "dataMax + 1"]}
+                domain={units === "lb" ? ["dataMin - 2", "dataMax + 2"] : ["dataMin - 1", "dataMax + 1"]}
                 allowDecimals={false}
                 width={44}
                 stroke="var(--dim)"
-                label={{ value: "kg", angle: -90, position: "insideLeft", fill: "var(--dim)" }}
+                label={{ value: units, angle: -90, position: "insideLeft", fill: "var(--dim)" }}
               />
-              <Tooltip labelFormatter={(date) => String(date)} formatter={(value) => [`${value} kg`, "Weight"]} />
+              <Tooltip labelFormatter={(date) => String(date)} formatter={(value) => [`${value} ${units}`, "Weight"]} />
               <Line type="monotone" dataKey="weightKg" stroke={ACCENT} strokeWidth={2} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -97,7 +105,8 @@ export function ProgressCharts({ logs, assignments }: Props) {
         )}
       </ChartCard>
 
-      <ChartCard title="Assignments by type">
+      {assignments && (
+        <ChartCard title="Assignments by type">
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <BarChart data={byType} margin={{ top: 20, right: 12, bottom: 4, left: 4 }}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -112,7 +121,8 @@ export function ProgressCharts({ logs, assignments }: Props) {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </ChartCard>
+        </ChartCard>
+      )}
     </div>
   );
 }

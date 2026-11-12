@@ -194,7 +194,10 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
                           {show(m[f.key])}
                         </td>
                       ))}
-                      <td className="min-w-0 max-w-[14rem] break-words px-2 py-2 text-dim">{m.note}</td>
+                      <td className="min-w-0 max-w-[14rem] break-words px-2 py-2 text-dim">
+                        {m.createdBy === "client" && <span className="mr-1 font-semibold text-accent2">Added by client.</span>}
+                        {m.note}
+                      </td>
                       <td className="py-2 pl-2 text-right">
                         <button
                           type="button"

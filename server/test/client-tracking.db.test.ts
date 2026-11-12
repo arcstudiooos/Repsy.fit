@@ -28,7 +28,7 @@ describe.skipIf(!process.env.DATABASE_URL)("client tracking (database)", () => {
       prisma.habit.create({ data: { coachId: coach.id, clientId: sam.id, name: "Sleep" } }),
     ]);
     const cookie = `${CLIENT_SESSION_COOKIE}=${signClientSession(maya.id, 0)}`;
-    const c = (m: "get" | "put" | "post", url: string) => (supertest(app) as any)[m](url).set("Cookie", cookie);
+    const c = (m: "get" | "put" | "post" | "delete", url: string) => (supertest(app) as any)[m](url).set("Cookie", cookie);
 
     expect((await c("put", `/api/client-auth/my-habits/${mine.id}/${today}`).send({ done: true })).status).toBe(200);
     expect((await c("put", `/api/client-auth/my-habits/${theirs.id}/${today}`).send({ done: true })).status).toBe(404);
@@ -52,6 +52,18 @@ describe.skipIf(!process.env.DATABASE_URL)("client tracking (database)", () => {
     expect(await prisma.reviewItem.count({ where: { coachId: coach.id, clientId: maya.id, kind: "checkin", sourceId: log.body.id, status: "Pending" } })).toBe(1);
     const queue = await asCoach(app, coach.id).get("/api/review-queue");
     expect(queue.body.pendingCount).toBe(1);
+
+    // Prompt 81: measurements - the client deletes only their own.
+    const coachM = await asCoach(app, coach.id).post(`/api/clients/${maya.id}/measurements`).send({ date: today, waistCm: 82 });
+    const mine2 = await c("post", "/api/client-auth/my-measurements").send({ date: today, waistCm: 81 });
+    expect(mine2.status).toBe(201);
+    const listed = await c("get", "/api/client-auth/my-measurements");
+    expect(listed.body.map((m: { createdBy: string }) => m.createdBy).sort()).toEqual(["client", "coach"]);
+    expect((await c("delete", `/api/client-auth/my-measurements/${coachM.body.id}`)).status).toBe(404);
+    expect((await c("delete", `/api/client-auth/my-measurements/${mine2.body.id}`)).status).toBe(204);
+    expect(await prisma.measurement.count({ where: { clientId: maya.id } })).toBe(1);
+    const samCookie = `${CLIENT_SESSION_COOKIE}=${signClientSession(sam.id, 0)}`;
+    expect((await supertest(app).get("/api/client-auth/my-measurements").set("Cookie", samCookie)).body).toEqual([]);
 
     // Targets set by the coach show to the client; meals attach from the coach's library.
     await asCoach(app, coach.id).patch(`/api/clients/${maya.id}/targets`).send({ calorieTarget: 2100, proteinTargetG: 140 });

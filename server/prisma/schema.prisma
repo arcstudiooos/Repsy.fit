@@ -426,6 +426,8 @@ model Measurement {
   hipCm          Float?
   bodyFatPercent Float?
   note           String   @default("")
+  /// Prompt 81: "coach" or "client". A client may delete only the measurements they added.
+  createdBy      String   @default("coach")
   createdAt      DateTime @default(now())
 
   @@index([clientId, date])

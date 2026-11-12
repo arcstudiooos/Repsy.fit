@@ -47,6 +47,16 @@ const appKb = appKey ? [...new Set([...first, ...staticClosure(appKey)])].reduce
 if (appKb > BUDGET_APP_GZ_KB) errors.push(`/app loads ${appKb.toFixed(1)} KB gz > budget ${BUDGET_APP_GZ_KB} KB`);
 if (firstKb > BUDGET_FIRST_LOAD_GZ_KB) errors.push(`first load ${firstKb.toFixed(1)} KB gz > budget ${BUDGET_FIRST_LOAD_GZ_KB} KB`);
 
+// 3b. The client app (Prompt 81) must not statically include the chart library: recharts loads only with
+// the lazy Progress tab (clientApp/ProgressView.tsx). Found by content, since vendor chunks are renamed.
+const clientAppKey =
+  Object.keys(manifest).find((k) => k.endsWith("src/clientApp/ClientApp.tsx")) ??
+  Object.keys(manifest).find((k) => manifest[k].name === "ClientApp");
+if (!clientAppKey) errors.push("no separate chunk for src/clientApp/ClientApp.tsx");
+else
+  for (const k of staticClosure(clientAppKey))
+    if (fs.readFileSync(path.join(dist, byKey(k).file), "utf8").includes("recharts-surface")) errors.push(`the client app includes recharts via ${k}`);
+
 // 4. No server secret may ever reach the browser (Prompt 73). The client has no import.meta.env
 // today; this guard is what keeps it that way, because a single VITE_-prefixed secret would be
 // inlined into these files in plain text.

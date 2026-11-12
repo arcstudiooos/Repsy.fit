@@ -61,10 +61,10 @@ describe("POST /api/clients/:clientId/measurements", () => {
     const res = await request(app).post("/api/clients/c1/measurements").send(body);
     expect(res.status).toBe(201);
     expect(prismaMock.measurement.create).toHaveBeenCalledWith({
-      data: { ...body, note: "morning", clientId: "c1", coachId: "coach-1" },
+      data: { ...body, note: "morning", clientId: "c1", coachId: "coach-1", createdBy: "coach" },
     });
     expect(Object.keys(res.body).sort()).toEqual(
-      ["armCm", "bodyFatPercent", "chestCm", "clientId", "coachId", "createdAt", "date", "hipCm", "id", "note", "waistCm"].sort(),
+      ["armCm", "bodyFatPercent", "chestCm", "clientId", "coachId", "createdAt", "createdBy", "date", "hipCm", "id", "note", "waistCm"].sort(),
     );
   });
 
@@ -72,7 +72,7 @@ describe("POST /api/clients/:clientId/measurements", () => {
     const res = await request(app).post("/api/clients/c1/measurements").send({ date: "2026-11-11", waistCm: 80 });
     expect(res.status).toBe(201);
     expect(prismaMock.measurement.create).toHaveBeenCalledWith({
-      data: { date: "2026-11-11", waistCm: 80, note: "", clientId: "c1", coachId: "coach-1" },
+      data: { date: "2026-11-11", waistCm: 80, note: "", clientId: "c1", coachId: "coach-1", createdBy: "coach" },
     });
     expect((await request(app).post("/api/clients/c1/measurements").send({ waistCm: 80 })).status).toBe(400);
     expect((await request(app).post("/api/clients/c1/measurements").send({ date: "2026-02-30" })).status).toBe(400);
