@@ -1,6 +1,6 @@
 // AI Coach tab UI (Prompt 16). Every /api call is mocked in the browser, so these run
 // without a database or AI key. The mock keeps chat history per client, like the server.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, selectClient } from "./fixtures";
 
 type Msg = { id: string; clientId: string; role: "coach" | "ai"; content: string; createdAt: string };
 
@@ -98,7 +98,7 @@ async function mockApi(page: Page): Promise<Mock> {
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const composer = (page: Page) => panel(page).getByRole("textbox", { name: "Ask the AI coach" });
 const conversation = (page: Page) => panel(page).getByRole("list", { name: "Conversation" });
 
@@ -106,7 +106,7 @@ test("keeps the existing heading and Selected line", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
   await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("AI Coach");
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
 test("summary card shows whose data the AI is using", async ({ page }) => {
@@ -238,7 +238,7 @@ test("history survives a reload and each client sees only their own chat", async
   await page.reload();
   await expect(conversation(page)).toContainText("Persist me");
   await expect(conversation(page)).toContainText("Answer about c-maya: keep going.");
-  await page.getByRole("group", { name: "Select client" }).getByRole("button", { name: /Arjun/ }).click();
+  await selectClient(page, "Arjun");
   await expect(conversation(page)).toContainText("Arjun only question");
   await expect(conversation(page)).not.toContainText("Persist me");
   await expect(conversation(page)).not.toContainText("How is Maya doing?");

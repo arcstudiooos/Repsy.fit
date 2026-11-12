@@ -48,12 +48,12 @@ async function mockApi(page: Page, tasks: Tasks | "missing") {
   return requested;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 
-test("Home is the first of 9 tabs", async ({ page }) => {
+test("Home is the first of 5 tabs", async ({ page }) => {
   await mockApi(page, TASKS);
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
   await page.getByRole("tab", { name: "Home" }).click();
   await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
   await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Home");
@@ -73,18 +73,18 @@ test("each task row shows the client and what is needed, with one button", async
   expect(requested[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/); // the coach's local date
 });
 
-test("a due task opens the Manual Planner with that client; an idle task opens the AI Coach with that client", async ({ page }) => {
+test("a due task opens Plans in that client's workspace; an idle task opens the AI Coach with that client", async ({ page }) => {
   await mockApi(page, TASKS);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
-  await panel(page).getByRole("button", { name: /Open in Manual Planner: Maya Patel/ }).click();
-  await expect(page.getByRole("tab", { name: "Manual Planner" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await panel(page).getByRole("button", { name: /Open in Plans: Maya Patel/ }).click();
+  await expect(page.getByRole("tab", { name: "Plans", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 
   await page.getByRole("tab", { name: "Home" }).click();
   await panel(page).getByRole("button", { name: /Plan with AI Coach: Leo Brooks/ }).click();
   await expect(page.getByRole("tab", { name: "AI Coach" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page)).toContainText("Selected: Leo Brooks");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
 });
 
 test("no tasks shows the plain-words empty state", async ({ page }) => {
@@ -93,7 +93,8 @@ test("no tasks shows the plain-words empty state", async ({ page }) => {
   await page.getByRole("tab", { name: "Home" }).click();
   await expect(panel(page)).toContainText("Nothing due today. Pick a client to plan ahead.");
   await expect(panel(page).getByRole("list", { name: "Today's tasks" })).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Select client" })).toBeVisible();
+  // Home is not client-scoped: no client header there.
+  await expect(page.getByRole("region", { name: "Selected client" })).toHaveCount(0);
 });
 
 test("a missing tasks endpoint shows an error with Retry, not made-up tasks", async ({ page }) => {

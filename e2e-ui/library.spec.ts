@@ -1,6 +1,6 @@
 // Library tab and workout templates (Prompt 58). Every /api call is mocked, with a small fake server
 // that keeps the templates and assignments so the list and the Manual Planner react like the real ones.
-import { expect, test, type Page } from "./fixtures";
+import { expect, test, type Page, openClientTab, openLibrary as goToLibrary } from "./fixtures";
 
 const client = (id: string, name: string) => ({
   id,
@@ -84,17 +84,17 @@ async function openLibrary(page: Page, initial: T[] = []) {
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Library" }).click();
+  await goToLibrary(page);
   await expect(page.getByRole("heading", { level: 2, name: "Library" })).toBeVisible();
   return { templates, calls };
 }
 
-test("Library is the 7th tab and lists templates, with search by name", async ({ page }) => {
+test("Library is a Business view and lists templates, with search by name", async ({ page }) => {
   await openLibrary(page, [
     tpl("t1", "Push day", { focus: "Upper body", notes: "Warm up first" }),
     tpl("t2", "Leg day", { exercises: [{ name: "Back Squat", sets: 4, reps: "6", rest: 120 }, { name: "Leg Press", sets: 3, reps: "12", rest: 90 }] }),
   ]);
-  await expect(page.getByRole("tab").nth(6)).toHaveText("Library");
+  await expect(page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Library" })).toHaveAttribute("aria-pressed", "true");
   const list = page.getByRole("list", { name: "Templates" });
   await expect(list.getByRole("heading", { level: 3 })).toHaveText(["Leg day", "Push day"]);
   await expect(list).toContainText("Back Squat");
@@ -182,7 +182,7 @@ test("delete asks first; Cancel keeps it, Delete removes it", async ({ page }) =
   expect(calls).toEqual(["DELETE t1"]);
 });
 
-test("Assign to client: any client and a date open the Manual Planner pre-filled and editable, then save a real Workout", async ({ page }) => {
+test("Assign to client: any client and a date open that client's Plans pre-filled and editable, then save a real Workout", async ({ page }) => {
   const { calls } = await openLibrary(page, [
     tpl("t1", "Leg day", { notes: "Warm up first", exercises: [{ name: "Back Squat", sets: 4, reps: "6", rest: 120 }, { name: "Leg Press", sets: 3, reps: "12", rest: 90 }] }),
   ]);
@@ -190,10 +190,10 @@ test("Assign to client: any client and a date open the Manual Planner pre-filled
   const panel = page.getByRole("group", { name: "Assign Leg day" });
   await panel.getByLabel("Client").selectOption({ label: "Arjun Mehta" });
   await panel.getByLabel("Date").fill("2026-12-01");
-  await panel.getByRole("button", { name: "Open in Manual Planner" }).click();
+  await panel.getByRole("button", { name: "Open in Plans" }).click();
 
-  await expect(page.getByRole("tab", { name: "Manual Planner" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Selected: Arjun Mehta")).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Plans", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Arjun Mehta");
   const form = page.getByRole("form", { name: "New assignment" });
   await expect(form.getByLabel("Title")).toHaveValue("Leg day");
   await expect(form.getByLabel("Reasoning / why this plan (optional)")).toHaveValue("From template: Leg day");
@@ -219,7 +219,7 @@ test("Assign to client: any client and a date open the Manual Planner pre-filled
   ]);
 
   // Leaving and coming back starts from an empty form again.
-  await page.getByRole("tab", { name: "Library" }).click();
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
+  await goToLibrary(page);
+  await openClientTab(page, "Plans");
   await expect(page.getByRole("form", { name: "New assignment" }).getByLabel("Title")).toHaveValue("");
 });

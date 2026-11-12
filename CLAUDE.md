@@ -28,7 +28,7 @@ Progress in charts. Built one feature at a time, across many separate prompts.
 5. **Never delete a working feature to make a new one fit.** If a prompt conflicts with
    existing code, stop and tell the user instead of guessing.
 6. **Keep the design rules below.** No new colours. No side / vertical menu — navigation is
-   horizontal, Chrome-style tabs at the top only.
+   horizontal, Chrome-style tabs at the top (phones: the same tabs in a bottom tab bar).
 
 Commits: one commit per prompt, message as given in the prompt (e.g. "Prompt N: …").
 
@@ -163,6 +163,20 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 ### Layout
 
 - **No vertical / side menu.** Navigation is horizontal, Chrome-style tabs across the top.
+- **Coach app navigation (Nov 2026, `client/src/App.tsx`).** 5 top tabs: **Home, Clients, AI Coach, Messages,
+  Business** - ONE `role=tablist` ("Sections"): Chrome-style tabs above the panel from `sm` (640px) up, a fixed
+  bottom tab bar with icons below it (safe-area padding; the page has bottom padding so nothing hides behind it).
+  Left / Right / Home / End move between tabs (roving tabindex). **Clients** shows the roster; a client card
+  (whole card, "Open <name>") opens that client's **workspace**: "Back to all clients", the client header, and
+  sub-tabs **Plans** (was "Manual Planner"), **Progress**, **Check-ins** (a nested tablist, same keys). Choosing
+  the Clients tab always shows the roster. **Library** is a Business view (Payments / Schedule / Engagement /
+  Reports / Library) and still works with zero clients. The **client header** (`client/src/ClientHeader.tsx`:
+  initials, name, goal, "Switch client" = searchable combobox + listbox) shows on AI Coach and in the workspace;
+  it replaced the chip strip and the "Selected: <name>" lines. Links that used to switch tabs land in the
+  workspace (Home "Open in Plans", AI "View in Plans", Library "Open in Plans", macro links -> Business > Library).
+  Tabs are in-memory state: there are no `/app/<tab>` URLs; any `/app/...` path opens the dashboard and
+  `/app/account` the account page. UI test helpers: `openClientTab`, `selectClient`, `openLibrary` in
+  `e2e-ui/fixtures.ts` (and `e2e/nav.ts` for the real-server specs).
 
 ## Data notes
 - **Security and privacy (Prompt 73).** There is **no CORS middleware**: the built client is served by
@@ -258,7 +272,7 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   - `roster` (all of the coach's clients, A-Z): `name, goal, level, planName, planStatus, billingCycle, priceAmount, nextDueDate` - a client
     with no plan has `planStatus` "No plan" and the other plan columns empty. The button "Download roster CSV" is in Business > Reports (moved from Payments, Nov 2026).
 - **Streaks and leaderboard (Prompt 71).** Nothing is stored: no model, no migration. **Place: the Business tab's "Engagement" view**
-  (switch Payments / Schedule / Engagement / Reports; still 9 tabs; no Home card). Rules live in `server/src/engagement.ts`, per client:
+  (switch Payments / Schedule / Engagement / Reports / Library; no extra top tab; no Home card). Rules live in `server/src/engagement.ts`, per client:
   **check-in streak** = consecutive days with a `DailyCheckIn` up to today (today not yet logged does not break it, counting back from
   yesterday) computed by the existing `habitStreaks` (Prompt 54, reused, not copied); **habit %** = done ticks in the last 7 days /
   (active habits x 7), rounded, `null` with no active habits - the denominator is always the full 7 days, so a habit added today starts low and climbs; **workouts this week** = Workout assignments with status Done dated Monday-Sunday
@@ -303,10 +317,10 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   the two share no table, route or component. Messages are plain text and rendered as text, never
   HTML. A coach may delete only their own message, and only within 15 minutes. Opening a thread
   (the newest page) marks the client's messages read; an older page marks nothing. **No
-  real-time in v2**: no WebSockets or push - the Messages tab (8th tab, after Library, lazy-loaded)
+  real-time in v2**: no WebSockets or push - the Messages tab (lazy-loaded)
   fetches on open and polls every 20 seconds while the browser tab is visible.
 - **Messages UI (Prompt 64).** The Messages tab has its own client column (search by name, last
-  message preview, how long ago, unread count badge), so the top client strip is hidden on that tab; picking a
+  message preview, how long ago, unread count badge), so the client header is hidden on that tab; picking a
   conversation still sets the app-wide selected client. `GET /api/messages/threads` was added
   for that column (the prompt listed UI files only): without it the list would have to open every
   thread, which marks it read. Coach bubbles sit right in teal (`bg-accent2`, white text), client
@@ -323,7 +337,7 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   save it a second time (no idempotency key in v2). Chat never touches the Home review-queue
   count.
 
-- **Lazy tabs and the bundle guard.** `/app` loads Home, AI Coach, Clients and Manual Planner
+- **Lazy tabs and the bundle guard.** `/app` loads Home, AI Coach, Clients and Plans (Manual Planner)
   eagerly; **Progress, Check-ins and Library load on first open**, each wrapped in `<Suspense>`.
   That keeps Recharts out of the dashboard's first download (`/app` ~99 KB gz, budget 130 KB in
   `client/scripts/check-budget.mjs`; first load 90 KB). A new chart-heavy tab should be lazy too.
@@ -333,8 +347,8 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   reps (text, 1-30 chars: "AMRAP" works), rest (whole seconds, 6-3600) }]`, 1 to 50 of them. `name` 1-100
   characters, `focus` up to 100, `notes` up to 2000. **Coach-level:** a template belongs to one coach, has no
   client, and is never shared between coaches (no marketplace); deleting the coach deletes their templates.
-  Deleting a template never touches assignments already made from it. The 7th tab, **Library**
-  (`client/src/tabs/LibraryTab.tsx`, lazy chunk), has no client strip and works with zero clients. It reuses the
+  Deleting a template never touches assignments already made from it. **Library** (a Business view since Nov 2026;
+  `client/src/tabs/LibraryTab.tsx`, lazy chunk) has no client header and works with zero clients. It reuses the
   Planner's exercise search and sets / reps / rest rows (`ExercisePicker` in `ManualAssignmentForm.tsx`).
   "Assign to client" picks any of the coach's clients and a date (default today), then opens the Manual Planner for
   that client with the New assignment form pre-filled (Workout, title = template name, its exercises, its notes as
@@ -904,6 +918,10 @@ and record it here.
 - Prompt 48: Home is the FIRST tab but `/app` still opens on AI Coach (making Home the landing tab would change
   what many existing specs assume; say so if you want it). Today's Tasks is built on the new
   `GET /api/tasks/today`. The review-queue count line is omitted (no check-in review data exists until Prompt 52).
+- Home card order (Nov 2026): Needs attention, Review queue, Client activity, Today's Tasks, New check-ins, AI weekly
+  summary; headings show a count when there is one ("Review queue · 2"). New check-ins shows one row per client (latest +
+  "+N earlier"), 5 rows then "See all (N)" (expands in place); a row opens that client's workspace - Check-ins for a daily
+  check-in, Progress for a weekly progress log (that is where each kind is shown).
   Buttons: a due task opens Manual Planner, an idle client opens AI Coach, each with that client selected.
 - Prompt 49: "New check-ins" card on Home, built on the new `GET /api/checkins/recent` (progress logs only until Prompt 53). The time shown is when the log was saved (`createdAt`), not its `date` field. Clicking a row selects that client and opens Progress.
 - Prompt 50: "Needs attention" card on Home, built on the new `GET /api/at-risk` (rules in `server/src/atRisk.ts`). The prompt's "3 straight logs" is read as 3 consecutive wrong-way moves (4 weights); "last 2 logged weeks" as the 14 days up to the client's latest adherence log. Each row lists every rule that fired.

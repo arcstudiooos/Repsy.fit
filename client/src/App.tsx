@@ -1,8 +1,8 @@
-import { Suspense, lazy, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ThemeSwitch } from "./components/ThemeSwitch";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
-import { ClientStrip, initials } from "./ClientStrip";
+import { ClientHeader, initials } from "./ClientHeader";
 import { MenuButton } from "./components/MenuButton";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./components/States";
 import { navigate } from "./route";
@@ -16,7 +16,7 @@ import type { Client, Coach } from "./types";
 
 // The account page (Prompt 47) is its own lazy chunk: its form validation (zod) stays out of the first /app load.
 const AccountPage = lazy(() => import("./auth/AccountPage"));
-// The Library tab (Prompt 58) loads on first open, which keeps the /app first load inside its size budget.
+// The Library (Prompt 58; a Business view since Nov 2026) loads on first open, which keeps the /app first load inside its size budget.
 const LibraryTab = lazy(() => import("./tabs/LibraryTab").then((m) => ({ default: m.LibraryTab })));
 // Progress and Check-ins draw charts, so Recharts loads with the tab the coach opens rather than
 // with the whole dashboard. Home is the first screen and draws no charts, so nothing waits on it.
@@ -24,25 +24,46 @@ const ProgressTab = lazy(() => import("./tabs/ProgressTab").then((m) => ({ defau
 const CheckInsTab = lazy(() => import("./tabs/CheckInsTab").then((m) => ({ default: m.CheckInsTab })));
 // Coach <-> client messages (Prompt 63) - a separate conversation from the AI Coach tab.
 const MessagesTab = lazy(() => import("./tabs/MessagesTab").then((m) => ({ default: m.MessagesTab })));
-// Business (Prompt 68): plans and recorded payments, coach-level like Library.
+// Business (Prompt 68): plans and recorded payments, coach-level like Library (which is now a Business view).
 const BusinessTab = lazy(() => import("./tabs/BusinessTab").then((m) => ({ default: m.BusinessTab })));
+import type { BusinessView } from "./tabs/BusinessTab";
 // Type-only: erased at build time, so the Messages code stays in its own lazy chunk.
 import type { ChatState } from "./tabs/MessagesTab";
 import { WaitingBanner } from "./components/WaitingBanner";
 
-type TabId = "home" | "ai" | "clients" | "planner" | "progress" | "checkins" | "library" | "messages" | "business";
+type TabId = "home" | "clients" | "ai" | "messages" | "business";
+/** Sub-tabs of the client workspace (inside Clients). */
+type SubTabId = "plans" | "progress" | "checkins";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "home", label: "Home" },
-  { id: "ai", label: "AI Coach" },
-  { id: "clients", label: "Clients" },
-  { id: "planner", label: "Manual Planner" },
+// Five top-level sections (Nov 2026). Plans, Progress and Check-ins live in the client workspace
+// inside Clients; Library lives in Business. Icons show on the phone bottom bar only.
+const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
+  { id: "home", label: "Home", icon: <path d="M4 11 12 4l8 7v9h-5v-6H9v6H4v-9z" /> },
+  { id: "clients", label: "Clients", icon: <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M18 14.5a7 7 0 0 1 4 6.5" /> },
+  { id: "ai", label: "AI Coach", icon: <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" /> },
+  { id: "messages", label: "Messages", icon: <path d="M4 5h16v11H8l-4 4V5z" /> },
+  { id: "business", label: "Business", icon: <path d="M3 8h18v12H3V8zm6 0V5h6v3M3 13h18" /> },
+];
+
+const SUB_TABS: { id: SubTabId; label: string }[] = [
+  { id: "plans", label: "Plans" },
   { id: "progress", label: "Progress" },
   { id: "checkins", label: "Check-ins" },
-  { id: "library", label: "Library" },
-  { id: "messages", label: "Messages" },
-  { id: "business", label: "Business" },
 ];
+
+/** Tab-pattern keys (APG): Left / Right move and activate, Home / End jump. Focus follows. */
+function onTabKeys<T extends string>(e: KeyboardEvent<HTMLElement>, ids: T[], active: T, select: (id: T) => void, idPrefix: string) {
+  const i = ids.indexOf(active);
+  let next = -1;
+  if (e.key === "ArrowRight") next = (i + 1) % ids.length;
+  else if (e.key === "ArrowLeft") next = (i - 1 + ids.length) % ids.length;
+  else if (e.key === "Home") next = 0;
+  else if (e.key === "End") next = ids.length - 1;
+  if (next < 0) return;
+  e.preventDefault();
+  select(ids[next]);
+  document.getElementById(`${idPrefix}${ids[next]}`)?.focus();
+}
 
 function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
   return (
@@ -74,10 +95,10 @@ function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () =>
   );
 }
 
-// Horizontal, Chrome-style tabs. Never a vertical / side menu at any screen size:
-// on narrow screens the row scrolls sideways instead of wrapping.
-// The panel's top border is drawn as a 1px line at the bottom of this row (not on the
-// panel), so the active tab can cover it without being clipped by the scroll container.
+// ONE tablist for every screen size. Desktop / tablet (sm+): horizontal, Chrome-style tabs above the
+// panel; the panel's top border is drawn as a 1px line at the bottom of this row, so the active tab can
+// cover it. Phones (<640px): the same tablist is a fixed bottom tab bar with icons (like the client app).
+// Never a vertical / side menu.
 function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => void }) {
   // Prompt 52: how many items wait in the review queue (this coach only). 0 shows no badge.
   const reviewCount = useReviewQueueCount();
@@ -85,13 +106,12 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
     <div
       role="tablist"
       aria-label="Sections"
-      className="flex flex-nowrap items-end gap-1 overflow-x-auto pt-4 [scrollbar-width:thin]"
-      style={{
-        backgroundImage: "linear-gradient(var(--border), var(--border))",
-        backgroundSize: "100% 1px",
-        backgroundPosition: "bottom",
-        backgroundRepeat: "no-repeat",
-      }}
+      onKeyDown={(e) => onTabKeys(e, TABS.map((t) => t.id), active, onSelect, "tab-")}
+      className={
+        "no-print fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] " +
+        "sm:static sm:z-auto sm:items-end sm:gap-1 sm:overflow-x-auto sm:border-t-0 sm:bg-transparent sm:pb-0 sm:pt-4 " +
+        "sm:bg-[image:linear-gradient(var(--border),var(--border))] sm:bg-[length:100%_1px] sm:bg-bottom sm:bg-no-repeat"
+      }
     >
       {TABS.map((tab) => {
         const isActive = tab.id === active;
@@ -103,21 +123,26 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
             id={`tab-${tab.id}`}
             aria-selected={isActive}
             aria-controls={`panel-${tab.id}`}
+            tabIndex={isActive ? 0 : -1}
             onClick={() => onSelect(tab.id)}
             className={
-              "relative shrink-0 whitespace-nowrap rounded-t-[10px] border border-b-0 px-5 py-2.5 text-sm font-semibold " +
+              "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-semibold " +
+              "sm:min-h-0 sm:flex-none sm:shrink-0 sm:flex-row sm:gap-0 sm:whitespace-nowrap sm:rounded-t-[10px] sm:border sm:border-b-0 sm:px-5 sm:py-2.5 sm:text-sm " +
               (isActive
                 ? // Active: surface colour, covers the line below so it joins the panel.
-                  "border-border bg-surface text-text"
+                  "text-accent2 sm:border-border sm:bg-surface sm:text-text"
                 : // Inactive: stops 1px above the line.
-                  "mb-px border-transparent bg-tab-inactive text-dim hover:text-text")
+                  "text-dim sm:mb-px sm:border-transparent sm:bg-tab-inactive sm:hover:text-text")
             }
           >
-            {tab.label}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sm:hidden">
+              {tab.icon}
+            </svg>
+            <span className="max-w-full truncate">{tab.label}</span>
             {tab.id === "home" && reviewCount > 0 && (
               <span
                 aria-label={`${reviewCount} waiting in the review queue`}
-                className="ml-2 inline-block rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-accent"
+                className="absolute right-[calc(50%-1.5rem)] top-1 inline-block rounded-full bg-accent px-1.5 text-[10px] font-bold leading-4 text-on-accent sm:static sm:ml-2 sm:px-2 sm:py-0.5 sm:text-xs"
               >
                 {reviewCount}
               </span>
@@ -129,17 +154,37 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
   );
 }
 
-// Every tab receives the selected client. All data views are per selected client -
-// never mixed data from two clients.
-type TabProps = { tab: { id: TabId; label: string }; client: Client | null };
-
-function PlaceholderTab({ tab, client }: TabProps) {
+/** Plans / Progress / Check-ins for the selected client: a nested tablist inside the Clients panel. */
+function SubTabBar({ active, onSelect, clientName }: { active: SubTabId; onSelect: (id: SubTabId) => void; clientName: string }) {
   return (
-    <>
-      <h2 className="text-2xl">{tab.label}</h2>
-      <p className="mt-2 text-dim">Placeholder - {tab.label} content comes in a later prompt.</p>
-      <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
-    </>
+    <div
+      role="tablist"
+      aria-label={`Client workspace: ${clientName}`}
+      onKeyDown={(e) => onTabKeys(e, SUB_TABS.map((t) => t.id), active, onSelect, "subtab-")}
+      className="mb-5 flex gap-1 border-b border-border"
+    >
+      {SUB_TABS.map((t) => {
+        const isActive = t.id === active;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`subtab-${t.id}`}
+            aria-selected={isActive}
+            aria-controls={`subpanel-${t.id}`}
+            tabIndex={isActive ? 0 : -1}
+            onClick={() => onSelect(t.id)}
+            className={
+              "-mb-px min-h-11 border-b-2 px-4 text-sm font-semibold " +
+              (isActive ? "border-accent text-text" : "border-transparent text-dim hover:text-text")
+            }
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -177,7 +222,7 @@ export default function App() {
       <>
         <Dashboard coach={meQuery.data} onLogout={onLogout} loggingOut={loggingOut} />
         {logoutError && (
-          <p role="alert" className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-amber-text">
+          <p role="alert" className="fixed bottom-20 left-1/2 z-30 sm:bottom-4 -translate-x-1/2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-amber-text">
             {logoutError}
           </p>
         )}
@@ -210,9 +255,14 @@ function usePathname(): string {
 
 function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
   const onAccount = usePathname() === "/app/account";
+  // /app still opens on AI Coach (Prompt 48).
   const [activeTab, setActiveTab] = useState<TabId>("ai");
-  const current = TABS.find((t) => t.id === activeTab)!;
-  // Prompt 58: a Library template waiting to fill the Manual Planner's new-assignment form.
+  // Clients shows the roster, or one client's workspace (Plans / Progress / Check-ins).
+  const [inWorkspace, setInWorkspace] = useState(false);
+  const [subTab, setSubTab] = useState<SubTabId>("plans");
+  // Business view (Payments / Schedule / Engagement / Reports / Library), lifted so links can open Library.
+  const [businessView, setBusinessView] = useState<BusinessView>("Payments");
+  // Prompt 58: a Library template waiting to fill the Plans new-assignment form.
   const [plannerPrefill, setPlannerPrefill] = useState<TemplatePrefill | null>(null);
   // Unsent chat messages and drafts live here, above the tabs, so leaving the Messages tab
   // mid-send never loses one (Prompt 64).
@@ -223,7 +273,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   const clearMacroClientId = useCallback(() => setMacroClientId(null), []);
   const openMacroCalculator = useCallback((clientId: string) => {
     setMacroClientId(clientId);
-    setActiveTab("library");
+    setBusinessView("Library");
+    setActiveTab("business");
   }, []);
 
   // Shared "selected client" for the whole app.
@@ -245,6 +296,19 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
+  /** Top-level tab. Choosing Clients always shows the full roster. */
+  const selectTab = useCallback((id: TabId) => {
+    setActiveTab(id);
+    if (id === "clients") setInWorkspace(false);
+  }, []);
+  /** Opens one client's workspace in Clients, on the given sub-tab. */
+  const openWorkspace = useCallback((clientId: string | null, sub: SubTabId) => {
+    if (clientId) setSelectedClientId(clientId);
+    setSubTab(sub);
+    setInWorkspace(true);
+    setActiveTab("clients");
+  }, []);
+
   // Both "Load demo" buttons share this; after a seed the first demo client is selected.
   const seedDemo = useDemoSeed(setSelectedClientId, { seed: seedQuickDemo, alreadyLoaded: "Demo already loaded" });
   const seedSixMonth = useDemoSeed(setSelectedClientId, {
@@ -252,17 +316,70 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     alreadyLoaded: "6-month demo already loaded",
   });
 
-  // What the panel shows. The Clients tab handles its own loading / error / empty states.
-  // Other tabs: loading / error / empty states, or the strip + tab content.
+  // Loading / error / no-clients states for the views that need clients.
+  let clientsGate: ReactNode = null;
+  if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {
+    // Also while retrying after an error, so Retry gives visible feedback.
+    clientsGate = <LoadingState />;
+  } else if (clientsQuery.isError) {
+    clientsGate = <ErrorState error={clientsQuery.error} onRetry={() => void clientsQuery.refetch()} />;
+  } else if (clients.length === 0) {
+    clientsGate = (
+      <>
+        <WaitingBanner onOpen={() => selectTab("clients")} />
+        <EmptyState onAddClient={() => selectTab("clients")} seedDemo={seedDemo} />
+      </>
+    );
+  }
+
+  const clientHeader = selectedClient && (
+    <ClientHeader clients={clients} client={selectedClient} onSelect={setSelectedClientId} />
+  );
+
   let panelContent: ReactNode;
-  if (current.id === "clients") {
+  if (activeTab === "clients" && inWorkspace && selectedClient) {
+    // The client workspace. key forces a clean remount when the selected client changes, so no
+    // view can keep showing the previous client's data.
+    panelContent = (
+      <>
+        <p className="mb-3 text-sm">
+          <button
+            type="button"
+            onClick={() => setInWorkspace(false)}
+            className="min-h-10 font-semibold text-accent2 underline underline-offset-4"
+          >
+            ← Back to all clients
+          </button>
+        </p>
+        {clientHeader}
+        <SubTabBar active={subTab} onSelect={setSubTab} clientName={selectedClient.name} />
+        <div role="tabpanel" id={`subpanel-${subTab}`} aria-labelledby={`subtab-${subTab}`}>
+          {subTab === "plans" ? (
+            <PlannerTab
+              key={`planner:${selectedClient.id}`}
+              client={selectedClient}
+              onOpenAiCoach={() => selectTab("ai")}
+              prefill={plannerPrefill}
+              onPrefillUsed={clearPlannerPrefill}
+            />
+          ) : subTab === "progress" ? (
+            <Suspense fallback={<LoadingState />}>
+              <ProgressTab key={`progress:${selectedClient.id}`} client={selectedClient} onOpenMacroCalculator={openMacroCalculator} />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<LoadingState />}>
+              <CheckInsTab key={`checkins:${selectedClient.id}`} client={selectedClient} onOpenMacroCalculator={openMacroCalculator} />
+            </Suspense>
+          )}
+        </div>
+      </>
+    );
+  } else if (activeTab === "clients") {
+    // The roster handles its own loading / error / empty states.
     panelContent = (
       <ClientsTab
         selectedClientId={selectedClientId}
-        onOpenClient={(clientId) => {
-          setSelectedClientId(clientId);
-          setActiveTab("ai");
-        }}
+        onOpenClient={(clientId) => openWorkspace(clientId, "plans")}
         onClientCreated={setSelectedClientId}
         onClientDeleted={(deletedId, nextClientId) => {
           // If the deleted client was selected, select the next remaining one (or none).
@@ -272,114 +389,78 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
         seedSixMonth={seedSixMonth}
       />
     );
-  } else if (current.id === "library") {
-    // Templates belong to the coach, not to a client: no client strip, and it works with zero clients.
+  } else if (activeTab === "business") {
+    // Library (templates, meals, macro calculator) belongs to the coach, so it works with zero
+    // clients; the other Business views need clients and show the usual states instead.
     panelContent = (
       <Suspense fallback={<LoadingState />}>
-        <LibraryTab
-          onAssign={(clientId, prefill) => {
-            setSelectedClientId(clientId);
-            setPlannerPrefill(prefill);
-            setActiveTab("planner");
-          }}
-          macroClientId={macroClientId}
-          onMacroPrefillUsed={clearMacroClientId}
+        <BusinessTab
+          clients={clients}
+          view={businessView}
+          onViewChange={setBusinessView}
+          blocked={clientsGate}
+          library={
+            <LibraryTab
+              onAssign={(clientId, prefill) => {
+                setPlannerPrefill(prefill);
+                openWorkspace(clientId, "plans");
+              }}
+              macroClientId={macroClientId}
+              onMacroPrefillUsed={clearMacroClientId}
+            />
+          }
         />
       </Suspense>
     );
-  } else if (clientsQuery.isPending || (clientsQuery.isError && clientsQuery.isFetching)) {
-    // Also while retrying after an error, so Retry gives visible feedback.
-    panelContent = <LoadingState />;
-  } else if (clientsQuery.isError) {
-    panelContent = <ErrorState error={clientsQuery.error} onRetry={() => void clientsQuery.refetch()} />;
-  } else if (clients.length === 0) {
+  } else if (clientsGate) {
+    panelContent = clientsGate;
+  } else if (activeTab === "home") {
+    panelContent = (
+      <HomeTab
+        onOpenTask={(clientId, target) => {
+          if (target === "planner") openWorkspace(clientId, "plans");
+          else {
+            setSelectedClientId(clientId);
+            selectTab("ai");
+          }
+        }}
+        onOpenClient={(clientId, sub) => openWorkspace(clientId, sub)}
+        onOpenThread={(clientId) => {
+          setSelectedClientId(clientId);
+          selectTab("messages");
+        }}
+        onOpenClients={() => selectTab("clients")}
+      />
+    );
+  } else if (activeTab === "ai") {
     panelContent = (
       <>
-        <WaitingBanner onOpen={() => setActiveTab("clients")} />
-        <EmptyState onAddClient={() => setActiveTab("clients")} seedDemo={seedDemo} />
+        {clientHeader}
+        <AiCoachTab
+          key={`ai:${selectedClientId ?? "none"}`}
+          client={selectedClient}
+          onOpenPlanner={() => openWorkspace(selectedClientId, "plans")}
+        />
       </>
     );
   } else {
+    // Messages has its own client column (with previews and unread dots) instead of the client header.
     panelContent = (
-      <>
-        {/* Client selector strip: every tab except Clients (that tab is the full list). */}
-        {/* Messages has its own client column (with previews and unread dots) instead of the strip. */}
-        {current.id !== "messages" && current.id !== "business" && (
-          <ClientStrip clients={clients} selectedClientId={selectedClientId} onSelect={setSelectedClientId} />
-        )}
-        {/* key forces a clean remount when the selected client changes, so no tab can
-            keep showing the previous client's data. */}
-        {current.id === "home" ? (
-          <HomeTab
-            onOpenTask={(clientId, target) => {
-              setSelectedClientId(clientId);
-              setActiveTab(target);
-            }}
-            onOpenCheckIn={(clientId) => {
-              setSelectedClientId(clientId);
-              setActiveTab("progress");
-            }}
-            onOpenThread={(clientId) => {
-              setSelectedClientId(clientId);
-              setActiveTab("messages");
-            }}
-            onOpenClients={() => setActiveTab("clients")}
-          />
-        ) : current.id === "ai" ? (
-          <AiCoachTab
-            key={`ai:${selectedClientId ?? "none"}`}
-            client={selectedClient}
-            onOpenPlanner={() => setActiveTab("planner")}
-          />
-        ) : current.id === "planner" ? (
-          <PlannerTab
-            key={`planner:${selectedClientId ?? "none"}`}
-            client={selectedClient}
-            onOpenAiCoach={() => setActiveTab("ai")}
-            prefill={plannerPrefill}
-            onPrefillUsed={clearPlannerPrefill}
-          />
-        ) : current.id === "progress" ? (
-          <Suspense fallback={<LoadingState />}>
-            <ProgressTab
-              key={`progress:${selectedClientId ?? "none"}`}
-              client={selectedClient}
-              onOpenMacroCalculator={openMacroCalculator}
-            />
-          </Suspense>
-        ) : current.id === "checkins" ? (
-          <Suspense fallback={<LoadingState />}>
-            <CheckInsTab
-              key={`checkins:${selectedClientId ?? "none"}`}
-              client={selectedClient}
-              onOpenMacroCalculator={openMacroCalculator}
-            />
-          </Suspense>
-        ) : (
-          current.id === "business" ? (
-            <Suspense fallback={<LoadingState />}>
-              <BusinessTab clients={clients} />
-            </Suspense>
-          ) : current.id === "messages" ? (
-            <Suspense fallback={<LoadingState />}>
-              <MessagesTab
-                clients={clients}
-                selectedClientId={selectedClientId}
-                onSelect={setSelectedClientId}
-                chat={chat}
-                setChat={setChat}
-              />
-            </Suspense>
-          ) : (
-            <PlaceholderTab key={`${current.id}:${selectedClientId ?? "none"}`} tab={current} client={selectedClient} />
-          )
-        )}
-      </>
+      <Suspense fallback={<LoadingState />}>
+        <MessagesTab
+          clients={clients}
+          selectedClientId={selectedClientId}
+          onSelect={setSelectedClientId}
+          chat={chat}
+          setChat={setChat}
+        />
+      </Suspense>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    // Phones: room at the bottom for the fixed tab bar (and the safe area).
+    <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <Header coach={coach} onLogout={onLogout} loggingOut={loggingOut} />
       <main className="mx-auto max-w-[1100px] px-4 pb-10">
         {onAccount ? (
@@ -402,21 +483,21 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           </section>
         ) : (
           <>
-        <TabBar active={activeTab} onSelect={setActiveTab} />
-        <section
-          role="tabpanel"
-          id={`panel-${current.id}`}
-          aria-labelledby={`tab-${current.id}`}
-          className="card rounded-t-none border-t-0 p-6"
-        >
-          {/* The demo buttons vanish once there are clients, so their result is said here. */}
-          {(seedDemo.message ?? seedSixMonth.message) && (
-            <p role="status" className="mb-3 text-sm font-semibold text-accent2">
-              {seedDemo.message ?? seedSixMonth.message}
-            </p>
-          )}
-          {panelContent}
-        </section>
+            <TabBar active={activeTab} onSelect={selectTab} />
+            <section
+              role="tabpanel"
+              id={`panel-${activeTab}`}
+              aria-labelledby={`tab-${activeTab}`}
+              className="card mt-4 p-4 sm:mt-0 sm:rounded-t-none sm:border-t-0 sm:p-6"
+            >
+              {/* The demo buttons vanish once there are clients, so their result is said here. */}
+              {(seedDemo.message ?? seedSixMonth.message) && (
+                <p role="status" className="mb-3 text-sm font-semibold text-accent2">
+                  {seedDemo.message ?? seedSixMonth.message}
+                </p>
+              )}
+              {panelContent}
+            </section>
           </>
         )}
       </main>

@@ -50,7 +50,7 @@ async function mockApi(page: Page) {
 
 test("Business has a Reports view; generating a report shows the printable progress report", async ({ page }) => {
   await mockApi(page);
-  await expect(page.getByRole("tab")).toHaveCount(9); // still 9 tabs, no 10th
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5); // still 5 tabs: views live inside Business
   await page.getByLabel("Client", { exact: true }).selectOption("c-arjun");
   await page.getByLabel("From (optional)").fill("2026-10-01");
   await page.getByLabel("To (optional)").fill("2026-10-31");
@@ -126,7 +126,7 @@ for (const [label, type] of [
 test("the roster CSV download sits with the other exports in Reports (not in Payments)", async ({ page }) => {
   await mockApi(page);
   await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Payments" }).click();
-  await expect(page.getByRole("tabpanel").getByText("Record-keeping only")).toBeVisible();
+  await expect(page.getByRole("tabpanel").first().getByText("Record-keeping only")).toBeVisible();
   await expect(page.getByRole("button", { name: "Download roster CSV" })).toHaveCount(0);
   await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Reports" }).click();
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download roster CSV" }).click()]);

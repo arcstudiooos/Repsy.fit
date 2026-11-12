@@ -1,7 +1,7 @@
 // Assignments list in the Manual Planner (Prompt 19). Every /api call is mocked in the
 // browser, so these run without a database or AI key. AI drafts are assigned into the mock, and
 // the assignments list returns newest first, like the server.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openSection, selectClient } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
@@ -90,8 +90,8 @@ async function mockApi(page: Page, initial: Record<string, Assignment[]> = {}): 
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
-const openTab = (page: Page, name: string) => page.getByRole("tab", { name }).click();
+const panel = (page: Page) => page.getByRole("tabpanel").first();
+const openTab = (page: Page, name: string) => openSection(page, name);
 const filters = (page: Page) => panel(page).getByRole("group", { name: "Filter by type" });
 const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem");
 const cardFor = (page: Page, title: string) => cards(page).filter({ hasText: title });
@@ -108,9 +108,9 @@ test("the 4 auto-assigned plans appear newest first with type chips, AI labels a
     await expect(draft).toContainText("✓ Assigned");
   }
 
-  await panel(page).getByRole("button", { name: "View in Manual Planner" }).click();
-  await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Manual Planner");
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await panel(page).getByRole("button", { name: "View in Plans" }).click();
+  await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Plans");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
   await expect(cards(page)).toHaveCount(4);
   // Newest first.
   await expect(cards(page).getByRole("heading")).toHaveText([
@@ -145,7 +145,7 @@ test("filter chips narrow the list instantly on the client", async ({ page }) =>
     if (r.method() === "GET" && r.url().endsWith("/assignments")) gets++;
   });
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   await expect(filters(page).getByRole("button")).toHaveText(["All", "Workout", "Nutrition", "Habit", "Recovery"]);
   await expect(filters(page).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
   await expect(cards(page)).toHaveCount(5);
@@ -180,7 +180,7 @@ test("cards show source, status, date, line breaks, and no Why line when reasoni
     ],
   });
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   const card = cardFor(page, "Meal prep");
   await expect(card.getByText("Manual", { exact: true })).toBeVisible();
   await expect(card.getByText("AI", { exact: true })).toHaveCount(0);
@@ -194,25 +194,25 @@ test("cards show source, status, date, line breaks, and no Why line when reasoni
 test("a filter with no matches says so; an empty list offers the AI Coach", async ({ page }) => {
   await mockApi(page, { "c-maya": [assignment("c-maya", { type: "Workout", title: "Squat day" })] });
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   await filters(page).getByRole("button", { name: "Habit" }).click();
   await expect(cards(page)).toHaveCount(0);
   await expect(panel(page)).toContainText("No Habit assignments");
 
   // Leo has nothing assigned.
-  await panel(page).getByRole("button", { name: /^Leo/ }).click();
-  await expect(panel(page)).toContainText("Selected: Leo Brooks");
+  await selectClient(page, "Leo");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
   await expect(panel(page)).toContainText("Nothing assigned yet. Create the first plan below, or ask the AI Coach.");
   await panel(page).getByRole("button", { name: "Ask the AI Coach" }).click();
   await expect(page.getByRole("tab", { name: "AI Coach" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page)).toContainText("Selected: Leo Brooks");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
 });
 
 test("a failed load shows an error with Retry", async ({ page }) => {
   const mock = await mockApi(page);
   mock.assignmentsBehaviour = "fail";
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   await expect(panel(page)).toContainText("Could not load plans for this client.");
   mock.assignmentsBehaviour = "ok";
   await panel(page).getByRole("button", { name: "Retry" }).click();
@@ -238,11 +238,11 @@ test("client cards show the last check-in and adherence from GET /api/clients (n
   });
   await page.goto("/app");
   await openTab(page, "Clients");
-  const maya = panel(page).getByRole("button", { name: "Maya Patel - open in AI Coach" });
+  const maya = panel(page).getByRole("button", { name: "Open Maya Patel" });
   await expect(maya).toContainText("Checked in 3 days ago");
   await expect(maya).toContainText("Adherence 82%");
   await expect(maya).not.toContainText("assignments");
-  const leo = panel(page).getByRole("button", { name: "Leo Brooks - open in AI Coach" });
+  const leo = panel(page).getByRole("button", { name: "Open Leo Brooks" });
   await expect(leo).toContainText("No check-ins yet");
   await expect(leo).not.toContainText("Adherence");
   expect(assignmentGets).toEqual([]);

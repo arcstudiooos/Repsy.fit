@@ -1,7 +1,7 @@
 // Exercise rows saved as one numbered workout plan (Prompt 23). Every /api call is mocked in the
 // browser, so these run without a database. POST .../assignments saves into the mock and the
 // list returns newest first, like the server.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -55,7 +55,7 @@ async function mockApi(page: Page): Promise<Mock> {
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const form = (page: Page) => panel(page).getByRole("form", { name: "New assignment" });
 const typeButton = (page: Page, type: string) => form(page).getByRole("group", { name: "Type" }).getByRole("button", { name: type });
 const title = (page: Page) => form(page).getByLabel("Title");
@@ -67,7 +67,7 @@ const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments
 
 async function openPlanner(page: Page) {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
+  await openClientTab(page, "Plans");
 }
 
 async function add(page: Page, query: string, name: string) {

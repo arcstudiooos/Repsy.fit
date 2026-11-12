@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteClient, listClients, queryKeys } from "../api";
-import { initials } from "../ClientStrip";
+import { initials } from "../ClientHeader";
 import { AddClientForm } from "../components/AddClientForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MenuButton } from "../components/MenuButton";
@@ -17,7 +17,7 @@ const ClientInvitePanel = lazy(() => import("../components/ClientInvite").then((
 
 type Props = {
   selectedClientId: string | null;
-  /** Selects the client and switches to the AI Coach tab. */
+  /** Selects the client and opens their workspace (Plans / Progress / Check-ins). */
   onOpenClient: (clientId: string) => void;
   /** Selects a newly added client (stays on the Clients tab). */
   onClientCreated: (clientId: string) => void;
@@ -201,9 +201,14 @@ function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError 
   const activity = activityLine(client);
 
   return (
+    // A click anywhere on the card that isn't one of its buttons opens the client too (mouse only;
+    // keyboard users have the main button). The action buttons keep their own behaviour.
     <div
+      onClick={(e) => {
+        if (!(e.target as HTMLElement).closest("button, a, [role=menu]")) onOpen();
+      }}
       className={
-        "card relative flex flex-col transition-colors " + (selected ? "border-2 border-accent" : "hover:border-dim")
+        "card relative flex cursor-pointer flex-col transition-colors " + (selected ? "border-2 border-accent" : "hover:border-dim")
       }
     >
       {deleteError && (
@@ -212,12 +217,12 @@ function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError 
         </p>
       )}
 
-      {/* Main area: opens the client in AI Coach. */}
+      {/* Main area (the whole card except its action buttons): opens the client workspace. */}
       <button
         type="button"
         onClick={onOpen}
         aria-pressed={selected}
-        aria-label={`${client.name} - open in AI Coach`}
+        aria-label={`Open ${client.name}`}
         className="flex flex-1 flex-col gap-3 rounded-card p-4 text-left"
       >
         <div className="flex w-full items-center gap-3">

@@ -79,7 +79,6 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
   return (
     <>
       <h2 className="text-2xl">AI Coach</h2>
-      <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
 
       {client && <ClientSummary client={client} />}
 
@@ -379,7 +378,7 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <span className="text-sm font-bold text-accent2">✓ Assigned{clientName ? ` to ${clientName}` : ""}</span>
           <button type="button" onClick={onOpenPlanner} className="text-sm font-semibold text-accent2 underline">
-            View in Manual Planner
+            View in Plans
           </button>
         </div>
       ) : (

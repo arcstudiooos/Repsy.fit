@@ -4,24 +4,24 @@
 // config whose baseURL is https://repsy-coach.onrender.com (no webServer).
 // It creates 2 uniquely named clients and deletes both at the end; nothing else is touched.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { clientHeader, openClientTab, selectClient as pickClient } from "./nav";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
 
 const stamp = Date.now().toString(36);
-// Distinct first words: the client strip shows first names only.
+// Distinct first words (kept from the old first-name chip strip; harmless with the searchable switcher).
 const A = `JourneyA${stamp} Test`;
 const B = `JourneyB${stamp} Test`;
 let idA = "";
 let idB = "";
 let aiWorks = false;
 
-const panel = (page: Page) => page.getByRole("tabpanel");
-const strip = (page: Page) => page.getByRole("group", { name: "Select client" });
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 
 async function selectClient(page: Page, name: string) {
-  await strip(page).getByRole("button", { name: new RegExp(`^${name.split(" ")[0]}\\b`) }).click();
-  await expect(panel(page)).toContainText(`Selected: ${name}`);
+  await pickClient(page, name);
+  await expect(clientHeader(page)).toContainText(name);
 }
 async function counts(request: APIRequestContext, id: string) {
   const get = async (p: string) => (await request.get(`/api/clients/${id}/${p}`)).json();
@@ -95,8 +95,8 @@ test("4. draft a Nutrition plan with AI, then assign it", async ({ page, request
 
 test("5. manual Workout with exercise search, sets, reps and rest, then mark it Done", async ({ page, request }) => {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
-  await selectClient(page, A);
+  await openClientTab(page, "Plans", A);
+  await expect(clientHeader(page)).toContainText(A);
   const form = panel(page).getByRole("form", { name: "New assignment" });
   await form.getByRole("button", { name: "Workout", exact: true }).click();
   await form.getByLabel("Title", { exact: true }).fill("Journey leg day");
@@ -120,8 +120,8 @@ test("5. manual Workout with exercise search, sets, reps and rest, then mark it 
 
 test("6. add two progress check-ins; the cards and all 3 charts update", async ({ page, request }) => {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Progress" }).click();
-  await selectClient(page, A);
+  await openClientTab(page, "Progress", A);
+  await expect(clientHeader(page)).toContainText(A);
   const form = panel(page).getByRole("form", { name: "Weekly check-in" });
   await form.getByLabel("Date", { exact: true }).fill("2026-11-02");
   await form.getByLabel("Weight kg", { exact: true }).fill("68.4");
@@ -153,10 +153,10 @@ test("7. switch client: zero data leakage", async ({ page, request }) => {
   await page.goto("/app");
   await selectClient(page, B);
   await expect(panel(page)).not.toContainText("Make a workout plan for this week");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
-  await expect(panel(page)).toContainText(`Selected: ${B}`);
+  await openClientTab(page, "Plans");
+  await expect(clientHeader(page)).toContainText(B);
   await expect(panel(page)).not.toContainText("Journey leg day");
-  await page.getByRole("tab", { name: "Progress" }).click();
+  await openClientTab(page, "Progress");
   await expect(panel(page)).toContainText("No progress logged yet");
   await expect(panel(page).getByRole("group", { name: "Current weight" })).not.toContainText("67.6");
 });

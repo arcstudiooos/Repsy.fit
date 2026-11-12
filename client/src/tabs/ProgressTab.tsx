@@ -96,7 +96,6 @@ export function ProgressTab({ client, onOpenMacroCalculator }: Props) {
   return (
     <>
       <h2 className="text-2xl">Progress</h2>
-      <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
       {client && onOpenMacroCalculator && (
         <button
           type="button"

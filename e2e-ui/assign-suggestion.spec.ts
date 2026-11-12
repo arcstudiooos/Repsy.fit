@@ -91,7 +91,7 @@ async function mockApi(page: Page): Promise<Mock> {
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const card = (page: Page) => panel(page).getByRole("region", { name: "AI suggestion" });
 
 async function askForWorkout(page: Page) {
@@ -139,9 +139,9 @@ test("Assign saves exactly one ai assignment with reasoning, then shows Assigned
   expect(mock.assignments["c-maya"][0]).toMatchObject({ source: "ai", reasoning: SUGGESTION.reasoning });
   await expect(card(page).getByRole("button", { name: "Assign to client" })).toHaveCount(0);
 
-  await card(page).getByRole("button", { name: "View in Manual Planner" }).click();
-  await expect(page.getByRole("tab", { name: "Manual Planner" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Manual Planner");
+  await card(page).getByRole("button", { name: "View in Plans" }).click();
+  await expect(page.getByRole("tab", { name: "Plans", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Plans");
   expect(mock.posts).toHaveLength(1);
 });
 

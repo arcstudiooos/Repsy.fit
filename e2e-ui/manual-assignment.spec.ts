@@ -1,7 +1,7 @@
 // Manual assignment form in the Manual Planner (Prompt 20). Every /api call is mocked in the
 // browser, so these run without a database. POST .../assignments saves into the mock and the
 // list returns newest first, like the server.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, selectClient } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
@@ -83,10 +83,10 @@ function localToday() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const openPlanner = async (page: Page) => {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
+  await openClientTab(page, "Plans");
 };
 const form = (page: Page) => panel(page).getByRole("form", { name: "New assignment" });
 const typePicker = (page: Page) => form(page).getByRole("group", { name: "Type" });
@@ -272,8 +272,8 @@ test("switching client resets the draft, and a save goes only to the selected cl
   await openPlanner(page);
   await title(page).fill("Plan typed for Maya");
   await details(page).fill("Maya-only details");
-  await page.getByRole("group", { name: "Select client" }).getByRole("button", { name: /Leo/ }).click();
-  await expect(panel(page)).toContainText("Selected: Leo Brooks");
+  await selectClient(page, "Leo");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
   await expect(title(page)).toHaveValue("");
   await expect(details(page)).toHaveValue("");
   await title(page).fill("Plan for Leo");

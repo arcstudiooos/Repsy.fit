@@ -85,7 +85,7 @@ const week = (page: Page) => page.getByRole("region", { name: "Schedule" });
 
 test("Schedule lives inside the Business tab (no 10th tab); Payments stays the default view", async ({ page }) => {
   await mockSchedule(page, []);
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
   const view = page.getByRole("group", { name: "Business view" });
   await expect(view.getByRole("button", { name: "Payments" })).toHaveAttribute("aria-pressed", "false");
   await expect(view.getByRole("button", { name: "Schedule" })).toHaveAttribute("aria-pressed", "true");

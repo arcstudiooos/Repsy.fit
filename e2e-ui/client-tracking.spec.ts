@@ -1,6 +1,7 @@
 // Prompt 80: the client's habits on Today, the daily and weekly check-ins, the Nutrition plan's targets
 // and meals, the weekly check-in day - and the coach's meal picker and "save as daily targets".
 import { expect, test, type Page } from "@playwright/test";
+import { openClientTab, openLibrary } from "./fixtures";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const key = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -178,7 +179,7 @@ test("coach: a Nutrition plan can carry meals from the library", async ({ page }
     return route.fulfill({ json: [] });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
+  await openClientTab(page, "Plans");
   const form = page.getByRole("form", { name: "New assignment" });
   await form.getByRole("button", { name: "Nutrition" }).click();
   const picker = form.getByRole("group", { name: "Add meals from library (optional)" });
@@ -209,7 +210,7 @@ test("coach: save the macro result as the client's daily targets", async ({ page
     return route.fulfill({ json: [] });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Library" }).click();
+  await openLibrary(page);
   const calc = page.getByRole("form", { name: "Macro calculator" });
   await calc.getByLabel("Client (optional)").selectOption("c-maya");
   await calc.getByLabel("Sex").selectOption("Female");

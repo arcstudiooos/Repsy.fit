@@ -27,7 +27,7 @@ type Props = {
 type Filter = "All" | AssignmentType;
 const FILTERS: Filter[] = ["All", ...ASSIGNMENT_TYPES];
 
-// Manual Planner tab: everything assigned to the selected client
+// Plans (the Manual Planner; a sub-tab of the client workspace since Nov 2026): everything assigned to the selected client
 // (GET /api/clients/:clientId/assignments, newest first), with instant type filters.
 export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed }: Props) {
   const [filter, setFilter] = useState<Filter>("All");
@@ -119,8 +119,7 @@ export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed }: Pr
 
   return (
     <>
-      <h2 className="text-2xl">Manual Planner</h2>
-      <p className="mt-1 text-sm text-dim">Selected: {client ? client.name : "none"}</p>
+      <h2 className="text-2xl">Plans</h2>
       <div className="mt-4">{body}</div>
       {client && <ManualAssignmentForm key={client.id} clientId={client.id} onCreated={onCreated} prefill={startFrom} />}
     </>

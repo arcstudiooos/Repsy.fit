@@ -4,6 +4,7 @@
 // weekly check-in reaches the coach's review queue -> the client deletes their account -> the coach no longer
 // sees them. The last step deletes the coach too, so the database is left as it was found.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { clientHeader, openClientTab } from "./nav";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
@@ -39,7 +40,7 @@ const WORKOUT = `Cj leg day ${stamp}`;
 const today = new Date().toLocaleDateString("en-CA");
 let joinPath = "";
 
-const panel = (p: Page) => p.getByRole("tabpanel");
+const panel = (p: Page) => p.getByRole("tabpanel").first();
 const tab = (p: Page, name: string) => p.getByRole("tab", { name });
 
 test("1. a new coach registers and reads their join code", async () => {
@@ -85,8 +86,8 @@ test("3. the coach sees the new client (joined with code) and assigns today's wo
   await expect(panel(coach)).toContainText(CLIENT_NAME, { timeout: 30_000 });
   await expect(panel(coach)).toContainText("Joined with code");
 
-  await tab(coach, "Manual Planner").click();
-  await expect(panel(coach)).toContainText(`Selected: ${CLIENT_NAME}`);
+  await openClientTab(coach, "Plans", CLIENT_NAME);
+  await expect(clientHeader(coach)).toContainText(CLIENT_NAME);
   const form = panel(coach).getByRole("form", { name: "New assignment" });
   await form.getByRole("group", { name: "Type" }).getByRole("button", { name: "Workout" }).click();
   await form.getByLabel("Title", { exact: true }).fill(WORKOUT);
@@ -110,7 +111,7 @@ test("4. the client opens Today, finishes the workout with effort and a note", a
 
 test("5. the coach sees Done by client with the effort and note, and a Home alert", async () => {
   await coach.goto("/app");
-  await tab(coach, "Manual Planner").click();
+  await openClientTab(coach, "Plans", CLIENT_NAME);
   const card = panel(coach).getByRole("list", { name: "Assignments" }).getByRole("listitem").filter({ hasText: WORKOUT });
   await expect(card).toContainText("Done by client", { timeout: 30_000 });
   await expect(card).toContainText("Effort 8/10");

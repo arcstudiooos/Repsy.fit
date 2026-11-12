@@ -106,13 +106,13 @@ const list = (page: Page) => page.getByRole("list", { name: "Clients" });
 const pane = (page: Page) => page.getByRole("region", { name: /^Conversation with / });
 const box = (page: Page) => page.getByLabel(/^Message to /);
 
-test("Messages is the 8th tab, after Library, has no developer note and no client strip", async ({ page }) => {
+test("Messages is the 4th tab, has no developer note and no client header", async ({ page }) => {
   await mockServer(page);
   await openMessages(page);
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
-  await expect(page.getByRole("tabpanel")).toContainText("Your conversations with clients.");
-  await expect(page.getByRole("tabpanel")).not.toContainText("Not live");
-  await expect(page.getByRole("group", { name: "Select client" })).toHaveCount(0);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
+  await expect(page.getByRole("tabpanel").first()).toContainText("Your conversations with clients.");
+  await expect(page.getByRole("tabpanel").first()).not.toContainText("Not live");
+  await expect(page.getByRole("region", { name: "Selected client" })).toHaveCount(0);
 });
 
 test("client list: names, last-message previews, unread dots, search by name", async ({ page }) => {

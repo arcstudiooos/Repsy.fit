@@ -80,7 +80,7 @@ test("the Home tab badge matches the queue, and clears when the queue empties", 
   await expect(page.getByRole("tab", { name: /Home/ }).getByText("1", { exact: true })).toBeVisible();
   await card(page).getByRole("button", { name: /^Dismiss/ }).first().click();
   await expect(card(page)).toContainText("Queue clear. Nothing waiting for you.");
-  await expect(page.getByRole("tab", { name: /Home/ }).locator("span")).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: /Home/ }).locator("[aria-label$='waiting in the review queue']")).toHaveCount(0);
 });
 
 test("approving a suggestion asks the server to create the assignment; dismissing keeps it in history", async ({ page }) => {
@@ -103,7 +103,7 @@ test("an empty queue shows the plain-words state and no badge", async ({ page })
   await openHome(page, []);
   await expect(card(page)).toContainText("Queue clear. Nothing waiting for you.");
   await expect(card(page).getByRole("listitem")).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: /Home/ }).locator("span")).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: /Home/ }).locator("[aria-label$='waiting in the review queue']")).toHaveCount(0);
 });
 
 test("a failed decision shows a plain message and keeps the item in the queue", async ({ page }) => {

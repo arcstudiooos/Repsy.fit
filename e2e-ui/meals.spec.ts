@@ -1,6 +1,6 @@
 // Meal library in the Library tab (Prompt 60). Every /api call is mocked, with a small fake server that keeps
 // the meals and assignments.
-import { expect, test, type Page } from "./fixtures";
+import { expect, test, type Page, openLibrary } from "./fixtures";
 
 const client = (id: string, name: string) => ({
   id,
@@ -92,7 +92,7 @@ async function openMeals(page: Page, initial: M[] = []) {
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Library" }).click();
+  await openLibrary(page);
   await expect(page.getByRole("heading", { level: 3, name: "Meal library" })).toBeVisible();
   return { calls };
 }

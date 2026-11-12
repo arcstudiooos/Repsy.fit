@@ -40,7 +40,7 @@ async function mockApi(page: Page, items: Items | "missing") {
   });
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const list = (page: Page) => panel(page).getByRole("list", { name: "New check-ins" });
 
 test("rows show client, what was logged and time ago, newest first", async ({ page }) => {
@@ -66,8 +66,8 @@ test("clicking a row selects that client and opens the Progress tab", async ({ p
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
   await list(page).getByRole("button", { name: /Maya Patel/ }).click();
-  await expect(page.getByRole("tab", { name: "Progress" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await expect(page.getByRole("tab", { name: "Progress", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
 test("no check-ins shows the plain-words empty state and no rows", async ({ page }) => {

@@ -1,6 +1,6 @@
 // Macro calculator in the Library tab (Prompt 61). Every /api call is mocked; the maths itself is covered by the
 // server unit tests, so the fake /api/macros here just returns fixed numbers.
-import { expect, test, type Page } from "./fixtures";
+import { expect, test, type Page, openClientTab, openLibrary } from "./fixtures";
 
 const DISCLAIMER = "Starting estimate for coaching only - not medical advice. Adjust from the client's real progress.";
 
@@ -52,7 +52,7 @@ async function mock(page: Page) {
 async function openCalculator(page: Page) {
   const calls = await mock(page);
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Library" }).click();
+  await openLibrary(page);
   await expect(page.getByRole("heading", { level: 3, name: "Macro calculator" })).toBeVisible();
   return calls;
 }
@@ -149,8 +149,8 @@ test("saving without a client asks for one and saves nothing", async ({ page }) 
 test("the Check-ins link opens the calculator pre-filled with that client", async ({ page }) => {
   await mock(page);
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Check-ins" }).click();
-  await expect(page.getByText("Selected: Maya Patel")).toBeVisible();
+  await openClientTab(page, "Check-ins");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
   await page.getByRole("button", { name: "Macro calculator for Maya Patel" }).click();
 
   const form = page.getByRole("form", { name: "Macro calculator" });
@@ -162,6 +162,6 @@ test("the Check-ins link opens the calculator pre-filled with that client", asyn
 
   // The pre-fill is used once: leaving and coming back starts empty.
   await page.getByRole("tab", { name: "Clients" }).click();
-  await page.getByRole("tab", { name: "Library" }).click();
+  await openLibrary(page);
   await expect(page.getByRole("form", { name: "Macro calculator" }).getByLabel("Weight (kg)")).toHaveValue("");
 });

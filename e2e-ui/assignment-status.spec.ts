@@ -1,7 +1,7 @@
 // Assignment status buttons and delete in the Manual Planner (Prompt 24). Every /api call is
 // mocked in the browser, so these run without a database. PATCH / DELETE change the mock, and
 // the list and Clients tab counts must follow without a page reload.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openSection } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
@@ -82,8 +82,8 @@ async function mockApi(page: Page): Promise<Mock> {
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
-const openTab = (page: Page, name: string) => page.getByRole("tab", { name }).click();
+const panel = (page: Page) => page.getByRole("tabpanel").first();
+const openTab = (page: Page, name: string) => openSection(page, name);
 const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem");
 const cardFor = (page: Page, title: string) => cards(page).filter({ hasText: title });
 const statusGroup = (page: Page, title: string) => cardFor(page, title).getByRole("group", { name: "Status" });
@@ -91,7 +91,7 @@ const statusGroup = (page: Page, title: string) => cardFor(page, title).getByRol
 test("each card has Active / Done / Paused buttons with the current one highlighted", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   const group = statusGroup(page, "Squat day");
   await expect(group.getByRole("button")).toHaveText(["Active", "Done", "Paused"]);
   await expect(group.getByRole("button", { name: "Active" })).toHaveAttribute("aria-pressed", "true");
@@ -104,7 +104,7 @@ test("each card has Active / Done / Paused buttons with the current one highligh
 test("mark Done, pause, delete: the list updates without a reload", async ({ page }) => {
   const mock = await mockApi(page);
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   let navigations = 0;
   page.on("framenavigated", () => navigations++);
 
@@ -155,7 +155,7 @@ test("mark Done, pause, delete: the list updates without a reload", async ({ pag
 test("a failed status change shows the error on that card and keeps the old status", async ({ page }) => {
   const mock = await mockApi(page);
   await page.goto("/app");
-  await openTab(page, "Manual Planner");
+  await openTab(page, "Plans");
   mock.failNext = true;
   await statusGroup(page, "Squat day").getByRole("button", { name: "Done" }).click();
   await expect(cardFor(page, "Squat day").getByRole("alert")).toContainText("The server had a problem. Please try again in a moment.");

@@ -52,7 +52,7 @@ async function mockApi(page: Page, clients: Clients | "missing") {
   return requested;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const list = (page: Page) => panel(page).getByRole("list", { name: "Needs attention" });
 
 test("rows show the client and every exact reason, in the server's order", async ({ page }) => {
@@ -75,8 +75,8 @@ test("clicking a row selects that client and opens the Progress tab", async ({ p
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
   await list(page).getByRole("button", { name: /Maya Patel/ }).click();
-  await expect(page.getByRole("tab", { name: "Progress" })).toHaveAttribute("aria-selected", "true");
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await expect(page.getByRole("tab", { name: "Progress", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
 test("nobody needing attention shows a plain-words message and no rows", async ({ page }) => {

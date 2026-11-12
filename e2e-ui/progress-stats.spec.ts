@@ -1,6 +1,6 @@
 // Progress tab stat cards (Prompt 26). Every /api call is mocked in the browser.
 // The numbers below are hand-checked against the raw logs/assignments in each test.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, selectClient } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
@@ -71,18 +71,18 @@ const PROMPT_25_LOGS: Log[] = [
   { date: "2026-11-09", weightKg: 67.2, adherence: 86, workoutsDone: 4 },
 ];
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const stat = (page: Page, label: string) => panel(page).getByRole("group", { name: label });
 const openProgress = async (page: Page) => {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Progress" }).click();
+  await openClientTab(page, "Progress");
 };
 
 test("keeps the Progress heading and the Selected line", async ({ page }) => {
   await mockApi(page, { logs: {}, statuses: {} });
   await openProgress(page);
   await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Progress");
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
 test("the four cards match a hand check of the Prompt 25 logs", async ({ page }) => {
@@ -167,8 +167,8 @@ test("each client sees only their own numbers", async ({ page }) => {
   });
   await openProgress(page);
   await expect(stat(page, "Total workouts")).toContainText("11");
-  await page.getByRole("group", { name: "Select client" }).getByRole("button", { name: /Leo/ }).click();
-  await expect(panel(page)).toContainText("Selected: Leo Brooks");
+  await selectClient(page, "Leo");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
   await expect(stat(page, "Current weight")).toContainText("80 kg");
   await expect(stat(page, "Average adherence")).toContainText("60%");
   await expect(stat(page, "Total workouts")).toContainText("5");

@@ -59,7 +59,7 @@ test("Invite clients shows who's waiting; Approve moves them into the client lis
   await expect(list.getByRole("listitem")).toHaveCount(1);
   await expect(page.getByText(/^Approved Priya Shah\./)).toBeAttached();
   await expect(page.locator(":focus")).toBeAttached(); // focus stays in the panel, not lost to the page
-  await expect(page.getByRole("button", { name: "Priya Shah - open in AI Coach" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Priya Shah" })).toBeVisible();
   expect(state.calls).toContain("POST /api/clients/p1/approve");
 });
 
@@ -82,9 +82,9 @@ test("clients who joined with the code carry a badge", async ({ page }) => {
   await mock(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  const maya = page.locator("article, li, div").filter({ has: page.getByRole("button", { name: "Maya Patel - open in AI Coach" }) }).last();
+  const maya = page.locator("article, li, div").filter({ has: page.getByRole("button", { name: "Open Maya Patel" }) }).last();
   await expect(maya).toContainText("Joined with code");
-  const sam = page.locator("article, li, div").filter({ has: page.getByRole("button", { name: "Sam Lee - open in AI Coach" }) }).last();
+  const sam = page.locator("article, li, div").filter({ has: page.getByRole("button", { name: "Open Sam Lee" }) }).last();
   await expect(sam).not.toContainText("Joined with code");
 });
 
@@ -135,5 +135,5 @@ test("a coach whose only people are waiting still finds them (banner on Home, li
   await page.getByRole("button", { name: "Review in Clients" }).click();
   await expect(page.getByRole("list", { name: "Waiting for approval" })).toContainText("Priya Shah");
   await page.getByRole("button", { name: "Approve Priya Shah" }).click();
-  await expect(page.getByRole("button", { name: "Priya Shah - open in AI Coach" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Priya Shah" })).toBeVisible();
 });

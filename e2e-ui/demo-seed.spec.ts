@@ -45,16 +45,21 @@ async function mockApi(page: Page, start: typeof DEMO = []): Promise<Mock> {
   return mock;
 }
 
-const strip = (page: Page) => page.getByRole("group", { name: "Select client" });
+// The client header's "Switch client" list (it replaced the chip strip).
+const clientList = async (page: Page) => {
+  await page.getByRole("button", { name: "Switch client" }).click();
+  return page.getByRole("listbox", { name: "Clients" });
+};
 
 test("the empty-state button seeds 3 clients, refreshes, and selects Maya", async ({ page }) => {
   const mock = await mockApi(page);
   await page.goto("/app");
   await page.getByRole("button", { name: "Load demo clients" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Added 3 demo clients" })).toBeVisible();
-  await expect(strip(page).getByRole("button")).toHaveCount(3);
-  await expect(strip(page).getByRole("button", { name: /^Maya/ })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("tabpanel")).toContainText("Selected: Maya Patel");
+  const list = await clientList(page);
+  await expect(list.getByRole("option")).toHaveCount(3);
+  await expect(list.getByRole("option", { name: /^Maya/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
   expect(mock.seeds).toBe(1);
 });
 
@@ -65,7 +70,7 @@ test("Clients tab: the demo buttons show only while there are no clients", async
   // Zero clients: the empty-state button seeds.
   await expect(page.getByRole("button", { name: "Load 6-month demo (10 clients)" })).toBeVisible();
   await page.getByRole("button", { name: "Load demo clients" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("3 clients");
+  await expect(page.getByRole("tabpanel").first()).toContainText("3 clients");
   await expect(page.getByRole("status").filter({ hasText: "Added 3 demo clients" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Load demo|6-month demo/ })).toHaveCount(0);
   expect(mock.seeds).toBe(1);
@@ -76,9 +81,9 @@ test("with clients already there, there are no demo buttons and no demo note", a
   await mockApi(page, DEMO.slice(0, 1));
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("1 client");
+  await expect(page.getByRole("tabpanel").first()).toContainText("1 client");
   await expect(page.getByRole("button", { name: /Load demo|6-month demo|Demo already loaded/ })).toHaveCount(0);
-  await expect(page.getByRole("tabpanel")).not.toContainText("13 clients");
+  await expect(page.getByRole("tabpanel").first()).not.toContainText("13 clients");
 });
 
 test("a failed seed shows the error and adds nothing", async ({ page }) => {
@@ -96,7 +101,7 @@ test("the 6-month button adds 10, says so, and the demo buttons go away", async 
   await page.getByRole("tab", { name: "Clients" }).click();
   await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Added 10 demo clients" })).toBeVisible();
-  await expect(page.getByRole("tabpanel")).toContainText("10 clients");
+  await expect(page.getByRole("tabpanel").first()).toContainText("10 clients");
   await expect(page.getByRole("button", { name: /Load demo|6-month demo/ })).toHaveCount(0);
   expect(mock.sixSeeds).toBe(1);
 });
@@ -108,5 +113,5 @@ test("after the 6-month seed the first new client is selected", async ({ page })
   await page.getByRole("button", { name: "Load 6-month demo (10 clients)" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Added 10 demo clients" })).toBeVisible();
   await page.getByRole("tab", { name: "AI Coach" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("Selected: Six Month 0");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Six Month 0");
 });

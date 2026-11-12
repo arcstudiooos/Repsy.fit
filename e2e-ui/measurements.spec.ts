@@ -1,6 +1,6 @@
 // Body measurements (Prompt 56), a section of the Check-ins tab. Every /api call is mocked, with a
 // small fake server that keeps the measurements so the table and chart react like the real ones.
-import { expect, test, type Page } from "./fixtures";
+import { expect, test, type Page, openClientTab } from "./fixtures";
 
 const CLIENTS = [
   { id: "c-maya", coachId: null, name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z" },
@@ -88,7 +88,7 @@ async function openTab(page: Page, initial: M[] = [], logs: ReturnType<typeof pr
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Check-ins" }).click();
+  await openClientTab(page, "Check-ins");
   await expect(page.getByRole("heading", { level: 2, name: "Check-ins" })).toBeVisible();
   return { items, calls, section: page.getByRole("region", { name: "Body measurements" }) };
 }

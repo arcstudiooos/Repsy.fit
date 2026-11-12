@@ -13,8 +13,8 @@ export type TaskTarget = "planner" | "ai";
 type Props = {
   /** Selects that client and switches to the tab where the task is handled. */
   onOpenTask: (clientId: string, target: TaskTarget) => void;
-  /** Selects that client and opens the Progress tab. */
-  onOpenCheckIn: (clientId: string) => void;
+  /** Selects that client and opens their workspace on Progress or Check-ins. */
+  onOpenClient: (clientId: string, sub: "progress" | "checkins") => void;
   /** Prompt 84: selects that client and opens their Messages thread. */
   onOpenThread: (clientId: string) => void;
   /** Prompt 84: opens the Clients tab (where the waiting list is). */
@@ -24,7 +24,7 @@ type Props = {
 // Home tab (Prompt 48): the Today's Tasks card. Every row comes from the server's real records
 // (GET /api/tasks/today): today's appointments first (Prompt 69), then plans due today, then clients
 // with no plan in 7+ days.
-export function HomeTab({ onOpenTask, onOpenCheckIn, onOpenThread, onOpenClients }: Props) {
+export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients }: Props) {
   const date = localToday();
   const query = useQuery({ queryKey: queryKeys.todayTasks(date), queryFn: () => getTodayTasks(date) });
 
@@ -45,23 +45,35 @@ export function HomeTab({ onOpenTask, onOpenCheckIn, onOpenThread, onOpenClients
     );
   }
 
+  // Actionable cards first (Nov 2026): who needs attention, what waits for a decision, what clients
+  // just did, today's list, then new check-ins and the weekly summary.
   return (
     <>
       <h2 className="text-2xl">Home</h2>
-      <section aria-label="Today's Tasks" className="card mt-4 p-5">
-        <h3 className="text-base">Today's Tasks</h3>
-        <div className="mt-3">{body}</div>
-      </section>
+      <NeedsAttention date={date} onOpenClient={(clientId) => onOpenClient(clientId, "progress")} />
+      <ReviewQueueCard date={date} />
       <ClientActivity
         onOpenThread={onOpenThread}
         onOpenPlans={(clientId) => onOpenTask(clientId, "planner")}
         onOpenClients={onOpenClients}
       />
-      <NewCheckIns onOpenCheckIn={onOpenCheckIn} />
-      <NeedsAttention date={date} onOpenClient={onOpenCheckIn} />
-      <ReviewQueueCard date={date} />
+      <section aria-label="Today's Tasks" className="card mt-4 p-5">
+        <CardTitle title="Today's Tasks" count={query.data?.tasks.length} />
+        <div className="mt-3">{body}</div>
+      </section>
+      <NewCheckIns onOpenClient={onOpenClient} />
       <WeeklySummaryCard date={date} />
     </>
+  );
+}
+
+/** Card heading with a count when there is one, e.g. "Review queue · 2". */
+function CardTitle({ title, count }: { title: string; count?: number }) {
+  return (
+    <h3 className="text-base">
+      {title}
+      {count ? <span className="font-normal text-dim"> · {count}</span> : null}
+    </h3>
   );
 }
 
@@ -97,43 +109,79 @@ function loggedSummary(c: RecentCheckIn): string {
   return parts.join(" · ") || "Check-in logged";
 }
 
-// New check-ins card (Prompt 49): read-only list from GET /api/checkins/recent.
-function NewCheckIns({ onOpenCheckIn }: { onOpenCheckIn: Props["onOpenCheckIn"] }) {
+const CHECKIN_ROWS = 5;
+
+/** Recent check-ins grouped by client, newest first: each client's latest one plus how many earlier. */
+export function groupByClient(items: RecentCheckIn[]): { latest: RecentCheckIn; earlier: number }[] {
+  const groups = new Map<string, { latest: RecentCheckIn; earlier: number }>();
+  for (const item of items) {
+    const g = groups.get(item.clientId);
+    if (g) g.earlier += 1;
+    else groups.set(item.clientId, { latest: item, earlier: 0 }); // items arrive newest first
+  }
+  return [...groups.values()];
+}
+
+// New check-ins card (Prompt 49): read-only list from GET /api/checkins/recent, one row per client
+// (their latest check-in, "+N earlier"), at most 5 rows until "See all". A row opens that client's
+// workspace where the check-in lives: daily check-ins on Check-ins, progress logs on Progress.
+function NewCheckIns({ onOpenClient }: { onOpenClient: Props["onOpenClient"] }) {
   const query = useQuery({ queryKey: queryKeys.recentCheckIns, queryFn: getRecentCheckIns });
+  const [showAll, setShowAll] = useState(false);
+  const groups = query.data ? groupByClient(query.data.items) : [];
 
   let body;
   if (query.isPending || (query.isError && query.isFetching)) {
     body = <LoadingState />;
   } else if (query.isError) {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  } else if (query.data.items.length === 0) {
+  } else if (groups.length === 0) {
     body = <p className="text-dim">No new check-ins in the last 2 days</p>;
   } else {
+    const shown = showAll ? groups : groups.slice(0, CHECKIN_ROWS);
     body = (
-      <ul aria-label="New check-ins" className="divide-y divide-border">
-        {query.data.items.map((item) => (
-          <li key={`${item.kind}:${item.id}`}>
-            <button
-              type="button"
-              aria-label={`Open progress: ${item.clientName}`}
-              onClick={() => onOpenCheckIn(item.clientId)}
-              className="flex w-full flex-wrap items-center justify-between gap-3 py-3 text-left"
-            >
-              <span className="min-w-0">
-                <span className="block font-semibold text-text">{item.clientName}</span>
-                <span className="block text-sm text-dim">{loggedSummary(item)}</span>
-              </span>
-              <span className="shrink-0 font-mono text-xs text-dim">{timeAgo(item.createdAt)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <>
+        <ul aria-label="New check-ins" className="divide-y divide-border">
+          {shown.map(({ latest: item, earlier }) => {
+            const sub = item.kind === "daily" ? "checkins" : "progress";
+            return (
+              <li key={item.clientId}>
+                <button
+                  type="button"
+                  aria-label={`Open ${sub === "checkins" ? "check-ins" : "progress"}: ${item.clientName}`}
+                  onClick={() => onOpenClient(item.clientId, sub)}
+                  className="flex min-h-11 w-full flex-wrap items-center justify-between gap-3 py-3 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-text">
+                      {item.clientName}
+                      {earlier > 0 && <span className="ml-2 text-xs font-normal text-dim">+{earlier} earlier</span>}
+                    </span>
+                    <span className="block text-sm text-dim">{loggedSummary(item)}</span>
+                  </span>
+                  <span className="shrink-0 font-mono text-xs text-dim">{timeAgo(item.createdAt)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {groups.length > CHECKIN_ROWS && (
+          <button
+            type="button"
+            aria-expanded={showAll}
+            onClick={() => setShowAll((v) => !v)}
+            className="mt-2 min-h-10 text-sm font-semibold text-accent2 underline underline-offset-4"
+          >
+            {showAll ? "Show fewer" : `See all (${groups.length})`}
+          </button>
+        )}
+      </>
     );
   }
 
   return (
     <section aria-label="New check-ins" className="card mt-4 p-5">
-      <h3 className="text-base">New check-ins</h3>
+      <CardTitle title="New check-ins" count={groups.length} />
       <div className="mt-3">{body}</div>
     </section>
   );
@@ -141,7 +189,7 @@ function NewCheckIns({ onOpenCheckIn }: { onOpenCheckIn: Props["onOpenCheckIn"] 
 
 // Needs attention card (Prompt 50): clients any of the server's 3 rules picked, worst first, each with
 // its exact reasons. Rules only, no AI. Clicking a row selects the client and opens Progress.
-function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: Props["onOpenCheckIn"] }) {
+function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: (clientId: string) => void }) {
   const query = useQuery({ queryKey: queryKeys.atRisk(date), queryFn: () => getAtRiskClients(date) });
 
   let body;
@@ -177,7 +225,7 @@ function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: Pr
 
   return (
     <section aria-label="Needs attention" className="card mt-4 p-5">
-      <h3 className="text-base">Needs attention</h3>
+      <CardTitle title="Needs attention" count={query.data?.clients.length} />
       <div className="mt-3">{body}</div>
     </section>
   );
@@ -200,7 +248,7 @@ function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"
     );
   }
   const target: TaskTarget = task.kind === "due" ? "planner" : "ai";
-  const label = target === "planner" ? "Open in Manual Planner" : "Plan with AI Coach";
+  const label = target === "planner" ? "Open in Plans" : "Plan with AI Coach";
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-3">
       <div className="min-w-0">
@@ -390,14 +438,7 @@ function ReviewQueueCard({ date }: { date: string }) {
   return (
     <section aria-label="Review queue" className="card mt-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base">
-          Review queue
-          {(pending.data?.pendingCount ?? 0) > 0 && (
-            <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-accent">
-              {pending.data?.pendingCount}
-            </span>
-          )}
-        </h3>
+        <CardTitle title="Review queue" count={pending.data?.pendingCount} />
         <button
           type="button"
           onClick={() => setShowDecided((v) => !v)}
@@ -476,9 +517,10 @@ function ClientActivity({
   const empty = a.waiting === 0 && a.joined.length === 0 && a.finished.length === 0 && a.unread.length === 0;
   if (empty) return null;
   const rowButton = "w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-surface2 min-h-11";
+  const count = (a.waiting > 0 ? 1 : 0) + a.unread.length + a.finished.length + a.joined.length;
   return (
     <section aria-label="Client activity" className="card mt-4 p-5">
-      <h3 className="text-base">Client activity</h3>
+      <CardTitle title="Client activity" count={count} />
       <ul aria-label="Client alerts" className="mt-2 divide-y divide-border">
         {a.waiting > 0 && (
           <li>

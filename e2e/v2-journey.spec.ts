@@ -6,6 +6,7 @@
 // Everything it makes belongs to its own coach, and the last step deletes that coach, so the
 // database is left exactly as it was found.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { clientHeader, openClientTab, openLibrary } from "./nav";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
@@ -36,7 +37,7 @@ const today = new Date().toLocaleDateString("en-CA");
 
 let inviteLink = "";
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const tab = (page: Page, name: string) => page.getByRole("tab", { name });
 
 test("1. the landing page loads (3D or fallback) and the lead form saves", async () => {
@@ -68,7 +69,7 @@ test("2. signed out, /app redirects to login; a new coach registers and lands in
   await form.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL(/\/app/, { timeout: 30_000 });
-  await expect(page.getByRole("tab")).toHaveCount(9);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5);
   // A brand-new coach starts with nothing: proof the account is really new and really scoped.
   await expect(panel(page)).toContainText(/Add your first client|No clients yet/);
 });
@@ -88,7 +89,7 @@ test("3. the coach adds a client", async () => {
 
 test("4. the coach builds a workout template in the Library", async () => {
   await page.goto("/app");
-  await tab(page, "Library").click();
+  await openLibrary(page);
   await panel(page).getByRole("button", { name: "New template" }).click();
   const form = panel(page).getByRole("form", { name: "New template" });
   await form.getByLabel("Template name").fill(TEMPLATE);
@@ -103,8 +104,8 @@ test("4. the coach builds a workout template in the Library", async () => {
 
 test("5. the coach assigns a program to the client", async () => {
   await page.goto("/app");
-  await tab(page, "Manual Planner").click();
-  await expect(panel(page)).toContainText(`Selected: ${CLIENT_NAME}`);
+  await openClientTab(page, "Plans", CLIENT_NAME);
+  await expect(clientHeader(page)).toContainText(CLIENT_NAME);
   const form = panel(page).getByRole("form", { name: "New assignment" });
   await form.getByRole("group", { name: "Type" }).getByRole("button", { name: "Workout" }).click();
   await form.getByLabel("Title", { exact: true }).fill("Journey leg day");
@@ -197,13 +198,13 @@ test("8. the client sets a password, signs in, and sees ONLY their own plan", as
 
 test("9. the coach marks the workout Done and files a weekly check-in", async () => {
   await page.goto("/app");
-  await tab(page, "Manual Planner").click();
+  await openClientTab(page, "Plans", CLIENT_NAME);
   const card = panel(page).getByRole("list", { name: "Assignments" }).getByRole("listitem").filter({ hasText: "Journey leg day" });
   const status = card.getByRole("group", { name: "Status" });
   await status.getByRole("button", { name: "Done" }).click();
   await expect(status.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
 
-  await tab(page, "Progress").click();
+  await openClientTab(page, "Progress");
   const checkIn = panel(page).getByRole("form", { name: "Weekly check-in" });
   await checkIn.getByLabel("Date", { exact: true }).fill(today);
   await checkIn.getByLabel("Weight kg", { exact: true }).fill("70");

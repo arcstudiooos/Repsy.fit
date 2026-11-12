@@ -1,7 +1,7 @@
 // Business tab (Prompt 68): client plans and payments the coach records by hand.
 // RECORD-KEEPING ONLY: nothing here charges a card, sends a payment link or a reminder, or makes an
 // invoice. The help line under the heading says so.
-import { lazy, Suspense, useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Engagement } from "../components/Engagement";
@@ -56,16 +56,28 @@ export function money(amount: number, currency: string): string {
 
 const dayText = (iso: string) => formatDay(iso);
 
-const VIEWS = ["Payments", "Schedule", "Engagement", "Reports"] as const;
-type View = (typeof VIEWS)[number];
+// Library (templates, meals, macro calculator) moved here from its own top-level tab (Nov 2026).
+const VIEWS = ["Payments", "Schedule", "Engagement", "Reports", "Library"] as const;
+export type BusinessView = (typeof VIEWS)[number];
+type View = BusinessView;
 
 // Reports (Prompt 70) holds Recharts, so it loads on first open like the other chart tabs.
 const Reports = lazy(() => import("../components/Reports").then((m) => ({ default: m.Reports })));
 
-// Prompt 69: the Business tab has a view switch (Payments / Schedule / Reports). It stays one
-// tab: the switch is inside the tab, so there is no 10th tab.
-export function BusinessTab({ clients }: { clients: Client[] }) {
-  const [view, setView] = useState<View>("Payments");
+type BusinessTabProps = {
+  clients: Client[];
+  /** The open view; owned by App so other screens can open Library (e.g. the macro calculator link). */
+  view: View;
+  onViewChange: (view: View) => void;
+  /** Shown instead of the client-based views while clients load, fail or don't exist yet. Library still works. */
+  blocked?: ReactNode;
+  /** The Library view (App owns its template / macro hand-offs). */
+  library: ReactNode;
+};
+
+// Prompt 69: the Business tab has a view switch (Payments / Schedule / Engagement / Reports / Library).
+// It stays one tab: the switch is inside the tab.
+export function BusinessTab({ clients, view, onViewChange: setView, blocked, library }: BusinessTabProps) {
   return (
     <>
       {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
@@ -86,7 +98,13 @@ export function BusinessTab({ clients }: { clients: Client[] }) {
           </button>
         ))}
       </div>
-      {view === "Payments" ? (
+      {view === "Library" ? (
+        <div className="mt-4">
+          <Suspense fallback={<LoadingState />}>{library}</Suspense>
+        </div>
+      ) : blocked ? (
+        <div className="mt-4">{blocked}</div>
+      ) : view === "Payments" ? (
         <PaymentsView clients={clients} />
       ) : view === "Schedule" ? (
         <Schedule clients={clients} />

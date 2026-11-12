@@ -1,5 +1,6 @@
 // Sleep & Recovery (Prompt 55): form fields, the card, the rule line and the At-Risk reason. Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
+import { openClientTab } from "./fixtures";
 
 const CLIENTS = [
   { id: "c-maya", coachId: "coach-1", name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z" },
@@ -69,7 +70,7 @@ async function openTab(page: Page, existing: Record<string, unknown>[] = []) {
 }
 
 const openCheckIns = async (page: Page) => {
-  await page.getByRole("tab", { name: "Check-ins" }).click();
+  await openClientTab(page, "Check-ins");
   await expect(page.getByRole("heading", { level: 2, name: "Check-ins" })).toBeVisible();
 };
 

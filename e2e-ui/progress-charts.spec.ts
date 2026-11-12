@@ -1,6 +1,6 @@
 // Progress charts + check-in list (Prompt 27). Every /api call is mocked in the browser;
 // the mock keeps logs per client and supports DELETE, like the server.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -73,12 +73,12 @@ async function mockApi(page: Page, logs: Log[], assignments = ASSIGNMENTS): Prom
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const chart = (page: Page, name: string) => panel(page).getByRole("figure", { name });
 const checkIns = (page: Page) => panel(page).getByRole("list", { name: "Check-ins" }).getByRole("listitem");
 const openProgress = async (page: Page) => {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Progress" }).click();
+  await openClientTab(page, "Progress");
 };
 
 test("weight chart: accent line, '29 Oct' dates, round kg ticks, Date and kg axis labels", async ({ page }) => {

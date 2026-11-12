@@ -1,6 +1,6 @@
 // Weekly check-in form (Prompt 28). Every /api call is mocked in the browser; the mock stores
 // POSTed logs and supports DELETE, like the server.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -74,7 +74,7 @@ async function mockApi(page: Page, logs: Log[] = START): Promise<Mock> {
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const form = (page: Page) => panel(page).getByRole("form", { name: "Weekly check-in" });
 const field = (page: Page, label: string) => form(page).getByLabel(label, { exact: true });
 const submit = (page: Page) => form(page).getByRole("button", { name: "Add check-in" });
@@ -83,7 +83,7 @@ const weightCard = (page: Page) => panel(page).getByRole("group", { name: "Curre
 const weightDots = (page: Page) => panel(page).getByRole("figure", { name: "Weight" }).locator(".recharts-line-dots circle");
 const openProgress = async (page: Page) => {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Progress" }).click();
+  await openClientTab(page, "Progress");
 };
 
 test("the form sits under the charts with today's date and the default values", async ({ page }) => {

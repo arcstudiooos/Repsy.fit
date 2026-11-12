@@ -1,7 +1,7 @@
 // Library tab (Prompt 58): the coach's own workout templates, plus the meal library section
 // (Prompt 60). Search by name, create / edit with the
 // Manual Planner's exercise search and sets / reps / rest controls, delete with a confirm, and
-// "Assign to client", which opens the Manual Planner for that client with the form pre-filled.
+// "Assign to client", which opens that client's Plans with the form pre-filled.
 // Templates belong to the signed-in coach only: no sharing, no marketplace.
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ const inputClass =
 const smallButton = "rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-text hover:border-dim disabled:opacity-60";
 
 type Props = {
-  /** Open the Manual Planner for `clientId`, starting a new assignment from the template. */
+  /** Open Plans for `clientId`, starting a new assignment from the template. */
   onAssign: (clientId: string, prefill: TemplatePrefill) => void;
   /** Prompt 61: a client whose details should pre-fill the macro calculator (used once). */
   macroClientId?: string | null;
@@ -166,7 +166,7 @@ export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed 
   );
 }
 
-// Pick any of the coach's clients and a date, then continue in the Manual Planner (nothing is saved yet).
+// Pick any of the coach's clients and a date, then continue in Plans (nothing is saved yet).
 function AssignPanel({ template, onAssign }: { template: WorkoutTemplate; onAssign: Props["onAssign"] }) {
   const clients = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
   const [clientId, setClientId] = useState("");
@@ -218,7 +218,7 @@ function AssignPanel({ template, onAssign }: { template: WorkoutTemplate; onAssi
             onClick={() => onAssign(chosen, { template, date: date || localToday() })}
             className="btn-primary rounded-lg px-4 py-2 text-sm"
           >
-            Open in Manual Planner
+            Open in Plans
           </button>
         </div>
       )}

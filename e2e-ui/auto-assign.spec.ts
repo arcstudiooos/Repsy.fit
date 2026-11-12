@@ -75,7 +75,7 @@ async function mockApi(page: Page): Promise<Mock> {
   return mock;
 }
 
-const panel = (page: Page) => page.getByRole("tabpanel");
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 const row = (page: Page) => panel(page).getByRole("group", { name: "Draft a plan with AI" });
 const button = (page: Page, name: string) => row(page).getByRole("button", { name, exact: true });
 const draft = (page: Page) => panel(page).getByRole("region", { name: "AI draft" });
@@ -129,8 +129,8 @@ test("Assign to client saves the draft as written, then links to the planner", a
       date: today,
     },
   ]);
-  await draft(page).getByRole("button", { name: "View in Manual Planner" }).click();
-  await expect(page.getByRole("tab", { name: "Manual Planner" })).toHaveAttribute("aria-selected", "true");
+  await draft(page).getByRole("button", { name: "View in Plans" }).click();
+  await expect(page.getByRole("tab", { name: "Plans", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("Edit lets the coach change title, details and why before assigning; the edited version is saved", async ({ page }) => {

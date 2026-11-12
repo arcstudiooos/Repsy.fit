@@ -103,7 +103,6 @@ function ClientCheckIns({ client, onOpenMacroCalculator }: { client: Client; onO
   return (
     <>
       <h2 className="text-2xl">Check-ins</h2>
-      <p className="mt-1 text-dim">Selected: {client.name}</p>
       {onOpenMacroCalculator && (
         <button
           type="button"

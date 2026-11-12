@@ -5,16 +5,16 @@
 // Each test sets up REAL clients through the API first (all clients are deleted, then the
 // needed ones created), so run these only against a test database.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { TOP_TABS, clientHeader, openClientTab, selectClient } from "./nav";
 
-const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"];
+const TABS = TOP_TABS;
 const SAMPLE_CLIENTS = [
   { name: "Maya Patel", goal: "Fat loss + strength" },
   { name: "Arjun Mehta", goal: "Muscle gain" },
   { name: "Casey Jordan", goal: "Marathon prep + conditioning" },
 ];
 
-const panel = (page: Page) => page.getByRole("tabpanel");
-const strip = (page: Page) => page.getByRole("group", { name: "Select client" });
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 
 /** Deletes every client, then creates the given ones in order (oldest first = first chip). */
 async function setClients(request: APIRequestContext, clients: { name: string; goal: string }[]) {
@@ -33,29 +33,33 @@ test.beforeEach(async ({ request }) => {
   await setClients(request, SAMPLE_CLIENTS);
 });
 
-test("the production build serves the app shell: 9 tabs in order and a real logo file", async ({ page }) => {
+test("the production build serves the app shell: 5 tabs in order and a real logo file", async ({ page }) => {
   await page.goto("/app");
-  await expect(page.getByRole("tab")).toHaveText(TABS);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(TABS);
   const logo = page.locator("header").getByRole("img", { name: "Repsy" });
   // Loaded for real from the server (a broken image has naturalWidth 0).
   expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 });
 
-test("the client strip shows the real clients, and switching one changes every tab", async ({ page }) => {
+test("the client header lists the real clients, and switching one carries into the workspace", async ({ page }) => {
   await page.goto("/app");
-  const chips = strip(page).getByRole("button");
-  await expect(chips).toHaveCount(3);
-  await expect(chips.nth(0)).toHaveText(/^MPMayaFat loss \+ strength$/);
-  await expect(panel(page)).toContainText("Selected: Maya Patel");
+  await expect(clientHeader(page)).toContainText("Maya Patel");
+  await expect(clientHeader(page)).toContainText("Fat loss + strength");
+  await page.getByRole("button", { name: "Switch client" }).click();
+  const options = page.getByRole("listbox", { name: "Clients" }).getByRole("option");
+  await expect(options).toHaveCount(3);
+  await expect(options.nth(0)).toContainText("Maya Patel");
+  await page.keyboard.press("Escape");
 
-  await strip(page).getByRole("button", { name: /Casey/ }).click();
-  for (const name of ["AI Coach", "Manual Planner", "Progress"]) {
-    await page.getByRole("tab", { name }).click();
-    await expect(panel(page)).toContainText("Selected: Casey Jordan");
+  await selectClient(page, "Casey Jordan");
+  await expect(clientHeader(page)).toContainText("Casey Jordan");
+  for (const sub of ["Plans", "Progress"] as const) {
+    await openClientTab(page, sub);
+    await expect(clientHeader(page)).toContainText("Casey Jordan");
   }
-  // The Clients tab manages clients, so it has no strip.
-  await page.getByRole("tab", { name: "Clients" }).click();
-  await expect(strip(page)).toHaveCount(0);
+  // The roster manages clients, so it has no client header.
+  await page.getByRole("button", { name: "Back to all clients" }).click();
+  await expect(clientHeader(page)).toHaveCount(0);
 });
 
 test("a message really persists: send it, reload, and it is still the only one", async ({ page }) => {
@@ -97,8 +101,8 @@ test.describe("production server", () => {
   test("refreshing on a deep /app path still opens the full app", async ({ page }) => {
     const res = await page.goto("/app/some/deep/link");
     expect(res?.status()).toBe(200);
-    await expect(page.getByRole("tab")).toHaveCount(9);
-    await expect(strip(page).getByRole("button")).toHaveCount(3);
+    await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5);
+    await expect(clientHeader(page)).toContainText("Maya Patel");
   });
 
   test("unknown /api paths are JSON 404, not the app page", async ({ request }) => {

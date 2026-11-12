@@ -1,6 +1,6 @@
 // Polish pass (Prompt 35): phone (375px) and desktop (1280px) checks on all four tabs, plus the
 // empty-proofing cases. Every /api call is mocked in the browser.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, type ClientSubTab } from "./fixtures";
 
 const client = (i: number, name: string) => ({
   id: `c-${i}`,
@@ -87,13 +87,16 @@ async function mockApi(page: Page, setup: Setup = {}) {
   });
 }
 
-// Every tab that works on the selected client (Library is coach-level, so it is not in this list).
-const TABS = ["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Messages", "Business"];
-const panel = (page: Page) => page.getByRole("tabpanel");
+// Every top-level tab plus the client workspace's sub-tabs (Library is coach-level, so it is not in this list).
+const TOP_TABS = ["Home", "AI Coach", "Clients", "Messages", "Business"];
+const SUB_TABS: ClientSubTab[] = ["Plans", "Progress", "Check-ins"];
+const TABS = [...TOP_TABS, ...SUB_TABS];
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 
 async function openTab(page: Page, tab: string) {
-  await page.getByRole("tab", { name: tab }).click();
-  await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+  if ((SUB_TABS as string[]).includes(tab)) await openClientTab(page, tab as ClientSubTab);
+  else await page.getByRole("tab", { name: tab }).click();
+  await expect(page.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(panel(page).getByText("Loading...")).toHaveCount(0);
 }
 
@@ -138,7 +141,7 @@ for (const width of [375, 1280]) {
         await mockApi(page);
         await page.goto("/app");
         await openTab(page, tab);
-        if (tab === "Manual Planner") {
+        if (tab === "Plans") {
           // Add an exercise row so its sets/reps/rest controls are checked too.
           const form = panel(page).getByRole("form", { name: "New assignment" });
           await form.getByRole("button", { name: "Workout", exact: true }).click();
@@ -158,14 +161,24 @@ for (const width of [375, 1280]) {
 test.describe("375px layout", () => {
   test.use({ viewport: { width: 375, height: 900 } });
 
-  test("tabs stay on one row and the chip strip scrolls sideways", async ({ page }) => {
+  test("the 5 tabs sit in a fixed bottom bar that fits the width, and content clears it", async ({ page }) => {
     await mockApi(page);
     await page.goto("/app");
-    const tops = await page.getByRole("tab").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    const bar = page.getByRole("tablist", { name: "Sections" });
+    await expect(bar.getByRole("tab")).toHaveCount(5);
+    expect(await bar.evaluate((el) => getComputedStyle(el).position)).toBe("fixed");
+    const box = (await bar.boundingBox())!;
+    expect(Math.round(box.y + box.height)).toBe(900);
+    expect(await bar.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const tops = await bar.getByRole("tab").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
     expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
-    const strip = page.getByRole("group", { name: "Select client" });
-    expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
-    expect(await strip.evaluate((el) => getComputedStyle(el).overflowX)).toBe("auto");
+    // Scrolled to the very bottom, the footer ends above the bar.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const footer = (await page.locator("footer").last().boundingBox())!;
+    expect(footer.y + footer.height).toBeLessThanOrEqual(box.y + 1);
+    // One client header with a switcher instead of the old chip strip.
+    await expect(page.getByRole("region", { name: "Selected client" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Switch client" })).toBeVisible();
   });
 
   test("stat cards wrap 2 x 2", async ({ page }) => {
@@ -215,8 +228,8 @@ test("focus is visible: tabbing to a tab and a button shows an outline", async (
 test("focused inputs and buttons show the teal focus ring", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Progress" }).click();
-  const weight = page.getByRole("tabpanel").getByLabel("Weight kg", { exact: true });
+  await openClientTab(page, "Progress");
+  const weight = page.getByRole("tabpanel").first().getByLabel("Weight kg", { exact: true });
   await weight.focus();
   await expect(weight).toHaveCSS("outline-style", "solid");
   await expect(weight).toHaveCSS("outline-color", "rgb(14, 124, 107)");
@@ -225,7 +238,8 @@ test("focused inputs and buttons show the teal focus ring", async ({ page }) => 
 });
 
 test.describe("empty-proofing", () => {
-  for (const tab of TABS) {
+  // With zero clients there is no client workspace, so only the top-level tabs exist.
+  for (const tab of TOP_TABS) {
     test(`${tab}: zero clients renders calmly`, async ({ page }) => {
       await mockApi(page, { clients: [] });
       await page.goto("/app");
@@ -249,7 +263,7 @@ test.describe("empty-proofing", () => {
   test("Planner with zero assignments renders calmly", async ({ page }) => {
     await mockApi(page, { assignments: 0 });
     await page.goto("/app");
-    await openTab(page, "Manual Planner");
+    await openTab(page, "Plans");
     await expect(panel(page).getByRole("alert")).toHaveCount(0);
     await expect(panel(page)).not.toContainText("undefined");
   });
@@ -258,14 +272,15 @@ test.describe("empty-proofing", () => {
 test.describe("errors show plain words where the action happened", () => {
   const cases: [string, RegExp][] = [
     ["AI Coach", /\/chat$/],
-    ["Manual Planner", /\/assignments$/],
+    ["Plans", /\/assignments$/],
     ["Progress", /\/progress$/],
   ];
   for (const [tab, fail] of cases) {
     test(`${tab}: a failed load shows plain words and Retry, not a blank screen`, async ({ page }) => {
       await mockApi(page, { fail });
       await page.goto("/app");
-      await page.getByRole("tab", { name: tab }).click();
+      if ((SUB_TABS as string[]).includes(tab)) await openClientTab(page, tab as ClientSubTab);
+      else await page.getByRole("tab", { name: tab }).click();
       const alert = panel(page).getByRole("alert").first();
       await expect(alert).toBeVisible({ timeout: 15_000 });
       await expect(alert).not.toContainText(/\[object|Error:|undefined|stack/i);
@@ -275,7 +290,7 @@ test.describe("errors show plain words where the action happened", () => {
   test("Clients: a failed client list shows plain words and Retry on every tab", async ({ page }) => {
     await mockApi(page, { fail: /^\/api\/clients$/ });
     await page.goto("/app");
-    for (const tab of TABS) {
+    for (const tab of TOP_TABS) {
       await page.getByRole("tab", { name: tab }).click();
       await expect(panel(page).getByRole("alert")).toContainText("The server had a problem", { timeout: 15_000 });
       await expect(panel(page).getByRole("button", { name: "Retry" })).toBeVisible();

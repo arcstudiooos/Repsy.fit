@@ -1,5 +1,6 @@
 // Check-ins tab and daily check-ins (Prompt 53). Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
+import { openClientTab } from "./fixtures";
 
 const CLIENTS = [
   { id: "c-maya", coachId: "coach-1", name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z" },
@@ -56,16 +57,16 @@ async function openTab(page: Page, existing: Record<string, unknown>[] = []) {
     return route.fulfill({ json: [] });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Check-ins" }).click();
+  await openClientTab(page, "Check-ins");
   await expect(page.getByRole("heading", { level: 2, name: "Check-ins" })).toBeVisible();
   return { posts, rows };
 }
 
-test("Check-ins is the 6th tab, after Progress, and Library the 7th", async ({ page }) => {
+test("Check-ins is a client workspace sub-tab, after Progress", async ({ page }) => {
   await openTab(page);
-  await expect(page.getByRole("tab")).toHaveText(["Home", "AI Coach", "Clients", "Manual Planner", "Progress", "Check-ins", "Library", "Messages", "Business"]);
-  await expect(page.getByRole("tab", { name: "Check-ins" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("tabpanel")).toContainText("Selected: Maya Patel");
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
+  await expect(page.getByRole("tab", { name: "Check-ins", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
 test("each 1-5 scale shows Low under 1 and High under 5; the buttons keep their names", async ({ page }) => {
@@ -151,7 +152,7 @@ test("a bad value is rejected by the server and shown in plain words", async ({ 
     return route.fulfill({ json: [] });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Check-ins" }).click();
+  await openClientTab(page, "Check-ins");
   const form = page.getByRole("form", { name: "Today's check-in" });
   await form.getByLabel("Steps").fill("200000");
   await form.getByRole("button", { name: "Save check-in" }).click();

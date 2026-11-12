@@ -1,6 +1,6 @@
 // Exercise library search in the Manual Planner form (Prompt 21). Every /api call is mocked in
 // the browser, so these run without a database.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -51,7 +51,7 @@ async function mockApi(page: Page) {
   return { posts };
 }
 
-const form = (page: Page) => page.getByRole("tabpanel").getByRole("form", { name: "New assignment" });
+const form = (page: Page) => page.getByRole("tabpanel").first().getByRole("form", { name: "New assignment" });
 const typeButton = (page: Page, type: string) => form(page).getByRole("group", { name: "Type" }).getByRole("button", { name: type });
 const search = (page: Page) => form(page).getByLabel("Search exercises");
 const results = (page: Page) => form(page).getByRole("list", { name: "Exercise results" });
@@ -60,7 +60,7 @@ const selected = (page: Page) => form(page).getByRole("list", { name: "Selected 
 
 async function openPlanner(page: Page) {
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Manual Planner" }).click();
+  await openClientTab(page, "Plans");
 }
 
 test("the search box shows only for Workout, above Details", async ({ page }) => {
