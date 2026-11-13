@@ -1,7 +1,7 @@
 // Manual assignment form in the Manual Planner (Prompt 20). Every /api call is mocked in the
 // browser, so these run without a database. POST .../assignments saves into the mock and the
 // list returns newest first, like the server.
-import { expect, test, type Page, type Route, openClientTab, selectClient } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, selectClient, openNewPlanForm } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
@@ -87,6 +87,7 @@ const panel = (page: Page) => page.getByRole("tabpanel").first();
 const openPlanner = async (page: Page) => {
   await page.goto("/app");
   await openClientTab(page, "Plans");
+  await openNewPlanForm(page);
 };
 const form = (page: Page) => panel(page).getByRole("form", { name: "New assignment" });
 const typePicker = (page: Page) => form(page).getByRole("group", { name: "Type" });
@@ -193,7 +194,9 @@ test("create one Nutrition and one Habit: source manual, form clears, cards show
   await expect(nutrition).toContainText(/Thu, 12 Nov( 2026)?/);
   await expect(nutrition).toBeInViewport();
 
-  // Form cleared (date back to today).
+  // Saving closes the form; opening it again starts clean (date back to today).
+  await expect(form(page)).toHaveCount(0);
+  await openNewPlanForm(page);
   await expect(title(page)).toHaveValue("");
   await expect(details(page)).toHaveValue("");
   await expect(reasoning(page)).toHaveValue("");
@@ -274,6 +277,9 @@ test("switching client resets the draft, and a save goes only to the selected cl
   await details(page).fill("Maya-only details");
   await selectClient(page, "Leo");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
+  // Another client's Plans start with the form closed; opening it shows an empty draft.
+  await expect(form(page)).toHaveCount(0);
+  await openNewPlanForm(page);
   await expect(title(page)).toHaveValue("");
   await expect(details(page)).toHaveValue("");
   await title(page).fill("Plan for Leo");

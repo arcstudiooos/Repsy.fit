@@ -1,6 +1,6 @@
 // Exercise library search in the Manual Planner form (Prompt 21). Every /api call is mocked in
 // the browser, so these run without a database.
-import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, openNewPlanForm } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -61,6 +61,7 @@ const selected = (page: Page) => form(page).getByRole("list", { name: "Selected 
 async function openPlanner(page: Page) {
   await page.goto("/app");
   await openClientTab(page, "Plans");
+  await openNewPlanForm(page);
 }
 
 test("the search box shows only for Workout, above Details", async ({ page }) => {

@@ -5,7 +5,7 @@
 // Each test sets up REAL clients through the API first (all clients are deleted, then the
 // needed ones created), so run these only against a test database.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { TOP_TABS, clientHeader, openClientTab, selectClient } from "./nav";
+import { TOP_TABS, clientHeader, openAiCoach, openClientTab, selectClient } from "./nav";
 
 const TABS = TOP_TABS;
 const SAMPLE_CLIENTS = [
@@ -42,7 +42,7 @@ test("the production build serves the app shell: 5 tabs in order and a real logo
 });
 
 test("the client header lists the real clients, and switching one carries into the workspace", async ({ page }) => {
-  await page.goto("/app");
+  await openAiCoach(page);
   await expect(clientHeader(page)).toContainText("Maya Patel");
   await expect(clientHeader(page)).toContainText("Fat loss + strength");
   await page.getByRole("button", { name: "Switch client" }).click();
@@ -102,6 +102,9 @@ test.describe("production server", () => {
     const res = await page.goto("/app/some/deep/link");
     expect(res?.status()).toBe(200);
     await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5);
+    // /app opens on Home; the client header is on AI Coach.
+    await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
+    await page.getByRole("tab", { name: "AI Coach" }).click();
     await expect(clientHeader(page)).toContainText("Maya Patel");
   });
 

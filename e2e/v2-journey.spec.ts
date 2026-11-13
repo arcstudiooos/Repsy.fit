@@ -6,7 +6,7 @@
 // Everything it makes belongs to its own coach, and the last step deletes that coach, so the
 // database is left exactly as it was found.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { clientHeader, openClientTab, openLibrary } from "./nav";
+import { clientHeader, openClientTab, openLibrary, openNewPlanForm } from "./nav";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
@@ -106,7 +106,7 @@ test("5. the coach assigns a program to the client", async () => {
   await page.goto("/app");
   await openClientTab(page, "Plans", CLIENT_NAME);
   await expect(clientHeader(page)).toContainText(CLIENT_NAME);
-  const form = panel(page).getByRole("form", { name: "New assignment" });
+  const form = await openNewPlanForm(page);
   await form.getByRole("group", { name: "Type" }).getByRole("button", { name: "Workout" }).click();
   await form.getByLabel("Title", { exact: true }).fill("Journey leg day");
   await form.getByLabel("Details", { exact: true }).fill("Back Squat 5 x 5");

@@ -1,6 +1,7 @@
 // Check-ins tab (Prompt 53): the selected client's daily check-ins.
-// Today's form (the coach logs for the client in v2), the last 14 days as a list, and small
-// energy / mood bars. One check-in per client per day: saving today again updates today's row.
+// Review first (Nov 2026): the last 14 days as a list, small energy / mood bars and sleep; the coach's own
+// "Log a check-in for <name>" form is a collapsed section below. One check-in per client per day: saving
+// today again updates today's row.
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bar, BarChart, Cell, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -47,11 +48,9 @@ const numberOrUndefined = (text: string) => numberOrNull(text) ?? undefined;
 
 type TabProps = {
   client: Client | null;
-  /** Prompt 61: opens the Library's macro calculator pre-filled with this client. */
-  onOpenMacroCalculator?: (clientId: string) => void;
 };
 
-export function CheckInsTab({ client, onOpenMacroCalculator }: TabProps) {
+export function CheckInsTab({ client }: TabProps) {
   if (!client) {
     return (
       <>
@@ -60,16 +59,17 @@ export function CheckInsTab({ client, onOpenMacroCalculator }: TabProps) {
       </>
     );
   }
-  return <ClientCheckIns key={client.id} client={client} onOpenMacroCalculator={onOpenMacroCalculator} />;
+  return <ClientCheckIns key={client.id} client={client} />;
 }
 
-function ClientCheckIns({ client, onOpenMacroCalculator }: { client: Client; onOpenMacroCalculator?: (clientId: string) => void }) {
+function ClientCheckIns({ client }: { client: Client }) {
   const queryClient = useQueryClient();
   const today = localToday();
   const query = useQuery({ queryKey: queryKeys.dailyCheckIns(client.id), queryFn: () => listDailyCheckIns(client.id) });
   const todays = query.data?.find((c) => c.date === today);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
 
   // Fill the form from today's saved check-in once it has loaded (editing it keeps your typing).
   useEffect(() => {
@@ -103,63 +103,6 @@ function ClientCheckIns({ client, onOpenMacroCalculator }: { client: Client; onO
   return (
     <>
       <h2 className="text-2xl">Check-ins</h2>
-      {onOpenMacroCalculator && (
-        <button
-          type="button"
-          onClick={() => onOpenMacroCalculator(client.id)}
-          className="mt-2 text-sm font-semibold text-accent2 underline underline-offset-2"
-        >
-          Macro calculator for {client.name}
-        </button>
-      )}
-
-      <form onSubmit={submit} noValidate aria-label="Today's check-in" className="card mt-4 p-5">
-        <h3 className="text-base">
-          Today's check-in <span className="font-mono text-xs font-normal text-dim">{today}</span>
-        </h3>
-        <p className="mt-1 text-sm text-dim">
-          {todays ? "Saved for today. Changing a value updates it." : "Nothing logged for today yet."}
-        </p>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Scale label="Energy" name="energy" value={form.energy} onChange={set("energy")} />
-          <Scale label="Mood" name="mood" value={form.mood} onChange={set("mood")} />
-          <Field label="Sleep (hours)" name="sleepHours" value={form.sleepHours} onChange={set("sleepHours")} step="0.1" min="0" max="16" />
-          <Scale label="Recovery" name="recoveryScore" value={form.recoveryScore} onChange={set("recoveryScore")} />
-          <Field label="Water (litres)" name="waterLiters" value={form.waterLiters} onChange={set("waterLiters")} step="0.1" min="0" max="20" />
-          <Field label="Steps" name="steps" value={form.steps} onChange={set("steps")} step="1" min="0" max="100000" />
-        </div>
-        <div className="mt-4">
-          <label htmlFor="foodNote" className="mb-1 block text-sm font-bold">
-            Food note
-          </label>
-          <textarea
-            id="foodNote"
-            rows={2}
-            value={form.foodNote}
-            onChange={(e) => set("foodNote")(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base text-text"
-          />
-        </div>
-        {save.isError && (
-          <p role="alert" className="mt-3 text-sm font-semibold text-amber-text">
-            {plainErrorMessage(save.error)}
-          </p>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button type="submit" disabled={save.isPending} className="btn-primary rounded-lg px-5 py-2 text-sm disabled:opacity-60">
-            {save.isPending ? "Saving..." : todays ? "Update today" : "Save check-in"}
-          </button>
-          {save.isSuccess && !save.isPending && (
-            <span role="status" className="text-sm font-bold text-accent2">
-              ✓ Saved
-            </span>
-          )}
-        </div>
-      </form>
-
-      <HabitTracker clientId={client.id} today={today} />
-      <Measurements clientId={client.id} today={today} />
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">
@@ -171,11 +114,75 @@ function ClientCheckIns({ client, onOpenMacroCalculator }: { client: Client; onO
         </div>
       ) : (
         <>
+          <History checkIns={query.data} />
           <Sparklines checkIns={query.data} />
           <SleepRecoveryCard checkIns={query.data} today={today} />
-          <History checkIns={query.data} />
         </>
       )}
+
+      <section aria-label="Log a check-in" className="mt-4">
+        <button
+          type="button"
+          aria-expanded={logOpen}
+          aria-controls="log-checkin"
+          onClick={() => setLogOpen((o) => !o)}
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-card border border-border bg-surface2 px-4 py-2 text-left text-sm font-semibold text-text hover:border-dim"
+        >
+          <span>Log a check-in for {client.name}</span>
+          <span aria-hidden="true" className="text-dim">{logOpen ? "−" : "+"}</span>
+        </button>
+        {logOpen && (
+          <div id="log-checkin">
+          <form onSubmit={submit} noValidate aria-label="Today's check-in" className="card mt-3 p-5">
+            <h3 className="text-base">
+              Today's check-in <span className="font-mono text-xs font-normal text-dim">{today}</span>
+            </h3>
+            <p className="mt-1 text-sm text-dim">
+              {todays ? "Saved for today. Changing a value updates it." : "Nothing logged for today yet."}
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Scale label="Energy" name="energy" value={form.energy} onChange={set("energy")} />
+              <Scale label="Mood" name="mood" value={form.mood} onChange={set("mood")} />
+              <Field label="Sleep (hours)" name="sleepHours" value={form.sleepHours} onChange={set("sleepHours")} step="0.1" min="0" max="16" />
+              <Scale label="Recovery" name="recoveryScore" value={form.recoveryScore} onChange={set("recoveryScore")} />
+              <Field label="Water (litres)" name="waterLiters" value={form.waterLiters} onChange={set("waterLiters")} step="0.1" min="0" max="20" />
+              <Field label="Steps" name="steps" value={form.steps} onChange={set("steps")} step="1" min="0" max="100000" />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="foodNote" className="mb-1 block text-sm font-bold">
+                Food note
+              </label>
+              <textarea
+                id="foodNote"
+                rows={2}
+                value={form.foodNote}
+                onChange={(e) => set("foodNote")(e.target.value)}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-base text-text"
+              />
+            </div>
+            {save.isError && (
+              <p role="alert" className="mt-3 text-sm font-semibold text-amber-text">
+                {plainErrorMessage(save.error)}
+              </p>
+            )}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button type="submit" disabled={save.isPending} className="btn-primary rounded-lg px-5 py-2 text-sm disabled:opacity-60">
+                {save.isPending ? "Saving..." : todays ? "Update today" : "Save check-in"}
+              </button>
+              {save.isSuccess && !save.isPending && (
+                <span role="status" className="text-sm font-bold text-accent2">
+                  ✓ Saved
+                </span>
+              )}
+            </div>
+          </form>
+          </div>
+        )}
+      </section>
+
+      <HabitTracker clientId={client.id} today={today} />
+      <Measurements clientId={client.id} today={today} />
     </>
   );
 }
@@ -297,7 +304,7 @@ function SleepRecoveryCard({ checkIns, today }: { checkIns: DailyCheckIn[]; toda
     <section aria-label="Sleep & Recovery" className="card mt-4 p-5">
       <h3 className="text-base">Sleep &amp; Recovery</h3>
       {!anyData ? (
-        <p className="mt-3 text-dim">No sleep or recovery logged in the last 14 days. Add them in today's check-in above.</p>
+        <p className="mt-3 text-dim">No sleep or recovery logged in the last 14 days. Add them with Log a check-in below.</p>
       ) : (
         <>
           <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
@@ -355,7 +362,7 @@ function History({ checkIns }: { checkIns: DailyCheckIn[] }) {
     <section aria-label="Last 14 days" className="card mt-4 p-5">
       <h3 className="text-base">Last 14 days</h3>
       {checkIns.length === 0 ? (
-        <p className="mt-3 text-dim">No check-ins logged yet. Use the form above to log today.</p>
+        <p className="mt-3 text-dim">No check-ins logged yet. Log one with Log a check-in below.</p>
       ) : (
         <ul aria-label="Daily check-ins" className="mt-3 divide-y divide-border">
           {checkIns.map((c) => (

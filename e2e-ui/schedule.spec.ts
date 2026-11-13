@@ -2,6 +2,7 @@
 // "My sessions", and today's appointments on Home. Mocked API. The browser runs in Asia/Kolkata (UTC+5:30)
 // with the clock fixed to Thu 12 Nov 2026 11:30 local, so "stored in UTC, shown in local time" is checked for real.
 import { expect, test, type Page } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 test.use({ timezoneId: "Asia/Kolkata", locale: "en-US" });
 
@@ -71,7 +72,7 @@ async function mockSchedule(page: Page, initial: Appt[]) {
     }
     if (path === "/api/business/plans") return route.fulfill({ json: { currency: "INR", plans: [] } });
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();

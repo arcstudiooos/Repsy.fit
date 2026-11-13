@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAssignment, listMeals, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import { localToday, TYPE_CHIP } from "../tabs/AiCoachTab";
+import { TYPE_DOT } from "../lib/typeChip";
 import {
   ASSIGNMENT_TYPES,
   type Assignment,
@@ -154,11 +155,13 @@ type Props = {
   onCreated: (assignment: Assignment) => void;
   /** Start from a template: Workout, its name as title, its exercises, notes and "From template: name". */
   prefill?: TemplatePrefill | null;
+  /** Nov 2026: the form opens from "+ New plan"; Cancel closes it without saving. */
+  onCancel?: () => void;
 };
 
 // Manual create form: same shape as AI plans (type, title, details, reasoning, date),
 // saved with source "manual" via POST /api/clients/:clientId/assignments.
-export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
+export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel }: Props) {
   const queryClient = useQueryClient();
   const [type, setType] = useState<AssignmentType>("Workout");
   const [title, setTitle] = useState(prefill?.template.name ?? "");
@@ -208,7 +211,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
   }
 
   return (
-    <form onSubmit={submit} noValidate aria-label="New assignment" className="card mt-6 p-5">
+    <form onSubmit={submit} noValidate aria-label="New assignment" className="card p-5">
       <h3 className="mb-4 text-xl">New assignment</h3>
       <div role="group" aria-label="Type" className="flex flex-wrap gap-2">
         {ASSIGNMENT_TYPES.map((t) => {
@@ -301,13 +304,25 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill }: Props) {
 
       {missingReps && <p className="mt-4 text-sm text-dim">Add reps for every exercise to save this plan.</p>}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="btn-primary mt-4 rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {mutation.isPending ? "Saving..." : "Assign plan"}
-      </button>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="btn-primary min-h-10 rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {mutation.isPending ? "Saving..." : "Assign plan"}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={mutation.isPending}
+            className="min-h-10 rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }
@@ -319,13 +334,6 @@ type DoseRowItemProps = {
   onChange: (change: Partial<Dose>) => void;
   onMove: (by: -1 | 1) => void;
   onRemove: () => void;
-};
-
-const TYPE_DOT: Record<AssignmentType, string> = {
-  Workout: "bg-type-workout",
-  Nutrition: "bg-type-nutrition",
-  Habit: "bg-type-habit",
-  Recovery: "bg-type-recovery",
 };
 
 const smallButton = "rounded-lg border border-border px-2 py-1 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40";

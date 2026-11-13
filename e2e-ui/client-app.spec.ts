@@ -1,7 +1,7 @@
 // Prompt 79: the client app - Today, This week, one plan (checklist, rest timer, Finish workout), Me -
 // and the coach's "Done by client" label. Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
-import { openClientTab } from "./fixtures";
+import { openClientTab, emptyApi } from "./fixtures";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const key = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -257,7 +257,7 @@ test("the coach's plan list says when the client finished it, with effort and no
         ],
       });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await openClientTab(page, "Plans");

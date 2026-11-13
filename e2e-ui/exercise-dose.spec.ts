@@ -1,6 +1,6 @@
 // Sets, reps and rest per selected exercise in the Manual Planner form (Prompt 22). Every /api
 // call is mocked in the browser, so these run without a database.
-import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, openNewPlanForm } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -44,6 +44,7 @@ const quickPick = (page: Page, name: string, seconds: number) =>
 async function openPlanner(page: Page) {
   await page.goto("/app");
   await openClientTab(page, "Plans");
+  await openNewPlanForm(page);
 }
 
 async function add(page: Page, query: string, name: string) {

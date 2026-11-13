@@ -8,3 +8,11 @@ export const TYPE_CHIP: Record<AssignmentType, string> = {
   Habit: "bg-type-habit text-on-accent",
   Recovery: "bg-type-recovery text-white",
 };
+
+/** A small dot in the type colour (outlined type buttons, AI draft buttons). */
+export const TYPE_DOT: Record<AssignmentType, string> = {
+  Workout: "bg-type-workout",
+  Nutrition: "bg-type-nutrition",
+  Habit: "bg-type-habit",
+  Recovery: "bg-type-recovery",
+};

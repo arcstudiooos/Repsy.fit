@@ -1,7 +1,7 @@
 // Prompt 80: the client's habits on Today, the daily and weekly check-ins, the Nutrition plan's targets
 // and meals, the weekly check-in day - and the coach's meal picker and "save as daily targets".
 import { expect, test, type Page } from "@playwright/test";
-import { openClientTab, openLibrary } from "./fixtures";
+import { openClientTab, openLibrary, emptyApi, openNewPlanForm } from "./fixtures";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const key = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -176,11 +176,11 @@ test("coach: a Nutrition plan can carry meals from the library", async ({ page }
       posts.push(req.postDataJSON());
       return route.fulfill({ status: 201, json: { id: "a1", ...(req.postDataJSON() as object), clientId: "c-maya", coachId: "coach-1", reasoning: "", source: "manual", status: "Active", createdAt: "2026-11-12T00:00:00Z" } });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await openClientTab(page, "Plans");
-  const form = page.getByRole("form", { name: "New assignment" });
+  const form = await openNewPlanForm(page);
   await form.getByRole("button", { name: "Nutrition" }).click();
   const picker = form.getByRole("group", { name: "Add meals from library (optional)" });
   await picker.getByRole("checkbox", { name: /Chicken bowl/ }).check();
@@ -191,7 +191,11 @@ test("coach: a Nutrition plan can carry meals from the library", async ({ page }
   await form.getByRole("button", { name: "Assign plan" }).click();
   await expect.poll(() => posts.length).toBe(1);
   expect(posts[0]).toMatchObject({ type: "Nutrition", mealIds: ["m2", "m1"] });
-  // Switching to Workout hides the picker.
+  // Saving closes the form; in a new one, switching to Workout hides the picker.
+  await expect(form).toHaveCount(0);
+  await openNewPlanForm(page);
+  await form.getByRole("button", { name: "Nutrition" }).click();
+  await expect(form.getByRole("group", { name: "Add meals from library (optional)" })).toBeVisible();
   await form.getByRole("button", { name: "Workout" }).click();
   await expect(form.getByRole("group", { name: "Add meals from library (optional)" })).toHaveCount(0);
 });
@@ -207,7 +211,7 @@ test("coach: save the macro result as the client's daily targets", async ({ page
       patches.push(req.postDataJSON());
       return route.fulfill({ json: { ...CLIENT, calorieTarget: 1800, proteinTargetG: 136 } });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await openLibrary(page);

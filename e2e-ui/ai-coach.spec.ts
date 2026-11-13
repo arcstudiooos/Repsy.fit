@@ -1,6 +1,6 @@
 // AI Coach tab UI (Prompt 16). Every /api call is mocked in the browser, so these run
 // without a database or AI key. The mock keeps chat history per client, like the server.
-import { expect, test, type Page, type Route, selectClient } from "./fixtures";
+import { expect, test, type Page, type Route, selectClient, openAiCoach } from "./fixtures";
 
 type Msg = { id: string; clientId: string; role: "coach" | "ai"; content: string; createdAt: string };
 
@@ -104,30 +104,33 @@ const conversation = (page: Page) => panel(page).getByRole("list", { name: "Conv
 
 test("keeps the existing heading and Selected line", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("AI Coach");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
-test("summary card shows whose data the AI is using", async ({ page }) => {
+test("summary card is one line (goal · level · weight · focus) and More shows every detail", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const summary = panel(page).getByRole("region", { name: "Client summary" });
-  for (const text of [
-    "Maya Patel",
-    "Fat loss + strength",
-    "Intermediate",
-    "68 kg",
-    "Lower body strength, protein intake",
-    "Vegetarian. Trains 4x/week.",
-  ]) {
+  await expect(summary).toContainText("Fat loss + strength · Intermediate · 68 kg · Lower body strength, protein intake");
+  // Notes stay behind the disclosure until the coach asks for them.
+  await expect(summary).not.toContainText("Vegetarian. Trains 4x/week.");
+  const more = summary.getByRole("button", { name: "More" });
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await more.click();
+  await expect(summary.getByRole("button", { name: "Less" })).toHaveAttribute("aria-expanded", "true");
+  for (const text of ["Fat loss + strength", "Intermediate", "68 kg", "Lower body strength, protein intake", "Vegetarian. Trains 4x/week."]) {
     await expect(summary).toContainText(text);
   }
+  for (const label of ["Age", "Height", "Notes"]) await expect(summary.getByText(label, { exact: true })).toBeVisible();
+  // The client's name is in the client header right above.
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
 test("coach messages sit right in accent colour, AI messages left in a white card", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const coach = conversation(page).getByText("How is Maya doing?", { exact: true });
   // AI text is formatted (paragraphs, lists) inside its card.
   const ai = conversation(page).getByRole("listitem").filter({ hasText: "Maya is consistent with training." }).locator("> div");
@@ -139,24 +142,24 @@ test("coach messages sit right in accent colour, AI messages left in a white car
   expect(c.x).toBeGreaterThan(a.x);
 });
 
-test("quick prompt chips are exactly the four prompts and tapping one sends it", async ({ page }) => {
+test("quick prompt chips are exactly the four questions (no plan-making chips) and tapping one sends it", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const chips = panel(page).getByRole("group", { name: "Quick prompts" }).getByRole("button");
   await expect(chips).toHaveText([
     "Summarise this client",
+    "What changed since the last check-in?",
     "What should I focus on this week?",
-    "Make a workout plan",
-    "Make a nutrition plan",
+    "Any warning signs?",
   ]);
-  await chips.nth(2).click();
+  await chips.nth(1).click();
   await expect(conversation(page)).toContainText("Answer about c-maya: keep going.");
-  expect(mock.asked).toEqual([{ clientId: "c-maya", question: "Make a workout plan" }]);
+  expect(mock.asked).toEqual([{ clientId: "c-maya", question: "What changed since the last check-in?" }]);
 });
 
 test("Enter sends, Shift+Enter adds a line", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const box = composer(page);
   await box.fill("Line one");
   await box.press("Shift+Enter");
@@ -172,7 +175,7 @@ test("Enter sends, Shift+Enter adds a line", async ({ page }) => {
 test("while waiting, Send is disabled and reads Thinking...", async ({ page }) => {
   const mock = await mockApi(page);
   mock.askBehaviour = "hold";
-  await page.goto("/app");
+  await openAiCoach(page);
   await composer(page).fill("Hold on");
   await panel(page).getByRole("button", { name: "Send" }).click();
   await expect(panel(page).getByRole("button", { name: "Thinking..." })).toBeDisabled();
@@ -185,8 +188,9 @@ test("while waiting, Send is disabled and reads Thinking...", async ({ page }) =
 
 test("an AI suggestion shows under the answer with Assign and a working Dismiss", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
-  await panel(page).getByRole("button", { name: "Make a workout plan" }).click();
+  await openAiCoach(page);
+  await composer(page).fill("Make a workout plan");
+  await composer(page).press("Enter");
   const answer = conversation(page).getByText("Answer about c-maya: keep going.", { exact: true });
   const card = panel(page).getByRole("region", { name: "AI suggestion" });
   await expect(card).toContainText("Lower-body strength session");
@@ -202,7 +206,7 @@ test("an AI suggestion shows under the answer with Assign and a working Dismiss"
 test("a failed send shows the error in the chat and keeps the typed text", async ({ page }) => {
   const mock = await mockApi(page);
   mock.askBehaviour = "fail";
-  await page.goto("/app");
+  await openAiCoach(page);
   await composer(page).fill("Will this fail?");
   await composer(page).press("Enter");
   await expect(panel(page).getByRole("alert")).toContainText("The server had a problem");
@@ -220,7 +224,7 @@ test("the chat auto-scrolls to the newest message", async ({ page }) => {
       createdAt: "2026-11-09T12:00:00.000Z",
     });
   }
-  await page.goto("/app");
+  await openAiCoach(page);
   await expect(conversation(page).getByText("Message number 29", { exact: true })).toBeInViewport();
   await composer(page).fill("Newest question");
   await composer(page).press("Enter");
@@ -229,13 +233,14 @@ test("the chat auto-scrolls to the newest message", async ({ page }) => {
 
 test("history survives a reload and each client sees only their own chat", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   // Wait for the saved history first, so typing can't race the chat loading.
   await expect(conversation(page)).toContainText("How is Maya doing?");
   await composer(page).fill("Persist me");
   await composer(page).press("Enter");
   await expect(conversation(page)).toContainText("Answer about c-maya: keep going.");
   await page.reload();
+  await page.getByRole("tab", { name: "AI Coach" }).click();
   await expect(conversation(page)).toContainText("Persist me");
   await expect(conversation(page)).toContainText("Answer about c-maya: keep going.");
   await selectClient(page, "Arjun");
@@ -253,7 +258,7 @@ test("AI replies are formatted: bold and bullet lists render, no raw ** marks", 
     content: "For Maya, keep **strength first**:\n- Adherence is 86%\n- Sleep averages 6.5 h",
     createdAt: "2026-11-09T10:01:00.000Z",
   });
-  await page.goto("/app");
+  await openAiCoach(page);
   const reply = conversation(page).getByRole("listitem").filter({ hasText: "For Maya, keep" });
   await expect(reply.locator("strong")).toHaveText("strength first");
   await expect(reply.getByRole("listitem")).toHaveText(["Adherence is 86%", "Sleep averages 6.5 h"]);
@@ -270,7 +275,7 @@ test("a suggested plan shows day headings and each exercise as a row with sets x
     "Day 2 — Pull",
     "1. Deadlift — 3 sets × 5 reps · 100 kg · Rest 180s",
   ].join("\n");
-  await page.goto("/app");
+  await openAiCoach(page);
   await composer(page).fill("Make a push pull week");
   await composer(page).press("Enter");
   const card = panel(page).getByRole("region", { name: "AI suggestion" });

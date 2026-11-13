@@ -1,5 +1,6 @@
 // Messages tab: chat data shell (Prompt 63) and the coach chat UI (Prompt 64). Every /api call is mocked.
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 const client = (id: string, name: string) => ({
   id,
@@ -91,7 +92,7 @@ async function mockServer(page: Page, setup: Setup = {}) {
       for (const x of threads[id] ?? []) if (x.sender === "client" && !x.readAt) x.readAt = new Date().toISOString();
       return route.fulfill({ json: { messages: threads[id] ?? [], hasMore: setup.hasMore ?? false } });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   return { posts, threadGets, reviewQueueGets, threads };
 }

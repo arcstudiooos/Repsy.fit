@@ -158,6 +158,10 @@ export const createAssignment = (clientId: string, input: NewAssignment) =>
   request<Assignment>("POST", `/clients/${enc(clientId)}/assignments`, input);
 export const updateAssignmentStatus = (clientId: string, assignmentId: string, status: AssignmentStatus) =>
   request<Assignment>("PATCH", `/clients/${enc(clientId)}/assignments/${enc(assignmentId)}`, { status });
+/** Nov 2026: edit a plan's title, details, reasoning and / or date (same PATCH, without `status`). */
+export type AssignmentEdit = { title?: string; details?: string; reasoning?: string; date?: string };
+export const updateAssignment = (clientId: string, assignmentId: string, edit: AssignmentEdit) =>
+  request<Assignment>("PATCH", `/clients/${enc(clientId)}/assignments/${enc(assignmentId)}`, edit);
 export const deleteAssignment = (clientId: string, assignmentId: string) =>
   request<void>("DELETE", `/clients/${enc(clientId)}/assignments/${enc(assignmentId)}`);
 

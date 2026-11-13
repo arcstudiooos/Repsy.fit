@@ -4,7 +4,7 @@
 // config whose baseURL is https://repsy-coach.onrender.com (no webServer).
 // It creates 2 uniquely named clients and deletes both at the end; nothing else is touched.
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
-import { clientHeader, openClientTab, selectClient as pickClient } from "./nav";
+import { clientHeader, openAiCoach, openClientTab, openNewPlanForm, selectClient as pickClient } from "./nav";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
@@ -54,7 +54,7 @@ test("1. add client", async ({ page, request }) => {
 });
 
 test("2. ask AI a question", async ({ page }) => {
-  await page.goto("/app");
+  await openAiCoach(page);
   await selectClient(page, A);
   await panel(page).getByRole("textbox", { name: "Ask the AI coach" }).fill("Make a workout plan for this week");
   await panel(page).getByRole("button", { name: "Send" }).click();
@@ -68,11 +68,13 @@ test("2. ask AI a question", async ({ page }) => {
 
 test("3. assign from the AI suggestion", async ({ page, request }) => {
   test.skip(!aiWorks, "No AI suggestion: the AI answered with the fallback, which never carries a suggestion.");
-  await page.goto("/app");
+  await openAiCoach(page);
   await selectClient(page, A);
   const card = panel(page).getByRole("region", { name: "AI suggestion" });
   if (!(await card.isVisible())) {
-    await panel(page).getByRole("group", { name: "Quick prompts" }).getByRole("button", { name: "Make a workout plan" }).click();
+    // Plans have no quick-prompt chip any more (the chips are questions only): ask in the composer.
+    await panel(page).getByRole("textbox", { name: "Ask the AI coach" }).fill("Make a workout plan");
+    await panel(page).getByRole("button", { name: "Send" }).click();
   }
   await expect(card).toBeVisible({ timeout: 90_000 });
   await card.getByRole("button", { name: "Assign to client" }).click();
@@ -82,7 +84,7 @@ test("3. assign from the AI suggestion", async ({ page, request }) => {
 test("4. draft a Nutrition plan with AI, then assign it", async ({ page, request }) => {
   test.skip(!aiWorks, "AI drafts need a working AI; without it the app correctly shows an error and saves nothing.");
   const before = (await counts(request, idA)).assignments;
-  await page.goto("/app");
+  await openAiCoach(page);
   await selectClient(page, A);
   await panel(page).getByRole("group", { name: "Draft a plan with AI" }).getByRole("button", { name: /Nutrition/ }).click();
   const draft = panel(page).getByRole("region", { name: "AI draft" });
@@ -97,7 +99,7 @@ test("5. manual Workout with exercise search, sets, reps and rest, then mark it 
   await page.goto("/app");
   await openClientTab(page, "Plans", A);
   await expect(clientHeader(page)).toContainText(A);
-  const form = panel(page).getByRole("form", { name: "New assignment" });
+  const form = await openNewPlanForm(page);
   await form.getByRole("button", { name: "Workout", exact: true }).click();
   await form.getByLabel("Title", { exact: true }).fill("Journey leg day");
   await form.getByLabel("Search exercises").fill("squat");
@@ -150,7 +152,7 @@ test("6. add two progress check-ins; the cards and all 3 charts update", async (
 
 test("7. switch client: zero data leakage", async ({ page, request }) => {
   expect(await counts(request, idB)).toEqual({ assignments: 0, progress: 0, chat: 0 });
-  await page.goto("/app");
+  await openAiCoach(page);
   await selectClient(page, B);
   await expect(panel(page)).not.toContainText("Make a workout plan for this week");
   await openClientTab(page, "Plans");

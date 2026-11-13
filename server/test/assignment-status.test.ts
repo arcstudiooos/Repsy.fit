@@ -85,6 +85,46 @@ describe("PATCH /api/clients/:clientId/assignments/:assignmentId", () => {
     expect(res.body).toEqual({ error: "Assignment not found" });
     expect(prisma.assignment.update).not.toHaveBeenCalled();
   });
+
+  // Nov 2026: the Plans "Edit" form uses the same route without `status`.
+  it("edits title, details, reasoning and date (trimmed) and nothing else", async () => {
+    const res = await request(app)
+      .patch(path)
+      .send({ title: "  Squat day v2 ", details: "Back squat 5x5", reasoning: "Heavier", date: "2026-11-12", type: "Habit", coachId: "other", clientId: "other", source: "ai" });
+    expect(res.status).toBe(200);
+    expect(prisma.assignment.findFirst).toHaveBeenCalledWith({ where: { id: stored.id, clientId: client.id, coachId: TEST_COACH_ID } });
+    expect(prisma.assignment.update.mock.calls[0][0]).toEqual({
+      where: { id: stored.id },
+      data: { title: "Squat day v2", details: "Back squat 5x5", reasoning: "Heavier", date: "2026-11-12" },
+    });
+    expect(res.body).toMatchObject({ title: "Squat day v2", type: "Workout", status: "Active" });
+  });
+
+  it("edits only the fields sent", async () => {
+    await request(app).patch(path).send({ reasoning: "" });
+    expect(prisma.assignment.update.mock.calls[0][0].data).toEqual({ reasoning: "" });
+  });
+
+  it.each([
+    ["an empty title", { title: "   " }],
+    ["empty details", { details: "" }],
+    ["a bad date", { date: "2026-02-30" }],
+    ["a too-long title", { title: "x".repeat(201) }],
+    ["no editable field", { type: "Habit" }],
+  ])("rejects an edit with %s (400, nothing changed)", async (_label, body) => {
+    const res = await request(app).patch(path).send(body);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: expect.any(String) });
+    expect(prisma.assignment.update).not.toHaveBeenCalled();
+  });
+
+  it("an edit of another coach's or client's assignment is 404 and changes nothing", async () => {
+    prisma.assignment.findFirst.mockResolvedValue(null);
+    const res = await request(app).patch(path).send({ title: "Mine now" });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Assignment not found" });
+    expect(prisma.assignment.update).not.toHaveBeenCalled();
+  });
 });
 
 describe("DELETE /api/clients/:clientId/assignments/:assignmentId", () => {

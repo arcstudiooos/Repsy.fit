@@ -33,6 +33,29 @@ export const test = base.extend({
   },
 });
 
+/**
+ * Valid empty answers for the Home cards' endpoints. /app opens on Home since Nov 2026, so a spec's catch-all
+ * mock must answer these with the right shape (a bare [] would not be a real server reply). Anything else: [].
+ */
+export function emptyApi(path: string): unknown {
+  switch (path) {
+    case "/api/review-queue":
+      return { pendingCount: 0, items: [] };
+    case "/api/tasks/today":
+      return { date: "2026-11-12", tasks: [] };
+    case "/api/checkins/recent":
+      return { items: [] };
+    case "/api/at-risk":
+      return { date: "2026-11-12", clients: [] };
+    case "/api/weekly-summary":
+      return { weekStart: "2026-11-09", summary: null };
+    case "/api/alerts":
+      return { waiting: 0, joined: [], finished: [], unread: [] };
+    default:
+      return [];
+  }
+}
+
 // Navigation helpers (Nov 2026 navigation): five top tabs (Home, Clients, AI Coach, Messages, Business);
 // Plans / Progress / Check-ins are sub-tabs of a client's workspace inside Clients; Library is a Business view.
 export type ClientSubTab = "Plans" | "Progress" | "Check-ins";
@@ -55,6 +78,25 @@ export async function openClientTab(page: Page, sub: ClientSubTab, clientName?: 
     : page.getByRole("button", { name: /^Open /, pressed: true });
   await card.first().click();
   await subTab.click();
+}
+
+/** Since Nov 2026 /app opens on Home: goes to /app and opens the AI Coach tab. */
+export async function openAiCoach(page: Page) {
+  await page.goto("/app");
+  await page.getByRole("tab", { name: "AI Coach" }).click();
+}
+
+/** Plans: opens the New assignment form with the "+ New plan" button (the form is closed by default). */
+export async function openNewPlanForm(page: Page) {
+  await page.getByRole("button", { name: "New plan", exact: true }).click();
+  return page.getByRole("form", { name: "New assignment" });
+}
+
+/** Check-ins: opens the collapsed "Log a check-in for <name>" section (history shows first). */
+export async function openLogCheckIn(page: Page) {
+  const toggle = page.getByRole("button", { name: /^Log a check-in for / });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  return page.getByRole("form", { name: "Today's check-in" });
 }
 
 /** Picks a client with the client header's "Switch client" control (AI Coach / client workspace). */

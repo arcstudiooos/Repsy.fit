@@ -1,6 +1,7 @@
 // Login screens and app guard (Prompt 46). Every /api call is mocked in the browser; the mock keeps
 // a tiny "server" (coaches, passwords, one session cookie-less sign-in state and per-coach clients).
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 type Coach = { id: string; name: string; email: string; createdAt: string };
 type Mock = {
@@ -69,7 +70,7 @@ async function mockApi(page: Page): Promise<Mock> {
     if (path.startsWith("/api/clients")) {
       if (!me) return route.fulfill({ status: 401, json: { error: "You are not signed in." } });
       if (req.method() === "GET" && path === "/api/clients") return route.fulfill({ json: mock.clientsByCoach[me.id] ?? [] });
-      return route.fulfill({ json: [] });
+      return route.fulfill({ json: emptyApi(path) });
     }
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
@@ -116,6 +117,8 @@ test("login: right password opens the app with the coach's name, Logout and own 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(menu).toBeFocused();
+  // /app opens on Home; the roster shows this coach's own clients.
+  await page.getByRole("tab", { name: "Clients" }).click();
   await expect(page.getByText("Maya Patel").first()).toBeVisible();
 });
 
@@ -172,6 +175,7 @@ test("logout clears everything: the next coach on the same browser sees nothing 
   await page.getByLabel("Email").fill("alice@example.com");
   await page.getByLabel("Password").fill("alice-password-1");
   await page.getByRole("button", { name: "Log in" }).click();
+  await page.getByRole("tab", { name: "Clients" }).click();
   await expect(page.getByText("Maya Patel").first()).toBeVisible();
 
   await page.getByRole("button", { name: /^Account menu for / }).click();

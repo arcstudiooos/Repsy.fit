@@ -1,7 +1,7 @@
 // Exercise rows saved as one numbered workout plan (Prompt 23). Every /api call is mocked in the
 // browser, so these run without a database. POST .../assignments saves into the mock and the
 // list returns newest first, like the server.
-import { expect, test, type Page, type Route, openClientTab } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, openNewPlanForm } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -68,6 +68,7 @@ const cards = (page: Page) => panel(page).getByRole("list", { name: "Assignments
 async function openPlanner(page: Page) {
   await page.goto("/app");
   await openClientTab(page, "Plans");
+  await openNewPlanForm(page);
 }
 
 async function add(page: Page, query: string, name: string) {
@@ -122,7 +123,9 @@ test("saving the 2-exercise workout sends the numbered list in the exact format 
   await expect(rows.nth(1)).toContainText("Romanian Deadlift");
   await expect(rows.nth(1)).toContainText("3 × 8 · 90s");
 
-  // The form clears, including the exercise rows.
+  // Saving closes the form; a new one starts clean, including the exercise rows.
+  await expect(form(page)).toHaveCount(0);
+  await openNewPlanForm(page);
   await expect(title(page)).toHaveValue("");
   await expect(form(page).getByRole("list", { name: "Selected exercises" })).toHaveCount(0);
   await expect(form(page).getByLabel("Details")).toBeVisible();

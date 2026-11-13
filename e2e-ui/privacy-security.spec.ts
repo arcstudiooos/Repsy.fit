@@ -1,6 +1,7 @@
 // Prompt 73 (+ published Nov 2026): the Privacy Policy and Terms, the Clients permission line, the Account data note, and
 // the type-to-confirm delete. Mocked API.
 import { expect, test, type Page } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 const ME = { id: "coach-1", name: "Ana", email: "ana@example.com", createdAt: "2026-11-01T00:00:00.000Z", currency: "INR" };
 const CLIENTS = [
@@ -21,7 +22,7 @@ async function mockApp(page: Page, onDelete?: (body: unknown) => { status: numbe
       return route.fulfill({ status: out.status, json: out.json ?? {} });
     }
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   return sent;
 }

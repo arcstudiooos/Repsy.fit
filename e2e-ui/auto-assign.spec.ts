@@ -1,7 +1,7 @@
 // AI plan drafts from the type buttons (Prompt 18; drafts since Nov 2026, owner's rule: the coach decides).
 // Every /api call is mocked in the browser, so these run without a database or AI key. The AI button
 // returns a DRAFT; only "Assign to client" saves (POST /assignments).
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openAiCoach } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -86,20 +86,24 @@ const browserToday = (page: Page) =>
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   });
 
-test("shows the 4 draft buttons in the type colours, and says nothing reaches the client unreviewed", async ({ page }) => {
+test("shows the 4 draft buttons, calm with a type-colour dot, and says nothing reaches the client unreviewed", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await expect(row(page).getByRole("button")).toHaveText(["Workout", "Nutrition", "Habit", "Recovery"]);
-  await expect(button(page, "Workout")).toHaveClass(/bg-type-workout/);
-  await expect(button(page, "Nutrition")).toHaveClass(/bg-type-nutrition/);
-  await expect(button(page, "Habit")).toHaveClass(/bg-type-habit/);
-  await expect(button(page, "Recovery")).toHaveClass(/bg-type-recovery/);
+  for (const type of ["Workout", "Nutrition", "Habit", "Recovery"]) {
+    const colour = new RegExp(`bg-type-${type.toLowerCase()}`);
+    // Neutral button (surface2 + border); only the small dot carries the type colour.
+    await expect(button(page, type)).toHaveClass(/bg-surface2/);
+    await expect(button(page, type)).toHaveClass(/border-border/);
+    await expect(button(page, type)).not.toHaveClass(colour);
+    await expect(button(page, type).getByTestId("type-dot")).toHaveClass(colour);
+  }
   await expect(panel(page)).toContainText("you review it before anything reaches Maya Patel");
 });
 
 test("a draft is NOT saved: it shows with Assign, Edit, Review later and Dismiss", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const today = await browserToday(page);
   await button(page, "Habit").click();
   await expect(draft(page)).toContainText("Habit plan for Maya");
@@ -114,7 +118,7 @@ test("a draft is NOT saved: it shows with Assign, Edit, Review later and Dismiss
 
 test("Assign to client saves the draft as written, then links to the planner", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const today = await browserToday(page);
   await button(page, "Nutrition").click();
   await draft(page).getByRole("button", { name: "Assign to client" }).click();
@@ -135,7 +139,7 @@ test("Assign to client saves the draft as written, then links to the planner", a
 
 test("Edit lets the coach change title, details and why before assigning; the edited version is saved", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await button(page, "Recovery").click();
   await draft(page).getByRole("button", { name: "Edit" }).click();
   await expect(draft(page)).toContainText("nothing is saved until you assign it");
@@ -160,7 +164,7 @@ test("Edit lets the coach change title, details and why before assigning; the ed
 
 test("an edit can't empty the title or details", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await button(page, "Workout").click();
   await draft(page).getByRole("button", { name: "Edit" }).click();
   await draft(page).getByLabel("Plan details").fill("   ");
@@ -171,7 +175,7 @@ test("an edit can't empty the title or details", async ({ page }) => {
 
 test("Dismiss drops the draft without saving; Review later parks the (edited) draft", async ({ page }) => {
   const mock = await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await button(page, "Habit").click();
   await draft(page).getByRole("button", { name: "Dismiss" }).click();
   await expect(draft(page)).toHaveCount(0);
@@ -187,7 +191,7 @@ test("Dismiss drops the draft without saving; Review later parks the (edited) dr
 test("shows Drafting... and disables all buttons, so a double click asks once", async ({ page }) => {
   const mock = await mockApi(page);
   mock.behaviour = "hold";
-  await page.goto("/app");
+  await openAiCoach(page);
   await button(page, "Habit").click();
   const running = button(page, "Drafting...");
   await expect(running).toBeDisabled();
@@ -204,7 +208,7 @@ test("shows Drafting... and disables all buttons, so a double click asks once", 
 test("an AI failure shows the error and no draft", async ({ page }) => {
   const mock = await mockApi(page);
   mock.behaviour = "fail";
-  await page.goto("/app");
+  await openAiCoach(page);
   await button(page, "Recovery").click();
   await expect(panel(page).getByRole("alert")).toContainText("couldn't create a plan");
   await expect(draft(page)).toHaveCount(0);

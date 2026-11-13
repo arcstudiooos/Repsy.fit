@@ -1,6 +1,6 @@
 // Check-ins tab and daily check-ins (Prompt 53). Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
-import { openClientTab } from "./fixtures";
+import { openClientTab, emptyApi, openLogCheckIn } from "./fixtures";
 
 const CLIENTS = [
   { id: "c-maya", coachId: "coach-1", name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z" },
@@ -54,7 +54,7 @@ async function openTab(page: Page, existing: Record<string, unknown>[] = []) {
       return route.fulfill({ json: list });
     }
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await openClientTab(page, "Check-ins");
@@ -69,9 +69,25 @@ test("Check-ins is a client workspace sub-tab, after Progress", async ({ page })
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
+test("review first: the history leads, and the coach's form is a collapsed 'Log a check-in for <name>'", async ({ page }) => {
+  await openTab(page, [checkIn()]);
+  const history = page.getByRole("region", { name: "Last 14 days" });
+  const toggle = page.getByRole("button", { name: "Log a check-in for Maya Patel" });
+  await expect(history).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("form", { name: "Today's check-in" })).toHaveCount(0);
+  expect((await history.boundingBox())!.y).toBeLessThan((await toggle.boundingBox())!.y);
+  expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("form", { name: "Today's check-in" })).toBeVisible();
+  await toggle.click();
+  await expect(page.getByRole("form", { name: "Today's check-in" })).toHaveCount(0);
+});
+
 test("each 1-5 scale shows Low under 1 and High under 5; the buttons keep their names", async ({ page }) => {
   await openTab(page);
-  const form = page.getByRole("form", { name: "Today's check-in" });
+  const form = await openLogCheckIn(page);
   for (const label of ["Energy", "Mood", "Recovery"]) {
     const group = form.getByRole("group", { name: label, exact: true });
     await expect(group.getByRole("button")).toHaveCount(5);
@@ -93,7 +109,7 @@ test("each 1-5 scale shows Low under 1 and High under 5; the buttons keep their 
 
 test("logging today saves energy, mood, water, steps and the food note", async ({ page }) => {
   const { posts } = await openTab(page);
-  const form = page.getByRole("form", { name: "Today's check-in" });
+  const form = await openLogCheckIn(page);
   await expect(form).toContainText("Nothing logged for today yet.");
   await form.getByRole("button", { name: "Energy 4" }).click();
   await form.getByRole("button", { name: "Mood 3" }).click();
@@ -109,7 +125,7 @@ test("logging today saves energy, mood, water, steps and the food note", async (
 
 test("saving today again updates the same day instead of adding a second row", async ({ page }) => {
   const { posts } = await openTab(page, [checkIn()]);
-  const form = page.getByRole("form", { name: "Today's check-in" });
+  const form = await openLogCheckIn(page);
   await expect(form).toContainText("Saved for today. Changing a value updates it.");
   await expect(form.getByRole("button", { name: "Energy 4" })).toHaveAttribute("aria-pressed", "true");
   await expect(form.getByLabel("Steps")).toHaveValue("8000");
@@ -149,11 +165,11 @@ test("a bad value is rejected by the server and shown in plain words", async ({ 
     }
     if (path === "/api/clients/c-maya/checkins") return route.fulfill({ json: [] });
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await openClientTab(page, "Check-ins");
-  const form = page.getByRole("form", { name: "Today's check-in" });
+  const form = await openLogCheckIn(page);
   await form.getByLabel("Steps").fill("200000");
   await form.getByRole("button", { name: "Save check-in" }).click();
   await expect(form.getByRole("alert")).toContainText("steps must be a whole number from 0 to 100000.");

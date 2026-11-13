@@ -2,7 +2,7 @@
 // workspace in Clients (Plans / Progress / Check-ins sub-tabs), the client header with "Switch client",
 // Library as a Business view, the phone bottom tab bar, and Home's card order / counts / grouped check-ins.
 // Every /api call is mocked.
-import { expect, test, openClientTab, selectClient, type Page, type Route } from "./fixtures";
+import { expect, test, openClientTab, selectClient, type Page, type Route, openAiCoach } from "./fixtures";
 
 const client = (i: number) => ({
   id: `c-${i}`,
@@ -85,9 +85,15 @@ test("5 top tabs; arrow keys move between them (roving focus)", async ({ page })
   await page.goto("/app");
   const tabs = page.getByRole("tablist", { name: "Sections" }).getByRole("tab");
   await expect(tabs).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
-  await expect(page.getByRole("tab", { name: "AI Coach" })).toHaveAttribute("tabindex", "0");
-  await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("tabindex", "-1");
-  await page.getByRole("tab", { name: "AI Coach" }).focus();
+  // /app opens on Home (owner, Nov 2026).
+  await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("tabindex", "0");
+  await expect(page.getByRole("tab", { name: "AI Coach" })).toHaveAttribute("tabindex", "-1");
+  await page.getByRole("tab", { name: "Home" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Clients" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("tab", { name: "Messages" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: "Messages" })).toBeFocused();
@@ -122,7 +128,7 @@ test("Clients shows the roster; a client card opens the workspace with sub-tabs 
 
 test("Switch client: a searchable list that works with 30+ clients and by keyboard", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await expect(header(page)).toContainText("Maya Patel");
   const button = page.getByRole("button", { name: "Switch client" });
   await button.click();
@@ -154,7 +160,7 @@ test("Switch client: a searchable list that works with 30+ clients and by keyboa
 
 test("the selected client carries from AI Coach into the workspace", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   await selectClient(page, "Client 12");
   await openClientTab(page, "Check-ins");
   await expect(header(page)).toContainText("Client 12");

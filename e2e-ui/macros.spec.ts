@@ -146,10 +146,16 @@ test("saving without a client asks for one and saves nothing", async ({ page }) 
   expect(calls.some((c) => c.startsWith("ASSIGN"))).toBe(false);
 });
 
-test("the Check-ins link opens the calculator pre-filled with that client", async ({ page }) => {
+test("the one macro link (Plans, next to New plan) opens the calculator pre-filled with that client", async ({ page }) => {
   await mock(page);
   await page.goto("/app");
-  await openClientTab(page, "Check-ins");
+  // Progress and Check-ins no longer carry a duplicate link.
+  for (const sub of ["Check-ins", "Progress"] as const) {
+    await openClientTab(page, sub);
+    await expect(page.getByRole("heading", { level: 2, name: sub })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Macro calculator for Maya Patel" })).toHaveCount(0);
+  }
+  await openClientTab(page, "Plans");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
   await page.getByRole("button", { name: "Macro calculator for Maya Patel" }).click();
 

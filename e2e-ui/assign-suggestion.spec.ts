@@ -1,6 +1,6 @@
 // Assign from an AI suggestion (Prompt 17). Every /api call is mocked in the browser, so
 // these run without a database or AI key. The mock stores assignments per client.
-import { expect, test, type Page, type Route } from "./fixtures";
+import { expect, test, type Page, type Route, openAiCoach } from "./fixtures";
 
 const CLIENTS = [
   {
@@ -95,8 +95,11 @@ const panel = (page: Page) => page.getByRole("tabpanel").first();
 const card = (page: Page) => panel(page).getByRole("region", { name: "AI suggestion" });
 
 async function askForWorkout(page: Page) {
-  await page.goto("/app");
-  await panel(page).getByRole("button", { name: "Make a workout plan" }).click();
+  await openAiCoach(page);
+  // Asked in chat: plans no longer have a quick-prompt chip (the draft buttons make plans).
+  const box = panel(page).getByRole("textbox", { name: "Ask the AI coach" });
+  await box.fill("Make a workout plan");
+  await box.press("Enter");
   await expect(card(page)).toContainText("Lower-body strength session");
 }
 

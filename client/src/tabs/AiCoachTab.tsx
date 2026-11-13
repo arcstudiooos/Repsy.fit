@@ -14,17 +14,19 @@ import {
 } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { AssignmentType, ChatMessage, Client } from "../types";
-import { TYPE_CHIP } from "../lib/typeChip";
+import { TYPE_CHIP, TYPE_DOT } from "../lib/typeChip";
+import { PlanEditor, planProblem } from "../components/PlanEditor";
 
 type Props = { client: Client | null; onOpenPlanner: () => void };
 
 const timeFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 
+// Questions only (Nov 2026): plans come from the "Draft a plan with AI" buttons, never from a chip.
 const QUICK_PROMPTS = [
   "Summarise this client",
+  "What changed since the last check-in?",
   "What should I focus on this week?",
-  "Make a workout plan",
-  "Make a nutrition plan",
+  "Any warning signs?",
 ];
 
 // The type chip colours live in lib/typeChip.ts (shared with the client app); re-exported for old imports.
@@ -113,14 +115,21 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
         )}
       </div>
 
-      <div role="group" aria-label="Quick prompts" className="mt-4 flex flex-wrap gap-2">
+      {/* Phones: the chips and composer stay pinned just above the bottom tab bar (3.5rem + its 1px border),
+          so the coach can always type; from sm up they sit in the page flow. */}
+      <div
+        data-testid="ai-composer"
+        className="sticky bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 border-t border-border bg-surface px-4 pb-3 pt-3 sm:static sm:z-auto sm:mx-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0"
+      >
+      {/* Phones: one row that scrolls sideways, so the pinned area stays short. */}
+      <div role="group" aria-label="Quick prompts" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
         {QUICK_PROMPTS.map((prompt) => (
           <button
             key={prompt}
             type="button"
             disabled={!client || ask.isPending}
             onClick={() => send(prompt)}
-            className={secondaryButton + " rounded-full"}
+            className={secondaryButton + " min-h-10 shrink-0 whitespace-nowrap rounded-full"}
           >
             {prompt}
           </button>
@@ -147,29 +156,51 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
           {ask.isPending ? "Thinking..." : "Send"}
         </button>
       </div>
+      </div>
     </>
   );
 }
 
+// One compact line (goal · level · weight · focus); "More" shows every detail (age, height, notes too).
 function ClientSummary({ client }: { client: Client }) {
+  const [open, setOpen] = useState(false);
+  const weight = client.weightKg === null ? null : `${client.weightKg} kg`;
+  const line = [client.goal, client.level, weight, client.focus].filter((v): v is string => !!v && v.trim() !== "").join(" · ");
   const rows: [string, string][] = [
     ["Goal", client.goal],
     ["Level", client.level],
-    ["Weight", client.weightKg === null ? "-" : `${client.weightKg} kg`],
+    ["Age", client.age === null ? "-" : String(client.age)],
+    ["Weight", weight ?? "-"],
+    ["Height", client.heightCm === null ? "-" : `${client.heightCm} cm`],
     ["Focus", client.focus || "-"],
     ["Notes", client.notes || "-"],
   ];
   return (
-    <section aria-label="Client summary" className="card mt-4 p-4">
-      <h3 className="text-lg">{client.name}</h3>
-      <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-dim">{label}</dt>
-            <dd className="whitespace-pre-wrap text-text">{value}</dd>
-          </div>
-        ))}
-      </dl>
+    <section aria-label="Client summary" className="mt-3 rounded-card border border-border bg-surface2 px-3 py-1.5">
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-sm text-text" title={line}>
+          {line || "No details yet"}
+        </p>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="client-summary-details"
+          onClick={() => setOpen((o) => !o)}
+          className="min-h-10 shrink-0 rounded-lg px-2 text-sm font-semibold text-accent2 underline underline-offset-4"
+        >
+          {open ? "Less" : "More"}
+        </button>
+      </div>
+      {open && (
+        <dl id="client-summary-details" className="mb-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+          {rows.map(([label, value]) => (
+            <div key={label} className="contents">
+              <dt className="text-dim">{label}</dt>
+              <dd className="whitespace-pre-wrap text-text">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }
@@ -218,8 +249,10 @@ function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlan
             type="button"
             disabled={generate.isPending}
             onClick={() => run(type)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60 ${TYPE_CHIP[type]}`}
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
           >
+            {/* Calm neutral buttons; the type colour is only the small dot. */}
+            <span aria-hidden="true" data-testid="type-dot" className={`h-2.5 w-2.5 shrink-0 rounded-full ${TYPE_DOT[type]}`} />
             {generate.isPending && generate.variables === type ? "Drafting..." : label}
           </button>
         ))}
@@ -269,11 +302,7 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const edited = plan.title !== suggestion.title || plan.details !== suggestion.details || plan.reasoning !== suggestion.reasoning;
-  const valid = () => {
-    if (plan.title.trim() === "") return "Give the plan a title.";
-    if (plan.details.trim() === "") return "The plan needs some details.";
-    return null;
-  };
+  const valid = () => planProblem(plan);
   const park = useMutation({
     mutationFn: () =>
       addReviewItem({
@@ -310,7 +339,6 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
     m.mutate();
   };
   const busy = assign.isPending || park.isPending;
-  const field = "w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text";
 
   return (
     <section aria-label={label} className="card p-4">
@@ -320,39 +348,7 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[suggestion.type]}`}>{suggestion.type}</span>
             <span className="text-sm text-dim">Editing - nothing is saved until you assign it.</span>
           </div>
-          <div>
-            <label htmlFor={`${label}-title`} className="mb-1 block text-sm font-semibold">
-              Title
-            </label>
-            <input id={`${label}-title`} value={plan.title} maxLength={200} onChange={(e) => setPlan({ ...plan, title: e.target.value })} className={field} />
-          </div>
-          <div>
-            <label htmlFor={`${label}-details`} className="mb-1 block text-sm font-semibold">
-              Plan details
-            </label>
-            <textarea
-              id={`${label}-details`}
-              value={plan.details}
-              rows={Math.min(18, Math.max(6, plan.details.split("\n").length + 1))}
-              maxLength={6000}
-              onChange={(e) => setPlan({ ...plan, details: e.target.value })}
-              className={`${field} font-mono`}
-            />
-            <p className="mt-1 text-xs text-dim">Exercise lines: 1. Bench Press — 4 sets × 6 reps · 60 kg · Rest 120s</p>
-          </div>
-          <div>
-            <label htmlFor={`${label}-why`} className="mb-1 block text-sm font-semibold">
-              Why this plan
-            </label>
-            <textarea
-              id={`${label}-why`}
-              value={plan.reasoning}
-              rows={3}
-              maxLength={2000}
-              onChange={(e) => setPlan({ ...plan, reasoning: e.target.value })}
-              className={field}
-            />
-          </div>
+          <PlanEditor idPrefix={label} value={plan} onChange={(next) => setPlan({ title: next.title, details: next.details, reasoning: next.reasoning })} />
         </div>
       ) : (
         <>

@@ -1,5 +1,6 @@
 // Business tab: plans and recorded payments (Prompt 68), plus the client's own "My plan". Mocked API.
 import { expect, test, type Page } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 const ME = { id: "coach-1", name: "Ana", email: "ana@example.com", createdAt: "2026-11-01T00:00:00.000Z", currency: "INR" };
 const client = (id: string, name: string) => ({
@@ -53,7 +54,7 @@ async function mockBusiness(page: Page, rows: Row[], currency = "INR") {
       return route.fulfill({ status: 201, json: { payment: body, plan: r.plan } });
     }
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();

@@ -255,8 +255,8 @@ function usePathname(): string {
 
 function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
   const onAccount = usePathname() === "/app/account";
-  // /app still opens on AI Coach (Prompt 48).
-  const [activeTab, setActiveTab] = useState<TabId>("ai");
+  // /app opens on Home (owner, Nov 2026; it opened on AI Coach until then).
+  const [activeTab, setActiveTab] = useState<TabId>("home");
   // Clients shows the roster, or one client's workspace (Plans / Progress / Check-ins).
   const [inWorkspace, setInWorkspace] = useState(false);
   const [subTab, setSubTab] = useState<SubTabId>("plans");
@@ -361,14 +361,15 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
               onOpenAiCoach={() => selectTab("ai")}
               prefill={plannerPrefill}
               onPrefillUsed={clearPlannerPrefill}
+              onOpenMacroCalculator={openMacroCalculator}
             />
           ) : subTab === "progress" ? (
             <Suspense fallback={<LoadingState />}>
-              <ProgressTab key={`progress:${selectedClient.id}`} client={selectedClient} onOpenMacroCalculator={openMacroCalculator} />
+              <ProgressTab key={`progress:${selectedClient.id}`} client={selectedClient} />
             </Suspense>
           ) : (
             <Suspense fallback={<LoadingState />}>
-              <CheckInsTab key={`checkins:${selectedClient.id}`} client={selectedClient} onOpenMacroCalculator={openMacroCalculator} />
+              <CheckInsTab key={`checkins:${selectedClient.id}`} client={selectedClient} />
             </Suspense>
           )}
         </div>

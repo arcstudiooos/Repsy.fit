@@ -4,7 +4,7 @@
 // weekly check-in reaches the coach's review queue -> the client deletes their account -> the coach no longer
 // sees them. The last step deletes the coach too, so the database is left as it was found.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { clientHeader, openClientTab } from "./nav";
+import { clientHeader, openClientTab, openNewPlanForm } from "./nav";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
@@ -88,7 +88,7 @@ test("3. the coach sees the new client (joined with code) and assigns today's wo
 
   await openClientTab(coach, "Plans", CLIENT_NAME);
   await expect(clientHeader(coach)).toContainText(CLIENT_NAME);
-  const form = panel(coach).getByRole("form", { name: "New assignment" });
+  const form = await openNewPlanForm(coach);
   await form.getByRole("group", { name: "Type" }).getByRole("button", { name: "Workout" }).click();
   await form.getByLabel("Title", { exact: true }).fill(WORKOUT);
   await form.getByLabel("Details", { exact: true }).fill("1. Back Squat — 3 sets × 5 reps · Rest 90s");

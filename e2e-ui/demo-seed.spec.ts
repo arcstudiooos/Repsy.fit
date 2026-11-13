@@ -56,6 +56,8 @@ test("the empty-state button seeds 3 clients, refreshes, and selects Maya", asyn
   await page.goto("/app");
   await page.getByRole("button", { name: "Load demo clients" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Added 3 demo clients" })).toBeVisible();
+  // The client header (and its Switch client list) is on AI Coach; /app opens on Home.
+  await page.getByRole("tab", { name: "AI Coach" }).click();
   const list = await clientList(page);
   await expect(list.getByRole("option")).toHaveCount(3);
   await expect(list.getByRole("option", { name: /^Maya/ })).toHaveAttribute("aria-selected", "true");

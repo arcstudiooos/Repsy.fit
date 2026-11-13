@@ -1,7 +1,7 @@
 // Assignments list in the Manual Planner (Prompt 19). Every /api call is mocked in the
 // browser, so these run without a database or AI key. AI drafts are assigned into the mock, and
 // the assignments list returns newest first, like the server.
-import { expect, test, type Page, type Route, openSection, selectClient } from "./fixtures";
+import { expect, test, type Page, type Route, openSection, selectClient, openAiCoach } from "./fixtures";
 
 const client = (id: string, name: string, createdAt: string) => ({
   id,
@@ -20,7 +20,7 @@ const client = (id: string, name: string, createdAt: string) => ({
 const CLIENTS = [client("c-maya", "Maya Patel", "2026-10-01T00:00:00.000Z"), client("c-leo", "Leo Brooks", "2026-10-02T00:00:00.000Z")];
 
 type Assignment = Record<string, unknown>;
-type Mock = { assignments: Record<string, Assignment[]>; assignmentsBehaviour: "ok" | "missing" | "fail" };
+type Mock = { assignments: Record<string, Assignment[]>; assignmentsBehaviour: "ok" | "missing" | "fail"; patches?: Partial<Assignment>[] };
 
 let nextId = 1;
 function assignment(clientId: string, fields: Partial<Assignment>): Assignment {
@@ -83,6 +83,17 @@ async function mockApi(page: Page, initial: Record<string, Assignment[]> = {}): 
       (mock.assignments[clientId] ??= []).push(saved);
       return route.fulfill({ status: 201, json: saved });
     }
+    // Plans "Edit" (Nov 2026): PATCH without status changes title / details / reasoning / date.
+    const one = path.match(/^\/api\/clients\/([^/]+)\/assignments\/([^/]+)$/);
+    if (one && req.method() === "PATCH") {
+      const body = req.postDataJSON() as Partial<Assignment>;
+      (mock.patches ??= []).push(body);
+      const rows = mock.assignments[decodeURIComponent(one[1])] ?? [];
+      const i = rows.findIndex((a) => a.id === decodeURIComponent(one[2]));
+      if (i < 0) return route.fulfill({ status: 404, json: { error: "Assignment not found" } });
+      rows[i] = { ...rows[i], ...body };
+      return route.fulfill({ json: rows[i] });
+    }
 
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
@@ -98,7 +109,7 @@ const cardFor = (page: Page, title: string) => cards(page).filter({ hasText: tit
 
 test("the 4 auto-assigned plans appear newest first with type chips, AI labels and Why lines", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/app");
+  await openAiCoach(page);
   const autoRow = panel(page).getByRole("group", { name: "Draft a plan with AI" });
   for (const label of ["Workout", "Nutrition", "Habit", "Recovery"]) {
     await autoRow.getByRole("button", { name: label, exact: true }).click();
@@ -202,10 +213,80 @@ test("a filter with no matches says so; an empty list offers the AI Coach", asyn
   // Leo has nothing assigned.
   await selectClient(page, "Leo");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
-  await expect(panel(page)).toContainText("Nothing assigned yet. Create the first plan below, or ask the AI Coach.");
+  await expect(panel(page)).toContainText("Nothing assigned yet. Create the first plan with New plan, or ask the AI Coach.");
   await panel(page).getByRole("button", { name: "Ask the AI Coach" }).click();
   await expect(page.getByRole("tab", { name: "AI Coach" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Leo Brooks");
+});
+
+test("+ New plan opens the New assignment form above the list; Cancel closes it; saving closes it and shows the plan", async ({ page }) => {
+  await mockApi(page, { "c-maya": [assignment("c-maya", { type: "Workout", title: "Squat day" })] });
+  await page.goto("/app");
+  await openTab(page, "Plans");
+  const form = panel(page).getByRole("form", { name: "New assignment" });
+  await expect(form).toHaveCount(0);
+  const newPlan = panel(page).getByRole("button", { name: "New plan", exact: true });
+  expect((await newPlan.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  await newPlan.click();
+  await expect(form).toBeVisible();
+  await expect(newPlan).toHaveCount(0);
+  // Inline, above the list.
+  expect((await form.boundingBox())!.y).toBeLessThan((await cards(page).first().boundingBox())!.y);
+  await form.getByRole("button", { name: "Cancel" }).click();
+  await expect(form).toHaveCount(0);
+
+  await newPlan.click();
+  await form.getByRole("button", { name: "Habit", exact: true }).click();
+  await form.getByLabel("Title").fill("Walk after lunch");
+  await form.getByLabel("Details").fill("10 minutes, every day.");
+  await form.getByRole("button", { name: "Assign plan" }).click();
+  await expect(form).toHaveCount(0);
+  await expect(cards(page).filter({ hasText: "Walk after lunch" })).toBeVisible();
+  await expect(newPlan).toBeVisible();
+});
+
+test("Edit (in the ⋯ menu) changes title, details, why and date with PATCH; Cancel keeps the plan as it was", async ({ page }) => {
+  const mock = await mockApi(page, {
+    "c-maya": [assignment("c-maya", { type: "Workout", title: "Squat day", details: "Back squat 4x6", reasoning: "Strength", date: "2026-11-01" })],
+  });
+  await page.goto("/app");
+  await openTab(page, "Plans");
+  const more = panel(page).getByRole("button", { name: "More actions for Squat day" });
+  await more.click();
+  await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Delete"]);
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  const editor = panel(page).getByRole("form", { name: "Edit Squat day" });
+  await expect(editor.getByLabel("Title")).toBeFocused();
+  await expect(editor.getByLabel("Plan details")).toHaveValue("Back squat 4x6");
+  await expect(editor.getByLabel("Why this plan")).toHaveValue("Strength");
+  await expect(editor.getByLabel("Date")).toHaveValue("2026-11-01");
+  // Cancel: nothing sent, the card is back unchanged.
+  await editor.getByLabel("Title").fill("Changed my mind");
+  await editor.getByRole("button", { name: "Cancel" }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(cards(page).first()).toContainText("Squat day");
+  expect(mock.patches ?? []).toHaveLength(0);
+
+  await more.click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  // A blank title is caught before anything is sent.
+  await editor.getByLabel("Title").fill(" ");
+  await editor.getByRole("button", { name: "Save changes" }).click();
+  await expect(editor.getByRole("alert")).toHaveText("Give the plan a title.");
+  expect(mock.patches ?? []).toHaveLength(0);
+
+  await editor.getByLabel("Title").fill("Squat day - heavier");
+  await editor.getByLabel("Plan details").fill("Back squat 5x5");
+  await editor.getByLabel("Why this plan").fill("Ready for more load");
+  await editor.getByLabel("Date").fill("2026-11-03");
+  await editor.getByRole("button", { name: "Save changes" }).click();
+  await expect(editor).toHaveCount(0);
+  expect(mock.patches).toEqual([{ title: "Squat day - heavier", details: "Back squat 5x5", reasoning: "Ready for more load", date: "2026-11-03" }]);
+  const card = cards(page).first();
+  await expect(card).toContainText("Squat day - heavier");
+  await expect(card).toContainText("Back squat 5x5");
+  await expect(card).toContainText("Why: Ready for more load");
+  await expect(card).toContainText("3 Nov");
 });
 
 test("a failed load shows an error with Retry", async ({ page }) => {

@@ -174,9 +174,19 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   initials, name, goal, "Switch client" = searchable combobox + listbox) shows on AI Coach and in the workspace;
   it replaced the chip strip and the "Selected: <name>" lines. Links that used to switch tabs land in the
   workspace (Home "Open in Plans", AI "View in Plans", Library "Open in Plans", macro links -> Business > Library).
-  Tabs are in-memory state: there are no `/app/<tab>` URLs; any `/app/...` path opens the dashboard and
-  `/app/account` the account page. UI test helpers: `openClientTab`, `selectClient`, `openLibrary` in
-  `e2e-ui/fixtures.ts` (and `e2e/nav.ts` for the real-server specs).
+  Tabs are in-memory state: there are no `/app/<tab>` URLs; any `/app/...` path opens the dashboard **on Home**
+  (owner, Nov 2026; it used to open on AI Coach) and `/app/account` the account page. UI test helpers: `openClientTab`, `selectClient`, `openLibrary` in
+  `e2e-ui/fixtures.ts` (and `e2e/nav.ts` for the real-server specs), plus `openAiCoach` (goto `/app` + the AI Coach tab),
+  `openNewPlanForm` and `openLogCheckIn`.
+- **Batch 3 (owner, Nov 2026).** AI Coach: the quick-prompt chips are questions only (Summarise this client / What changed
+  since the last check-in? / What should I focus on this week? / Any warning signs?); the "Draft a plan with AI" buttons are
+  neutral (`bg-surface2` + border) with a small dot in the type colour (`TYPE_DOT`, `lib/typeChip.ts`); the "Client summary"
+  is one line (goal · level · weight · focus) with a More / Less disclosure for age, height and notes; on phones the chips and
+  composer are `sticky` just above the bottom tab bar. Plans: the New assignment form opens from "+ New plan" (Cancel closes it,
+  saving closes it; a Library template opens it pre-filled) and each card's ⋯ menu has **Edit** (title, details, why, date) using
+  the shared `components/PlanEditor.tsx` (also the AI suggestion card's edit mode), saved with the assignments PATCH. Check-ins:
+  history, energy / mood bars and sleep come first; the coach's form is the collapsed "Log a check-in for <name>" section.
+  The one "Macro calculator for <name>" link is in the Plans header (next to New plan), no longer in Progress / Check-ins.
 
 ## Data notes
 - **Security and privacy (Prompt 73).** There is **no CORS middleware**: the built client is served by
@@ -377,8 +387,8 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   coaching only - not medical advice. Adjust from the client's real progress.`, and "Save as Nutrition assignment" saves a
   `Nutrition` assignment (`source: "manual"`, title `Macro targets: N kcal`) with that line in the reasoning. No diagnosis or
   prescription wording. UI: a "Macro calculator" section at the bottom of the Library tab
-  (`client/src/components/MacroCalculator.tsx`); the Check-ins and Progress tabs have a "Macro calculator for <name>" link that
-  opens it pre-filled (weight, height, age, goal) from that client; the pre-fill is used once.
+  (`client/src/components/MacroCalculator.tsx`); the Plans view has the one "Macro calculator for <name>" link (Nov 2026; it was on
+  Check-ins and Progress) that opens it pre-filled (weight, height, age, goal) from that client; the pre-fill is used once.
 
 - **Body measurements (Prompt 56).** `Measurement` = `{ id, coachId, clientId, date ("YYYY-MM-DD"),
   waistCm, chestCm, armCm, hipCm, bodyFatPercent, note, createdAt }`; everything except `date` is
@@ -674,6 +684,7 @@ with a matching HTTP status (400 invalid input, 404 not found, 500 server error,
 | `listAssignments(clientId)` | GET | `/api/clients/:clientId/assignments` | — | `Assignment[]` |
 | `createAssignment(clientId, input)` | POST | `/api/clients/:clientId/assignments` | `NewAssignment` | `Assignment` |
 | `updateAssignmentStatus(clientId, assignmentId, status)` | PATCH | `/api/clients/:clientId/assignments/:assignmentId` | `{ "status": AssignmentStatus }` | `Assignment` |
+| `updateAssignment(clientId, assignmentId, edit)` | PATCH | `/api/clients/:clientId/assignments/:assignmentId` | `{ title?, details?, reasoning?, date? }` (no `status`; at least one; title 1-200, details 1-6000, reasoning <= 2000, real date) | `Assignment`; only those fields change (Plans "Edit", Nov 2026) |
 | `deleteAssignment(clientId, assignmentId)` | DELETE | `/api/clients/:clientId/assignments/:assignmentId` | — | 204, no body |
 | `listChat(clientId)` | GET | `/api/clients/:clientId/chat` | — | `ChatMessage[]` |
 | `askAI(clientId, question)` | POST | `/api/clients/:clientId/chat` | `{ "question": string }` | `{ "question": ChatMessage, "reply": ChatMessage, "suggestion": AiSuggestion \| null }` (201) |
@@ -839,7 +850,8 @@ Client limits (server): `name` 1–100 characters (trimmed); `age` whole number 
   unknown client -> `404 {"error":"Client not found"}`.
 - `GET /api/clients/:clientId/assignments` lists **newest first** (`createdAt`, then `id`);
   unknown client -> `404 {"error":"Client not found"}`. `title` and `details` at least 1
-  character (trimmed); `date` must be a real `YYYY-MM-DD` date. PATCH changes `status` only;
+  character (trimmed); `date` must be a real `YYYY-MM-DD` date. PATCH with `status` changes the status only (other fields
+  ignored); PATCH without `status` edits title / details / reasoning / date (Nov 2026);
   an assignment that is not this client's (or does not exist) -> `404 {"error":"Assignment not found"}`.
 - **Nothing from the AI is auto-saved.** A suggestion becomes an assignment only when the coach
   taps "Assign to client" (`source: "ai"`, today's local date); "Dismiss" saves nothing.
@@ -915,8 +927,7 @@ and record it here.
   `/app/account` page (header "Account" link) built on `PATCH /api/auth/me` (name) and
   `POST /api/auth/change-password`, which the prompt left unnamed. `reset` replies 204 and signs nobody in.
   SMTP is a small built-in client (no `nodemailer`); env names `SMTP_*` and `APP_URL` (see `.env.example`).
-- Prompt 48: Home is the FIRST tab but `/app` still opens on AI Coach (making Home the landing tab would change
-  what many existing specs assume; say so if you want it). Today's Tasks is built on the new
+- Prompt 48: Home is the FIRST tab; `/app` opened on AI Coach until the owner made Home the landing tab (Nov 2026). Today's Tasks is built on the new
   `GET /api/tasks/today`. The review-queue count line is omitted (no check-in review data exists until Prompt 52).
 - Home card order (Nov 2026): Needs attention, Review queue, Client activity, Today's Tasks, New check-ins, AI weekly
   summary; headings show a count when there is one ("Review queue · 2"). New check-ins shows one row per client (latest +

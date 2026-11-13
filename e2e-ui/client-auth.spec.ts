@@ -1,5 +1,6 @@
 // Client invite (coach side) and client sign-in pages (Prompt 65). Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 const CLIENTS = [
   { id: "c-maya", coachId: "coach-1", name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z", loginEmail: null },
@@ -34,7 +35,7 @@ async function openInvite(page: Page, opts: { emailConfigured: boolean; status?:
       });
     }
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();

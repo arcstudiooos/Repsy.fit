@@ -1,6 +1,6 @@
 // Library tab and workout templates (Prompt 58). Every /api call is mocked, with a small fake server
 // that keeps the templates and assignments so the list and the Manual Planner react like the real ones.
-import { expect, test, type Page, openClientTab, openLibrary as goToLibrary } from "./fixtures";
+import { expect, test, type Page, openClientTab, openLibrary as goToLibrary, openNewPlanForm } from "./fixtures";
 
 const client = (id: string, name: string) => ({
   id,
@@ -218,8 +218,9 @@ test("Assign to client: any client and a date open that client's Plans pre-fille
     })}`,
   ]);
 
-  // Leaving and coming back starts from an empty form again.
+  // Leaving and coming back: the form is closed again, and opening it starts empty.
   await goToLibrary(page);
   await openClientTab(page, "Plans");
-  await expect(page.getByRole("form", { name: "New assignment" }).getByLabel("Title")).toHaveValue("");
+  await expect(page.getByRole("form", { name: "New assignment" })).toHaveCount(0);
+  await expect((await openNewPlanForm(page)).getByLabel("Title")).toHaveValue("");
 });

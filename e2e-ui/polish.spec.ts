@@ -1,6 +1,6 @@
 // Polish pass (Prompt 35): phone (375px) and desktop (1280px) checks on all four tabs, plus the
 // empty-proofing cases. Every /api call is mocked in the browser.
-import { expect, test, type Page, type Route, openClientTab, type ClientSubTab } from "./fixtures";
+import { expect, test, type Page, type Route, openClientTab, type ClientSubTab, openNewPlanForm, openAiCoach } from "./fixtures";
 
 const client = (i: number, name: string) => ({
   id: `c-${i}`,
@@ -143,7 +143,7 @@ for (const width of [375, 1280]) {
         await openTab(page, tab);
         if (tab === "Plans") {
           // Add an exercise row so its sets/reps/rest controls are checked too.
-          const form = panel(page).getByRole("form", { name: "New assignment" });
+          const form = await openNewPlanForm(page);
           await form.getByRole("button", { name: "Workout", exact: true }).click();
           await form.getByLabel("Search exercises").fill("squat");
           await form.getByRole("list", { name: "Exercise results" }).getByRole("button").filter({ hasText: "Back Squat" }).first().click();
@@ -163,7 +163,7 @@ test.describe("375px layout", () => {
 
   test("the 5 tabs sit in a fixed bottom bar that fits the width, and content clears it", async ({ page }) => {
     await mockApi(page);
-    await page.goto("/app");
+    await openAiCoach(page);
     const bar = page.getByRole("tablist", { name: "Sections" });
     await expect(bar.getByRole("tab")).toHaveCount(5);
     expect(await bar.evaluate((el) => getComputedStyle(el).position)).toBe("fixed");
@@ -179,6 +179,30 @@ test.describe("375px layout", () => {
     // One client header with a switcher instead of the old chip strip.
     await expect(page.getByRole("region", { name: "Selected client" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Switch client" })).toBeVisible();
+  });
+
+  test("AI Coach: the composer stays pinned just above the bottom tab bar, never covered, at any scroll", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 560 });
+    await mockApi(page);
+    await openAiCoach(page);
+    const bar = page.getByRole("tablist", { name: "Sections" });
+    const box = page.getByRole("textbox", { name: "Ask the AI coach" });
+    await expect(box).toBeVisible();
+    expect(await page.getByTestId("ai-composer").evaluate((el) => getComputedStyle(el).position)).toBe("sticky");
+    for (const to of ["top", "bottom"] as const) {
+      await page.evaluate((where) => window.scrollTo(0, where === "top" ? 0 : document.body.scrollHeight), to);
+      await page.waitForTimeout(50);
+      const barBox = (await bar.boundingBox())!;
+      const b = (await box.boundingBox())!;
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      expect(b.y + b.height).toBeLessThanOrEqual(barBox.y + 1);
+      // Nothing sits on top of it: the middle of the box is the box itself.
+      expect(await box.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === el;
+      })).toBe(true);
+    }
+    await expect(page.getByRole("button", { name: "Send" })).toBeInViewport();
   });
 
   test("stat cards wrap 2 x 2", async ({ page }) => {

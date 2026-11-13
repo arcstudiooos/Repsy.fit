@@ -38,6 +38,17 @@ const StatusSchema = z.object({
   status: z.enum(ASSIGNMENT_STATUSES, { required_error: "status is required." }),
 });
 
+/** Nov 2026: the Plans "Edit" form. Only these four fields; type, source, status, client and coach never change here. */
+const EditSchema = z
+  .object({
+    title: z.string().trim().min(1, "title can't be empty.").max(200, "title can be up to 200 characters."),
+    details: z.string().trim().min(1, "details can't be empty.").max(6000, "details can be up to 6000 characters."),
+    reasoning: z.string().trim().max(2000, "reasoning can be up to 2000 characters."),
+    date: z.string().refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
+  })
+  .partial()
+  .refine((v) => Object.values(v).some((x) => x !== undefined), "Send a status, or a title, details, reasoning or date to change.");
+
 /**
  * This client's assignment with this id, or a 404 already sent (client checked first, then
  * the assignment must belong to that client and coach).
@@ -120,12 +131,35 @@ assignmentsRouter.post(
   }),
 );
 
-// PATCH /api/clients/:clientId/assignments/:assignmentId - change the status only
-// (Active / Done / Paused); returns the full assignment.
+// PATCH /api/clients/:clientId/assignments/:assignmentId - returns the full assignment. Two kinds of body:
+// with `status` it changes the status only (Active / Done / Paused; any other field is ignored, as before);
+// without `status` it edits `title`, `details`, `reasoning` and / or `date` (at least one, nothing else).
 assignmentsRouter.patch(
   "/:assignmentId",
   asyncHandler(async (req, res) => {
-    const parsed = StatusSchema.safeParse(req.body ?? {});
+    const body = req.body ?? {};
+    if (typeof body === "object" && body !== null && !("status" in body)) {
+      const edit = EditSchema.safeParse(body);
+      if (!edit.success) {
+        res.status(400).json({ error: validationMessage(edit.error) });
+        return;
+      }
+      const found = await findClientAssignment(req, res);
+      if (!found) return;
+      const { title, details, reasoning, date } = edit.data;
+      const edited = await prisma.assignment.update({
+        where: { id: found.id },
+        data: {
+          ...(title !== undefined ? { title } : {}),
+          ...(details !== undefined ? { details } : {}),
+          ...(reasoning !== undefined ? { reasoning } : {}),
+          ...(date !== undefined ? { date } : {}),
+        },
+      });
+      res.json(edited);
+      return;
+    }
+    const parsed = StatusSchema.safeParse(body);
     if (!parsed.success) {
       res.status(400).json({ error: validationMessage(parsed.error) });
       return;

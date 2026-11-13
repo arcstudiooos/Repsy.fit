@@ -29,6 +29,18 @@ export async function openClientTab(page: Page, sub: ClientSubTab, clientName?: 
   await subTab.click();
 }
 
+/** Since Nov 2026 /app opens on Home: goes to /app and opens the AI Coach tab. */
+export async function openAiCoach(page: Page) {
+  await page.goto("/app");
+  await page.getByRole("tab", { name: "AI Coach" }).click();
+}
+
+/** Plans: opens the New assignment form with "+ New plan" (closed by default since Nov 2026). */
+export async function openNewPlanForm(page: Page) {
+  await page.getByRole("button", { name: "New plan", exact: true }).click();
+  return page.getByRole("form", { name: "New assignment" });
+}
+
 /** Picks a client with the client header's "Switch client" control. */
 export async function selectClient(page: Page, name: string) {
   await page.getByRole("button", { name: "Switch client" }).click();

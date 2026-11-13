@@ -1,5 +1,6 @@
 // Prompt 76: the coach's "Invite clients" panel (join code, link, QR, switches). Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
+import { emptyApi } from "./fixtures";
 
 const CLIENTS = [
   { id: "c-maya", coachId: "coach-1", name: "Maya Patel", goal: "Fat loss", age: 29, weightKg: 68, heightCm: 165, level: "Intermediate", focus: "", notes: "", createdAt: "2026-10-01T00:00:00.000Z", loginEmail: null },
@@ -34,7 +35,7 @@ async function open(page: Page, opts: { failFirst?: boolean; share?: boolean } =
       return route.fulfill({ json: jc });
     }
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
-    return route.fulfill({ json: [] });
+    return route.fulfill({ json: emptyApi(path) });
   });
   if (opts.share) {
     await page.addInitScript(() => {
