@@ -122,9 +122,9 @@
 .ln-nav::before {
   content: "";
   position: absolute;
-  inset: -16px -16px -10px -16px;
+  inset: -16px -16px -22px -16px;
   z-index: -1;
-  background: linear-gradient(to bottom, var(--paper) 55%, color-mix(in srgb, var(--paper) 70%, transparent) 85%, transparent);
+  background: linear-gradient(to bottom, var(--paper) 72%, color-mix(in srgb, var(--paper) 85%, transparent) 90%, transparent);
   opacity: 0;
   transition: opacity 0.25s ease;
 }
@@ -133,8 +133,8 @@
 }
 @supports (backdrop-filter: blur(6px)) {
   .ln-nav.is-stuck::before {
-    background: linear-gradient(to bottom, color-mix(in srgb, var(--paper) 88%, transparent), color-mix(in srgb, var(--paper) 55%, transparent) 75%, transparent);
-    backdrop-filter: blur(8px);
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--paper) 94%, transparent) 70%, color-mix(in srgb, var(--paper) 70%, transparent) 88%, transparent);
+    backdrop-filter: blur(10px);
   }
 }
 /* Section links for narrow screens: one sideways-scrolling row under the logo. */
@@ -682,6 +682,16 @@
   position: fixed;
   right: 16px;
   bottom: 16px;
+  /* Phone headings run full width: park it bottom-left, clear of the text. */
+}
+@media (max-width: 640px) {
+  .ln-pause {
+    right: auto;
+    left: 16px;
+    opacity: 0.4;
+  }
+}
+.ln-pause {
   z-index: 60;
   display: inline-flex;
   align-items: center;

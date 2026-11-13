@@ -389,7 +389,7 @@ export function Hero() {
           <Barbell />
           {/* plate labels: who each plate is for */}
           <ul
-            className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 md:grid-cols-4"
+            className="mt-2 grid grid-cols-1 gap-x-6 gap-y-2 min-[420px]:grid-cols-2 md:grid-cols-4"
             aria-label="This week's plans"
           >
             {PLATES.map((p) => (
