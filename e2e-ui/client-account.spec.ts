@@ -202,3 +202,12 @@ test("a client waiting for approval can still delete their account", async ({ pa
   await expect(page.getByRole("heading", { name: "Waiting for Anna Rivers" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete my account..." })).toBeVisible();
 });
+
+test("Me has jump links that scroll to a section", async ({ page }) => {
+  await mock(page);
+  await page.goto("/client/me");
+  const nav = page.getByRole("navigation", { name: "Jump to a section" });
+  await expect(nav.getByRole("link")).toHaveCount(3);
+  await nav.getByRole("link", { name: "Payments" }).click();
+  await expect(page.locator("#me-payments")).toBeInViewport();
+});

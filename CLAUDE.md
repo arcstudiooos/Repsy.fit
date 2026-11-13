@@ -1038,3 +1038,12 @@ and record it here.
   tiles (the coach's standing targets card is then hidden, not repeated).
 - Progress charts lead with the number ("72.4 kg · −1.6 kg in 4 weeks", "80% last week"); units moved
   into the card title and the axis titles are gone.
+
+## Client app UI pass, batch 4 (owner, Nov 2026)
+
+- Messages: "Today" / "Yesterday" / "Fri, 6 Nov" separators between days, rendered as
+  `<li role="presentation">` so they never count as messages; the thread is taller on phones and the
+  composer grows with what's typed (up to ~5 lines) instead of being a fixed two-row box.
+- Me: a "Jump to a section" chip row (My plan, Profile, Payments) scrolls to `#me-plan`,
+  `#me-profile`, `#me-payments` (each `scroll-mt-20`). Payment rows lead with the amount, with
+  plan + method under it and the date on the right.

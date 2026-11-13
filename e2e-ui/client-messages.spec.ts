@@ -163,3 +163,27 @@ test("leaving the Messages tab stops polling the thread", async ({ page }) => {
   await page.clock.runFor(65_000);
   expect(state.gets).toBe(gets);
 });
+
+test("messages are split by day: Today, Yesterday and a dated line", async ({ page }) => {
+  const now = new Date();
+  const at = (daysAgo: number) => new Date(now.getTime() - daysAgo * 86_400_000).toISOString();
+  await mock(page, {
+    messages: [
+      { id: "1", sender: "coach", body: "Older note", createdAt: at(4), readAt: null },
+      { id: "2", sender: "client", body: "Yesterday reply", createdAt: at(1), readAt: null },
+      { id: "3", sender: "coach", body: "Today note", createdAt: at(0), readAt: null },
+    ],
+  });
+  await page.goto("/client/messages");
+  const list = page.getByRole("list", { name: "Messages" });
+  // The separators are presentation rows: they don't change the message count.
+  await expect(list.getByRole("listitem")).toHaveCount(3);
+  await expect(list).toContainText("Today");
+  await expect(list).toContainText("Yesterday");
+  // Built in the page so the browser's locale decides the wording, like the app does.
+  const dated = await page.evaluate(
+    (ms: number) => new Date(ms).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }),
+    now.getTime() - 4 * 86_400_000,
+  );
+  await expect(list).toContainText(dated);
+});

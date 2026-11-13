@@ -114,7 +114,7 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
     save.mutate();
   }
   return (
-    <section aria-labelledby="profile-h" className={card}>
+    <section id="me-profile" aria-labelledby="profile-h" className={`scroll-mt-20 ${card}`}>
       <h2 id="profile-h" className="card-title">
         Profile
       </h2>
@@ -314,7 +314,7 @@ function TimezoneSection({ account }: { account: MyAccount }) {
 function PaymentsSection() {
   const payments = useQuery({ queryKey: queryKeys.myPayments, queryFn: getMyPayments });
   return (
-    <section aria-labelledby="pay-h" className={card}>
+    <section id="me-payments" aria-labelledby="pay-h" className={`scroll-mt-20 ${card}`}>
       <h2 id="pay-h" className="card-title">
         Payment history
       </h2>
@@ -327,11 +327,14 @@ function PaymentsSection() {
       ) : (
         <ul aria-label="Payments" className="mt-2 divide-y divide-border">
           {payments.data.map((p) => (
-            <li key={p.id} className="flex flex-wrap gap-x-3 py-2 text-sm">
-              <span className="text-text">{formatDay(p.paidOn)}</span>
-              <span className="font-semibold text-text">{formatMoney(p.amount, p.currency)}</span>
-              <span className="text-dim">{p.planName}</span>
-              <span className="text-dim">{p.method}</span>
+            <li key={p.id} className="flex items-baseline justify-between gap-3 py-2 text-sm">
+              <span className="min-w-0">
+                <span className="block font-semibold text-text">{formatMoney(p.amount, p.currency)}</span>
+                <span className="block truncate text-xs text-dim">
+                  {p.planName} · {p.method}
+                </span>
+              </span>
+              <span className="shrink-0 text-dim">{formatDay(p.paidOn)}</span>
             </li>
           ))}
         </ul>

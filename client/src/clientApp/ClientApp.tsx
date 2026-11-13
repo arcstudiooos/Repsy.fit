@@ -768,6 +768,26 @@ function MeView({ account, onSignOut, signingOut }: { account: ClientAccount; on
     <>
       <h1 className="text-3xl">Me</h1>
       <p className="mt-1 text-sm text-dim">Signed in as {account.loginEmail ?? account.name}.</p>
+      {/* The Me tab is a long page: these jump to a section instead of scrolling for it. */}
+      <nav aria-label="Jump to a section" className="mt-3 flex flex-wrap gap-2">
+        {[
+          ["My plan", "me-plan"],
+          ["Profile", "me-profile"],
+          ["Payments", "me-payments"],
+        ].map(([label, id]) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className="flex min-h-9 items-center rounded-full border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
       <MyPlanSection />
       <MySessionsSection />
       <CheckInDaySetting />
