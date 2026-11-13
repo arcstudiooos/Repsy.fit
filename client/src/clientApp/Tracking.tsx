@@ -406,7 +406,7 @@ function CheckInForm({
       <button
         type="submit"
         disabled={save.isPending}
-        className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60"
+        className="btn btn-primary min-h-11"
       >
         {save.isPending ? "Saving..." : "Save check-in"}
       </button>
@@ -570,7 +570,7 @@ export function WeeklyPage() {
           <button
             type="submit"
             disabled={send.isPending}
-            className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60"
+            className="btn btn-primary min-h-11"
           >
             {send.isPending ? "Sending..." : "Send to my coach"}
           </button>

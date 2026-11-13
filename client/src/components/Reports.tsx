@@ -10,7 +10,7 @@ import type { Client, ClientExportType, ProgressReport, ReportRange } from "../t
 
 const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text";
 const labelClass = "mb-1 block text-sm font-bold";
-const buttonClass = "min-h-10 rounded-lg border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim";
+const buttonClass = "btn btn-secondary";
 
 const EXPORTS: { type: ClientExportType; label: string }[] = [
   { type: "progress", label: "Progress logs" },
@@ -110,7 +110,7 @@ export function Reports({ clients }: { clients: Client[] }) {
               type="button"
               disabled={!clientId || report.isPending}
               onClick={() => checkRange() && report.mutate()}
-              className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60"
+              className="btn btn-primary min-h-11"
             >
               {report.isPending ? "Making report..." : "Generate progress report"}
             </button>
@@ -180,7 +180,7 @@ function ReportView({ report }: { report: ProgressReport }) {
   return (
     <article aria-label="Progress report" className="report mt-6">
       <div className="no-print mb-3 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => window.print()} className="btn-primary min-h-11 rounded-lg px-5 text-sm">
+        <button type="button" onClick={() => window.print()} className="btn btn-primary min-h-11">
           Print or save as PDF
         </button>
         <span className="text-xs text-dim">In the print window, choose "Save as PDF" as the printer.</span>

@@ -85,7 +85,7 @@ export function WaitingList() {
                         decide.mutate({ id: c.id, to: "approve", name: c.name });
                       }}
                       aria-label={`Approve ${c.name}`}
-                      className="btn-primary min-h-11 rounded-lg px-4 text-sm disabled:opacity-60"
+                      className="btn btn-primary min-h-11"
                     >
                       Approve
                     </button>
@@ -97,7 +97,7 @@ export function WaitingList() {
                         setDeclining(c);
                       }}
                       aria-label={`Decline ${c.name}`}
-                      className="min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+                      className="btn btn-secondary min-h-11"
                     >
                       Decline
                     </button>

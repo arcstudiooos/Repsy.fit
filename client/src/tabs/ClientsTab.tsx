@@ -115,7 +115,7 @@ export function ClientsTab({
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-2xl">Clients</h2>
+          <h2 className="page-title">Clients</h2>
           <span className="text-sm text-dim">{clients.length === 1 ? "1 client" : `${clients.length} clients`}</span>
         </div>
         {/* The demo-data buttons show only while the client list is empty (owner, Nov 2026). */}
@@ -124,7 +124,7 @@ export function ClientsTab({
             <button
               type="button"
               onClick={openForm}
-              className="btn-primary rounded-lg px-4 py-2 text-sm"
+              className="btn btn-primary"
             >
               Add client
             </button>
@@ -296,7 +296,7 @@ function SixMonthDemoControl({ seed }: { seed: DemoSeed }) {
           type="button"
           onClick={seed.run}
           disabled={seed.pending}
-          className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+          className="btn btn-secondary"
         >
           {seed.pending ? "Loading 6-month demo..." : (seed.message ?? "Load 6-month demo (10 clients)")}
         </button>

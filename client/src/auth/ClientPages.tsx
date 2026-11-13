@@ -117,7 +117,7 @@ function ClientLoginPage() {
           error={errors.password}
         />
         <ServerError message={serverError} />
-        <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
           {busy ? "Please wait..." : "Sign in"}
         </button>
       </form>
@@ -159,7 +159,7 @@ function JoinWithCode() {
           aria-describedby={error ? "join-code-input-error" : undefined}
           className={`${inputClass} font-mono uppercase`}
         />
-        <button type="submit" className="min-h-11 shrink-0 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim">
+        <button type="submit" className="btn btn-secondary min-h-11 shrink-0">
           Next
         </button>
       </div>
@@ -209,7 +209,7 @@ function ClientSetPasswordPage() {
             error={errors.password}
           />
           <ServerError message={serverError} />
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
             {busy ? "Please wait..." : "Set password"}
           </button>
         </form>
@@ -317,7 +317,7 @@ function JoinPage() {
               error={errors.password}
             />
             <ServerError message={serverError} />
-            <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+            <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
               {busy ? "Please wait..." : "Create account"}
             </button>
           </form>
@@ -567,14 +567,14 @@ function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; c
           </div>
         )}
         <ServerError message={serverError} />
-        <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
           {busy ? "Saving..." : "Save and continue"}
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={() => void send({ skip: true })}
-          className="min-h-11 rounded-lg border border-border bg-surface2 px-5 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+          className="btn btn-secondary min-h-11"
         >
           Skip for now
         </button>
@@ -614,7 +614,7 @@ function ClientForgotPage() {
         <form onSubmit={submit} noValidate aria-label="Forgot your password" className="mt-6 grid gap-4">
           <TextField id="client-forgot-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={errors.email} />
           <ServerError message={serverError} />
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
             {busy ? "Please wait..." : "Send reset link"}
           </button>
         </form>
@@ -654,7 +654,7 @@ function ClientResetPage() {
         <form onSubmit={submit} noValidate aria-label="Choose a new password" className="mt-6 grid gap-4">
           <TextField id="client-reset-password" label="New password" type="password" autoComplete="new-password" value={password} onChange={setPassword} error={errors.password} />
           <ServerError message={serverError} />
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
             {busy ? "Please wait..." : "Set new password"}
           </button>
         </form>
@@ -714,7 +714,7 @@ function ClientHomePage() {
         type="button"
         onClick={logout}
         disabled={busy}
-        className="min-h-11 rounded-lg border border-border bg-surface2 px-5 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+        className="btn btn-secondary min-h-11"
       >
         {busy ? "Signing out..." : "Sign out"}
       </button>

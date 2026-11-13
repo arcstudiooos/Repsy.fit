@@ -214,7 +214,7 @@ test("coach: save the macro result as the client's daily targets", async ({ page
     return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
-  await openLibrary(page);
+  await openLibrary(page, "Macro calculator");
   const calc = page.getByRole("form", { name: "Macro calculator" });
   await calc.getByLabel("Client (optional)").selectOption("c-maya");
   await calc.getByLabel("Sex").selectOption("Female");

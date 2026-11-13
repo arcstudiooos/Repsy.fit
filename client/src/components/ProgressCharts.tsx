@@ -158,7 +158,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <figure aria-label={title} className="card m-0 min-w-0 p-4">
-      <h3 className="mb-2 text-lg">{title}</h3>
+      <h3 className="mb-2 card-title">{title}</h3>
       {children}
     </figure>
   );

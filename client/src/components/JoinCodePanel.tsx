@@ -80,7 +80,7 @@ export function JoinCodePanel() {
         <p role="alert" className="text-sm font-semibold text-amber-text">
           Couldn't load your join code{query.error ? `: ${plainErrorMessage(query.error)}` : "."}
         </p>
-        <button type="button" onClick={() => void query.refetch()} className="mt-2 min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim">
+        <button type="button" onClick={() => void query.refetch()} className="btn btn-secondary mt-2 min-h-11">
           Retry
         </button>
       </section>
@@ -89,13 +89,13 @@ export function JoinCodePanel() {
   const jc = query.data;
   const off = !jc.active;
   const buttonClass =
-    "min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim disabled:opacity-60";
+    "btn btn-secondary min-h-11";
 
   return (
     <section aria-label="Invite clients" className="card mb-4 p-4">
       {/* Compact bar: the code and the three share actions. Settings sit behind "Invite settings". */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h3 className="text-base">Invite clients</h3>
+        <h3 className="card-title">Invite clients</h3>
         <p className={`font-mono text-xl font-bold tracking-wider ${off ? "text-dim line-through" : "text-text"}`} data-testid="join-code">
           {jc.code}
         </p>

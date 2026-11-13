@@ -40,7 +40,7 @@ export function RestTimer({ seconds, label, nonce = 0 }: { seconds: number; labe
     setAnnounce("");
     setRunning(true);
   };
-  const btn = "min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim";
+  const btn = "btn btn-secondary min-h-11";
 
   return (
     <section aria-label="Rest timer" className="rounded-lg border border-border bg-surface p-4">
@@ -55,7 +55,7 @@ export function RestTimer({ seconds, label, nonce = 0 }: { seconds: number; labe
             Pause
           </button>
         ) : (
-          <button type="button" className="btn-primary min-h-11 rounded-lg px-4 text-sm" onClick={start}>
+          <button type="button" className="btn btn-primary min-h-11" onClick={start}>
             {remaining === seconds || remaining === 0 ? "Start rest" : "Resume"}
           </button>
         )}

@@ -48,7 +48,7 @@ function NameForm({ coach }: { coach: Coach }) {
           Name saved.
         </p>
       )}
-      <button type="submit" disabled={busy} className="btn-primary min-h-11 justify-self-start rounded-lg px-5 text-sm disabled:opacity-60">
+      <button type="submit" disabled={busy} className="btn btn-primary min-h-11 justify-self-start">
         {busy ? "Please wait..." : "Save name"}
       </button>
     </form>
@@ -109,7 +109,7 @@ function CurrencyForm({ coach }: { coach: Coach }) {
           Currency saved.
         </p>
       )}
-      <button type="submit" disabled={busy} className="btn-primary min-h-11 justify-self-start rounded-lg px-5 text-sm disabled:opacity-60">
+      <button type="submit" disabled={busy} className="btn btn-primary min-h-11 justify-self-start">
         {busy ? "Please wait..." : "Save currency"}
       </button>
     </form>
@@ -184,7 +184,7 @@ function DeleteAccountForm() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-3 min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim"
+          className="btn btn-secondary mt-3 min-h-11"
         >
           Delete my account
         </button>
@@ -310,7 +310,7 @@ function PasswordForm() {
           Password changed. Your other devices have been signed out.
         </p>
       )}
-      <button type="submit" disabled={busy} className="btn-primary min-h-11 justify-self-start rounded-lg px-5 text-sm disabled:opacity-60">
+      <button type="submit" disabled={busy} className="btn btn-primary min-h-11 justify-self-start">
         {busy ? "Please wait..." : "Change password"}
       </button>
     </form>
@@ -320,35 +320,35 @@ function PasswordForm() {
 export default function AccountPage({ coach }: { coach: Coach }) {
   return (
     <div className="grid gap-8">
-      <h2 className="text-2xl">Account</h2>
+      <h2 className="page-title">Account</h2>
       <section>
-        <h3 className="text-base">Email</h3>
+        <h3 className="card-title">Email</h3>
         <p className="mt-1 text-sm text-dim" data-testid="account-email">
           {coach.email}
         </p>
         <p className="mt-1 text-xs text-dim">This is the address you log in with. It can't be changed here.</p>
       </section>
       <section className="grid gap-3">
-        <h3 className="text-base">Name</h3>
+        <h3 className="card-title">Name</h3>
         <NameForm coach={coach} />
       </section>
       <section className="grid gap-3">
-        <h3 className="text-base">Currency</h3>
+        <h3 className="card-title">Currency</h3>
         <CurrencyForm coach={coach} />
       </section>
       <section className="grid gap-3">
-        <h3 className="text-base">Password</h3>
+        <h3 className="card-title">Password</h3>
         <p className="text-sm text-dim">
           Signed in with Google and never set a password? Use "Forgot password?" on the log-in page to set one first.
         </p>
         <PasswordForm />
       </section>
       <section className="grid gap-3">
-        <h3 className="text-base">Your data</h3>
+        <h3 className="card-title">Your data</h3>
         <DataNote />
       </section>
       <section className="grid gap-3">
-        <h3 className="text-base">Delete account</h3>
+        <h3 className="card-title">Delete account</h3>
         <DeleteAccountForm />
       </section>
     </div>

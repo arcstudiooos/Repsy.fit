@@ -136,11 +136,116 @@
   border-radius: var(--radius-card);
 }
 
-/* Primary (orange) button: dark bold text for contrast - never white on orange. */
+/* Heading hierarchy (UI batch 4): each tab's h2 is a big serif page title; every card / section title (h3) uses
+   one smaller Geist semibold style, so page titles always read above the cards beneath them. */
+@utility page-title {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: clamp(2rem, 1.6rem + 1.4vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+@utility card-title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+/* Primary (orange) button: dark bold text for contrast - never white on orange. This utility is the colour
+   contract only (the landing pages use it with their own shapes, so it must not change). */
 @utility btn-primary {
   background-color: var(--accent);
   color: var(--on-accent);
   font-weight: 700;
+}
+
+/* One button system for the coach app, the client app and the sign-in screens (UI batch 4). Always `btn` plus a
+   look: `btn btn-primary` (orange pill, hard ink shadow, presses down), `btn btn-secondary` (surface2 + border
+   pill), `btn btn-ghost` (no fill until hover), `btn btn-danger` (destructive confirms: orange outline). In the
+   components layer, so layout utilities on the element (mt-4, w-full, min-h-11 for main CTAs) still win.
+   The shadow is ink (#141414) in light mode; on dark it is a dark mix of the accent so it stays visible. */
+@layer components {
+  .btn {
+    --btn-shadow: #141414;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0 1.25rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    text-align: center;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s,
+      background-color 0.15s,
+      border-color 0.15s;
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .btn.btn-primary {
+    border-color: var(--accent);
+    font-weight: 700;
+    box-shadow: 0 4px 0 var(--btn-shadow);
+  }
+  .btn.btn-primary:hover:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--btn-shadow);
+  }
+  .btn.btn-primary:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 var(--btn-shadow);
+  }
+  .btn-secondary {
+    background-color: var(--surface2);
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--dim);
+  }
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--text);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--surface2);
+  }
+  .btn-danger {
+    background-color: var(--surface);
+    border: 2px solid var(--accent);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn {
+    --btn-shadow: color-mix(in srgb, var(--accent) 45%, #141414);
+  }
+}
+:root[data-theme="dark"] .btn {
+  --btn-shadow: color-mix(in srgb, var(--accent) 45%, #141414);
+}
+/* Sign-in screens are always light paper, so the shadow stays ink there. */
+:root[data-theme] .paper .btn,
+:root .paper .btn {
+  --btn-shadow: #141414;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
 }
 
 /* Sign-in screens (coach log in / sign up / password, client sign-in / join / welcome / waiting) wear the
@@ -162,15 +267,6 @@
 }
 .paper .card {
   border-radius: 24px;
-}
-.paper .btn-primary {
-  border-radius: 999px;
-  box-shadow: 0 4px 0 #141414;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.paper .btn-primary:hover:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0 #141414;
 }
 .paper input:not([type="checkbox"]):not([type="radio"]),
 .paper select,

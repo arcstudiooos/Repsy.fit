@@ -106,6 +106,32 @@ test("Library is a Business view and lists templates, with search by name", asyn
   await expect(page.getByText('No template matches "zzz".')).toBeVisible();
 });
 
+test("Library switches between Templates, Meals and Macro calculator, one at a time, and remembers the choice", async ({ page }) => {
+  await openLibrary(page);
+  const views = page.getByRole("group", { name: "Library view" });
+  const view = (name: string) => views.getByRole("button", { name, exact: true });
+  await expect(view("Templates")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("Search templates")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Meal library" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 3, name: "Macro calculator" })).toHaveCount(0);
+
+  await view("Meals").click();
+  await expect(view("Meals")).toHaveAttribute("aria-pressed", "true");
+  await expect(view("Templates")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByRole("heading", { level: 3, name: "Meal library" })).toBeVisible();
+  await expect(page.getByLabel("Search templates")).toHaveCount(0);
+
+  await view("Macro calculator").click();
+  await expect(page.getByRole("form", { name: "Macro calculator" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Meal library" })).toHaveCount(0);
+
+  // Leaving Business and coming back keeps the last view.
+  await page.getByRole("tab", { name: "Home" }).click();
+  await goToLibrary(page);
+  await expect(view("Macro calculator")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("form", { name: "Macro calculator" })).toBeVisible();
+});
+
 test("shows an empty state, and works with zero clients", async ({ page }) => {
   await openLibrary(page);
   await expect(page.getByText("No templates yet")).toBeVisible();

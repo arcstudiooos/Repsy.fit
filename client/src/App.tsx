@@ -13,6 +13,7 @@ import type { TemplatePrefill } from "./components/ManualAssignmentForm";
 import { PlannerTab } from "./tabs/PlannerTab";
 import { useDemoSeed } from "./lib/useDemoSeed";
 import type { Client, Coach } from "./types";
+import type { LibraryView } from "./tabs/LibraryTab";
 
 // The account page (Prompt 47) is its own lazy chunk: its form validation (zod) stays out of the first /app load.
 const AccountPage = lazy(() => import("./auth/AccountPage"));
@@ -262,6 +263,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   const [subTab, setSubTab] = useState<SubTabId>("plans");
   // Business view (Payments / Schedule / Engagement / Reports / Library), lifted so links can open Library.
   const [businessView, setBusinessView] = useState<BusinessView>("Payments");
+  // UI batch 4: the Library's own view (Templates / Meals / Macro calculator), remembered while the app is open.
+  const [libraryView, setLibraryView] = useState<LibraryView>("Templates");
   // Prompt 58: a Library template waiting to fill the Plans new-assignment form.
   const [plannerPrefill, setPlannerPrefill] = useState<TemplatePrefill | null>(null);
   // Unsent chat messages and drafts live here, above the tabs, so leaving the Messages tab
@@ -274,6 +277,7 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   const openMacroCalculator = useCallback((clientId: string) => {
     setMacroClientId(clientId);
     setBusinessView("Library");
+    setLibraryView("Macro calculator");
     setActiveTab("business");
   }, []);
 
@@ -402,6 +406,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           blocked={clientsGate}
           library={
             <LibraryTab
+              view={libraryView}
+              onViewChange={setLibraryView}
               onAssign={(clientId, prefill) => {
                 setPlannerPrefill(prefill);
                 openWorkspace(clientId, "plans");

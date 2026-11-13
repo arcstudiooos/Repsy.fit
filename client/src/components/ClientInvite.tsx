@@ -66,7 +66,7 @@ export function ClientInvitePanel({ client, onClose }: { client: Client; onClose
     <section aria-label={`Client sign-in for ${client.name}`} className="card mb-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base">Client sign-in for {client.name}</h3>
+          <h3 className="card-title">Client sign-in for {client.name}</h3>
           <p className="mt-1 text-sm text-dim">
             {access.isPending ? "Checking..." : status ? STATUS_TEXT[status] : "Couldn't check the sign-in status."}
             {status === "active" && access.data?.loginEmail && ` Signs in as ${access.data.loginEmail}.`}
@@ -95,7 +95,7 @@ export function ClientInvitePanel({ client, onClose }: { client: Client; onClose
             className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text"
           />
         </div>
-        <button type="submit" disabled={invite.isPending} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={invite.isPending} className="btn btn-primary min-h-11">
           {invite.isPending ? "Sending..." : status === "none" || !status ? "Send invite" : "Send a new invite"}
         </button>
       </form>
@@ -137,7 +137,7 @@ export function ClientInvitePanel({ client, onClose }: { client: Client; onClose
             <button
               type="button"
               onClick={() => void copy(result.inviteLink)}
-              className="min-h-11 rounded-lg border border-border bg-surface px-4 text-sm font-semibold text-text hover:border-dim"
+              className="btn btn-secondary min-h-11"
             >
               {copied ? "Copied" : "Copy link"}
             </button>

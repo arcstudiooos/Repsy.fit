@@ -11,7 +11,7 @@ import { MEAL_TYPES, type Meal, type MealType, type NewMeal } from "../types";
 
 const inputClass =
   "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
-const smallButton = "rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-text hover:border-dim disabled:opacity-60";
+const smallButton = "btn btn-secondary";
 
 /** Drops a trailing ".0" so 30 reads "30", not "30.0"; keeps one-decimal values like 45.5. */
 const num = (n: number) => String(Math.round(n * 10) / 10);
@@ -53,8 +53,8 @@ export function MealLibrary() {
   );
 
   return (
-    <section aria-labelledby="meal-library-heading" className="mt-10">
-      <h3 id="meal-library-heading" className="text-xl">
+    <section aria-labelledby="meal-library-heading" className="mt-4">
+      <h3 id="meal-library-heading" className="card-title">
         Meal library
       </h3>
       <p className="mt-1 text-sm text-dim">Your own meals, with the calories and macros you enter. Assign one to any client as a Nutrition plan.</p>
@@ -95,7 +95,7 @@ export function MealLibrary() {
               ))}
             </select>
           </div>
-          <button type="button" onClick={() => setEditing("new")} className="btn-primary rounded-lg px-4 py-2 text-sm">
+          <button type="button" onClick={() => setEditing("new")} className="btn btn-primary">
             New meal
           </button>
         </div>
@@ -140,7 +140,7 @@ export function MealLibrary() {
                     aria-label={`Assign ${m.name} to client`}
                     aria-expanded={assigning === m.id}
                     onClick={() => setAssigning(assigning === m.id ? null : m.id)}
-                    className="btn-primary rounded-lg px-3 py-1.5 text-sm"
+                    className="btn btn-primary"
                   >
                     Assign to client
                   </button>
@@ -256,7 +256,7 @@ function AssignPanel({ meal }: { meal: Meal }) {
             type="button"
             disabled={assign.isPending}
             onClick={() => assign.mutate()}
-            className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60"
+            className="btn btn-primary"
           >
             {assign.isPending ? "Assigning..." : "Assign meal"}
           </button>
@@ -399,7 +399,7 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="submit" disabled={save.isPending} className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60">
+        <button type="submit" disabled={save.isPending} className="btn btn-primary">
           {save.isPending ? "Saving..." : "Save meal"}
         </button>
         <button type="button" onClick={onDone} disabled={save.isPending} className={smallButton}>

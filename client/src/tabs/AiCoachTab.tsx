@@ -33,7 +33,7 @@ const QUICK_PROMPTS = [
 export { TYPE_CHIP };
 
 const secondaryButton =
-  "rounded-lg border border-border bg-surface2 px-3 py-1.5 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60";
+  "btn btn-secondary";
 
 // AI Coach tab: the selected client's summary, saved conversation
 // (GET /api/clients/:clientId/chat) and a composer that asks the AI (POST .../chat).
@@ -80,7 +80,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
 
   return (
     <>
-      <h2 className="text-2xl">AI Coach</h2>
+      <h2 className="page-title">AI Coach</h2>
 
       {client && <ClientSummary client={client} />}
 
@@ -151,7 +151,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
           type="button"
           disabled={!client || ask.isPending || !draft.trim()}
           onClick={() => send(draft)}
-          className="btn-primary rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn btn-primary"
         >
           {ask.isPending ? "Thinking..." : "Send"}
         </button>
@@ -353,7 +353,7 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg">{plan.title}</h3>
+            <h3 className="card-title">{plan.title}</h3>
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[suggestion.type]}`}>{suggestion.type}</span>
             {edited && <span className="text-xs font-semibold text-dim">Edited</span>}
           </div>
@@ -384,7 +384,7 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
               type="button"
               disabled={busy}
               onClick={() => act(assign)}
-              className="btn-primary rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn btn-primary"
             >
               {assign.isPending ? "Assigning..." : "Assign to client"}
             </button>

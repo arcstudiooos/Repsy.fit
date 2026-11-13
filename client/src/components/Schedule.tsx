@@ -88,7 +88,7 @@ export function Schedule({ clients }: { clients: Client[] }) {
   }, [query.data]);
   const isThisWeek = startKey === localDateKey(weekStartOf(new Date()));
 
-  const navButton = "min-h-10 rounded-lg border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim";
+  const navButton = "btn btn-secondary";
 
   return (
     <section aria-label="Schedule" className="mt-4">
@@ -109,7 +109,7 @@ export function Schedule({ clients }: { clients: Client[] }) {
           type="button"
           onClick={() => setEditing("new")}
           disabled={clients.length === 0}
-          className="btn-primary min-h-11 rounded-lg px-4 text-sm disabled:opacity-60"
+          className="btn btn-primary min-h-11"
         >
           Add appointment
         </button>
@@ -381,7 +381,7 @@ function AppointmentForm({
         </p>
       )}
       <div className="flex gap-2 sm:col-span-2">
-        <button type="submit" disabled={save.isPending || !clientId} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={save.isPending || !clientId} className="btn btn-primary min-h-11">
           {save.isPending ? "Saving..." : "Save appointment"}
         </button>
         <button type="button" onClick={onCancel} className="min-h-11 rounded-lg px-4 text-sm text-dim hover:text-text">

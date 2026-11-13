@@ -148,7 +148,7 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
               {serverError}
             </p>
           )}
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
             {busy ? "Please wait..." : isRegister ? "Create account" : "Log in"}
           </button>
         </form>

@@ -93,7 +93,7 @@ export function ProgressTab({ client }: Props) {
 
   return (
     <>
-      <h2 className="text-2xl">Progress</h2>
+      <h2 className="page-title">Progress</h2>
       {body}
     </>
   );

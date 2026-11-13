@@ -158,7 +158,8 @@ All load from Google Fonts in `client/index.html`; no npm packages.
 
 - Cards: white (`--surface`) with a 1px `var(--border)` border, radius **14px**, no heavy
   shadows. Use the `card` class (radius alone: `rounded-card`).
-- Primary button: `btn-primary` (orange background, `#141414` bold text).
+- Primary button: `btn btn-primary` (orange pill, `#141414` bold text, hard ink shadow); also `btn-secondary`,
+  `btn-ghost`, `btn-danger` (see Batch 4).
 
 ### Layout
 
@@ -187,6 +188,15 @@ All load from Google Fonts in `client/index.html`; no npm packages.
   the shared `components/PlanEditor.tsx` (also the AI suggestion card's edit mode), saved with the assignments PATCH. Check-ins:
   history, energy / mood bars and sleep come first; the coach's form is the collapsed "Log a check-in for <name>" section.
   The one "Macro calculator for <name>" link is in the Plans header (next to New plan), no longer in Progress / Check-ins.
+- **Batch 4 (owner, Nov 2026).** Library (Business > Library) has its own view switch **Templates / Meals / Macro calculator**
+  (`role=group` "Library view" + `aria-pressed`, like the Business switch); App keeps the choice (`libraryView`) and the macro link
+  opens the Macro calculator view. `openLibrary(page, view?)` in the test helpers. **Buttons:** always `btn` + a look (index.css,
+  components layer, so `mt-*` / `w-full` / `min-h-11` still win): `btn btn-primary` = orange pill, `#141414` bold text, hard
+  shadow `0 4px 0` (ink; on dark a mix of accent + #141414) that presses down on hover/active; `btn btn-secondary` = surface2 +
+  border pill; `btn btn-ghost` = no fill until hover; `btn btn-danger` = surface + 2px accent outline (ConfirmDialog confirms).
+  All 40px min, 0 20px padding, 14px text. `btn-primary` alone stays the colour-only utility because the landing pages use it
+  with their own shapes (do not change it). Sign-in screens use `btn btn-primary` (the old `.paper .btn-primary` override is gone).
+  **Headings:** each tab's h2 uses `page-title` (serif, 32-40px); every card / section h3 uses `card-title` (Geist 600, 17px).
 
 ## Data notes
 - **Security and privacy (Prompt 73).** There is **no CORS middleware**: the built client is served by

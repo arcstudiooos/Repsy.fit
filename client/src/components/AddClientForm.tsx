@@ -89,7 +89,7 @@ export function AddClientForm({ onCreated, onCancel, focusSignal = 0 }: Props) {
 
   return (
     <form onSubmit={submit} noValidate aria-label="Add client" className="card mb-5 p-5">
-      <h3 className="mb-4 text-xl">Add client</h3>
+      <h3 className="mb-4 card-title">Add client</h3>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field id="client-name" label="Name" error={errors.name} className="sm:col-span-2">
           <input
@@ -203,14 +203,14 @@ export function AddClientForm({ onCreated, onCancel, focusSignal = 0 }: Props) {
       )}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <button type="submit" disabled={mutation.isPending} className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60">
+        <button type="submit" disabled={mutation.isPending} className="btn btn-primary">
           {mutation.isPending ? "Saving..." : "Save client"}
         </button>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim"
+            className="btn btn-secondary"
           >
             Cancel
           </button>

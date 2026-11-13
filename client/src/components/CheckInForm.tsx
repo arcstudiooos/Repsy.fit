@@ -58,7 +58,7 @@ export function CheckInForm({ clientId }: Props) {
 
   return (
     <form onSubmit={submit} noValidate aria-label="Weekly check-in" className="card mt-6 p-5">
-      <h3 className="mb-4 text-lg">Weekly check-in</h3>
+      <h3 className="mb-4 card-title">Weekly check-in</h3>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="checkin-date" className="mb-1 block text-sm font-semibold text-text">
@@ -173,7 +173,7 @@ export function CheckInForm({ clientId }: Props) {
       <button
         type="submit"
         disabled={!canSubmit}
-        className="btn-primary mt-4 rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn btn-primary mt-4"
       >
         {save.isPending ? "Saving..." : "Add check-in"}
       </button>

@@ -22,7 +22,7 @@ export function CheckInList({ clientId, logs }: Props) {
 
   return (
     <section className="mt-6">
-      <h3 className="text-lg">Check-ins</h3>
+      <h3 className="card-title">Check-ins</h3>
       {remove.isError && (
         <p role="alert" className="mt-2 text-sm font-semibold text-accent">
           Couldn't delete: {plainErrorMessage(remove.error)}

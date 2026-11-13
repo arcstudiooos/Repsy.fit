@@ -14,7 +14,7 @@ export function plainErrorMessage(error: unknown): string {
 }
 
 const secondaryButton =
-  "rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim";
+  "btn btn-secondary";
 
 type EmptyStateProps = {
   onAddClient: () => void;
@@ -28,7 +28,7 @@ export function EmptyState({ onAddClient, seedDemo }: EmptyStateProps) {
       <h2 className="text-2xl">No clients yet</h2>
       <p className="mt-2 text-dim">Add your first client, or load demo clients to explore.</p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
-        <button type="button" onClick={onAddClient} className="btn-primary rounded-lg px-4 py-2 text-sm">
+        <button type="button" onClick={onAddClient} className="btn btn-primary">
           Add a client
         </button>
         <button type="button" onClick={seedDemo.run} disabled={seedDemo.pending} className={`${secondaryButton} disabled:opacity-60`}>
@@ -71,7 +71,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
     <div role="alert" className="card p-6 text-center sm:p-8">
       <h2 className="text-2xl">Something went wrong</h2>
       <p className="mt-2 text-dim">{plainErrorMessage(error)}</p>
-      <button type="button" onClick={onRetry} className="btn-primary mt-5 rounded-lg px-4 py-2 text-sm">
+      <button type="button" onClick={onRetry} className="btn btn-primary mt-5">
         Retry
       </button>
     </div>

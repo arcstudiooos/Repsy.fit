@@ -81,7 +81,7 @@ export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed, onOp
     body = (
       <div className="rounded-card bg-surface2 px-4 py-6 text-center">
         <p className="text-dim">Nothing assigned yet. Create the first plan with New plan, or ask the AI Coach.</p>
-        <button type="button" onClick={onOpenAiCoach} className="btn-primary mt-4 rounded-lg px-4 py-2 text-sm">
+        <button type="button" onClick={onOpenAiCoach} className="btn btn-primary mt-4">
           Ask the AI Coach
         </button>
       </div>
@@ -126,9 +126,9 @@ export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed, onOp
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h2 className="text-2xl">Plans</h2>
+        <h2 className="page-title">Plans</h2>
         {client && !formOpen && (
-          <button type="button" onClick={() => setFormOpen(true)} className="btn-primary min-h-10 rounded-lg px-4 py-2 text-sm">
+          <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
             <span aria-hidden="true">+ </span>New plan
           </button>
         )}
@@ -233,7 +233,7 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
             <button
               type="submit"
               disabled={editMutation.isPending}
-              className="btn-primary min-h-10 rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn btn-primary"
             >
               {editMutation.isPending ? "Saving..." : "Save changes"}
             </button>
@@ -241,7 +241,7 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
               type="button"
               disabled={editMutation.isPending}
               onClick={() => setEditing(null)}
-              className="min-h-10 rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -257,7 +257,7 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[assignment.type]}`}>
           {assignment.type}
         </span>
-        <h3 className={"text-lg " + (isDone ? "text-dim" : "")}>{assignment.title}</h3>
+        <h3 className={"card-title " + (isDone ? "text-dim" : "")}>{assignment.title}</h3>
         <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">
           {assignment.source === "ai" ? "AI" : "Manual"}
         </span>

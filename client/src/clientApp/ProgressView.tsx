@@ -88,7 +88,7 @@ function MeasurementsSection() {
               setSaved(false);
               setOpen(true);
             }}
-            className="btn-primary min-h-11 rounded-lg px-4 text-sm"
+            className="btn btn-primary min-h-11"
           >
             Add measurements
           </button>
@@ -238,7 +238,7 @@ function AddMeasurements({ onDone }: { onDone: (saved: boolean) => void }) {
         </p>
       )}
       <div className="flex gap-2">
-        <button type="submit" disabled={save.isPending} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={save.isPending} className="btn btn-primary min-h-11">
           {save.isPending ? "Saving..." : "Save measurements"}
         </button>
         <button type="button" onClick={() => onDone(false)} className="min-h-11 rounded-lg border border-border px-4 text-sm font-semibold text-text">

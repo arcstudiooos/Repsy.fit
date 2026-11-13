@@ -91,7 +91,7 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
 
   return (
     <section aria-label="Body measurements" className="card mt-4 p-5">
-      <h3 className="text-base">Body measurements</h3>
+      <h3 className="card-title">Body measurements</h3>
       <p className="mt-1 text-sm text-dim">Log tape measurements and body fat for this client. Every value is typed in by hand.</p>
 
       <form onSubmit={submit} noValidate aria-label="Add measurements" className="mt-4">
@@ -145,7 +145,7 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
           </p>
         )}
         <div className="mt-4">
-          <button type="submit" disabled={add.isPending} className="btn-primary rounded-lg px-5 py-2 text-sm disabled:opacity-60">
+          <button type="submit" disabled={add.isPending} className="btn btn-primary">
             {add.isPending ? "Adding..." : "Add measurement"}
           </button>
         </div>

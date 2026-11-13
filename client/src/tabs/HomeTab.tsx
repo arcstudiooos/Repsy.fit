@@ -49,7 +49,7 @@ export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients 
   // just did, today's list, then new check-ins and the weekly summary.
   return (
     <>
-      <h2 className="text-2xl">Home</h2>
+      <h2 className="page-title">Home</h2>
       <NeedsAttention date={date} onOpenClient={(clientId) => onOpenClient(clientId, "progress")} />
       <ReviewQueueCard date={date} />
       <ClientActivity
@@ -70,7 +70,7 @@ export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients 
 /** Card heading with a count when there is one, e.g. "Review queue · 2". */
 function CardTitle({ title, count }: { title: string; count?: number }) {
   return (
-    <h3 className="text-base">
+    <h3 className="card-title">
       {title}
       {count ? <span className="font-normal text-dim"> · {count}</span> : null}
     </h3>
@@ -259,7 +259,7 @@ function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"
         type="button"
         aria-label={`${label}: ${task.clientName}`}
         onClick={() => onOpen(task.clientId, target)}
-        className="btn-primary shrink-0 rounded-lg px-4 py-2 text-sm"
+        className="btn btn-primary shrink-0"
       >
         {label}
       </button>
@@ -319,12 +319,12 @@ function WeeklySummaryCard({ date }: { date: string }) {
   return (
     <section aria-label="AI weekly summary" className="card mt-4 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-base">AI weekly summary</h3>
+        <h3 className="card-title">AI weekly summary</h3>
         <button
           type="button"
           onClick={() => generate.mutate(false)}
           disabled={busy}
-          className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60"
+          className="btn btn-primary"
         >
           {busy ? "Generating..." : "Generate this week's summary"}
         </button>
@@ -415,7 +415,7 @@ function ReviewQueueCard({ date }: { date: string }) {
                 aria-label={`Approve: ${item.clientName} ${item.title}`}
                 disabled={decide.isPending}
                 onClick={() => decide.mutate({ item, approve: true })}
-                className="btn-primary rounded-lg px-3 py-2 text-sm disabled:opacity-60"
+                className="btn btn-primary"
               >
                 Approve
               </button>
@@ -502,7 +502,7 @@ function ClientActivity({
   if (query.isError) {
     return (
       <section aria-label="Client activity" className="card mt-4 p-5">
-        <h3 className="text-base">Client activity</h3>
+        <h3 className="card-title">Client activity</h3>
         <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
           Couldn't load client activity.{" "}
           <button type="button" onClick={() => void query.refetch()} className="min-h-11 px-1 text-accent2 underline underline-offset-4">

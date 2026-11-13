@@ -43,7 +43,7 @@ export function MessagesTab({ clients, selectedClientId, onSelect, chat, setChat
   );
   return (
     <>
-      <h2 className="text-2xl">Messages</h2>
+      <h2 className="page-title">Messages</h2>
       <p className="mt-1 text-sm text-dim">Your conversations with clients.</p>
       {/* minmax(0, 1fr): grid tracks may shrink below their content, so a long preview or the
           message box placeholder can never push the page sideways on a phone. */}
@@ -305,7 +305,7 @@ function Conversation({
   return (
     <section aria-label={`Conversation with ${client.name}`} className="card flex min-h-[26rem] flex-col p-0">
       <header className="border-b border-border px-5 py-3">
-        <h3 className="text-base">{client.name}</h3>
+        <h3 className="card-title">{client.name}</h3>
         <p className="text-xs text-dim">Client messages - separate from the AI Coach</p>
       </header>
 
@@ -372,7 +372,7 @@ function Conversation({
           placeholder={`Message ${client.name}`}
           className="min-h-11 min-w-0 flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 text-base text-text"
         />
-        <button type="submit" disabled={!draft.trim()} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={!draft.trim()} className="btn btn-primary min-h-11">
           Send
         </button>
         <p id="message-hint" className="w-full text-xs text-dim">

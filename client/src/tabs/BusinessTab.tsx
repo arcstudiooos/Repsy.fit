@@ -81,7 +81,7 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked, lib
   return (
     <>
       {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
-      <h2 className="no-print text-2xl">Business</h2>
+      <h2 className="no-print page-title">Business</h2>
       <div role="group" aria-label="Business view" className="no-print mt-3 flex flex-wrap gap-2">
         {VIEWS.map((v) => (
           <button
@@ -143,7 +143,7 @@ function PaymentsView({ clients }: { clients: Client[] }) {
     <>
       <div className="mt-3 flex flex-wrap items-baseline justify-end gap-3 empty:hidden">
         {!adding && withoutPlan.length > 0 && query.data && (
-          <button type="button" onClick={() => setAdding(true)} className="btn-primary min-h-11 rounded-lg px-4 text-sm">
+          <button type="button" onClick={() => setAdding(true)} className="btn btn-primary min-h-11">
             Add a plan
           </button>
         )}
@@ -251,7 +251,7 @@ function PlanRow({ row, currency, today }: { row: BusinessPlanRow; currency: str
             type="button"
             aria-expanded={open === "pay"}
             onClick={() => setOpen(open === "pay" ? null : "pay")}
-            className="min-h-10 rounded-lg border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim"
+            className="btn btn-secondary"
           >
             Record payment
           </button>
@@ -342,7 +342,7 @@ function PaymentForm({ row, currency, today, onDone }: { row: BusinessPlanRow; c
         </p>
       )}
       <div className="flex gap-2 sm:col-span-2">
-        <button type="submit" disabled={save.isPending} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={save.isPending} className="btn btn-primary min-h-11">
           {save.isPending ? "Saving..." : "Save payment"}
         </button>
         <button type="button" onClick={onDone} className="min-h-11 rounded-lg px-4 text-sm text-dim hover:text-text">
@@ -470,7 +470,7 @@ function PlanForm({
         </p>
       )}
       <div className="flex gap-2 sm:col-span-2">
-        <button type="submit" disabled={save.isPending || !clientId} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={save.isPending || !clientId} className="btn btn-primary min-h-11">
           {save.isPending ? "Saving..." : existing ? "Save plan" : "Add plan"}
         </button>
         <button type="button" onClick={onDone} className="min-h-11 rounded-lg px-4 text-sm text-dim hover:text-text">

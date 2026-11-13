@@ -12,7 +12,7 @@ export function WaitingBanner({ onOpen }: { onOpen: () => void }) {
       <p className="text-sm font-semibold text-text">
         {n === 1 ? "1 person is" : `${n} people are`} waiting for you to approve them.
       </p>
-      <button type="button" onClick={onOpen} className="btn-primary min-h-11 rounded-lg px-4 text-sm">
+      <button type="button" onClick={onOpen} className="btn btn-primary min-h-11">
         Review in Clients
       </button>
     </div>

@@ -49,7 +49,9 @@ export async function selectClient(page: Page, name: string) {
 }
 
 /** Opens Business -> Library. */
-export async function openLibrary(page: Page) {
+export async function openLibrary(page: Page, view?: "Templates" | "Meals" | "Macro calculator") {
   await page.getByRole("tab", { name: "Business" }).click();
   await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Library" }).click();
+  // UI batch 4: Library has its own views (Templates / Meals / Macro calculator); the last one is remembered.
+  if (view) await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: view, exact: true }).click();
 }

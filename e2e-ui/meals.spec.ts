@@ -92,7 +92,7 @@ async function openMeals(page: Page, initial: M[] = []) {
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
   await page.goto("/app");
-  await openLibrary(page);
+  await openLibrary(page, "Meals");
   await expect(page.getByRole("heading", { level: 3, name: "Meal library" })).toBeVisible();
   return { calls };
 }

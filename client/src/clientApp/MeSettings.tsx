@@ -182,7 +182,7 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
         <Err text={error ?? (save.isError ? plainErrorMessage(save.error) : null)} />
         <Saved show={save.isSuccess} />
         <div>
-          <button type="submit" disabled={save.isPending} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={save.isPending} className="btn btn-primary min-h-11">
             {save.isPending ? "Saving..." : "Save profile"}
           </button>
         </div>
@@ -257,7 +257,7 @@ function SignInSection({ account }: { account: MyAccount }) {
           </p>
         )}
         <div>
-          <button type="submit" disabled={change.isPending} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={change.isPending} className="btn btn-primary min-h-11">
             {change.isPending ? "Changing..." : "Change password"}
           </button>
         </div>

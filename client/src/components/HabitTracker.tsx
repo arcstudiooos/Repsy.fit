@@ -52,7 +52,7 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
 
   return (
     <section aria-label="Habit tracker" className="card mt-4 p-5">
-      <h3 className="text-base">Habits this week</h3>
+      <h3 className="card-title">Habits this week</h3>
       <p className="mt-1 text-sm text-dim">Tap a day to mark it done. Up to {MAX_HABITS} habits per client.</p>
 
       {query.isPending || (query.isError && query.isFetching) ? (
@@ -119,7 +119,7 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
                 className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text disabled:opacity-60"
               />
             </div>
-            <button type="submit" disabled={full || add.isPending} className="btn-primary rounded-lg px-5 py-2 text-sm disabled:opacity-60">
+            <button type="submit" disabled={full || add.isPending} className="btn btn-primary">
               {add.isPending ? "Adding..." : "Add habit"}
             </button>
           </form>

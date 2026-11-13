@@ -52,7 +52,7 @@ async function mock(page: Page) {
 async function openCalculator(page: Page) {
   const calls = await mock(page);
   await page.goto("/app");
-  await openLibrary(page);
+  await openLibrary(page, "Macro calculator");
   await expect(page.getByRole("heading", { level: 3, name: "Macro calculator" })).toBeVisible();
   return calls;
 }
@@ -158,6 +158,9 @@ test("the one macro link (Plans, next to New plan) opens the calculator pre-fill
   await openClientTab(page, "Plans");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
   await page.getByRole("button", { name: "Macro calculator for Maya Patel" }).click();
+  // The link lands on Business > Library on its Macro calculator view.
+  await expect(page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Macro calculator" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("heading", { level: 3, name: "Meal library" })).toHaveCount(0);
 
   const form = page.getByRole("form", { name: "Macro calculator" });
   await expect(form.getByLabel("Client (optional)")).toHaveValue("c-maya");
@@ -166,7 +169,7 @@ test("the one macro link (Plans, next to New plan) opens the calculator pre-fill
   await expect(form.getByLabel("Age")).toHaveValue("29");
   await expect(form.getByLabel("Goal")).toHaveValue("Fat loss");
 
-  // The pre-fill is used once: leaving and coming back starts empty.
+  // The pre-fill is used once: leaving and coming back starts empty (and Library remembers the calculator view).
   await page.getByRole("tab", { name: "Clients" }).click();
   await openLibrary(page);
   await expect(page.getByRole("form", { name: "Macro calculator" }).getByLabel("Weight (kg)")).toHaveValue("");

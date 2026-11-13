@@ -189,7 +189,7 @@ export function MessagesView({ coachName }: { coachName: string | null }) {
             placeholder="Write a message"
             className="min-h-11 flex-1 resize-y rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
           />
-          <button type="submit" disabled={draft.trim() === "" || tooLong} className="btn-primary min-h-11 rounded-lg px-4 text-sm disabled:opacity-60">
+          <button type="submit" disabled={draft.trim() === "" || tooLong} className="btn btn-primary min-h-11">
             Send
           </button>
         </form>

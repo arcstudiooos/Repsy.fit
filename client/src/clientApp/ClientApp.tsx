@@ -177,7 +177,7 @@ function ErrorBox({ error, onRetry }: { error: unknown; onRetry: () => void }) {
       <p role="alert" className="text-sm font-semibold text-amber-text">
         {plainErrorMessage(error)}
       </p>
-      <button type="button" onClick={onRetry} className="mt-2 min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim">
+      <button type="button" onClick={onRetry} className="btn btn-secondary mt-2 min-h-11">
         Retry
       </button>
     </div>
@@ -234,9 +234,7 @@ function PlanRow({ plan, showMark }: { plan: ClientAssignment; showMark: boolean
             disabled={mark.isPending}
             aria-label={done ? `Mark ${plan.title} as not done` : `Mark ${plan.title} done`}
             onClick={toggle}
-            className={`min-h-11 shrink-0 rounded-lg px-4 text-sm font-semibold disabled:opacity-60 ${
-              done ? "border border-border bg-surface2 text-text" : "btn-primary"
-            }`}
+            className={`btn min-h-11 shrink-0 ${done ? "btn-secondary" : "btn-primary"}`}
           >
             {mark.isPending ? "Saving..." : done ? "Undo" : "Mark done"}
           </button>
@@ -367,7 +365,7 @@ function WeekView() {
   const today = localDateKey(new Date());
   const plans = useQuery({ queryKey: queryKeys.myAssignments(from, to), queryFn: () => getMyAssignments(from, to) });
   const label = `${start.toLocaleDateString([], { day: "numeric", month: "short" })} – ${addDays(start, 6).toLocaleDateString([], { day: "numeric", month: "short" })}`;
-  const btn = "min-h-11 rounded-lg border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim";
+  const btn = "btn btn-secondary min-h-11";
 
   return (
     <>
@@ -625,7 +623,7 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
           type="button"
           disabled={mark.isPending}
           onClick={() => mark.mutate({ done: false })}
-          className="mt-3 min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+          className="btn btn-secondary mt-3 min-h-11"
         >
           {mark.isPending ? "Saving..." : "Mark as not done"}
         </button>
@@ -636,7 +634,7 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
   if (!open) {
     return (
       <div className="mt-6">
-        <button type="button" onClick={() => setOpen(true)} className="btn-primary min-h-12 w-full rounded-lg px-5 text-base sm:w-auto">
+        <button type="button" onClick={() => setOpen(true)} className="btn btn-primary min-h-12 w-full text-base sm:w-auto">
           {isWorkout ? "Finish workout" : "Mark done"}
         </button>
       </div>
@@ -683,13 +681,13 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
         className="mt-1 w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
       />
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="submit" disabled={mark.isPending} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+        <button type="submit" disabled={mark.isPending} className="btn btn-primary min-h-11">
           {mark.isPending ? "Saving..." : "Save as done"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="min-h-11 rounded-lg border border-border bg-surface2 px-4 text-sm font-semibold text-text hover:border-dim"
+          className="btn btn-secondary min-h-11"
         >
           Cancel
         </button>
@@ -715,7 +713,7 @@ function MeView({ account, onSignOut, signingOut }: { account: ClientAccount; on
           type="button"
           onClick={onSignOut}
           disabled={signingOut}
-          className="min-h-11 rounded-lg border border-border bg-surface2 px-5 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+          className="btn btn-secondary min-h-11"
         >
           {signingOut ? "Signing out..." : "Sign out"}
         </button>

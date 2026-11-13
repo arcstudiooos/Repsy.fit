@@ -16,9 +16,16 @@ import type { NewWorkoutTemplate, WorkoutTemplate } from "../types";
 
 const inputClass =
   "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
-const smallButton = "rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-text hover:border-dim disabled:opacity-60";
+const smallButton = "btn btn-secondary";
+
+// UI batch 4: the three Library tools are separate views (same switch pattern as the Business views).
+export const LIBRARY_VIEWS = ["Templates", "Meals", "Macro calculator"] as const;
+export type LibraryView = (typeof LIBRARY_VIEWS)[number];
 
 type Props = {
+  /** The open Library view; owned by App so it is remembered and the macro links can open the calculator. */
+  view?: LibraryView;
+  onViewChange?: (view: LibraryView) => void;
   /** Open Plans for `clientId`, starting a new assignment from the template. */
   onAssign: (clientId: string, prefill: TemplatePrefill) => void;
   /** Prompt 61: a client whose details should pre-fill the macro calculator (used once). */
@@ -26,7 +33,43 @@ type Props = {
   onMacroPrefillUsed?: () => void;
 };
 
-export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed }: Props) {
+export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClientId = null, onMacroPrefillUsed }: Props) {
+  const [ownView, setOwnView] = useState<LibraryView>("Templates");
+  const view = viewProp ?? ownView;
+  const setView = onViewChange ?? setOwnView;
+
+  return (
+    <>
+      <h2 className="text-2xl">Library</h2>
+      <div role="group" aria-label="Library view" className="mt-3 flex flex-wrap gap-2">
+        {LIBRARY_VIEWS.map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={view === v}
+            onClick={() => setView(v)}
+            className={
+              "min-h-10 rounded-full border px-4 text-sm font-semibold " +
+              (view === v ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+            }
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+      {view === "Meals" ? (
+        <MealLibrary />
+      ) : view === "Macro calculator" ? (
+        <MacroCalculator initialClientId={macroClientId} onPrefillUsed={onMacroPrefillUsed} />
+      ) : (
+        <TemplatesView onAssign={onAssign} />
+      )}
+    </>
+  );
+}
+
+// The workout templates view (Prompt 58).
+function TemplatesView({ onAssign }: { onAssign: Props["onAssign"] }) {
   const query = useQuery({ queryKey: queryKeys.templates, queryFn: listTemplates });
   const [search, setSearch] = useState("");
   // null = no form; "new" = creating; a template = editing it.
@@ -49,8 +92,7 @@ export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed 
 
   return (
     <>
-      <h2 className="text-2xl">Library</h2>
-      <p className="mt-1 text-sm text-dim">Your workout templates. Build one once, then assign it to any client.</p>
+      <p className="mt-4 text-sm text-dim">Your workout templates. Build one once, then assign it to any client.</p>
 
       {editing ? (
         <TemplateForm
@@ -74,7 +116,7 @@ export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed 
               autoComplete="off"
             />
           </div>
-          <button type="button" onClick={() => setEditing("new")} className="btn-primary rounded-lg px-4 py-2 text-sm">
+          <button type="button" onClick={() => setEditing("new")} className="btn btn-primary">
             New template
           </button>
         </div>
@@ -96,7 +138,7 @@ export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed 
             {shown.map((t) => (
               <li key={t.id} className="card p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg">{t.name}</h3>
+                  <h3 className="card-title">{t.name}</h3>
                   {t.focus !== "" && (
                     <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{t.focus}</span>
                   )}
@@ -121,7 +163,7 @@ export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed 
                     aria-label={`Assign ${t.name} to client`}
                     aria-expanded={assigning === t.id}
                     onClick={() => setAssigning(assigning === t.id ? null : t.id)}
-                    className="btn-primary rounded-lg px-3 py-1.5 text-sm"
+                    className="btn btn-primary"
                   >
                     Assign to client
                   </button>
@@ -160,8 +202,6 @@ export function LibraryTab({ onAssign, macroClientId = null, onMacroPrefillUsed 
         </ConfirmDialog>
       )}
 
-      <MealLibrary />
-      <MacroCalculator initialClientId={macroClientId} onPrefillUsed={onMacroPrefillUsed} />
     </>
   );
 }
@@ -216,7 +256,7 @@ function AssignPanel({ template, onAssign }: { template: WorkoutTemplate; onAssi
           <button
             type="button"
             onClick={() => onAssign(chosen, { template, date: date || localToday() })}
-            className="btn-primary rounded-lg px-4 py-2 text-sm"
+            className="btn btn-primary"
           >
             Open in Plans
           </button>
@@ -256,7 +296,7 @@ function TemplateForm({ template, onDone }: { template: WorkoutTemplate | null; 
 
   return (
     <form onSubmit={submit} noValidate aria-label={template ? "Edit template" : "New template"} className="card mt-4 p-5">
-      <h3 className="mb-4 text-xl">{template ? "Edit template" : "New template"}</h3>
+      <h3 className="mb-4 card-title">{template ? "Edit template" : "New template"}</h3>
       <div className="flex flex-col gap-4">
         <div>
           <label htmlFor="template-name" className="mb-1 block text-sm font-semibold text-text">
@@ -309,7 +349,7 @@ function TemplateForm({ template, onDone }: { template: WorkoutTemplate | null; 
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
-        <button type="submit" disabled={save.isPending} className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60">
+        <button type="submit" disabled={save.isPending} className="btn btn-primary">
           {save.isPending ? "Saving..." : "Save template"}
         </button>
         <button type="button" onClick={onDone} disabled={save.isPending} className={smallButton}>

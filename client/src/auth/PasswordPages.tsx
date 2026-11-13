@@ -64,7 +64,7 @@ function ForgotPage() {
         <form onSubmit={submit} noValidate aria-label="Forgot password" className="mt-6 grid gap-4">
           <TextField id="auth-email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={errors.email} />
           <ServerError message={serverError} />
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
             {busy ? "Please wait..." : "Send reset link"}
           </button>
         </form>
@@ -126,7 +126,7 @@ function ResetPage() {
             error={errors.password}
           />
           <ServerError message={serverError} />
-          <button type="submit" disabled={busy} className="btn-primary min-h-11 rounded-lg px-5 text-sm disabled:opacity-60">
+          <button type="submit" disabled={busy} className="btn btn-primary min-h-11">
             {busy ? "Please wait..." : "Set new password"}
           </button>
         </form>

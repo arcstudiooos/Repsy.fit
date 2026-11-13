@@ -131,8 +131,8 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
   const labelClass = "mb-1 block text-sm font-semibold text-text";
 
   return (
-    <section ref={sectionRef} id="macro-calculator" aria-labelledby="macro-calculator-heading" className="mt-10">
-      <h3 id="macro-calculator-heading" className="text-xl">
+    <section ref={sectionRef} id="macro-calculator" aria-labelledby="macro-calculator-heading" className="mt-4">
+      <h3 id="macro-calculator-heading" className="card-title">
         Macro calculator
       </h3>
       <p className="mt-1 text-sm text-dim">
@@ -240,7 +240,7 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
           </p>
         )}
         <div className="mt-4">
-          <button type="submit" disabled={calc.isPending} className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60">
+          <button type="submit" disabled={calc.isPending} className="btn btn-primary">
             {calc.isPending ? "Calculating..." : "Calculate"}
           </button>
         </div>
@@ -277,7 +277,7 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
               type="button"
               disabled={save.isPending}
               onClick={saveAssignment}
-              className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60"
+              className="btn btn-primary"
             >
               {save.isPending ? "Saving..." : "Save as Nutrition assignment"}
             </button>
@@ -290,7 +290,7 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
                 setSaveError(null);
                 saveTargets.mutate({ clientId, calories: calc.data.calories, proteinG: calc.data.proteinG });
               }}
-              className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+              className="btn btn-secondary"
             >
               {saveTargets.isPending ? "Saving..." : clientName ? `Save as ${clientName}'s daily targets` : "Save as daily targets"}
             </button>

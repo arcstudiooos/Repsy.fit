@@ -54,7 +54,7 @@ export function CheckInsTab({ client }: TabProps) {
   if (!client) {
     return (
       <>
-        <h2 className="text-2xl">Check-ins</h2>
+        <h2 className="page-title">Check-ins</h2>
         <p className="mt-1 text-dim">Pick a client above to log and read their daily check-ins.</p>
       </>
     );
@@ -102,7 +102,7 @@ function ClientCheckIns({ client }: { client: Client }) {
 
   return (
     <>
-      <h2 className="text-2xl">Check-ins</h2>
+      <h2 className="page-title">Check-ins</h2>
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">
@@ -134,7 +134,7 @@ function ClientCheckIns({ client }: { client: Client }) {
         {logOpen && (
           <div id="log-checkin">
           <form onSubmit={submit} noValidate aria-label="Today's check-in" className="card mt-3 p-5">
-            <h3 className="text-base">
+            <h3 className="card-title">
               Today's check-in <span className="font-mono text-xs font-normal text-dim">{today}</span>
             </h3>
             <p className="mt-1 text-sm text-dim">
@@ -167,7 +167,7 @@ function ClientCheckIns({ client }: { client: Client }) {
               </p>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="submit" disabled={save.isPending} className="btn-primary rounded-lg px-5 py-2 text-sm disabled:opacity-60">
+              <button type="submit" disabled={save.isPending} className="btn btn-primary">
                 {save.isPending ? "Saving..." : todays ? "Update today" : "Save check-in"}
               </button>
               {save.isSuccess && !save.isPending && (
@@ -266,7 +266,7 @@ function Sparklines({ checkIns }: { checkIns: DailyCheckIn[] }) {
   if (points.length === 0) return null;
   return (
     <section aria-label="Energy and mood" className="card mt-4 p-5">
-      <h3 className="text-base">Energy and mood</h3>
+      <h3 className="card-title">Energy and mood</h3>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         {([
           ["Energy", "energy", "#ff4a1f"],
@@ -302,7 +302,7 @@ function SleepRecoveryCard({ checkIns, today }: { checkIns: DailyCheckIn[]; toda
   const anyData = points.some((p) => p.sleepHours !== null || p.recoveryScore !== null);
   return (
     <section aria-label="Sleep & Recovery" className="card mt-4 p-5">
-      <h3 className="text-base">Sleep &amp; Recovery</h3>
+      <h3 className="card-title">Sleep &amp; Recovery</h3>
       {!anyData ? (
         <p className="mt-3 text-dim">No sleep or recovery logged in the last 14 days. Add them with Log a check-in below.</p>
       ) : (
@@ -360,7 +360,7 @@ const scaleText = (n: number | null) => (n === null ? "-" : `${n}/5`);
 function History({ checkIns }: { checkIns: DailyCheckIn[] }) {
   return (
     <section aria-label="Last 14 days" className="card mt-4 p-5">
-      <h3 className="text-base">Last 14 days</h3>
+      <h3 className="card-title">Last 14 days</h3>
       {checkIns.length === 0 ? (
         <p className="mt-3 text-dim">No check-ins logged yet. Log one with Log a check-in below.</p>
       ) : (

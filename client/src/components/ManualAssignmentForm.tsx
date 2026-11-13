@@ -212,7 +212,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel }:
 
   return (
     <form onSubmit={submit} noValidate aria-label="New assignment" className="card p-5">
-      <h3 className="mb-4 text-xl">New assignment</h3>
+      <h3 className="mb-4 card-title">New assignment</h3>
       <div role="group" aria-label="Type" className="flex flex-wrap gap-2">
         {ASSIGNMENT_TYPES.map((t) => {
           const isActive = t === type;
@@ -308,7 +308,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel }:
         <button
           type="submit"
           disabled={!canSubmit}
-          className="btn-primary min-h-10 rounded-lg px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn btn-primary"
         >
           {mutation.isPending ? "Saving..." : "Assign plan"}
         </button>
@@ -317,7 +317,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel }:
             type="button"
             onClick={onCancel}
             disabled={mutation.isPending}
-            className="min-h-10 rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn btn-secondary"
           >
             Cancel
           </button>

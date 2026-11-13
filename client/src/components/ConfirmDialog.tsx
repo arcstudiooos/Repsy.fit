@@ -48,7 +48,7 @@ export function ConfirmDialog({ title, children, confirmLabel, pendingLabel, pen
           type="button"
           onClick={onCancel}
           disabled={pending}
-          className="rounded-lg border border-border bg-surface2 px-4 py-2 text-sm font-semibold text-text hover:border-dim disabled:opacity-60"
+          className="btn btn-secondary"
         >
           Cancel
         </button>
@@ -56,7 +56,7 @@ export function ConfirmDialog({ title, children, confirmLabel, pendingLabel, pen
           type="button"
           onClick={onConfirm}
           disabled={pending}
-          className="btn-primary rounded-lg px-4 py-2 text-sm disabled:opacity-60"
+          className="btn btn-danger"
         >
           {pending ? (pendingLabel ?? confirmLabel) : confirmLabel}
         </button>
