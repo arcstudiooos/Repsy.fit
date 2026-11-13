@@ -106,6 +106,7 @@
 /* ---------- nav ---------- */
 .ln-nav {
   position: fixed;
+  flex-wrap: wrap;
   inset: 16px 16px auto 16px;
   z-index: 50;
   display: flex;
@@ -115,6 +116,57 @@
 }
 .ln-nav > * {
   pointer-events: auto;
+}
+/* A soft paper backdrop behind the fixed nav once the page moves, so scrolling copy
+   never shows between the pills (owner, Nov 2026). */
+.ln-nav::before {
+  content: "";
+  position: absolute;
+  inset: -16px -16px -10px -16px;
+  z-index: -1;
+  background: linear-gradient(to bottom, var(--paper) 55%, color-mix(in srgb, var(--paper) 70%, transparent) 85%, transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.ln-nav.is-stuck::before {
+  opacity: 1;
+}
+@supports (backdrop-filter: blur(6px)) {
+  .ln-nav.is-stuck::before {
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--paper) 88%, transparent), color-mix(in srgb, var(--paper) 55%, transparent) 75%, transparent);
+    backdrop-filter: blur(8px);
+  }
+}
+/* Section links for narrow screens: one sideways-scrolling row under the logo. */
+.ln-subnav {
+  order: 3;
+  width: 100%;
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.ln-subnav::-webkit-scrollbar {
+  display: none;
+}
+.ln-subnav a {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+@media (min-width: 860px) {
+  .ln-subnav {
+    display: none;
+  }
 }
 .ln-logo {
   display: inline-flex;
@@ -562,6 +614,69 @@
   margin: -22px 0 0 -22px;
 }
 
+/* ---------- product screenshots, framed like a browser window ---------- */
+.ln-shot {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: 0 30px 60px -40px color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.ln-shot-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper));
+}
+.ln-shot-bar i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.ln-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* The capture ends part-way down a page: fade it out rather than cut it. */
+  mask-image: linear-gradient(to bottom, var(--ink) 82%, transparent 100%);
+}
+
+/* ---------- pricing: currency switch and the "most popular" badge ---------- */
+.ln-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.ln-switch button {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mute);
+}
+.ln-switch button.is-on {
+  background: var(--ink);
+  color: var(--paper);
+}
+.ln-badge {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* ---------- pause control (WCAG 2.2.2: moving content can be paused) ---------- */
 .ln-pause {
   position: fixed;
@@ -571,15 +686,22 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 0 14px;
+  min-height: 36px;
+  padding: 0 11px;
   border-radius: 999px;
   background: var(--paper);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   box-shadow: 0 6px 20px -8px color-mix(in srgb, var(--ink) 40%, transparent);
+  /* Present but quiet: it sits over the artwork, so it fades back until wanted. */
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+.ln-pause:hover,
+.ln-pause:focus-visible {
+  opacity: 1;
 }
 .ln.is-paused .ln-marquee,
 .ln.is-paused .ln-spin {

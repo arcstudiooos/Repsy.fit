@@ -1047,3 +1047,25 @@ and record it here.
 - Me: a "Jump to a section" chip row (My plan, Profile, Payments) scrolls to `#me-plan`,
   `#me-profile`, `#me-payments` (each `scroll-mt-20`). Payment rows lead with the amount, with
   plan + method under it and the date on the right.
+
+## Landing pass (owner, Nov 2026)
+
+- The fixed nav gains `.is-stuck` (a paper/blur backdrop) past 8px of scroll so copy never shows
+  between the pills, and narrow screens get `.ln-subnav`: the same section links in one
+  sideways-scrolling row.
+- Pricing: Pro is "Up to 100 clients" with a Most popular badge, Studio "No client limit"; every
+  feature is in every plan, so tiers differ only by client count. A US dollars / Indian rupees switch
+  shows an approximate rupee figure from `RUPEES_PER_USD` in content.ts - billing stays in USD, and
+  the rate needs a manual update when it drifts.
+- `Shots` renders real captures of the live app (`client/public/shot-home.png`,
+  `shot-progress.png`, 1200px wide, lazy) framed like a browser window and masked at the bottom.
+  Re-make them with `prompts/shot_account.py <base-url>` (throwaway coach + demo data; run
+  `... cleanup` after) and downscale to 1200px.
+- `TRUST` holds four plain facts above the price. No testimonial or customer count goes on the page
+  until there is a real one to quote.
+- FAQ answers are also rendered as a `sr-only` `aria-hidden` definition list so search engines see
+  them without tapping; the chat stays the visible, accessible version.
+- Canonical and Open Graph URLs point at https://repsy.fit (not the Render host), and the invite-link
+  demo shows app.repsy.fit.
+- Landing scene elements are hidden until scrolled into view: UI tests must scroll the section in
+  (`page.locator("#inside").scrollIntoViewIfNeeded()`) before asserting visible text or clicking.

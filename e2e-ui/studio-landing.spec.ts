@@ -310,3 +310,51 @@ test("colour rule: the Studio landing uses only the theme.css tokens (no new hex
     expect(used.filter((h) => !allowed.has(h)), `${file} uses hex colours that are not theme tokens`).toEqual([]);
   }
 });
+
+test("the nav gets a backdrop once the page scrolls, and narrow screens get a section row", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 800 });
+  await page.goto("/");
+  const header = page.locator("header.ln-nav");
+  await expect(header).not.toHaveClass(/is-stuck/);
+  // The pill row is hidden this narrow; the scrolling row carries the same links.
+  const sub = page.locator("nav.ln-subnav");
+  await expect(sub).toBeVisible();
+  await expect(sub.getByRole("link")).toHaveCount(4);
+  await page.mouse.wheel(0, 400);
+  await expect(header).toHaveClass(/is-stuck/);
+});
+
+test("pricing: a most-popular badge, plain client limits and a rupee switch", async ({ page }) => {
+  await page.goto("/#pricing");
+  const plans = page.getByTestId("plan");
+  await expect(plans).toHaveCount(3);
+  // Scene elements stay hidden until scrolled into view, so bring pricing in first.
+  await plans.first().scrollIntoViewIfNeeded();
+  await expect(plans.nth(1)).toContainText("Most popular");
+  await expect(plans.nth(1)).toContainText("Up to 100 clients");
+  await expect(plans.nth(2)).toContainText("No client limit");
+  await expect(page.getByText("Client limit to be announced")).toHaveCount(0);
+  await expect(plans.nth(0)).toContainText("$39");
+  const rupees = page.getByRole("button", { name: "Indian rupees" });
+  await rupees.scrollIntoViewIfNeeded();
+  await rupees.click();
+  await expect(plans.nth(0)).toContainText("\u20b93300");
+  await expect(plans.nth(0)).toContainText("Billed in US dollars ($39)");
+});
+
+test("real product screenshots and the FAQ answers are in the markup", async ({ page }) => {
+  await page.goto("/#inside");
+  // Scene items are hidden until revealed, so scroll the section itself into view first.
+  await page.locator("#inside").scrollIntoViewIfNeeded();
+  await expect(page.locator("#inside figure")).toHaveCount(2);
+  for (const src of ["/shot-home.png", "/shot-progress.png"]) {
+    const img = page.locator(`img[src="${src}"]`);
+    await expect(img).toHaveAttribute("loading", "lazy");
+    await expect(img).toHaveAttribute("alt", /Repsy/);
+  }
+  // Answers are in the DOM for search engines even before anyone taps a question.
+  const html = await page.content();
+  expect(html).toContain("They set a password and see their membership");
+  // The invite demo shows the real domain, never the hosting URL.
+  expect(html).not.toContain("onrender.com");
+});

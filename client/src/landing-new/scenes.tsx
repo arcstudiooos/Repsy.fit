@@ -14,6 +14,8 @@ import {
   PLATES,
   RIBBON,
   ROAD,
+  RUPEES_PER_USD,
+  TRUST,
   TANGLE,
 } from "./content";
 import { Icon, PenArrow, Scribble } from "./icons";
@@ -370,9 +372,8 @@ export function Hero() {
             Watch it get <span className="ln-key">lifted.</span>
           </h1>
           <p className="ln-lead mt-5 max-w-[34rem]">
-            Every client's week on one bar: workout, nutrition, habits,
-            recovery. Load it on Monday with the reasoning attached, mark it
-            done as they train, and the check-ins chart themselves.
+            Workout, nutrition, habits and recovery for every client, loaded on
+            Monday with the reasoning attached. The check-ins chart themselves.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-6">
             <a href="#get" className="ln-btn">
@@ -1635,7 +1636,66 @@ export function OldWay() {
  * PRICING
  * ==================================================================================== */
 
+/** Real screens, not illustrations: two captures of the live app, framed like a browser window and
+ *  faded at the bottom so a part-page capture reads as deliberate (owner, Nov 2026). */
+export function Shots() {
+  const shots: [string, string, string, number][] = [
+    ["/shot-home.png", "Home", "Who needs you today, what is waiting to be reviewed, and every check-in that came in.", 702],
+    ["/shot-progress.png", "A client's progress", "Weight, adherence and workouts, charted from their check-ins. No formulas to keep.", 764],
+  ];
+  return (
+    <section id="inside" className="ln-wrap scroll-mt-24 py-20 md:py-28" aria-labelledby="ln-shots-title">
+      <h2 id="ln-shots-title" data-rise className="ln-h2 text-center">
+        The actual <span className="ln-key">screens.</span>
+      </h2>
+      <p data-rise className="mt-5 text-center text-[0.9rem]" style={{ color: "var(--mute)" }}>
+        Straight from the live app, with the demo clients every new account can load.
+      </p>
+      <div className="mx-auto mt-12 grid max-w-5xl gap-8 md:grid-cols-2">
+        {shots.map(([src, title, body, h]) => (
+          <figure key={src} data-rise className="m-0">
+            <div className="ln-shot">
+              <span className="ln-shot-bar" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <img src={src} alt={`Repsy: ${title}`} width={1200} height={h} loading="lazy" decoding="async" />
+            </div>
+            <figcaption className="mt-4">
+              <p className="text-[0.95rem] font-bold">{title}</p>
+              <p className="mt-1 text-[0.85rem]" style={{ color: "var(--mute)" }}>
+                {body}
+              </p>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Four plain facts above the price, where people start looking for reasons to say no. */
+export function Trust() {
+  return (
+    <section className="ln-wrap pb-4 pt-10" aria-label="What you get either way">
+      <dl className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 md:grid-cols-4">
+        {TRUST.map((t) => (
+          <div key={t.k} data-rise className="ln-white p-5">
+            <dt className="ln-display text-[1.9rem] leading-none">{t.k}</dt>
+            <dd className="mt-2 text-[0.85rem]" style={{ color: "var(--mute)" }}>
+              {t.v}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 export function Pricing() {
+  const [inr, setInr] = useState(false);
+  const shown = (usd: number) => (inr ? `₹${Math.round((usd * RUPEES_PER_USD) / 100) * 100}` : `$${usd}`);
   return (
     <section
       id="pricing"
@@ -1652,9 +1712,24 @@ export function Pricing() {
         className="mt-5 text-center text-[0.9rem]"
         style={{ color: "var(--mute)" }}
       >
-        Every plan starts with a 7-day free trial. Prices in US dollars, per
-        month.
+        Every plan starts with a 7-day free trial. Every feature is in every plan - you only pay for
+        how many clients you coach.
       </p>
+      <div data-rise className="mt-6 flex justify-center">
+        <div role="group" aria-label="Show prices in" className="ln-switch">
+          {([["$", false], ["₹", true]] as const).map(([sym, on]) => (
+            <button
+              key={sym}
+              type="button"
+              aria-pressed={inr === on}
+              onClick={() => setInr(on)}
+              className={inr === on ? "is-on" : ""}
+            >
+              {sym === "$" ? "US dollars" : "Indian rupees"}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="mx-auto mt-14 grid max-w-5xl gap-4 md:grid-cols-3">
         {PLANS.map((p) => (
           <article
@@ -1670,8 +1745,13 @@ export function Pricing() {
             <h3 id={`ln-plan-${p.name}`} className="text-[1.05rem] font-bold">
               {p.name}
             </h3>
+            {p.badge && (
+              <p className="ln-badge" aria-label={`${p.name}: ${p.badge}`}>
+                {p.badge}
+              </p>
+            )}
             <p className="mt-4 flex items-baseline gap-2">
-              <span className="ln-display text-[3.6rem]">${p.price}</span>
+              <span className="ln-display text-[3.6rem]">{shown(p.price)}</span>
               <span
                 className="text-[0.85rem]"
                 style={{ color: p.dark ? "var(--soft)" : "var(--mute)" }}
@@ -1685,6 +1765,11 @@ export function Pricing() {
             >
               {p.clients}
             </p>
+            {inr && (
+              <p className="mt-1 text-[0.72rem]" style={{ color: p.dark ? "var(--soft)" : "var(--mute)" }}>
+                Billed in US dollars (${p.price}); the rupee figure is approximate.
+              </p>
+            )}
             <ul className="mt-6 flex-1 space-y-2.5 text-[0.88rem]">
               {p.features.map((f) => (
                 <li key={f} className="flex gap-2.5">
@@ -1778,6 +1863,16 @@ export function FaqChat() {
           Straight answers, before anyone has to ask twice. Tap a message.
         </p>
       </div>
+      {/* The same questions and answers in plain markup: the chat reveals them on tap, which search
+          engines never do. Hidden from assistive tech so the thread isn't read out twice. */}
+      <dl className="sr-only" aria-hidden="true">
+        {FAQ_CHAT.map((f) => (
+          <div key={f.q}>
+            <dt>{f.q}</dt>
+            <dd>{f.a}</dd>
+          </div>
+        ))}
+      </dl>
       <div data-rise className="ln-white overflow-hidden">
         <div
           className="flex items-center gap-3 border-b px-5 py-3.5"
@@ -1913,7 +2008,7 @@ export function Get() {
               className="ln-mono mt-4 break-all rounded-xl p-3 text-[11px]"
               style={{ background: "var(--paper)" }}
             >
-              repsy-coach.onrender.com/client/set-password?token=…
+              app.repsy.fit/client/set-password?token=…
             </p>
             <p className="ln-who mt-3">
               Works once, for 48 hours. Emailed to them, or copy it if email

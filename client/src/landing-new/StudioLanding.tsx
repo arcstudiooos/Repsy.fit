@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NAV } from "./content";
 import { Icon } from "./icons";
-import { Compare, Currency, Done, FaqChat, Get, Hero, Intro, More, OldWay, Pricing, Ribbon, Road } from "./scenes";
+import { Compare, Currency, Done, FaqChat, Get, Hero, Intro, More, OldWay, Pricing, Ribbon, Road, Shots, Trust } from "./scenes";
 import "./landing-new.css";
 
 const WIDE = "(min-width: 768px)";
@@ -58,12 +58,27 @@ function DotCursor() {
 }
 
 function Nav() {
+  // A backdrop appears once the page scrolls, so content never runs between the pills.
+  const [stuck, setStuck] = useState(() => window.scrollY > 8);
+  useEffect(() => {
+    const f = () => setStuck(window.scrollY > 8);
+    window.addEventListener("scroll", f, { passive: true });
+    return () => window.removeEventListener("scroll", f);
+  }, []);
   return (
-    <header className="ln-nav">
+    <header className={"ln-nav" + (stuck ? " is-stuck" : "")}>
       <a href="#top" className="ln-logo" aria-label="Repsy, back to top">
         <img src="/repsy-logo-dark.png" alt="" width={391} height={108} className="h-7 w-auto" />
       </a>
       <nav aria-label="Sections" className="ln-links">
+        {NAV.map((n) => (
+          <a key={n.href} href={n.href}>
+            {n.label}
+          </a>
+        ))}
+      </nav>
+      {/* Narrow screens have no room for the pill row above: this scrolls sideways instead. */}
+      <nav aria-label="Sections" className="ln-subnav">
         {NAV.map((n) => (
           <a key={n.href} href={n.href}>
             {n.label}
@@ -89,7 +104,7 @@ function Nav() {
 
 function Footer() {
   const cols: [string, [string, string][]][] = [
-    ["Product", [["How it works", "#how"], ["Pricing", "#pricing"], ["FAQ", "#faq"]]],
+    ["Product", [["How it works", "#how"], ["Why Repsy", "#why"], ["Pricing", "#pricing"], ["FAQ", "#faq"]]],
     ["Account", [["Coach log in", "/login"], ["Start free", "/register"], ["Client sign in", "/client/login"]]],
     ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"]]],
   ];
@@ -176,6 +191,8 @@ export default function StudioLanding() {
         <Compare />
         <Done />
         <OldWay />
+        <Shots />
+        <Trust />
         <Pricing />
         <FaqChat />
         <Get />

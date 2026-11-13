@@ -100,7 +100,6 @@ export const FEED = [
 /** The old way, beat by beat (left column of the pinned notebook scene). */
 export const BEATS = [
   { title: "The old way.", body: "Five apps for one client. A sheet, a chat, a calendar, a calculator and a camera roll." },
-  { title: "Someone missed Thursday.", body: "The calendar says nothing. The chat says \u201csorry!\u201d. Nothing adds it up." },
   { title: "Now: is she actually progressing?", body: "Three screenshots, a calculator and a guess." },
   { title: "Enough.", body: "One place." },
 ];
@@ -118,8 +117,33 @@ export const PLANS = [
       "Client message log, schedule and payment records",
     ],
   },
-  { name: "Pro", price: 89, clients: "Client limit to be announced", features: ["Everything in Solo"], dark: true },
-  { name: "Studio", price: 199, clients: "Client limit to be announced", features: ["Everything in Pro"] },
+  {
+    name: "Pro",
+    price: 89,
+    clients: "Up to 100 clients",
+    badge: "Most popular",
+    features: ["Everything in Solo - no feature is locked", "Room for a full book of clients", "Weekly AI summary for every client"],
+    dark: true,
+  },
+  {
+    name: "Studio",
+    price: 199,
+    clients: "No client limit",
+    features: ["Everything in Pro - no feature is locked", "Take on as many clients as you can coach", "One place for a studio's whole roster"],
+  },
+];
+
+/** Rough INR shown beside the dollar price. Billing is in USD; this is a convenience only, so it is
+ *  deliberately rounded and labelled "about". Update when the rate drifts far (owner, Nov 2026). */
+export const RUPEES_PER_USD = 84;
+
+/** Plain promises shown above pricing. Every line is something the product actually does today -
+ *  no testimonial or customer count is implied until there are real ones to quote. */
+export const TRUST = [
+  { k: "7 days", v: "free trial, no card to start" },
+  { k: "0", v: "apps for your clients to install" },
+  { k: "Any time", v: "export your data, or delete it all" },
+  { k: "Never", v: "your clients' data used to train AI models" },
 ];
 
 /** FAQ as a coaches' group chat. Answers describe v2 as it is today. */

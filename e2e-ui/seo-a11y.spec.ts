@@ -12,11 +12,11 @@ test("title, description, canonical, Open Graph and Twitter tags", async ({ page
   await expect(page).toHaveTitle(/Repsy Coach/);
   const meta = (sel: string) => page.locator(sel).first().getAttribute("content");
   expect(await meta('meta[name="description"]')).toMatch(/fitness coaches/);
-  expect(await page.locator('link[rel="canonical"]').getAttribute("href")).toBe("https://repsy-coach.onrender.com/");
+  expect(await page.locator('link[rel="canonical"]').getAttribute("href")).toBe("https://repsy.fit/");
   for (const p of ["og:title", "og:description", "og:url", "og:image", "og:type"]) {
     expect(await meta(`meta[property="${p}"]`), p).toBeTruthy();
   }
-  expect(await meta('meta[property="og:image"]')).toBe("https://repsy-coach.onrender.com/og-image.png");
+  expect(await meta('meta[property="og:image"]')).toBe("https://repsy.fit/og-image.png");
   expect(await meta('meta[name="twitter:card"]')).toBe("summary_large_image");
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.png");
 });
