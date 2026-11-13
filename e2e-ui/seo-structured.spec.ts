@@ -26,9 +26,12 @@ test("the landing copy and the crawlable shell say the same things", async ({ pa
 
 test("index.html carries the shell and valid structured data", () => {
   const html = dist("index.html");
-  expect(html).toContain("data-seo-shell");
-  expect(html).toContain(seo.hero.h1);
-  for (const f of FAQ_CHAT) expect(html).toContain(f.a.slice(0, 50));
+  // The shell sits in <noscript>: in #root it flashed on screen, unstyled, before React booted.
+  const noscript = /<noscript>([\s\S]*?)<\/noscript>/.exec(html)?.[1] ?? "";
+  expect(noscript).toContain("data-seo-shell");
+  expect(html).toContain('<div id="root"></div>');
+  expect(noscript).toContain(seo.hero.h1);
+  for (const f of FAQ_CHAT) expect(noscript).toContain(f.a.slice(0, 50));
   const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
   const types = blocks.map((b) => b["@type"]);
   expect(types).toEqual(["WebSite", "Organization", "SoftwareApplication", "FAQPage"]);

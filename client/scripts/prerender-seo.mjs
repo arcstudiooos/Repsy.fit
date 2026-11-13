@@ -1,9 +1,11 @@
 // Runs after `vite build` (and after prerender-legal.mjs). Three jobs, all for crawlers:
 //
-// 1. A static shell inside <div id="root"> of dist/index.html, built from src/landing-new/seo.json:
+// 1. A static shell in a <noscript> block in dist/index.html, built from src/landing-new/seo.json:
 //    the hero, the six section blurbs, the three prices and the FAQ. The landing itself is a lazy
-//    React chunk, so without this a crawler that doesn't run JavaScript sees an empty page. React
-//    replaces the shell with the same words on first render.
+//    React chunk, so without this a crawler that doesn't run JavaScript sees an empty page.
+//    It lives in <noscript> on purpose: inside #root it was briefly painted, unstyled, before React
+//    booted (the owner saw the flash). Crawlers that don't run scripts still read it, Google renders
+//    the real page, and nobody sees a flash of raw text.
 // 2. Structured data (JSON-LD): WebSite, Organization, SoftwareApplication with its three offers,
 //    and FAQPage from src/landing-new/content.ts. A ld+json block is data, not script, so the
 //    'script-src self' CSP does not apply to it.
@@ -85,7 +87,7 @@ const ld = [
 const indexPath = path.join(dist, "index.html");
 let html = fs.readFileSync(indexPath, "utf8");
 if (!html.includes('<div id="root"></div>')) throw new Error("prerender-seo: index.html has no empty #root to fill");
-html = html.replace('<div id="root"></div>', `<div id="root">${shell}</div>`).replace("</head>", `${ld}\n</head>`);
+html = html.replace('<div id="root"></div>', `<div id="root"></div>\n<noscript>${shell}</noscript>`).replace("</head>", `${ld}\n</head>`);
 fs.writeFileSync(indexPath, html);
 
 // ---------- /pricing: same app, its own title and description ----------

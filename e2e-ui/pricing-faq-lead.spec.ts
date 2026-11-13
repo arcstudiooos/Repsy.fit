@@ -35,7 +35,12 @@ test("3 plans at the published prices, trial noted once, payments honestly 'comi
   await expect(plans.nth(1)).toContainText("$89/mo");
   await expect(plans.nth(2)).toContainText("Studio");
   await expect(plans.nth(2)).toContainText("$199/mo");
-  const body = (await page.locator("body").textContent()) ?? "";
+  const body = await page.evaluate(() => {
+    // The <noscript> shell for non-JS crawlers is in the DOM but never rendered: not visitor copy.
+    const copy = document.body.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll("noscript").forEach((n) => n.remove());
+    return copy.textContent ?? "";
+  });
   expect(body.match(/7-day free trial/gi)).toHaveLength(1);
   expect(body).toContain("Client payments: coming soon.");
   expect(body).not.toMatch(/stripe|checkout|credit card|testimonial|trusted by/i);

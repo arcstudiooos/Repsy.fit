@@ -1,6 +1,15 @@
 // Landing page route, shell and 3D foundation (Prompt 37). Every /api call is mocked.
 import { expect, test, type Page } from "@playwright/test";
 
+const renderedText = (page: Page) =>
+  // Everything a visitor can actually read: the <noscript> shell for non-JS crawlers is in the DOM
+  // but never rendered, so it must not count towards copy rules.
+  page.evaluate(() => {
+    const copy = document.body.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll("noscript").forEach((n) => n.remove());
+    return copy.textContent ?? "";
+  });
+
 async function mockApi(page: Page) {
   const apiCalls: string[] = [];
   await page.route("**/api/**", (route) => {
@@ -66,7 +75,7 @@ test("landing copy sticks to shipped features: no testimonials, logos or user co
   await mockApi(page);
   await page.goto("/?design=classic");
   await expect(page.locator("#features")).toContainText("Plan by hand");
-  const text = (await page.locator("body").textContent()) ?? "";
+  const text = await renderedText(page);
   for (const fact of ["AI Coach, with the reasoning shown", "Plan by hand", "sets, reps and rest", "Progress you can see", "sample client"]) {
     expect(text).toContain(fact);
   }
