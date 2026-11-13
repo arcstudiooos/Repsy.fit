@@ -11,9 +11,12 @@ const plans = (page: Page) => widget(page).getByRole("list", { name: "Demo plan 
 
 async function open(page: Page) {
   const network: string[] = [];
-  // Any API, fetch or XHR request counts (page assets like scripts and fonts don't).
+  // Any API, fetch or XHR request counts (page assets like scripts and fonts don't). Cloudflare's
+  // cookieless analytics beacon is page-wide, nothing to do with the demo, so it is not counted.
   page.on("request", (req) => {
-    if (new URL(req.url()).pathname.startsWith("/api") || ["fetch", "xhr", "websocket", "eventsource"].includes(req.resourceType())) {
+    const url = new URL(req.url());
+    if (url.hostname.endsWith("cloudflareinsights.com")) return;
+    if (url.pathname.startsWith("/api") || ["fetch", "xhr", "websocket", "eventsource"].includes(req.resourceType())) {
       network.push(req.url());
     }
   });

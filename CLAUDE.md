@@ -1124,3 +1124,17 @@ and record it here.
   - `z.ZodIssueCode.custom` is now the plain string `"custom"`.
 - Still open: **prisma 6 -> 7** (`@prisma/config` -> `deepmerge-ts` stack exhaustion, reachable only
   through a malicious config file, so not remotely exploitable). Ask before starting it.
+
+## Analytics (owner, Nov 2026)
+
+- Cloudflare Web Analytics, installed as a `<script defer>` tag at the end of `client/index.html`
+  (Cloudflare's automatic injection never fired on this zone, even with auto_install on). The
+  `data-cf-beacon` token is PUBLIC - it ships in the page source of every site using it.
+- Cookieless: no cookies, no localStorage, no personal data, so no consent banner is needed under
+  DPDP/GDPR. The privacy policy's "we don't track you across sites" line stays true.
+- CSP allows exactly one third party: `static.cloudflareinsights.com` (script-src) and
+  `cloudflareinsights.com` (connect-src). Nothing else third-party may be added without a reason.
+- Tests that assert "no network calls" must ignore `*.cloudflareinsights.com` (see
+  `e2e-ui/demo-widget.spec.ts`): the beacon is page-wide and unrelated to what they measure.
+- If Cloudflare's dashboard is ever switched back to automatic injection, REMOVE the tag first -
+  two beacons double-count every visit.
