@@ -48,7 +48,7 @@ chatRouter.get(
 
 const AskSchema = z.object({
   question: z
-    .string({ required_error: "question is required." })
+    .string({ error: "question is required." })
     .trim()
     .min(1, "question can't be empty."),
 });

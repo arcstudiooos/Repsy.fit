@@ -14,6 +14,7 @@ import { rateLimit } from "../auth/rateLimit.js";
 import { ChangePasswordSchema } from "../auth/schemas.js";
 import { secretMissing, WRONG_CURRENT } from "./auth.js";
 import { asyncHandler } from "./clients.js";
+import { strictWith } from "../validation.js";
 
 export const GOOGLE_NO_PASSWORD = "You sign in with Google, so there's no password to change. Use Forgot password to set one.";
 export const DELETE_WORD = "DELETE";
@@ -58,9 +59,10 @@ clientAccountRouter.get(
   }),
 );
 
-const AccountPatchSchema = z
+const AccountPatchSchema = strictWith(
+z
   .object({
-    name: z.string({ invalid_type_error: "Please enter your name." }).trim().min(1, "Please enter your name.").max(100, "Please keep your name under 100 characters.").optional(),
+    name: z.string({ error: "Please enter your name." }).trim().min(1, "Please enter your name.").max(100, "Please keep your name under 100 characters.").optional(),
     timezone: z
       .string()
       .refine(isTimeZone, BAD_TIMEZONE)
@@ -68,7 +70,7 @@ const AccountPatchSchema = z
       .nullable()
       .optional(),
   })
-  .strict("Only your name and timezone can be changed here.");
+, "Only your name and timezone can be changed here.");
 
 // PATCH /api/client-auth/me/account { name?, timezone? (IANA name or null = use the device's) } -> 204
 clientAccountRouter.patch(
@@ -130,12 +132,13 @@ clientAccountRouter.get(
   }),
 );
 
-const DeleteSchema = z
+const DeleteSchema = strictWith(
+z
   .object({
     password: z.string().optional(),
-    confirm: z.string({ required_error: DELETE_WORD_WRONG }),
+    confirm: z.string({ error: DELETE_WORD_WRONG }),
   })
-  .strict("Only password and confirm can be sent.");
+, "Only password and confirm can be sent.");
 
 // DELETE /api/client-auth/me { password?, confirm: "DELETE" } -> 204, cookie cleared. Deletes the Client
 // row; Postgres cascades every record that belongs to it (plans, check-ins, habits, measurements, messages,

@@ -8,9 +8,9 @@ import { asyncHandler } from "./clients.js";
 import { rateLimit } from "../auth/rateLimit.js";
 
 const NewLeadSchema = z.object({
-  name: z.string({ required_error: "Please enter your name." }).trim().min(1, "Please enter your name.").max(100, "Name is too long."),
+  name: z.string({ error: "Please enter your name." }).trim().min(1, "Please enter your name.").max(100, "Name is too long."),
   email: z
-    .string({ required_error: "Please enter your email." })
+    .string({ error: "Please enter your email." })
     .trim()
     .toLowerCase()
     .min(1, "Please enter your email.")

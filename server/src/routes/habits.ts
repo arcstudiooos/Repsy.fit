@@ -15,16 +15,16 @@ export const habitsRouter = Router({ mergeParams: true });
 const LIMIT_MESSAGE = `A client can have up to ${MAX_ACTIVE_HABITS} habits. Archive one to add another.`;
 
 const NameSchema = z
-  .string({ required_error: "name is required." })
+  .string({ error: "name is required." })
   .trim()
   .min(1, "name is required.")
   .max(60, "name must be 60 characters or fewer.");
 
 const NewHabitSchema = z.object({ name: NameSchema });
 const UpdateHabitSchema = z
-  .object({ name: NameSchema.optional(), active: z.boolean({ invalid_type_error: "active must be true or false." }).optional() })
+  .object({ name: NameSchema.optional(), active: z.boolean({ error: "active must be true or false." }).optional() })
   .refine((v) => v.name !== undefined || v.active !== undefined, "Nothing to change: send a name or active.");
-const LogSchema = z.object({ done: z.boolean({ required_error: "done is required.", invalid_type_error: "done must be true or false." }) });
+const LogSchema = z.object({ done: z.boolean({ error: (issue) => (issue.input === undefined ? "done is required." : "done must be true or false.") }) });
 
 /** The client when it belongs to the signed-in coach; otherwise replies 404 and returns null. */
 async function clientOr404(req: Request, res: Response) {

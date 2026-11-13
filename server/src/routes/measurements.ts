@@ -14,7 +14,7 @@ export const MAX_BODY_FAT_PERCENT = 75;
 
 const tape = (name: string) =>
   z
-    .number({ invalid_type_error: `${name} must be a number.` })
+    .number({ error: `${name} must be a number.` })
     .positive(`${name} must be more than 0 and at most ${MAX_TAPE_CM}.`)
     .max(MAX_TAPE_CM, `${name} must be more than 0 and at most ${MAX_TAPE_CM}.`)
     .nullable()
@@ -22,14 +22,14 @@ const tape = (name: string) =>
 
 export const NewMeasurementSchema = z.object({
   date: z
-    .string({ required_error: "date is required." })
+    .string({ error: "date is required." })
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
   waistCm: tape("waistCm"),
   chestCm: tape("chestCm"),
   armCm: tape("armCm"),
   hipCm: tape("hipCm"),
   bodyFatPercent: z
-    .number({ invalid_type_error: "bodyFatPercent must be a number." })
+    .number({ error: "bodyFatPercent must be a number." })
     .positive(`bodyFatPercent must be more than 0 and at most ${MAX_BODY_FAT_PERCENT}.`)
     .max(MAX_BODY_FAT_PERCENT, `bodyFatPercent must be more than 0 and at most ${MAX_BODY_FAT_PERCENT}.`)
     .nullable()

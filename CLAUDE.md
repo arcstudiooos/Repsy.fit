@@ -1112,7 +1112,15 @@ and record it here.
   re-adding `cors()` is forbidden (same-origin app).
 - Prisma config lives in `server/prisma.config.ts`, not `package.json#prisma` (deprecated in 6.19,
   removed in Prisma 7). That warning on every Render build is gone.
-- Still open, both breaking majors needing a deliberate upgrade: **zod 3 -> 4** (the advisory above;
-  ~25 files use `required_error` / `invalid_type_error` / `errorMap`, all renamed in zod 4) and
-  **prisma 6 -> 7** (`@prisma/config` -> `deepmerge-ts` stack exhaustion, reachable only through a
-  malicious config file, so not remotely exploitable). Ask before starting either.
+- **zod 4 since Nov 2026** (closes GHSA-mrhx-c7xc-m3w5). What changed, and the rules that follow:
+  - `required_error` / `invalid_type_error` / `errorMap` are gone. Use `error: "..."` for one
+    wording, or `error: (issue) => (issue.input === undefined ? "missing" : "wrong type")` when the
+    two cases need different words.
+  - `.strict("message")` takes no argument any more. Use `strictWith(schema, "message")` from
+    `server/src/validation.ts`, which keeps our "Only X and Y can be sent." wording for unknown keys.
+  - **Object-level `.refine` / `.superRefine` now runs even when a field failed its own rules**, so a
+    cross-field check can be handed a raw string where it expected a Date. Guard the types first and
+    return early - the field's own error is already reported (see `CreateSchema` in appointments.ts).
+  - `z.ZodIssueCode.custom` is now the plain string `"custom"`.
+- Still open: **prisma 6 -> 7** (`@prisma/config` -> `deepmerge-ts` stack exhaustion, reachable only
+  through a malicious config file, so not remotely exploitable). Ask before starting it.

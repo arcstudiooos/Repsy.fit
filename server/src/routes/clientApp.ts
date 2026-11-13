@@ -9,6 +9,7 @@ import { rateLimit } from "../auth/rateLimit.js";
 import { clientAccountIdOf, requireActiveClient } from "../auth/clientSession.js";
 import { isDateString } from "./assignments.js";
 import { asyncHandler } from "./clients.js";
+import { strictWith } from "../validation.js";
 
 export const MAX_WINDOW_DAYS = 62;
 export const NOT_FOUND = "Plan not found";
@@ -83,19 +84,20 @@ clientAppRouter.get(
   }),
 );
 
-const DoneSchema = z
+const DoneSchema = strictWith(
+z
   .object({
-    done: z.boolean({ required_error: "done must be true or false.", invalid_type_error: "done must be true or false." }),
+    done: z.boolean({ error: "done must be true or false." }),
     effort: z
-      .number({ invalid_type_error: "Effort must be a whole number from 1 to 10." })
+      .number({ error: "Effort must be a whole number from 1 to 10." })
       .int("Effort must be a whole number from 1 to 10.")
       .min(1, "Effort must be a whole number from 1 to 10.")
       .max(10, "Effort must be a whole number from 1 to 10.")
       .nullable()
       .optional(),
-    note: z.string({ invalid_type_error: "The note must be text." }).trim().max(500, "Please keep the note under 500 characters.").optional(),
+    note: z.string({ error: "The note must be text." }).trim().max(500, "Please keep the note under 500 characters.").optional(),
   })
-  .strict("Only done, effort and note can be sent.");
+, "Only done, effort and note can be sent.");
 
 // POST /api/client-auth/my-assignments/:id/done { done, effort?, note? } -> the updated plan.
 //   done: true  -> status Done, completedAt now, completedBy "client", the effort and note saved (an

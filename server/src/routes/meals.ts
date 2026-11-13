@@ -11,15 +11,15 @@ export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 
 const macro = (label: string) =>
   z
-    .number({ required_error: `${label} is required.`, invalid_type_error: `${label} must be a number from 0 to 1000.` })
+    .number({ error: (issue) => (issue.input === undefined ? `${label} is required.` : `${label} must be a number from 0 to 1000.`) })
     .min(0, `${label} must be a number from 0 to 1000.`)
     .max(1000, `${label} must be a number from 0 to 1000.`);
 
 const MealSchema = z.object({
-  name: z.string({ required_error: "name is required." }).trim().min(1, "name is required.").max(100, "name must be 100 characters or fewer."),
-  mealType: z.enum(MEAL_TYPES, { errorMap: () => ({ message: "mealType must be Breakfast, Lunch, Dinner or Snack." }) }),
+  name: z.string({ error: "name is required." }).trim().min(1, "name is required.").max(100, "name must be 100 characters or fewer."),
+  mealType: z.enum(MEAL_TYPES, { error: "mealType must be Breakfast, Lunch, Dinner or Snack." }),
   calories: z
-    .number({ required_error: "calories is required.", invalid_type_error: "calories must be a whole number from 0 to 10000." })
+    .number({ error: (issue) => (issue.input === undefined ? "calories is required." : "calories must be a whole number from 0 to 10000.") })
     .int("calories must be a whole number from 0 to 10000.")
     .min(0, "calories must be a whole number from 0 to 10000.")
     .max(10000, "calories must be a whole number from 0 to 10000."),

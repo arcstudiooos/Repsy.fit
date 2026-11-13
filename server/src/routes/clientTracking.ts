@@ -19,6 +19,7 @@ import { asyncHandler, validationMessage } from "./clients.js";
 import { NewMeasurementSchema } from "./measurements.js";
 import { CheckInSchema } from "./dailyCheckIns.js";
 import { checkInSummary, NewProgressLogSchema } from "./progress.js";
+import { strictWith } from "../validation.js";
 
 export const TOO_FAR_BACK = "You can only log today or yesterday.";
 export const COACH_ENTERED = "Your coach already logged this day, so it can't be changed here.";
@@ -81,9 +82,10 @@ clientTrackingRouter.get(
   }),
 );
 
-const TickSchema = z
-  .object({ done: z.boolean({ required_error: "done must be true or false.", invalid_type_error: "done must be true or false." }) })
-  .strict("Only done can be sent.");
+const TickSchema = strictWith(
+z
+  .object({ done: z.boolean({ error: "done must be true or false." }) })
+, "Only done can be sent.");
 
 // PUT /api/client-auth/my-habits/:habitId/:date { done } -> { habitId, date, done }. Own active habits only.
 clientTrackingRouter.put(
@@ -126,7 +128,7 @@ clientTrackingRouter.get(
 );
 
 /** The coach's check-in fields and rules, without `date` (it comes from the path). */
-const ClientCheckInSchema = CheckInSchema.omit({ date: true }).strict("Only the check-in fields can be sent.");
+const ClientCheckInSchema = strictWith(CheckInSchema.omit({ date: true }), "Only the check-in fields can be sent.");
 const nullish = <T>(v: T | null | undefined) => (v === undefined ? null : v);
 
 // PUT /api/client-auth/my-checkins/:date { energy?, mood?, sleepHours?, recoveryScore?, waterLiters?, steps?, foodNote? }
@@ -180,9 +182,12 @@ clientTrackingRouter.get(
   }),
 );
 
-const ClientProgressSchema = NewProgressLogSchema.extend({
-  note: z.string().trim().max(500, "Please keep the note under 500 characters.").default(""),
-}).strict("Only date, weightKg, adherence, workoutsDone and note can be sent.");
+const ClientProgressSchema = strictWith(
+  NewProgressLogSchema.extend({
+    note: z.string().trim().max(500, "Please keep the note under 500 characters.").default(""),
+  }),
+  "Only date, weightKg, adherence, workoutsDone and note can be sent.",
+);
 
 // POST /api/client-auth/my-progress { date, weightKg?, adherence?, workoutsDone?, note? } -> 201 the log.
 // Same rules as the coach's form; the log goes to the coach's review queue like any other check-in.
@@ -251,7 +256,7 @@ const MEASUREMENT_SELECT = {
   createdBy: true,
   createdAt: true,
 } as const;
-const ClientMeasurementSchema = NewMeasurementSchema.strict("Only date, waistCm, chestCm, armCm, hipCm, bodyFatPercent and note can be sent.");
+const ClientMeasurementSchema = strictWith(NewMeasurementSchema, "Only date, waistCm, chestCm, armCm, hipCm, bodyFatPercent and note can be sent.");
 export const MEASUREMENT_NOT_FOUND = "Measurement not found";
 
 // GET /api/client-auth/my-measurements -> the client's own measurements, newest first.

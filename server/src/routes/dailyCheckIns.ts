@@ -15,7 +15,7 @@ export const dailyCheckInsRouter = Router({ mergeParams: true });
 
 const oneToFive = (field: string) =>
   z
-    .number({ invalid_type_error: `${field} must be a whole number from 1 to 5.` })
+    .number({ error: `${field} must be a whole number from 1 to 5.` })
     .int(`${field} must be a whole number from 1 to 5.`)
     .min(1, `${field} must be a whole number from 1 to 5.`)
     .max(5, `${field} must be a whole number from 1 to 5.`)
@@ -25,24 +25,24 @@ const SLEEP_MESSAGE = "sleepHours must be a number of hours from 0 to 16, with a
 
 export const CheckInSchema = z.object({
   date: z
-    .string({ required_error: "date is required." })
+    .string({ error: "date is required." })
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
   energy: oneToFive("energy"),
   mood: oneToFive("mood"),
   sleepHours: z
-    .number({ invalid_type_error: SLEEP_MESSAGE })
+    .number({ error: SLEEP_MESSAGE })
     .min(0, SLEEP_MESSAGE)
     .max(16, SLEEP_MESSAGE)
     .refine((v) => Math.abs(v * 10 - Math.round(v * 10)) < 1e-9, SLEEP_MESSAGE) // one decimal at most
     .nullish(),
   recoveryScore: oneToFive("recoveryScore"),
   waterLiters: z
-    .number({ invalid_type_error: "waterLiters must be a number from 0 to 20." })
+    .number({ error: "waterLiters must be a number from 0 to 20." })
     .min(0, "waterLiters must be a number from 0 to 20.")
     .max(20, "waterLiters must be a number from 0 to 20.")
     .nullish(),
   steps: z
-    .number({ invalid_type_error: "steps must be a whole number from 0 to 100000." })
+    .number({ error: "steps must be a whole number from 0 to 100000." })
     .int("steps must be a whole number from 0 to 100000.")
     .min(0, "steps must be a whole number from 0 to 100000.")
     .max(100_000, "steps must be a whole number from 0 to 100000.")

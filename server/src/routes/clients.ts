@@ -3,6 +3,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { z } from "zod";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { prisma } from "../db.js";
+import { strictWith } from "../validation.js";
 
 // Every route here sits behind requireCoach (Prompt 45): all queries filter by the signed-in
 // coach's id (coachIdOf(req)). Rows with coachId NULL (unclaimed demo data) are never returned.
@@ -10,7 +11,7 @@ import { prisma } from "../db.js";
 export const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 
 const NewClientSchema = z.object({
-  name: z.string({ required_error: "Name is required." }).trim().min(1, "Name is required.").max(100),
+  name: z.string({ error: "Name is required." }).trim().min(1, "Name is required.").max(100),
   goal: z.string().trim().min(1, "Goal can't be empty.").max(100).optional(), // free text; default "General fitness"
   level: z.enum(LEVELS).optional(),
   age: z.number().int().min(1).max(120).nullable().optional(),
@@ -171,23 +172,24 @@ clientsRouter.delete(
 // PATCH /api/clients/:clientId/targets { calorieTarget, proteinTargetG } (Prompt 80) -> the client.
 // The coach saves the macro calculator's result as the client's daily targets; null clears one. The ranges
 // cover everything the calculator can produce (Prompt 80 review).
-const TargetsSchema = z
+const TargetsSchema = strictWith(
+z
   .object({
     calorieTarget: z
-      .number({ invalid_type_error: "calorieTarget must be a whole number from 300 to 15000." })
+      .number({ error: "calorieTarget must be a whole number from 300 to 15000." })
       .int("calorieTarget must be a whole number from 300 to 15000.")
       .min(300, "calorieTarget must be a whole number from 300 to 15000.")
       .max(15000, "calorieTarget must be a whole number from 300 to 15000.")
       .nullable()
       .optional(),
     proteinTargetG: z
-      .number({ invalid_type_error: "proteinTargetG must be a number from 0 to 1000." })
+      .number({ error: "proteinTargetG must be a number from 0 to 1000." })
       .min(0, "proteinTargetG must be a number from 0 to 1000.")
       .max(1000, "proteinTargetG must be a number from 0 to 1000.")
       .nullable()
       .optional(),
   })
-  .strict("Only calorieTarget and proteinTargetG can be changed here.")
+, "Only calorieTarget and proteinTargetG can be changed here.")
   .refine((v) => v.calorieTarget !== undefined || v.proteinTargetG !== undefined, "Nothing to change.");
 
 clientsRouter.patch(

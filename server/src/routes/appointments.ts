@@ -10,18 +10,18 @@ import { asyncHandler, findClient } from "./clients.js";
 
 const time = (what: string) =>
   z
-    .string({ required_error: `Please choose the ${what}.` })
+    .string({ error: `Please choose the ${what}.` })
     .datetime({ offset: true, message: `Please choose a real ${what}.` })
     .transform((s) => new Date(s));
 
 const AppointmentFields = z.object({
-  clientId: z.string({ required_error: "Please choose a client." }).min(1, "Please choose a client."),
-  title: z.string({ required_error: "Please add a title." }).trim().min(1, "Please add a title.").max(100, "Please use a title under 100 characters."),
-  type: z.enum(APPOINTMENT_TYPES, { errorMap: () => ({ message: "Please choose Session, Call, Check-in review or Other." }) }),
+  clientId: z.string({ error: "Please choose a client." }).min(1, "Please choose a client."),
+  title: z.string({ error: "Please add a title." }).trim().min(1, "Please add a title.").max(100, "Please use a title under 100 characters."),
+  type: z.enum(APPOINTMENT_TYPES, { error: "Please choose Session, Call, Check-in review or Other." }),
   startsAt: time("start time"),
   endsAt: time("end time"),
   location: z.string().trim().max(300, "Please keep the location or link under 300 characters.").optional(),
-  status: z.enum(APPOINTMENT_STATUSES, { errorMap: () => ({ message: "Please choose Booked, Done, Cancelled or No-show." }) }).optional(),
+  status: z.enum(APPOINTMENT_STATUSES, { error: "Please choose Booked, Done, Cancelled or No-show." }).optional(),
   note: z.string().trim().max(1000, "Please keep the note under 1000 characters.").optional(),
 });
 
@@ -36,8 +36,11 @@ function timesProblem(startsAt: Date, endsAt: Date): string | null {
 }
 
 const CreateSchema = AppointmentFields.superRefine((a, ctx) => {
+  // zod 4 still runs object-level checks when a field failed its own rules, so the values here are
+  // not guaranteed to be Dates yet: that field's own error is already on the pile, so skip.
+  if (!(a.startsAt instanceof Date) || !(a.endsAt instanceof Date)) return;
   const problem = timesProblem(a.startsAt, a.endsAt);
-  if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem, path: ["endsAt"] });
+  if (problem) ctx.addIssue({ code: "custom", message: problem, path: ["endsAt"] });
 });
 const UpdateSchema = AppointmentFields.partial().refine((a) => Object.keys(a).length > 0, "Nothing to change.");
 

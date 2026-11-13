@@ -20,7 +20,7 @@ export const messagesRouter = Router({ mergeParams: true });
 
 const NewMessageSchema = z.object({
   body: z
-    .string({ required_error: "Write a message first.", invalid_type_error: "Write a message first." })
+    .string({ error: "Write a message first." })
     .trim()
     .min(1, "Write a message first.")
     .max(MESSAGE_MAX_CHARS, `Messages can be up to ${MESSAGE_MAX_CHARS} characters.`),

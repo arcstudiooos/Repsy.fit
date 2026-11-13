@@ -15,6 +15,7 @@ import { rateLimit } from "../auth/rateLimit.js";
 import { appBaseUrl } from "../auth/resetToken.js";
 import { newJoinCode, normalizeJoinCode } from "../auth/joinCode.js";
 import { asyncHandler } from "./clients.js";
+import { strictWith } from "../validation.js";
 
 export const BAD_JOIN_CODE = "This join code is not valid. Please ask your coach for a new one.";
 const COACH_GONE = "Your account was not found. Please sign in again.";
@@ -81,12 +82,13 @@ joinCodeRouter.post(
   }),
 );
 
-const PatchSchema = z
+const PatchSchema = strictWith(
+z
   .object({
-    active: z.boolean({ invalid_type_error: "active must be true or false." }).optional(),
-    approveNewClients: z.boolean({ invalid_type_error: "approveNewClients must be true or false." }).optional(),
+    active: z.boolean({ error: "active must be true or false." }).optional(),
+    approveNewClients: z.boolean({ error: "approveNewClients must be true or false." }).optional(),
   })
-  .strict("Only active and approveNewClients can be changed.")
+, "Only active and approveNewClients can be changed.")
   .refine((v) => v.active !== undefined || v.approveNewClients !== undefined, "Nothing to change.");
 
 joinCodeRouter.patch(

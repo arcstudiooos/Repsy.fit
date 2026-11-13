@@ -84,9 +84,9 @@ reviewQueueRouter.get(
 );
 
 const NewItemSchema = z.object({
-  clientId: z.string({ required_error: "clientId is required." }).min(1, "clientId is required."),
+  clientId: z.string({ error: "clientId is required." }).min(1, "clientId is required."),
   kind: z.enum(REVIEW_KINDS).default("suggestion"),
-  title: z.string({ required_error: "title is required." }).trim().min(1, "title is required.").max(200),
+  title: z.string({ error: "title is required." }).trim().min(1, "title is required.").max(200),
   summary: z.string().trim().max(500).default(""),
   type: z.enum(ASSIGNMENT_TYPES).nullish(),
   details: z.string().trim().max(6000).default(""),

@@ -9,17 +9,17 @@ import { asyncHandler, validationMessage } from "./clients.js";
 
 /** Same limits as the Manual Planner's sets / rest controls (reps is free text: "AMRAP", "30 sec"). */
 const ExerciseSchema = z.object({
-  name: z.string({ required_error: "Each exercise needs a name." }).trim().min(1, "Each exercise needs a name.").max(100, "Exercise names must be 100 characters or fewer."),
-  sets: z.number({ invalid_type_error: "sets must be a whole number from 1 to 10." }).int("sets must be a whole number from 1 to 10.").min(1, "sets must be a whole number from 1 to 10.").max(10, "sets must be a whole number from 1 to 10."),
-  reps: z.string({ required_error: "Each exercise needs reps." }).trim().min(1, "Each exercise needs reps.").max(30, "reps must be 30 characters or fewer."),
-  rest: z.number({ invalid_type_error: "rest must be whole seconds from 6 to 3600." }).int("rest must be whole seconds from 6 to 3600.").min(6, "rest must be whole seconds from 6 to 3600.").max(3600, "rest must be whole seconds from 6 to 3600."),
+  name: z.string({ error: "Each exercise needs a name." }).trim().min(1, "Each exercise needs a name.").max(100, "Exercise names must be 100 characters or fewer."),
+  sets: z.number({ error: "sets must be a whole number from 1 to 10." }).int("sets must be a whole number from 1 to 10.").min(1, "sets must be a whole number from 1 to 10.").max(10, "sets must be a whole number from 1 to 10."),
+  reps: z.string({ error: "Each exercise needs reps." }).trim().min(1, "Each exercise needs reps.").max(30, "reps must be 30 characters or fewer."),
+  rest: z.number({ error: "rest must be whole seconds from 6 to 3600." }).int("rest must be whole seconds from 6 to 3600.").min(6, "rest must be whole seconds from 6 to 3600.").max(3600, "rest must be whole seconds from 6 to 3600."),
 });
 
 const TemplateSchema = z.object({
-  name: z.string({ required_error: "name is required." }).trim().min(1, "name is required.").max(100, "name must be 100 characters or fewer."),
+  name: z.string({ error: "name is required." }).trim().min(1, "name is required.").max(100, "name must be 100 characters or fewer."),
   focus: z.string().trim().max(100, "focus must be 100 characters or fewer.").default(""),
   exercises: z
-    .array(ExerciseSchema, { required_error: "exercises are required." })
+    .array(ExerciseSchema, { error: "exercises are required." })
     .min(1, "Add at least one exercise.")
     .max(50, "A template can have up to 50 exercises."),
   notes: z.string().trim().max(2000, "notes must be 2000 characters or fewer.").default(""),

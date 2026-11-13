@@ -17,7 +17,7 @@ const amount = (what: string) => {
   const aWhat = /^[aeiou]/i.test(what) ? `an ${what}` : `a ${what}`;
   return (
   z
-    .number({ required_error: `Please enter the ${what}.`, invalid_type_error: `Please enter the ${what} as a number.` })
+    .number({ error: (issue) => (issue.input === undefined ? `Please enter the ${what}.` : `Please enter the ${what} as a number.`) })
     // At least 0.01: a "positive" float like 0.000000005 would otherwise pass and show as 0.00.
     .refine((n) => Math.round(n * 100) >= 1, `Please enter ${aWhat} of at least 0.01.`)
     .refine((n) => n <= MAX_AMOUNT, `Please enter ${aWhat} of ${MAX_AMOUNT.toLocaleString("en")} or less.`)
@@ -27,24 +27,24 @@ const amount = (what: string) => {
 };
 
 const date = (what: string) =>
-  z.string({ required_error: `Please choose the ${what}.` }).refine(isDateString, `Please choose a real ${what}.`);
+  z.string({ error: `Please choose the ${what}.` }).refine(isDateString, `Please choose a real ${what}.`);
 
 const PlanSchema = z
   .object({
-    planName: z.string({ required_error: "Please name the plan." }).trim().min(1, "Please name the plan.").max(100, "Please use a plan name under 100 characters."),
+    planName: z.string({ error: "Please name the plan." }).trim().min(1, "Please name the plan.").max(100, "Please use a plan name under 100 characters."),
     priceAmount: amount("price"),
-    billingCycle: z.enum(BILLING_CYCLES, { errorMap: () => ({ message: "Please choose Monthly, Quarterly, Yearly or One-time." }) }),
+    billingCycle: z.enum(BILLING_CYCLES, { error: "Please choose Monthly, Quarterly, Yearly or One-time." }),
     startDate: date("start date"),
     /** Defaults to startDate for a new plan. Only sent when the coach sets or changes it. */
     nextDueDate: date("next due date").optional(),
-    status: z.enum(PLAN_STATUSES, { errorMap: () => ({ message: "Please choose Active, Paused or Ended." }) }).optional(),
+    status: z.enum(PLAN_STATUSES, { error: "Please choose Active, Paused or Ended." }).optional(),
   })
   .refine((p) => !p.nextDueDate || p.nextDueDate >= p.startDate, "The next due date can't be before the start date.");
 
 const PaymentSchema = z.object({
   amount: amount("amount"),
   paidOn: date("payment date"),
-  method: z.enum(PAYMENT_METHODS, { errorMap: () => ({ message: "Please choose Cash, UPI, Card, Bank or Other." }) }),
+  method: z.enum(PAYMENT_METHODS, { error: "Please choose Cash, UPI, Card, Bank or Other." }),
   note: z.string().trim().max(500, "Please keep the note under 500 characters.").optional(),
 });
 

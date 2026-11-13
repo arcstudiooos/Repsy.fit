@@ -2,13 +2,14 @@
 // The client re-exports this file from client/src/authSchemas.ts, so both sides validate with
 // the exact same rules. Only depends on zod - keep it free of server-only imports.
 import { z } from "zod";
+import { strictWith } from "../validation.js";
 
 export const PASSWORD_MIN_LENGTH = 10;
 /** bcrypt only uses the first 72 bytes of a password; longer ones are refused, not cut. */
 export const PASSWORD_MAX_BYTES = 72;
 
 const email = z
-  .string({ required_error: "Please enter your email." })
+  .string({ error: "Please enter your email." })
   .trim()
   .min(1, "Please enter your email.")
   .max(254, "That email is too long.")
@@ -16,13 +17,13 @@ const email = z
   .transform((e) => e.toLowerCase());
 
 const name = z
-  .string({ required_error: "Please enter your name." })
+  .string({ error: "Please enter your name." })
   .trim()
   .min(1, "Please enter your name.")
   .max(100, "Please use a name under 100 characters.");
 
 const newPassword = z
-  .string({ required_error: "Please choose a password." })
+  .string({ error: "Please choose a password." })
   .min(PASSWORD_MIN_LENGTH, `Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`)
   .refine((p) => new TextEncoder().encode(p).length <= PASSWORD_MAX_BYTES, "That password is too long. Please use a shorter one (72 bytes at most; emoji and accents count double).");
 
@@ -30,23 +31,23 @@ export const RegisterSchema = z.object({ name, email, password: newPassword });
 
 export const LoginSchema = z.object({
   email,
-  password: z.string({ required_error: "Please enter your password." }).min(1, "Please enter your password."),
+  password: z.string({ error: "Please enter your password." }).min(1, "Please enter your password."),
 });
 
 // Password reset and account settings (Prompt 47).
 export const ForgotSchema = z.object({ email });
 export const ResetSchema = z.object({
-  token: z.string({ required_error: "This reset link is not valid any more. Please ask for a new one." }).min(1, "This reset link is not valid any more. Please ask for a new one.").max(200),
+  token: z.string({ error: "This reset link is not valid any more. Please ask for a new one." }).min(1, "This reset link is not valid any more. Please ask for a new one.").max(200),
   password: newPassword,
 });
 export const UpdateNameSchema = z.object({ name });
 /** Prompt 68: the coach's single currency for plan prices and payments. */
 export const COACH_CURRENCIES = ["INR", "USD"] as const;
 export const UpdateCurrencySchema = z.object({
-  currency: z.enum(COACH_CURRENCIES, { errorMap: () => ({ message: "Please choose INR or USD." }) }),
+  currency: z.enum(COACH_CURRENCIES, { error: "Please choose INR or USD." }),
 });
 export const ChangePasswordSchema = z.object({
-  currentPassword: z.string({ required_error: "Please enter your current password." }).min(1, "Please enter your current password."),
+  currentPassword: z.string({ error: "Please enter your current password." }).min(1, "Please enter your current password."),
   newPassword,
 });
 
@@ -54,14 +55,14 @@ export const ChangePasswordSchema = z.object({
 export const BAD_INVITE = "This invite link is not valid any more. Please ask your coach for a new one.";
 export const InviteSchema = z.object({ email });
 export const ClientSetPasswordSchema = z.object({
-  token: z.string({ required_error: BAD_INVITE }).min(1, BAD_INVITE).max(200),
+  token: z.string({ error: BAD_INVITE }).min(1, BAD_INVITE).max(200),
   password: newPassword,
 });
 export const ClientLoginSchema = LoginSchema;
 
 // Joining with a coach's code (Prompt 77): same name, email and password rules as coach sign-up.
 export const ClientJoinSchema = z.object({
-  code: z.string({ required_error: "This join code is not valid. Please ask your coach for a new one." }).max(40),
+  code: z.string({ error: "This join code is not valid. Please ask your coach for a new one." }).max(40),
   name,
   email,
   password: newPassword,
@@ -72,23 +73,24 @@ export const ClientResetSchema = ResetSchema;
 /** Prompt 77: the welcome questions. The same goal/level/number ranges as the coach's client form. */
 export const CLIENT_LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
 export const CLIENT_UNITS = ["kg", "lb"] as const;
-export const ClientProfileSchema = z
+export const ClientProfileSchema = strictWith(
+z
   .object({
     goal: z.string().trim().min(1, "Goal can't be empty.").max(100, "Please keep the goal under 100 characters.").optional(),
-    age: z.number({ invalid_type_error: "Age must be a whole number." }).int("Age must be a whole number.").min(18, "You need to be 18 or over to use Repsy.").max(120, "Please enter a real age.").nullable().optional(),
-    heightCm: z.number({ invalid_type_error: "Height must be a number." }).min(50, "Height looks too small.").max(300, "Height looks too big.").nullable().optional(),
-    weightKg: z.number({ invalid_type_error: "Weight must be a number." }).min(20, "Weight looks too small.").max(500, "Weight looks too big.").nullable().optional(),
-    level: z.enum(CLIENT_LEVELS, { errorMap: () => ({ message: "Please pick Beginner, Intermediate or Advanced." }) }).optional(),
+    age: z.number({ error: "Age must be a whole number." }).int("Age must be a whole number.").min(18, "You need to be 18 or over to use Repsy.").max(120, "Please enter a real age.").nullable().optional(),
+    heightCm: z.number({ error: "Height must be a number." }).min(50, "Height looks too small.").max(300, "Height looks too big.").nullable().optional(),
+    weightKg: z.number({ error: "Weight must be a number." }).min(20, "Weight looks too small.").max(500, "Weight looks too big.").nullable().optional(),
+    level: z.enum(CLIENT_LEVELS, { error: "Please pick Beginner, Intermediate or Advanced." }).optional(),
     injuries: z.string().trim().max(1000, "Please keep this under 1000 characters.").optional(),
-    units: z.enum(CLIENT_UNITS, { errorMap: () => ({ message: "Please pick kg or lb." }) }).optional(),
+    units: z.enum(CLIENT_UNITS, { error: "Please pick kg or lb." }).optional(),
     /** Prompt 80: the weekday for the weekly check-in, 0 = Sunday ... 6 = Saturday. */
-    weeklyCheckInDay: z.number({ invalid_type_error: "Please pick a day of the week." }).int("Please pick a day of the week.").min(0, "Please pick a day of the week.").max(6, "Please pick a day of the week.").optional(),
+    weeklyCheckInDay: z.number({ error: "Please pick a day of the week." }).int("Please pick a day of the week.").min(0, "Please pick a day of the week.").max(6, "Please pick a day of the week.").optional(),
     /** The client's explicit consent to store the health details they enter (weight, height, injuries). */
-    healthConsent: z.literal(true, { errorMap: () => ({ message: "healthConsent can only be true." }) }).optional(),
+    healthConsent: z.literal(true, { error: "healthConsent can only be true." }).optional(),
     /** True for "Skip for now": nothing else is saved, the welcome step just stops showing. */
     skip: z.boolean().optional(),
   })
-  .strict("Only the welcome questions can be changed here.");
+, "Only the welcome questions can be changed here.");
 export type ClientProfileInput = z.infer<typeof ClientProfileSchema>;
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;
@@ -105,8 +107,8 @@ export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
  * mis-click. The confirm word is compared exactly, so a lowercase "delete" is refused.
  */
 export const DeleteAccountSchema = z.object({
-  password: z.string({ required_error: "Please enter your password." }).min(1, "Please enter your password."),
+  password: z.string({ error: "Please enter your password." }).min(1, "Please enter your password."),
   confirm: z.literal("DELETE", {
-    errorMap: () => ({ message: "To delete your account, type DELETE and enter your password." }),
+    error: "To delete your account, type DELETE and enter your password.",
   }),
 });

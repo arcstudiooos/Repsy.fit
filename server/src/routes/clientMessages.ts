@@ -10,6 +10,7 @@ import { clientAccountIdOf, requireActiveClient } from "../auth/clientSession.js
 import { rateLimit } from "../auth/rateLimit.js";
 import { asyncHandler } from "./clients.js";
 import { MESSAGE_MAX_CHARS } from "./messages.js";
+import { strictWith } from "../validation.js";
 
 /** How many of the newest messages the client app shows. */
 export const CLIENT_THREAD_SIZE = 100;
@@ -19,15 +20,16 @@ export const NO_COACH = "You don't have a coach to message right now.";
 export const TOO_FAST = "You're sending messages too fast. Please wait a few minutes and try again.";
 
 const MESSAGE_SELECT = { id: true, sender: true, body: true, createdAt: true, readAt: true } as const;
-const ClientMessageSchema = z
+const ClientMessageSchema = strictWith(
+z
   .object({
     body: z
-      .string({ required_error: "Write a message first.", invalid_type_error: "Write a message first." })
+      .string({ error: "Write a message first." })
       .trim()
       .min(1, "Write a message first.")
       .max(MESSAGE_MAX_CHARS, `Messages can be up to ${MESSAGE_MAX_CHARS} characters.`),
   })
-  .strict("Only the message text can be sent.");
+, "Only the message text can be sent.");
 
 export const clientMessagesRouter = Router();
 clientMessagesRouter.use(["/my-messages"], requireActiveClient);

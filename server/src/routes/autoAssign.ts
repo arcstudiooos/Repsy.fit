@@ -10,7 +10,7 @@ import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 const AutoAssignSchema = z.object({
-  type: z.enum(ASSIGNMENT_TYPES, { required_error: "type is required." }),
+  type: z.enum(ASSIGNMENT_TYPES, { error: "type is required." }),
   date: z
     .string()
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form.")

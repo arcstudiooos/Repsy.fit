@@ -20,14 +20,14 @@ export function isDateString(value: string) {
 }
 
 const NewAssignmentSchema = z.object({
-  type: z.enum(ASSIGNMENT_TYPES, { required_error: "type is required." }),
-  title: z.string({ required_error: "title is required." }).trim().min(1, "title can't be empty."),
-  details: z.string({ required_error: "details is required." }).trim().min(1, "details can't be empty."),
+  type: z.enum(ASSIGNMENT_TYPES, { error: "type is required." }),
+  title: z.string({ error: "title is required." }).trim().min(1, "title can't be empty."),
+  details: z.string({ error: "details is required." }).trim().min(1, "details can't be empty."),
   reasoning: z.string().trim().default(""),
   source: z.enum(ASSIGNMENT_SOURCES).default("manual"),
   status: z.enum(ASSIGNMENT_STATUSES).default("Active"),
   /** Prompt 80: meals from the coach's own library, for Nutrition plans only (checked against the coach). */
-  mealIds: z.array(z.string().min(1).max(40), { invalid_type_error: "mealIds must be a list of meal ids." }).max(10, "Attach at most 10 meals.").optional(),
+  mealIds: z.array(z.string().min(1).max(40), { error: "mealIds must be a list of meal ids." }).max(10, "Attach at most 10 meals.").optional(),
   date: z
     .string()
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form.")
@@ -35,7 +35,7 @@ const NewAssignmentSchema = z.object({
 });
 
 const StatusSchema = z.object({
-  status: z.enum(ASSIGNMENT_STATUSES, { required_error: "status is required." }),
+  status: z.enum(ASSIGNMENT_STATUSES, { error: "status is required." }),
 });
 
 /** Nov 2026: the Plans "Edit" form. Only these four fields; type, source, status, client and coach never change here. */

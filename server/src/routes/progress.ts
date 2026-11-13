@@ -8,7 +8,7 @@ import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 export const NewProgressLogSchema = z.object({
   date: z
-    .string({ required_error: "date is required." })
+    .string({ error: "date is required." })
     .refine(isDateString, "date must be a real date in YYYY-MM-DD form."),
   weightKg: z.number().positive("weightKg must be more than 0.").max(500).nullable().optional(),
   adherence: z
