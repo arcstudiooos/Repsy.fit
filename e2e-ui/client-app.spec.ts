@@ -75,12 +75,16 @@ test("Today lists today's plans in type order, and Mark done / Undo work", async
   await expect(list.nth(1)).toContainText("High-protein day");
   // Grouped by type (chips on the cards; no repeated section headings since the client UI pass).
   await expect(page.getByRole("region", { name: "Today's plans" }).getByRole("heading", { level: 2 })).toHaveCount(0);
-  await expect(page.getByText("0 of 3 done")).toBeVisible();
+  await expect(page.getByText("Today: 0 of 3 plans")).toBeVisible();
+  // The workout card starts the workout instead of a blind Mark done (finishing happens inside the plan).
+  await expect(list.nth(0).getByRole("link", { name: "Start workout" })).toBeVisible();
+  await expect(list.nth(0).getByRole("button", { name: /Mark Lower body A/ })).toHaveCount(0);
+  await expect(list.nth(0)).toContainText("2 exercises · Back Squat");
   await page.getByRole("button", { name: "Mark 10k steps done" }).click();
-  await expect(page.getByText("1 of 3 done")).toBeVisible();
+  await expect(page.getByText("Today: 1 of 3 plans")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mark 10k steps as not done" })).toHaveText("Undo");
   await page.getByRole("button", { name: "Mark 10k steps as not done" }).click();
-  await expect(page.getByText("0 of 3 done")).toBeVisible();
+  await expect(page.getByText("Today: 0 of 3 plans")).toBeVisible();
   expect(marks).toEqual([{ id: "h1", done: true }, { id: "h1", done: false }]);
   await expect(page.getByRole("region", { name: "Next session" })).toContainText("Form check");
   await expect(page.getByRole("region", { name: "Streaks" })).toContainText("3 days");

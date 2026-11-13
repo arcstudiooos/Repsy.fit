@@ -1015,3 +1015,13 @@ and record it here.
   for timers. Client-app section headings all use `card-title`.
 - Check-ins: daily form has unit placeholders and a sticky Save on phones; weekly "Plan followed (%)"
   has 50 / 70 / 90 / 100 quick picks.
+
+## Client app UI pass, batch 2 (owner, Nov 2026)
+
+- Today: a `TodaySummary` bar ("Today: 1 of 2 plans · 2 of 3 habits" + fill) replaces the old "N of M done"
+  line; wide screens show plans beside habits/check-ins (two columns). Plan cards are fully tappable and
+  carry a one-line preview (workouts: "4 exercises · Back Squat 50 kg"; nutrition: kcal · protein).
+- Workout cards offer "Start workout" (opens the plan) instead of a blind one-tap Mark done - finishing
+  happens inside the plan with ticks, timer and effort. Other types keep a secondary Mark done.
+- Check-in cards read as actions (› chevron, "✓ Checked in today" after submitting). Week view marks past
+  undone plans "Missed".

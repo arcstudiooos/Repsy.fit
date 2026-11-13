@@ -17,11 +17,11 @@ import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
 import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../types";
 import { fmtDay, fmtTime, MyPlanSection, MySessionsSection } from "./sections";
-import { parsePlanLines } from "./planLines";
+import { parsePlanLines, type PlanLine } from "./planLines";
 import { RestTimer } from "./RestTimer";
 import { MeSettings } from "./MeSettings";
 import { MessagesView, CLIENT_MESSAGES_POLL_MS } from "./MessagesView";
-import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, WeeklyPage } from "./Tracking";
+import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, TodaySummary, WeeklyPage } from "./Tracking";
 
 // Prompt 81: the charts (recharts) load only when the Progress tab opens.
 const ProgressView = lazy(() => import("./ProgressView"));
@@ -186,17 +186,45 @@ function ErrorBox({ error, onRetry }: { error: unknown; onRetry: () => void }) {
 
 const planHref = (id: string) => `/client/plan/${encodeURIComponent(id)}`;
 
+/** One line under a plan title: what's inside, before opening it. Nothing for done plans. */
+function planPreview(plan: ClientAssignment): string {
+  const lines = parsePlanLines(plan.details);
+  const exercises = lines.filter((l) => l.kind === "exercise");
+  if (plan.type === "Workout" && exercises.length > 0) {
+    const first = exercises[0] as Extract<PlanLine, { kind: "exercise" }>;
+    const head = `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}`;
+    return `${head} · ${first.name}${first.load ? ` ${first.load}` : ""}`;
+  }
+  const text = plan.details.replace(/\s+/g, " ").trim();
+  if (plan.type === "Nutrition") {
+    const kcal = /(\d[\d,]*)\s*kcal/i.exec(text);
+    const protein = /(\d[\d,]*)\s*g\s*protein/i.exec(text);
+    if (kcal || protein) return [kcal && `${kcal[1]} kcal`, protein && `${protein[1]} g protein`].filter(Boolean).join(" · ");
+  }
+  return text.length > 72 ? `${text.slice(0, 71).trimEnd()}…` : text;
+}
+
 function PlanRow({ plan, showMark }: { plan: ClientAssignment; showMark: boolean }) {
   const refresh = useRefreshPlans();
   const mark = useMutation({ mutationFn: (done: boolean) => markMyAssignment(plan.id, { done }), onSuccess: refresh });
   const done = plan.status === "Done";
+  const workout = plan.type === "Workout";
   // Undo clears the effort and note sent with it: ask first when there is one.
   const toggle = () => {
     if (done && (plan.clientEffort != null || plan.clientNote) && !window.confirm("Mark as not done? Your effort and note for it will be removed.")) return;
     mark.mutate(!done);
   };
+  const open = () => navigate(planHref(plan.id));
+  const preview = done ? "" : planPreview(plan);
   return (
-    <li className="card p-4">
+    <li
+      className="card cursor-pointer p-4 hover:border-dim"
+      onClick={(e) => {
+        // The whole card opens the plan; its own buttons and links keep working.
+        if ((e.target as HTMLElement).closest("a, button")) return;
+        open();
+      }}
+    >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -208,20 +236,28 @@ function PlanRow({ plan, showMark }: { plan: ClientAssignment; showMark: boolean
             onClick={(e) => {
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
               e.preventDefault();
-              navigate(planHref(plan.id));
+              open();
             }}
             className={`mt-1 block text-lg font-semibold underline-offset-4 hover:underline ${done ? "text-dim" : "text-text"}`}
           >
             {plan.title}
           </a>
+          {preview && <p className="mt-0.5 truncate text-sm text-dim">{preview}</p>}
         </div>
-        {showMark && (
+        {/* A workout is finished INSIDE the plan (ticks, timer, effort), so its card starts it instead
+            of offering a blind one-tap Mark done (owner, Nov 2026). */}
+        {showMark && workout && !done && (
+          <a href={planHref(plan.id)} onClick={(e) => { e.preventDefault(); open(); }} className="btn btn-primary min-h-11 shrink-0">
+            Start workout
+          </a>
+        )}
+        {showMark && (!workout || done) && (
           <button
             type="button"
             disabled={mark.isPending}
             aria-label={done ? `Mark ${plan.title} as not done` : `Mark ${plan.title} done`}
             onClick={toggle}
-            className={`btn min-h-11 shrink-0 ${done ? "btn-secondary" : "btn-primary"}`}
+            className="btn btn-secondary min-h-11 shrink-0"
           >
             {mark.isPending ? "Saving..." : done ? "Undo" : "Mark done"}
           </button>
@@ -266,7 +302,13 @@ function TodayView() {
     <>
       <h1 className="text-3xl">Today</h1>
       <p className="mt-1 text-sm text-dim">{heading}</p>
-      <section aria-label="Today's plans" className="mt-5">
+      <div className="mt-5">
+        {plans.isSuccess && (
+          <TodaySummary today={today} plansDone={plans.data.filter((p) => p.status === "Done").length} plansTotal={plans.data.length} />
+        )}
+      </div>
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start lg:gap-5">
+      <section aria-label="Today's plans">
         {plans.isPending ? (
           <LoadingState />
         ) : plans.isError ? (
@@ -278,9 +320,6 @@ function TodayView() {
           </div>
         ) : (
           <>
-            <p className="mb-3 text-sm text-dim">
-              {plans.data.filter((p) => p.status === "Done").length} of {plans.data.length} done
-            </p>
             <div className="grid gap-5">
               {ASSIGNMENT_TYPES.filter((type) => plans.data.some((p) => p.type === type)).map((type) => (
                 <section key={type} aria-label={type}>
@@ -297,9 +336,10 @@ function TodayView() {
           </>
         )}
       </section>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5 grid gap-3 lg:mt-0">
         <TodayHabits today={today} />
         <CheckInPrompts today={today} />
+      </div>
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         {/* These cards only show when they have something to say (owner, Nov 2026). */}
@@ -406,6 +446,7 @@ function WeekView() {
                           >
                             {p.title}
                           </a>
+                          {p.status !== "Done" && key < today && <span className="shrink-0 text-xs text-dim">Missed</span>}
                           <span className="sr-only">{p.status === "Done" ? "(done)" : "(not done yet)"}</span>
                         </li>
                       ))}

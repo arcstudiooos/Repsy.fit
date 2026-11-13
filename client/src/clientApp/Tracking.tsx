@@ -117,6 +117,31 @@ export function TodayHabits({ today }: { today: string }) {
   );
 }
 
+/** "Today: 1 of 2 plans · 2 of 3 habits" with a fill bar - the day at a glance (owner, Nov 2026). */
+export function TodaySummary({ today, plansDone, plansTotal }: { today: string; plansDone: number; plansTotal: number }) {
+  const habits = useQuery({ queryKey: queryKeys.myHabits(today), queryFn: () => getMyHabits(today) });
+  const habitList = habits.data?.habits ?? [];
+  const habitsDone = habitList.filter((h) => h.week[h.week.length - 1] === true).length;
+  const total = plansTotal + habitList.length;
+  if (total === 0) return null;
+  const done = plansDone + habitsDone;
+  const parts = [
+    plansTotal > 0 && `${plansDone} of ${plansTotal} plan${plansTotal === 1 ? "" : "s"}`,
+    habitList.length > 0 && `${habitsDone} of ${habitList.length} habit${habitList.length === 1 ? "" : "s"}`,
+  ].filter(Boolean);
+  return (
+    <div className="mb-3">
+      <p className="text-sm font-semibold text-text">
+        Today: {parts.join(" · ")}
+        {done === total && <span className="ml-1 text-accent2">✓ all done</span>}
+      </p>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface2" aria-hidden="true">
+        <div className="h-full rounded-full bg-accent2 transition-[width] duration-300" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export function CheckInPrompts({ today }: { today: string }) {
   const checkIn = useQuery({
     queryKey: queryKeys.myCheckIn(today),
@@ -136,26 +161,26 @@ export function CheckInPrompts({ today }: { today: string }) {
         onClick={linkTo("/client/checkin")}
         className="card block p-4 hover:border-dim"
       >
-        <p className="font-body text-base font-bold text-text">
-          How was today?
+        <p className="card-title flex items-center justify-between text-text">
+          {doneToday ? "✓ Checked in today" : "How was today?"}
+          <span aria-hidden="true" className="text-dim">
+            ›
+          </span>
         </p>
-        <p className="mt-1 text-sm text-dim">
-          {doneToday
-            ? "Checked in ✓ - tap to change it."
-            : "Energy, mood, sleep - 30 seconds."}
-        </p>
+        <p className="mt-1 text-sm text-dim">{doneToday ? "Tap to change today's answers." : "Check in - energy, mood, sleep. 30 seconds."}</p>
       </a>
       <a
         href="/client/weekly"
         onClick={linkTo("/client/weekly")}
         className={`card block p-4 hover:border-dim ${isWeeklyDay ? "border-accent2" : ""}`}
       >
-        <p className="font-body text-base font-bold text-text">
+        <p className="card-title flex items-center justify-between text-text">
           {isWeeklyDay ? "It's weekly check-in day" : "Weekly check-in"}
+          <span aria-hidden="true" className="text-dim">
+            ›
+          </span>
         </p>
-        <p className="mt-1 text-sm text-dim">
-          Weight, how the week went, workouts done. Your coach reviews it.
-        </p>
+        <p className="mt-1 text-sm text-dim">Weight, how the week went, workouts done. Your coach reviews it.</p>
       </a>
     </div>
   );
