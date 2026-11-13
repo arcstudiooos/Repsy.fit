@@ -262,6 +262,11 @@ describe("security headers", () => {
   it("the policy refuses inline scripts and framing, and allows only our own origin to be called", () => {
     expect(CONTENT_SECURITY_POLICY).toContain("script-src 'self'");
     expect(CONTENT_SECURITY_POLICY).not.toContain("'unsafe-eval'");
+    // The ONLY third party that may run or be called is Cloudflare's cookieless analytics beacon.
+    const scriptSrc = /script-src ([^;]*)/.exec(CONTENT_SECURITY_POLICY)?.[1] ?? "";
+    expect(scriptSrc.trim()).toBe("'self' https://static.cloudflareinsights.com");
+    const connectSrc = /connect-src ([^;]*)/.exec(CONTENT_SECURITY_POLICY)?.[1] ?? "";
+    expect(connectSrc.trim()).toBe("'self' https://static.cloudflareinsights.com https://cloudflareinsights.com");
     // 'unsafe-inline' is allowed for STYLE only (inline style attributes), never for script.
     expect(CONTENT_SECURITY_POLICY).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
     expect(/script-src [^;]*unsafe-inline/.test(CONTENT_SECURITY_POLICY)).toBe(false);

@@ -5,7 +5,9 @@
 //   - Google Fonts supplies one stylesheet (fonts.googleapis.com) and the font files (fonts.gstatic.com)
 //   - Tailwind-style inline `style` attributes are used throughout, so style-src needs 'unsafe-inline'
 //     (a nonce cannot cover a style ATTRIBUTE)
-//   - three.js / GSAP ship inside our own bundle: no script CDN, so script-src stays 'self'
+//   - three.js / GSAP ship inside our own bundle, so the only third-party script is Cloudflare Web
+//     Analytics (cookieless page counts, injected by Cloudflare's proxy): static.cloudflareinsights.com
+//     serves the beacon and receives the hits
 //   - CSV download uses a blob: URL, and images may be data: URLs
 import type { NextFunction, Request, Response } from "express";
 
@@ -18,11 +20,13 @@ export const CONTENT_SECURITY_POLICY = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self'",
+  // Cloudflare Web Analytics' beacon (owner, Nov 2026). Cookieless: no personal data, no consent
+  // banner needed. Nothing else third-party may run.
+  "script-src 'self' https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' data: blob:",
-  "connect-src 'self'",
+  "connect-src 'self' https://static.cloudflareinsights.com https://cloudflareinsights.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");
