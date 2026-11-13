@@ -343,3 +343,14 @@ describe("search engines", () => {
     expect(onSite.headers["x-robots-tag"]).toBeUndefined();
   });
 });
+
+describe("request size", () => {
+  it("refuses a body over 32 KB before any validation runs", async () => {
+    const big = { name: "x".repeat(40_000), email: "a@b.com" };
+    const res = await supertest(app).post("/api/leads").set("Content-Type", "application/json").send(JSON.stringify(big));
+    expect(res.status).toBe(413);
+    // A normal body still goes through the usual validation, not the size guard.
+    const ok = await supertest(app).post("/api/leads").send({ name: "Ranesh", email: "r@example.com" });
+    expect(ok.status).not.toBe(413);
+  });
+});

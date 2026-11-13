@@ -61,7 +61,10 @@ app.use(securityHeaders);
 // (mounted before express.json, which would re-serialise it and break the signature).
 app.use("/api/inbound/resend", express.raw({ type: "*/*", limit: "1mb" }));
 app.use("/api/inbound", inboundMailRouter);
-app.use(express.json());
+// 32 KB is far above anything the app sends (the longest field is 6,000 characters) and far below
+// what an attacker needs to make a validator chew through memory - see the zod advisory note in
+// CLAUDE.md. Oversized bodies get a 413 before any parsing or validation happens.
+app.use(express.json({ limit: "32kb" }));
 app.use(sessionMiddleware);
 // Client sessions (Prompt 65): reads only the client cookie, sets only req.clientAccountId.
 app.use(clientSessionMiddleware);
@@ -155,8 +158,14 @@ app.use("/api", (_req, res) => {
 // Errors always come back as JSON { error } (API contract), never an HTML page.
 app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (res.headersSent) return next(err);
-  if (err && typeof err === "object" && (err as { type?: string }).type === "entity.parse.failed") {
+  const type = err && typeof err === "object" ? (err as { type?: string }).type : undefined;
+  if (type === "entity.parse.failed") {
     res.status(400).json({ error: "Request body is not valid JSON." });
+    return;
+  }
+  // Over the 32 KB cap: a plain 413, not a 500 (nothing went wrong on our side).
+  if (type === "entity.too.large") {
+    res.status(413).json({ error: "That request is too large." });
     return;
   }
   console.error(err);

@@ -1101,3 +1101,18 @@ and record it here.
   and re-serialising the body breaks the signature.
 - Never log a message body - subject and sender only - and never the API key.
 - Unset env vars make the route answer 503; everything else keeps working.
+
+## Dependency advisories (Nov 2026)
+
+- Request bodies are capped at 32 KB (`express.json({ limit: "32kb" })`). The longest field the app
+  accepts is 6,000 characters, so this is pure headroom - and it is the standing mitigation for
+  GHSA-mrhx-c7xc-m3w5 (zod can exhaust memory on oversized constrained collections) while the
+  server is still on zod 3. Do not raise it without a reason.
+- `cors` and `@types/cors` were removed from server dependencies: nothing imported them, and
+  re-adding `cors()` is forbidden (same-origin app).
+- Prisma config lives in `server/prisma.config.ts`, not `package.json#prisma` (deprecated in 6.19,
+  removed in Prisma 7). That warning on every Render build is gone.
+- Still open, both breaking majors needing a deliberate upgrade: **zod 3 -> 4** (the advisory above;
+  ~25 files use `required_error` / `invalid_type_error` / `errorMap`, all renamed in zod 4) and
+  **prisma 6 -> 7** (`@prisma/config` -> `deepmerge-ts` stack exhaustion, reachable only through a
+  malicious config file, so not remotely exploitable). Ask before starting either.
