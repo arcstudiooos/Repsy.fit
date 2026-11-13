@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import { assignmentsRouter } from "./routes/assignments.js";
 import { autoAssignRouter } from "./routes/autoAssign.js";
 import { chatRouter } from "./routes/chat.js";
+import { inboundMailRouter } from "./routes/inboundMail.js";
 import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
@@ -56,6 +57,10 @@ app.disable("x-powered-by");
 // paths, and the Vite dev server proxies /api, so nothing legitimate is ever cross-origin. A wildcard
 // Access-Control-Allow-Origin on a cookie-authenticated app was the wrong default.
 app.use(securityHeaders);
+// Resend's inbound webhook is signed over the exact bytes it sent, so this route keeps the raw body
+// (mounted before express.json, which would re-serialise it and break the signature).
+app.use("/api/inbound/resend", express.raw({ type: "*/*", limit: "1mb" }));
+app.use("/api/inbound", inboundMailRouter);
 app.use(express.json());
 app.use(sessionMiddleware);
 // Client sessions (Prompt 65): reads only the client cookie, sets only req.clientAccountId.

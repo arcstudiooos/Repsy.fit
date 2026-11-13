@@ -1088,3 +1088,16 @@ and record it here.
 - Requests whose Host starts with `app.` get `X-Robots-Tag: noindex` (one server, two hosts; only
   repsy.fit should be in search results). Canonicals all point at https://repsy.fit.
 - `client/public/manifest.webmanifest` makes the client app installable (start_url /client).
+
+## Inbound mail forwarding (owner, Nov 2026)
+
+- `POST /api/inbound/resend` answers Resend's `email.received` webhook and forwards the message to
+  `INBOUND_FORWARD_TO` (Resend has no dashboard forwarding; the only route is code). It tries
+  `POST /emails/receiving/:id/forward` first (attachments preserved) and falls back to fetching the
+  email and sending a copy with the original sender as reply-to.
+- Signature: the Svix standard-webhooks scheme verified with `node:crypto` (no new dependency),
+  HMAC-SHA256 over `<svix-id>.<svix-timestamp>.<raw body>`, five-minute tolerance so a captured
+  payload cannot be replayed. The route is mounted with `express.raw` BEFORE `express.json`: parsing
+  and re-serialising the body breaks the signature.
+- Never log a message body - subject and sender only - and never the API key.
+- Unset env vars make the route answer 503; everything else keeps working.
