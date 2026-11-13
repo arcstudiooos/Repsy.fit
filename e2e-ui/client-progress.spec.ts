@@ -65,7 +65,7 @@ test("weight shows in lb for a client who picked lb", async ({ page }) => {
   await page.goto("/client/progress");
   const fig = page.getByRole("figure", { name: "Weight" });
   await expect(fig.locator("svg.recharts-surface")).toBeVisible();
-  await expect(fig.locator(".recharts-yAxis")).toContainText("lb");
+  await expect(fig).toContainText("(lb)");
   // 68.9-70 kg = 151.9-154.3 lb, so the axis runs around 150 (never around 70).
   await expect(fig.locator(".recharts-yAxis .recharts-cartesian-axis-tick-value").first()).toHaveText(/^1[45]\d(\.\d)?$/);
 });

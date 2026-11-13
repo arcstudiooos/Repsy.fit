@@ -128,27 +128,33 @@ test("a workout opens with its exercises, a checklist kept on the device, the co
   await expect(ex.getByText("Warm up first.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Why this plan" })).toContainText("Build your squat base");
 
-  await ex.getByRole("checkbox", { name: /Back Squat/ }).check();
-  await expect(page.getByText("1 of 2 exercises ticked")).toBeVisible();
+  // Set dots: ticking set 1 and 2 of 4 - the exercise is done only when all sets are.
+  const squatSets = ex.getByRole("group", { name: "Sets for Back Squat" });
+  await squatSets.getByRole("button", { name: "Back Squat set 2" }).click();
+  await expect(page.getByText("0 of 2 exercises done")).toBeVisible();
+  await expect(squatSets.getByRole("button", { name: "Back Squat set 1" })).toHaveAttribute("aria-pressed", "true");
   await page.reload();
-  await expect(page.getByRole("checkbox", { name: /Back Squat/ })).toBeChecked();
+  await expect(squatSets.getByRole("button", { name: "Back Squat set 2" })).toHaveAttribute("aria-pressed", "true");
+  await expect(squatSets.getByRole("button", { name: "Back Squat set 3" })).toHaveAttribute("aria-pressed", "false");
 
+  // Ticking a set starts that exercise's rest automatically, in the pinned bar.
   const timer = page.getByRole("region", { name: "Rest timer" });
+  await squatSets.getByRole("button", { name: "Back Squat set 3" }).click();
   await expect(timer).toContainText("Back Squat");
-  await expect(timer).toContainText("2:00");
-  await page.getByRole("button", { name: "Rest 90 seconds after Romanian Deadlift" }).click();
-  await expect(timer).toContainText("1:30");
-  await timer.getByRole("button", { name: "Start rest" }).click();
   await page.clock.runFor(30_000);
-  await expect(timer).toContainText("1:00");
+  await expect(timer).toContainText("1:30");
   await timer.getByRole("button", { name: "Pause" }).click();
   await page.clock.runFor(10_000);
-  await expect(timer).toContainText("1:00");
-  await timer.getByRole("button", { name: "Resume" }).click();
-  await page.clock.runFor(61_000);
-  await expect(timer.getByRole("status")).toHaveText("Rest over");
-  await timer.getByRole("button", { name: "Reset" }).click();
   await expect(timer).toContainText("1:30");
+  await timer.getByRole("button", { name: "+30 s" }).click();
+  await expect(timer).toContainText("2:00");
+  // The rest buttons show play + the time and also start at once.
+  await page.getByRole("button", { name: "Rest 90 seconds after Romanian Deadlift" }).click();
+  await expect(timer).toContainText("Romanian Deadlift");
+  await page.clock.runFor(90_000);
+  await expect(timer.getByRole("status")).toHaveText("Rest over");
+  await timer.getByRole("button", { name: "Close the rest timer" }).click();
+  await expect(timer).toHaveCount(0);
 });
 
 test("Finish workout saves effort and a note, then shows Done; Mark as not done undoes it", async ({ page }) => {
@@ -189,14 +195,17 @@ test("the rest button resets the timer even for the same exercise; ticks from re
   await mock(page);
   await page.addInitScript(() => localStorage.setItem("repsy:client-checklist:w1", JSON.stringify([1, 7, 9])));
   await page.goto("/client/plan/w1");
-  await expect(page.getByText("1 of 2 exercises ticked")).toBeVisible();
+  // The old saved list still counts: exercise 1 is fully done, ids 7 and 9 no longer exist.
+  await expect(page.getByText("1 of 2 exercises done")).toBeVisible();
+  await page.getByRole("button", { name: "Rest 90 seconds after Romanian Deadlift" }).click();
   const timer = page.getByRole("region", { name: "Rest timer" });
-  await timer.getByRole("button", { name: "Start rest" }).click();
   await page.clock.runFor(30_000);
-  await expect(timer).toContainText("1:30");
+  await expect(timer).toContainText("1:00");
+  // Picking a rest again resets and restarts it.
   await page.getByRole("button", { name: "Rest 120 seconds after Back Squat" }).click();
   await expect(timer).toContainText("2:00");
-  await expect(timer.getByRole("button", { name: "Start rest" })).toBeVisible();
+  await page.clock.runFor(10_000);
+  await expect(timer).toContainText("1:50");
 });
 
 test("a plan without exercise lines shows its text and a simple Mark done", async ({ page }) => {
@@ -289,8 +298,12 @@ test("an AI plan over several days: day headings, loads, and ticks kept apart wh
   await expect(ex.getByText("Day 2 — Pull")).toBeVisible();
   await expect(ex.getByText("4 sets × 6 reps · 60 kg")).toBeVisible();
   await expect(ex.getByText("3 sets × 5 reps · 100 kg")).toBeVisible();
-  await ex.getByRole("checkbox", { name: /Bench Press/ }).check();
-  await expect(ex.getByRole("checkbox", { name: /Deadlift/ })).not.toBeChecked();
-  await expect(page.getByText("1 of 2 exercises ticked")).toBeVisible();
+  const bench = ex.getByRole("group", { name: "Sets for Bench Press" });
+  await bench.getByRole("button", { name: "Bench Press set 4" }).click();
+  await expect(ex.getByRole("group", { name: "Sets for Deadlift" }).getByRole("button", { name: "Deadlift set 1" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.getByText("1 of 2 exercises done")).toBeVisible();
 });
 

@@ -65,7 +65,8 @@ export async function loadClientContext(client: Client): Promise<ClientContext> 
 export const WORKOUT_LINE_RULES = [
   "Write workout details one line per exercise, exactly like '1. Back Squat — 4 sets × 6 reps · 60 kg · Rest 120s'",
   "(number, exercise name, sets, reps, a specific starting load in the client's unit or 'bodyweight', rest in",
-  "seconds). Cardio lines look like '6. Incline walk — 20 min · moderate'. For a plan over several days, put a",
+  "seconds). Timed moves write seconds instead of reps: '5. Plank — 3 sets × 40 s · bodyweight · Rest 45s'.",
+  "Cardio lines look like '6. Incline walk — 20 min · moderate'. For a plan over several days, put a",
   "line 'Day 1 — Push' before that day's exercises (and 'Day 3 — Rest' for rest days), numbering exercises from 1",
   "each day. Choose loads from the client's bodyweight, level, age and any loads in their recent plans; if a",
   "recent plan used a load, progress from it. Never leave the load out.",

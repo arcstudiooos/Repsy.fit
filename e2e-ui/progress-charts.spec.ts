@@ -81,7 +81,7 @@ const openProgress = async (page: Page) => {
   await openClientTab(page, "Progress");
 };
 
-test("weight chart: accent line, '29 Oct' dates, round kg ticks, Date and kg axis labels", async ({ page }) => {
+test("weight chart: accent line, '29 Oct' dates, round kg ticks, unit in the title", async ({ page }) => {
   await mockApi(page, PROMPT_25_LOGS);
   await openProgress(page);
   const weight = chart(page, "Weight");
@@ -93,8 +93,9 @@ test("weight chart: accent line, '29 Oct' dates, round kg ticks, Date and kg axi
   const yTicks = await weight.locator(".recharts-yAxis .recharts-cartesian-axis-tick-value").allTextContents();
   expect(yTicks.length).toBeGreaterThanOrEqual(3);
   for (const t of yTicks) expect(t).toMatch(/^\d+(\.5)?$/);
-  await expect(weight).toContainText("Date");
-  await expect(weight).toContainText("kg");
+  // The unit lives in the card title now; there are no axis titles.
+  await expect(weight).toContainText("(kg)");
+  await expect(weight).not.toContainText("Date");
 });
 
 test("the weight tooltip shows the full date and the weight", async ({ page }) => {

@@ -66,6 +66,21 @@ const LB_PER_KG = 2.20462262;
 /** Weight, adherence and assignments-by-type charts, fed only by real data. logs: oldest first. */
 export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
   const toUnit = (kg: number) => (units === "lb" ? Math.round(kg * LB_PER_KG * 10) / 10 : kg);
+  // The result first, the chart under it (owner, Nov 2026): latest weight + change over the charted
+  // weeks, and the latest "plan followed" week.
+  const weighed = logs.filter((l) => l.weightKg != null);
+  const latestW = weighed.at(-1);
+  const firstW = weighed[0];
+  const weeks = weighed.length > 1 ? Math.max(1, Math.round((Date.parse(latestW!.date) - Date.parse(firstW!.date)) / 604_800_000)) : 0;
+  const delta = weighed.length > 1 ? toUnit(latestW!.weightKg!) - toUnit(firstW!.weightKg!) : 0;
+  const weightHeadline = latestW
+    ? `${toUnit(latestW.weightKg!)} ${units}` +
+      (weighed.length > 1 && Math.abs(delta) >= 0.1
+        ? ` · ${delta > 0 ? "+" : "−"}${Math.abs(Math.round(delta * 10) / 10)} ${units} in ${weeks === 1 ? "1 week" : `${weeks} weeks`}`
+        : "")
+    : undefined;
+  const latestA = logs.filter((l) => l.adherence != null).at(-1);
+  const adherenceHeadline = latestA ? `${latestA.adherence}% last week` : undefined;
   const weightPoints = logs
     .filter((l) => l.weightKg !== null)
     .map((l) => ({ date: l.date, weightKg: toUnit(l.weightKg as number) }));
@@ -77,7 +92,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
 
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
-      <ChartCard title="Weight">
+      <ChartCard title={`Weight (${units})`} label="Weight" headline={weightHeadline}>
         {weightPoints.length < 2 ? (
           <NotEnough />
         ) : (
@@ -88,7 +103,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
                 dataKey="date"
                 tickFormatter={shortDate}
                 stroke="var(--dim)"
-                label={{ value: "Date", position: "insideBottom", offset: -8, fill: "var(--dim)" }}
+
               />
               <YAxis
                 domain={axis!.domain}
@@ -97,7 +112,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
                 interval={0}
                 width={44}
                 stroke="var(--dim)"
-                label={{ value: units, angle: -90, position: "insideLeft", fill: "var(--dim)" }}
+
               />
               <Tooltip labelFormatter={(date) => formatDay(String(date))} formatter={(value) => [`${value} ${units}`, "Weight"]} />
               <Line type="monotone" dataKey="weightKg" stroke={ACCENT} strokeWidth={2} isAnimationActive={false} />
@@ -106,7 +121,7 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
         )}
       </ChartCard>
 
-      <ChartCard title="Adherence">
+      <ChartCard title="Plan followed (%)" label="Adherence" headline={adherenceHeadline}>
         {adherencePoints.length < 2 ? (
           <NotEnough />
         ) : (
@@ -117,14 +132,14 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
                 dataKey="date"
                 tickFormatter={shortDate}
                 stroke="var(--dim)"
-                label={{ value: "Date", position: "insideBottom", offset: -8, fill: "var(--dim)" }}
+
               />
               <YAxis
                 domain={[0, 100]}
                 ticks={[0, 25, 50, 75, 100]}
                 width={44}
                 stroke="var(--dim)"
-                label={{ value: "%", angle: -90, position: "insideLeft", fill: "var(--dim)" }}
+
               />
               <Tooltip labelFormatter={(date) => formatDay(String(date))} formatter={(value) => [`${value}%`, "Adherence"]} />
               <Line type="monotone" dataKey="adherence" stroke={TEAL} strokeWidth={2} isAnimationActive={false} />
@@ -155,10 +170,12 @@ export function ProgressCharts({ logs, assignments, units = "kg" }: Props) {
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: ReactNode }) {
+function ChartCard({ title, label, headline, children }: { title: string; label?: string; headline?: string; children: ReactNode }) {
   return (
-    <figure aria-label={title} className="card m-0 min-w-0 p-4">
-      <h3 className="mb-2 card-title">{title}</h3>
+    <figure aria-label={label ?? title} className="card m-0 min-w-0 p-4">
+      <h3 className="card-title">{title}</h3>
+      {headline && <p className="mb-1 text-xl font-semibold text-text">{headline}</p>}
+      {!headline && <span className="mb-2 block" />}
       {children}
     </figure>
   );

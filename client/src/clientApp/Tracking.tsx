@@ -663,6 +663,53 @@ function PastCheckIns({
 
 // ---------- Nutrition plan: targets + meals ----------
 
+/** A nutrition plan's details as meal rows; a "Target: ..." line becomes the two tiles. */
+export function NutritionDetails({ details }: { details: string }) {
+  const lines = details.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const target = lines.find((l) => /^targets?\s*:/i.test(l));
+  const kcal = target && /(\d[\d,]*)\s*kcal/i.exec(target);
+  const protein = target && /(\d[\d,]*)\s*g\s*protein/i.exec(target);
+  const rows = lines.filter((l) => l !== target);
+  return (
+    <div className="mt-5 grid gap-3">
+      {target && (kcal || protein) && (
+        <div className="grid grid-cols-2 gap-3" aria-label="Daily targets">
+          {kcal && (
+            <div className="card p-3 text-center">
+              <p className="text-xl font-bold text-text">{kcal[1]}</p>
+              <p className="text-xs text-dim">kcal</p>
+            </div>
+          )}
+          {protein && (
+            <div className="card p-3 text-center">
+              <p className="text-xl font-bold text-text">{protein[1]} g</p>
+              <p className="text-xs text-dim">protein</p>
+            </div>
+          )}
+        </div>
+      )}
+      <ul className="card divide-y divide-border p-1">
+        {rows.map((l, i) => {
+          const m = /^([^:]{1,28}):\s+(.+)$/.exec(l);
+          return (
+            <li key={i} className="flex gap-3 px-3 py-2.5 text-sm">
+              {m ? (
+                <>
+                  <span className="w-24 shrink-0 font-semibold text-text">{m[1]}</span>
+                  <span className="min-w-0 flex-1 text-text">{m[2]}</span>
+                </>
+              ) : (
+                <span className="text-text">{l}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {target && !kcal && !protein && <p className="text-sm text-dim">{target}</p>}
+    </div>
+  );
+}
+
 export function NutritionExtras({ plan }: { plan: ClientAssignment }) {
   const targets = useQuery({
     queryKey: queryKeys.myTargets,
@@ -670,8 +717,10 @@ export function NutritionExtras({ plan }: { plan: ClientAssignment }) {
   });
   const t = targets.data;
   const meals = plan.meals ?? [];
+  // The plan's own "Target:" line already shows as tiles - don't repeat the coach's standing targets.
+  const planHasTarget = /^targets?\s*:/im.test(plan.details);
   const hasTargets =
-    !!t && (t.calorieTarget != null || t.proteinTargetG != null);
+    !planHasTarget && !!t && (t.calorieTarget != null || t.proteinTargetG != null);
   if (!hasTargets && meals.length === 0) return null;
   const total = meals.reduce(
     (s, m) => ({ kcal: s.kcal + m.calories, p: s.p + m.proteinG }),

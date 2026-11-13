@@ -1025,3 +1025,16 @@ and record it here.
   happens inside the plan with ticks, timer and effort. Other types keep a secondary Mark done.
 - Check-in cards read as actions (› chevron, "✓ Checked in today" after submitting). Week view marks past
   undone plans "Missed".
+
+## Client app UI pass, batch 3 (owner, Nov 2026)
+
+- Workout: one dot per set (`Sets for <name>` group, 40px). Ticking a set, or a rest button
+  ("▶ 2:00"), starts that exercise's rest at once in a timer bar pinned above the tab bar
+  (Pause / Resume, +30 s, close). The checklist in localStorage is now `{seq: setsDone}`;
+  an older array of seqs still reads as "all sets done".
+- Timed moves: AI and manual lines may write "3 sets × 40 s" instead of reps; `planLines.ts`
+  sets `timed` and the UI drops the word "reps".
+- Nutrition plans render as meal rows, with a "Target: ... kcal ... g protein" line shown as two
+  tiles (the coach's standing targets card is then hidden, not repeated).
+- Progress charts lead with the number ("72.4 kg · −1.6 kg in 4 weeks", "80% last week"); units moved
+  into the card title and the axis titles are gone.

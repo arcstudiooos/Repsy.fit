@@ -17,11 +17,11 @@ import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
 import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../types";
 import { fmtDay, fmtTime, MyPlanSection, MySessionsSection } from "./sections";
-import { parsePlanLines, type PlanLine } from "./planLines";
+import { clock, parsePlanLines, type PlanLine } from "./planLines";
 import { RestTimer } from "./RestTimer";
 import { MeSettings } from "./MeSettings";
 import { MessagesView, CLIENT_MESSAGES_POLL_MS } from "./MessagesView";
-import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionExtras, TodayHabits, TodaySummary, WeeklyPage } from "./Tracking";
+import { CheckInDaySetting, CheckInPage, CheckInPrompts, NutritionDetails, NutritionExtras, TodayHabits, TodaySummary, WeeklyPage } from "./Tracking";
 
 // Prompt 81: the charts (recharts) load only when the Progress tab opens.
 const ProgressView = lazy(() => import("./ProgressView"));
@@ -465,18 +465,27 @@ function WeekView() {
 // ---------- One plan ----------
 
 const checkKey = (id: string) => `repsy:client-checklist:${id}`;
+/** Sets done per exercise (seq -> count), kept on this device. Old saves (a list of fully
+ *  ticked seqs) still count as "all sets done" for those exercises. */
 function useChecklist(id: string) {
-  const [checked, setChecked] = useState<number[]>(() => {
+  const [setsDone, setSetsDone] = useState<Record<number, number>>(() => {
     try {
-      const v = JSON.parse(localStorage.getItem(checkKey(id)) ?? "[]");
-      return Array.isArray(v) ? v.filter((n) => typeof n === "number") : [];
+      const v = JSON.parse(localStorage.getItem(checkKey(id)) ?? "{}");
+      if (Array.isArray(v)) return Object.fromEntries(v.filter((n) => typeof n === "number").map((n) => [n, 99]));
+      if (v && typeof v === "object") {
+        return Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).filter(([, c]) => typeof c === "number") as [string, number][],
+        );
+      }
+      return {};
     } catch {
-      return [];
+      return {};
     }
   });
-  const toggle = (n: number) =>
-    setChecked((c) => {
-      const next = c.includes(n) ? c.filter((x) => x !== n) : [...c, n];
+  const setDone = (seq: number, count: number) =>
+    setSetsDone((c) => {
+      const next = { ...c, [seq]: count };
+      if (count <= 0) delete next[seq];
       try {
         localStorage.setItem(checkKey(id), JSON.stringify(next));
       } catch {
@@ -484,7 +493,7 @@ function useChecklist(id: string) {
       }
       return next;
     });
-  return { checked, toggle };
+  return { setsDone, setDone };
 }
 
 function PlanDetail({ id }: { id: string }) {
@@ -525,11 +534,12 @@ function PlanDetail({ id }: { id: string }) {
 function PlanBody({ plan }: { plan: ClientAssignment }) {
   const lines = parsePlanLines(plan.details);
   const exercises = lines.filter((l) => l.kind === "exercise");
-  const { checked, toggle } = useChecklist(plan.id);
-  const [rest, setRest] = useState<{ sec: number; label: string; nonce: number } | null>(() =>
-    exercises[0] && exercises[0].kind === "exercise" ? { sec: exercises[0].restSec, label: exercises[0].name, nonce: 0 } : null,
-  );
+  const { setsDone, setDone } = useChecklist(plan.id);
+  const doneOf = (seq: number, sets: number) => Math.min(setsDone[seq] ?? 0, sets);
+  const fullDone = exercises.filter((e) => e.kind === "exercise" && doneOf(e.seq, e.sets) >= e.sets).length;
+  const [rest, setRest] = useState<{ sec: number; label: string; nonce: number } | null>(null);
   const date = new Date(`${plan.date}T00:00:00`).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  const startRest = (sec: number, label: string) => setRest((r) => ({ sec, label, nonce: (r?.nonce ?? 0) + 1 }));
 
   return (
     <article className="mt-3">
@@ -542,36 +552,57 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
       {exercises.length > 0 ? (
         <section aria-label="Exercises" className="mt-5">
           <p className="mb-2 text-sm text-dim">
-            {exercises.filter((e) => e.kind === "exercise" && checked.includes(e.seq)).length} of {exercises.length} exercises ticked
+            {fullDone} of {exercises.length} exercises done
           </p>
           <ol className="grid gap-2">
             {lines.map((l, i) =>
               l.kind === "exercise" ? (
-                <li key={i} className="card flex items-center gap-3 p-3">
-                  <input
-                    id={`ex-${i}`}
-                    type="checkbox"
-                    checked={checked.includes(l.seq)}
-                    onChange={() => toggle(l.seq)}
-                    className="h-6 w-6 shrink-0 accent-[var(--accent)]"
-                  />
-                  <label htmlFor={`ex-${i}`} className="min-w-0 flex-1">
-                    <span className={`block font-semibold ${checked.includes(l.seq) ? "text-dim line-through" : "text-text"}`}>
-                      {l.n}. {l.name}
-                    </span>
-                    <span className="block text-sm text-dim">
-                      {l.sets} sets × {l.reps} reps
-                      {l.load ? ` · ${l.load}` : ""}
-                    </span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setRest((r) => ({ sec: l.restSec, label: l.name, nonce: (r?.nonce ?? 0) + 1 }))}
-                    aria-label={`Rest ${l.restSec} seconds after ${l.name}`}
-                    className="min-h-11 shrink-0 rounded-lg border border-border bg-surface2 px-3 font-mono text-sm text-text hover:border-dim"
-                  >
-                    Rest {l.restSec}s
-                  </button>
+                <li key={i} className="card p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className={`block font-semibold ${doneOf(l.seq, l.sets) >= l.sets ? "text-dim line-through" : "text-text"}`}>
+                        {l.n}. {l.name}
+                      </span>
+                      <span className="block text-sm text-dim">
+                        {l.sets} sets × {l.reps}
+                        {l.timed ? "" : " reps"}
+                        {l.load ? ` · ${l.load}` : ""}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => startRest(l.restSec, l.name)}
+                      aria-label={`Rest ${l.restSec} seconds after ${l.name}`}
+                      className="btn btn-secondary min-h-11 shrink-0 px-3 text-sm"
+                    >
+                      <span aria-hidden="true">▶</span>&nbsp;{clock(l.restSec)}
+                    </button>
+                  </div>
+                  {/* One dot per set: tick sets as you do them. Ticking a set starts that exercise's rest. */}
+                  <div role="group" aria-label={`Sets for ${l.name}`} className="mt-2 flex flex-wrap gap-1.5">
+                    {Array.from({ length: l.sets }, (_, k) => {
+                      const done = doneOf(l.seq, l.sets);
+                      const isDone = k < done;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          aria-pressed={isDone}
+                          aria-label={`${l.name} set ${k + 1}`}
+                          onClick={() => {
+                            const next = k + 1 === done ? k : k + 1;
+                            setDone(l.seq, next);
+                            if (next > done) startRest(l.restSec, l.name);
+                          }}
+                          className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${
+                            isDone ? "border-accent2 bg-accent2 text-white" : "border-border bg-surface2 text-dim hover:border-dim"
+                          }`}
+                        >
+                          {isDone ? "✓" : k + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </li>
               ) : (
                 <li key={i} className={l.kind === "day" ? "px-1 pt-3 text-base font-semibold text-text" : "px-1 text-sm text-text"}>
@@ -581,6 +612,8 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
             )}
           </ol>
         </section>
+      ) : plan.type === "Nutrition" ? (
+        <NutritionDetails details={plan.details} />
       ) : (
         <div className="mt-5 text-base text-text">
           <PlanDetails details={plan.details} />
@@ -590,8 +623,8 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
       {plan.type === "Nutrition" && <NutritionExtras plan={plan} />}
 
       {rest && (
-        <div className="mt-5">
-          <RestTimer seconds={rest.sec} label={rest.label} nonce={rest.nonce} />
+        <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-20 mx-auto max-w-3xl px-4 sm:sticky sm:bottom-4 sm:mt-5 sm:px-0">
+          <RestTimer seconds={rest.sec} label={rest.label} nonce={rest.nonce} autoStart onDismiss={() => setRest(null)} />
         </div>
       )}
 
@@ -606,7 +639,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
         <FinishBox plan={plan} />
       </div>
       {/* All exercises ticked: one tap to the finish step (sticky above the phone tab bar). */}
-      {exercises.length > 0 && plan.status !== "Done" && checked.length >= exercises.length && (
+      {exercises.length > 0 && plan.status !== "Done" && fullDone >= exercises.length && (
         <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-10 px-4 sm:sticky sm:bottom-4 sm:mt-4 sm:px-0">
           <button
             type="button"
