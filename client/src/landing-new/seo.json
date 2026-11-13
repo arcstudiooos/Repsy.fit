@@ -1,0 +1,46 @@
+{
+  "comment": "Crawlable copy for the landing shell and structured data (prerender-seo.mjs). Every line here must also appear on the rendered landing - e2e-ui/seo-structured.spec.ts fails if they drift apart. Nothing here is hidden from people: the shell is what a visitor without JavaScript sees, and React replaces it with the same words.",
+  "site": "https://repsy.fit",
+  "name": "Repsy Coach",
+  "tagline": "Coaching software for personal trainers",
+  "hero": {
+    "h1": "Load the week. Watch it get lifted.",
+    "lead": "Workout, nutrition, habits and recovery for every client, loaded on Monday with the reasoning attached. The check-ins chart themselves."
+  },
+  "sections": [
+    {
+      "h": "AI plans with the why",
+      "p": "Ask about a client. The AI answers from their goal, level and check-ins, and every suggestion carries its reasoning. No AI plan reaches a client's list unless you choose it."
+    },
+    {
+      "h": "Sets, reps, rest, written down",
+      "p": "Search the exercise library and set the dose for every move. It saves as a numbered plan, exactly as you wrote it, and as a template to reuse."
+    },
+    {
+      "h": "See the week at a glance",
+      "p": "Mark plans Done as clients train. Home shows today's tasks, new check-ins and who needs attention, every time you open it."
+    },
+    {
+      "h": "Check-ins that add up",
+      "p": "Weight, adherence and workouts turn into charts on their own. A stall or a slipping week lands in Needs attention with the reason."
+    },
+    {
+      "h": "Plans, the way you coach",
+      "p": "Workout, Nutrition, Habit and Recovery plans live side by side on one client. Build them by hand in the Manual Planner, from a Library template, or from an AI suggestion you approve."
+    },
+    {
+      "h": "Your clients just get a link",
+      "p": "Each client gets an invite link, sets a password and sees their plans, check-ins, messages and membership in the browser. Nothing to install, nothing to sync."
+    }
+  ],
+  "plans": [
+    { "name": "Solo", "price": 39, "clients": "Up to 30 clients" },
+    { "name": "Pro", "price": 89, "clients": "Up to 100 clients" },
+    { "name": "Studio", "price": 199, "clients": "No client limit" }
+  ],
+  "trial": "Every plan starts with a 7-day free trial, with no card to start.",
+  "pricingPage": {
+    "title": "Repsy Coach pricing - plans from $39 a month",
+    "description": "Repsy Coach pricing: Solo $39, Pro $89 and Studio $199 a month, every feature in every plan. 7-day free trial, no card to start."
+  }
+}

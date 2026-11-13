@@ -1,0 +1,14 @@
+{
+  "name": "Repsy Coach",
+  "short_name": "Repsy",
+  "description": "Coaching software for personal trainers: plans with the reasoning, check-ins that add up.",
+  "start_url": "/client",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#141414",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

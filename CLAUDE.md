@@ -1069,3 +1069,22 @@ and record it here.
   demo shows app.repsy.fit.
 - Landing scene elements are hidden until scrolled into view: UI tests must scroll the section in
   (`page.locator("#inside").scrollIntoViewIfNeeded()`) before asserting visible text or clicking.
+
+## SEO plumbing (owner, Nov 2026)
+
+- `client/scripts/prerender-seo.mjs` runs in `npm run build` after the legal prerender. It fills
+  `<div id="root">` in dist/index.html with a static shell (hero, six section blurbs, prices, FAQ)
+  from `src/landing-new/seo.json` plus the FAQ pairs parsed out of `content.ts`, adds four JSON-LD
+  blocks (WebSite, Organization, SoftwareApplication with its offers, FAQPage), and writes
+  `pricing.html`, `not-found.html`, `sitemap.xml` and `robots.txt`.
+- seo.json must keep saying what the landing says: `e2e-ui/seo-structured.spec.ts` compares it with
+  the rendered page and with `PLANS`/`FAQ_CHAT`, so drift fails CI. Change the copy in both places.
+- JSON-LD is a data block, not a running script, so the strict CSP stays as it is. Never add a
+  runnable inline script to index.html.
+- `/pricing` is the landing page served from `pricing.html` (own title, description and canonical);
+  `route.ts` maps it to the landing and StudioLanding scrolls to `#pricing`.
+- Unknown paths now return a real 404 (`not-found.html`) instead of the landing with a 200. The
+  known-page list lives in `server/src/app.ts` - ADD NEW PUBLIC ROUTES THERE or they 404.
+- Requests whose Host starts with `app.` get `X-Robots-Tag: noindex` (one server, two hosts; only
+  repsy.fit should be in search results). Canonicals all point at https://repsy.fit.
+- `client/public/manifest.webmanifest` makes the client app installable (start_url /client).

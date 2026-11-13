@@ -41,5 +41,8 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   // Only over HTTPS: sending HSTS on plain-http local dev would pin localhost to https.
   if (isHttps(req)) res.setHeader("Strict-Transport-Security", `max-age=${HSTS_SECONDS}; includeSubDomains`);
+  // app.repsy.fit serves the same pages as repsy.fit (one server, two hosts). Only the marketing
+  // host should be indexed, or every public page exists twice in search results.
+  if (/^app\./i.test(String(req.headers.host ?? ""))) res.setHeader("X-Robots-Tag", "noindex");
   next();
 }

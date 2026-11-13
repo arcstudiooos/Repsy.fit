@@ -1,0 +1,62 @@
+// SEO plumbing that crawlers rely on (owner, Nov 2026): the static shell in index.html, structured
+// data, the sitemap, robots.txt and the prerendered /pricing page. The shell must say the same things
+// the React landing says - if the two drift, this file fails before anything reaches search results.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { expect, test } from "@playwright/test";
+import { FAQ_CHAT, PLANS } from "../client/src/landing-new/content";
+
+const seo = JSON.parse(readFileSync(path.join(__dirname, "../client/src/landing-new/seo.json"), "utf8")) as {
+  hero: { h1: string; lead: string };
+  sections: { h: string; p: string }[];
+  plans: { name: string; price: number; clients: string }[];
+};
+const dist = (f: string) => readFileSync(path.join(__dirname, "../client/dist", f), "utf8");
+
+test("the landing copy and the crawlable shell say the same things", async ({ page }) => {
+  // Prices and client limits come from one place.
+  expect(seo.plans.map((p) => [p.name, p.price, p.clients])).toEqual(PLANS.map((p) => [p.name, p.price, p.clients]));
+  await page.goto("/");
+  // textContent, not innerText: scene elements stay hidden until scrolled into view.
+  await expect(page.getByTestId("studio-landing")).toBeVisible();
+  const text = ((await page.locator("body").textContent()) ?? "").replace(/\s+/g, " ");
+  expect(text).toContain(seo.hero.lead);
+  for (const s of seo.sections) expect(text.toLowerCase()).toContain(s.p.toLowerCase().slice(0, 60));
+});
+
+test("index.html carries the shell and valid structured data", () => {
+  const html = dist("index.html");
+  expect(html).toContain("data-seo-shell");
+  expect(html).toContain(seo.hero.h1);
+  for (const f of FAQ_CHAT) expect(html).toContain(f.a.slice(0, 50));
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+  const types = blocks.map((b) => b["@type"]);
+  expect(types).toEqual(["WebSite", "Organization", "SoftwareApplication", "FAQPage"]);
+  const app = blocks[2] as { offers: { name: string; price: string }[] };
+  expect(app.offers.map((o) => `${o.name} ${o.price}`)).toEqual(PLANS.map((p) => `${p.name} ${p.price}`));
+  const faqLd = blocks[3] as { mainEntity: { name: string }[] };
+  expect(faqLd.mainEntity).toHaveLength(FAQ_CHAT.length);
+  // The shell is plain markup: no runnable inline script is added (the CSP forbids them).
+  expect(html).not.toMatch(/<script(?![^>]*type="application\/ld\+json")[^>]*>[^<]/);
+});
+
+test("sitemap, robots and the 404 page are built", () => {
+  const map = dist("sitemap.xml");
+  for (const u of ["https://repsy.fit/", "https://repsy.fit/pricing", "https://repsy.fit/privacy"]) expect(map).toContain(`<loc>${u}</loc>`);
+  const robots = dist("robots.txt");
+  expect(robots).toContain("Sitemap: https://repsy.fit/sitemap.xml");
+  expect(robots).toContain("Disallow: /app");
+  expect(robots).toContain("Allow: /client/login");
+  expect(dist("not-found.html")).toContain('content="noindex"');
+  expect(dist("legal/privacy.html")).toContain('href="https://repsy.fit/privacy"');
+});
+
+test("/pricing is its own page and opens at the prices", async ({ page }) => {
+  const html = dist("pricing.html");
+  expect(html).toContain("<title>Repsy Coach pricing - plans from $39 a month</title>");
+  expect(html).toContain('href="https://repsy.fit/pricing"');
+  await page.goto("/pricing");
+  // The dev/preview server serves index.html for it; what matters is that the app shows the landing.
+  await expect(page.getByTestId("studio-landing")).toBeVisible();
+  await expect(page.locator("#pricing")).toBeInViewport({ timeout: 10_000 });
+});

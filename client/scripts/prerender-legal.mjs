@@ -48,7 +48,7 @@ for (const [slug, doc] of [["privacy", content.privacy], ["terms", content.terms
 <title>${esc(doc.title)} - Repsy Coach</title>
 <meta name="description" content="${esc(doc.intro.slice(0, 155))}">
 <link rel="icon" type="image/png" href="/favicon.png">
-<link rel="canonical" href="https://app.repsy.fit/${slug}">
+<link rel="canonical" href="https://repsy.fit/${slug}">
 <style>${CSS}</style>
 </head>
 <body>

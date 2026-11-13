@@ -334,3 +334,12 @@ describe("the public lead form is rate limited", () => {
     expect(last.headers["retry-after"]).toBeTruthy();
   });
 });
+
+describe("search engines", () => {
+  it("marks the app host noindex, so public pages are not indexed twice", async () => {
+    const onApp = await supertest(app).get("/api/health").set("Host", "app.repsy.fit");
+    expect(onApp.headers["x-robots-tag"]).toBe("noindex");
+    const onSite = await supertest(app).get("/api/health").set("Host", "repsy.fit");
+    expect(onSite.headers["x-robots-tag"]).toBeUndefined();
+  });
+});

@@ -161,6 +161,13 @@ export default function StudioLanding() {
     document.title = "Repsy - coaching software for personal trainers";
   }, []);
 
+  // /pricing is this page, opened at the price list (the prerendered page carries its own title).
+  useEffect(() => {
+    if (window.location.pathname !== "/pricing") return;
+    const id = window.setTimeout(() => document.getElementById("pricing")?.scrollIntoView(), 120);
+    return () => window.clearTimeout(id);
+  }, []);
+
   useEffect(() => {
     if (!animate || !root.current) return;
     let stop: (() => void) | undefined;

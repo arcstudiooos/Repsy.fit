@@ -174,8 +174,44 @@ if (fs.existsSync(clientDist)) {
     const file = path.join(clientDist, "legal", `${page}.html`);
     app.get(`/${page}`, (_req, res, next) => (fs.existsSync(file) ? res.sendFile(file) : next()));
   }
+  // /pricing is the landing page with its own title, description and canonical (prerender-seo.mjs).
+  const pricingFile = path.join(clientDist, "pricing.html");
+  app.get("/pricing", (_req, res, next) => (fs.existsSync(pricingFile) ? res.sendFile(pricingFile) : next()));
+
   const TOKEN_PAGES = new Set(["/client/set-password", "/reset-password", "/client/reset-password"]);
+  // Paths the app actually has. Anything else is a real 404, not the landing page with a 200:
+  // a "soft 404" teaches search engines that every typo is a valid page.
+  const KNOWN_PAGES = new Set([
+    "/",
+    "/pricing",
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+    "/privacy",
+    "/terms",
+    "/client",
+    "/client/login",
+    "/client/set-password",
+    "/client/welcome",
+    "/client/forgot-password",
+    "/client/reset-password",
+    "/client/week",
+    "/client/progress",
+    "/client/messages",
+    "/client/me",
+    "/client/checkin",
+    "/client/weekly",
+  ]);
+  const KNOWN_PREFIXES = ["/app", "/client/plan/", "/join/"];
+  const notFoundFile = path.join(clientDist, "not-found.html");
   app.get("*", (req, res) => {
+    const p = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
+    const known = KNOWN_PAGES.has(p) || KNOWN_PREFIXES.some((pre) => p === pre || p.startsWith(pre));
+    if (!known && fs.existsSync(notFoundFile)) {
+      res.status(404).sendFile(notFoundFile);
+      return;
+    }
     // Pages whose URL carries a one-time token (invite, password reset) never send it on as a Referer.
     if (TOKEN_PAGES.has(req.path)) res.setHeader("Referrer-Policy", "no-referrer");
     res.sendFile(path.join(clientDist, "index.html"));

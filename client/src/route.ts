@@ -44,6 +44,9 @@ export function routeFor(pathname: string, opts: { inAppFlow: boolean; backForwa
   if (pathname === "/client/welcome") return "client-welcome";
   if (pathname === "/client/forgot-password") return "client-forgot";
   if (pathname === "/client/reset-password") return "client-reset";
+  // /pricing is the landing with its own title and canonical (prerender-seo.mjs); it opens scrolled
+  // to the price list.
+  if (pathname === "/pricing") return "landing";
   if (pathname === "/privacy") return "privacy";
   if (pathname === "/terms") return "terms";
   if (pathname === "/" && opts.inAppFlow && !opts.backForward) return "redirect-to-app";

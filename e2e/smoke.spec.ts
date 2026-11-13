@@ -125,4 +125,20 @@ test.describe("production server", () => {
     expect(h["x-powered-by"]).toBeUndefined();
     expect(h["access-control-allow-origin"]).toBeUndefined();
   });
+
+  // Nov 2026: a typo in the address is a real 404, and the SEO files are served.
+  test("unknown pages are a 404 page, and the known ones still open", async ({ request }) => {
+    const missing = await request.get("/no-such-page");
+    expect(missing.status()).toBe(404);
+    expect(await missing.text()).toContain("That page isn't here.");
+    for (const p of ["/", "/pricing", "/login", "/client/login", "/privacy", "/app"]) {
+      expect((await request.get(p)).status(), p).toBe(200);
+    }
+    const map = await request.get("/sitemap.xml");
+    expect(map.status()).toBe(200);
+    expect(await map.text()).toContain("<loc>https://repsy.fit/pricing</loc>");
+    expect(await (await request.get("/robots.txt")).text()).toContain("Sitemap: https://repsy.fit/sitemap.xml");
+    const home = await request.get("/");
+    expect(await home.text()).toContain("application/ld+json");
+  });
 });
