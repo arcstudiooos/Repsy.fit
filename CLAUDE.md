@@ -1003,3 +1003,15 @@ and record it here.
   Keep the "Google user data" section's meaning (Google approved it). It still needs the operator's legal name,
   address, a named Grievance Officer and a city for disputes when the owner provides them. The AI provider is
   OpenAI (named in the policy, with its no-training and 30-day API retention terms).
+
+## Client app UI pass, batch 1 (owner, Nov 2026)
+
+- Today: no repeated type headings (chips only); the Next session and Streaks cards render only when they
+  have data. Week: rest days are one compact row. Greeting uses the first name.
+- Plan detail: no "ticks are kept on this device" note; when every exercise is ticked a sticky
+  "All exercises done - finish workout" bar (above the phone tab bar) scrolls to the finish box.
+- Money: `formatMoney` (and the Business tab's `money`) drop decimals for whole amounts ("₹4,999",
+  "₹1,25,000.50"). Dates shown to clients use `lib/dates.ts` (`formatDay`), body font - mono stays only
+  for timers. Client-app section headings all use `card-title`.
+- Check-ins: daily form has unit placeholders and a sticky Save on phones; weekly "Plan followed (%)"
+  has 50 / 70 / 90 / 100 quick picks.

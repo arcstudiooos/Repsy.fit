@@ -113,7 +113,7 @@ export default function ClientApp({ account, onSignOut, signingOut }: { account:
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           <img src="/repsy-mark.png" alt="" width={39} height={32} className="h-8 w-auto" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-text">Hi, {account.name}</p>
+            <p className="truncate text-base font-bold text-text">Hi, {account.name.split(" ")[0]}</p>
             {account.coachName && <p className="truncate text-xs text-dim">Coached by {account.coachName}</p>}
           </div>
           <nav aria-label="Client app" className="hidden gap-1 sm:flex">
@@ -178,19 +178,6 @@ function ErrorBox({ error, onRetry }: { error: unknown; onRetry: () => void }) {
         {plainErrorMessage(error)}
       </p>
       <button type="button" onClick={onRetry} className="btn btn-secondary mt-2 min-h-11">
-        Retry
-      </button>
-    </div>
-  );
-}
-
-function CardError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
-  return (
-    <div className="mt-2">
-      <p role="alert" className="text-sm font-semibold text-amber-text">
-        {plainErrorMessage(error)}
-      </p>
-      <button type="button" onClick={onRetry} className="mt-1 text-sm font-semibold text-accent2 underline underline-offset-4">
         Retry
       </button>
     </div>
@@ -297,7 +284,6 @@ function TodayView() {
             <div className="grid gap-5">
               {ASSIGNMENT_TYPES.filter((type) => plans.data.some((p) => p.type === type)).map((type) => (
                 <section key={type} aria-label={type}>
-                  <h2 className="mb-2 font-body text-sm font-bold uppercase tracking-wide text-dim">{type}</h2>
                   <ul className="grid gap-3">
                     {plans.data
                       .filter((p) => p.type === type)
@@ -316,41 +302,28 @@ function TodayView() {
         <CheckInPrompts today={today} />
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <section aria-label="Next session" className="card p-4">
-          <h2 className="font-body text-base font-bold">Next session</h2>
-          {sessions.isPending ? (
-            <p className="mt-2 text-sm text-dim">Loading...</p>
-          ) : sessions.isError ? (
-            <CardError error={sessions.error} onRetry={() => void sessions.refetch()} />
-          ) : !next ? (
-            <p className="mt-2 text-sm text-dim">No sessions booked.</p>
-          ) : (
+        {/* These cards only show when they have something to say (owner, Nov 2026). */}
+        {next && (
+          <section aria-label="Next session" className="card p-4">
+            <h2 className="card-title">Next session</h2>
             <p className="mt-2 text-sm text-text">
               <span className="font-semibold">{next.title}</span>
               <br />
               {fmtDay(next.startsAt, sessions.data?.timezone ?? undefined)} ·{" "}
-              <span className="font-mono">
-                {fmtTime(next.startsAt, sessions.data?.timezone ?? undefined)} - {fmtTime(next.endsAt, sessions.data?.timezone ?? undefined)}
-              </span>
+              {fmtTime(next.startsAt, sessions.data?.timezone ?? undefined)} - {fmtTime(next.endsAt, sessions.data?.timezone ?? undefined)}
             </p>
-          )}
-        </section>
-        <section aria-label="Streaks" className="card p-4">
-          <h2 className="font-body text-base font-bold">Streaks</h2>
-          {streaks.isPending ? (
-            <p className="mt-2 text-sm text-dim">Loading...</p>
-          ) : streaks.isError ? (
-            <CardError error={streaks.error} onRetry={() => void streaks.refetch()} />
-          ) : !s || !s.enoughData ? (
-            <p className="mt-2 text-sm text-dim">Not enough data yet</p>
-          ) : (
+          </section>
+        )}
+        {s?.enoughData && (
+          <section aria-label="Streaks" className="card p-4">
+            <h2 className="card-title">Streaks</h2>
             <p className="mt-2 text-sm text-text">
-              Check-in streak <span className="font-mono">{s.checkInStreak === 1 ? "1 day" : `${s.checkInStreak} days`}</span>
+              Check-in streak <span className="font-semibold">{s.checkInStreak === 1 ? "1 day" : `${s.checkInStreak} days`}</span>
               <br />
-              Workouts this week <span className="font-mono">{s.workoutsThisWeek}</span>
+              Workouts this week <span className="font-semibold">{s.workoutsThisWeek}</span>
             </p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </>
   );
@@ -395,22 +368,26 @@ function WeekView() {
               const items = plans.data.filter((p) => p.date === key);
               const done = items.filter((p) => p.status === "Done").length;
               return (
-                <li key={key} aria-label={day.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })} className={`card p-4 ${key === today ? "border-accent2" : ""}`}>
+                <li
+                  key={key}
+                  aria-label={day.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}
+                  className={`card ${items.length === 0 ? "px-4 py-2.5" : "p-4"} ${key === today ? "border-accent2" : ""}`}
+                >
                   <div className="flex items-baseline justify-between gap-2">
                     <h2 className="font-body text-base font-bold">
                       {day.toLocaleDateString([], { weekday: "long" })}{" "}
                       <span className="font-normal text-dim">{day.toLocaleDateString([], { day: "numeric", month: "short" })}</span>
                       {key === today && <span className="ml-2 text-xs font-bold text-accent2">Today</span>}
                     </h2>
-                    {items.length > 0 && (
+                    {items.length > 0 ? (
                       <span className="text-xs text-dim">
                         {done}/{items.length} done
                       </span>
+                    ) : (
+                      <span className="text-sm text-dim">Rest day</span>
                     )}
                   </div>
-                  {items.length === 0 ? (
-                    <p className="mt-1 text-sm text-dim">Rest day</p>
-                  ) : (
+                  {items.length === 0 ? null : (
                     <ul className="mt-2 grid gap-1">
                       {items.map((p) => (
                         <li key={p.id} className="flex items-center gap-2 text-sm">
@@ -562,7 +539,6 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
               ),
             )}
           </ol>
-          <p className="mt-2 text-xs text-dim">Ticks are kept on this device only.</p>
         </section>
       ) : (
         <div className="mt-5 text-base text-text">
@@ -580,12 +556,26 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
 
       {plan.reasoning.trim() !== "" && (
         <section aria-label="Why this plan" className="mt-5 rounded-lg border border-border bg-surface2 p-4">
-          <h2 className="font-body text-base font-bold">Why this plan</h2>
+          <h2 className="card-title">Why this plan</h2>
           <p className="mt-1 text-sm text-text">{inline(plan.reasoning)}</p>
         </section>
       )}
 
-      <FinishBox plan={plan} />
+      <div id="finish-box">
+        <FinishBox plan={plan} />
+      </div>
+      {/* All exercises ticked: one tap to the finish step (sticky above the phone tab bar). */}
+      {exercises.length > 0 && plan.status !== "Done" && checked.length >= exercises.length && (
+        <div className="fixed inset-x-0 bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-10 px-4 sm:sticky sm:bottom-4 sm:mt-4 sm:px-0">
+          <button
+            type="button"
+            onClick={() => document.getElementById("finish-box")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+            className="btn btn-primary w-full shadow-lg"
+          >
+            All exercises done - finish workout
+          </button>
+        </div>
+      )}
     </article>
   );
 }

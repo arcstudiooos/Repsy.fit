@@ -7,6 +7,7 @@ import { addMyMeasurement, deleteMyMeasurement, getMyMeasurements, getMyProfile,
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProgressCharts } from "../components/ProgressCharts";
 import { LoadingState, plainErrorMessage } from "../components/States";
+import { formatDay } from "../lib/dates";
 import { localDateKey } from "../lib/schedule";
 import { MyStreaksSection } from "./sections";
 import type { MyMeasurement } from "../types";
@@ -77,7 +78,7 @@ function MeasurementsSection() {
   return (
     <section aria-labelledby="measurements-h" className="card mt-5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="measurements-h" className="font-body text-base font-bold">
+        <h2 id="measurements-h" className="card-title">
           Body measurements
         </h2>
         {!open && (
@@ -88,7 +89,7 @@ function MeasurementsSection() {
               setSaved(false);
               setOpen(true);
             }}
-            className="btn btn-primary min-h-11"
+            className="btn btn-secondary min-h-11"
           >
             Add measurements
           </button>
@@ -147,7 +148,7 @@ const summary = (m: MyMeasurement) =>
 function MeasurementRow({ m, onDelete }: { m: MyMeasurement; onDelete: () => void }) {
   return (
     <li className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2">
-      <span className="font-mono text-sm text-dim">{m.date}</span>
+      <span className="text-sm text-dim">{formatDay(m.date)}</span>
       <span className="min-w-0 flex-1 text-sm text-text">
         {summary(m)}
         {m.note && <span className="block text-xs text-dim">{m.note}</span>}

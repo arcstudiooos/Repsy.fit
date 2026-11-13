@@ -73,8 +73,8 @@ test("Today lists today's plans in type order, and Mark done / Undo work", async
   await expect(list).toHaveCount(3);
   await expect(list.nth(0)).toContainText("Lower body A");
   await expect(list.nth(1)).toContainText("High-protein day");
-  // Grouped by type, each with its own heading.
-  await expect(page.getByRole("region", { name: "Today's plans" }).getByRole("heading", { level: 2 })).toHaveText(["Workout", "Nutrition", "Habit"]);
+  // Grouped by type (chips on the cards; no repeated section headings since the client UI pass).
+  await expect(page.getByRole("region", { name: "Today's plans" }).getByRole("heading", { level: 2 })).toHaveCount(0);
   await expect(page.getByText("0 of 3 done")).toBeVisible();
   await page.getByRole("button", { name: "Mark 10k steps done" }).click();
   await expect(page.getByText("1 of 3 done")).toBeVisible();

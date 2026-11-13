@@ -1,9 +1,16 @@
-/** An amount in an ISO currency, the way the Business tab shows it (INR in Indian grouping). */
+/** An amount in an ISO currency (INR in Indian grouping). Whole amounts drop the decimals:
+ *  "₹4,999", "₹1,25,000.50" (owner, Nov 2026). */
 export function formatMoney(amount: number, currency = "INR"): string {
+  const digits = Number.isInteger(amount) ? 0 : 2;
   try {
-    return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency }).format(amount);
+    return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: 2,
+    }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${currency}`;
+    return `${digits ? amount.toFixed(2) : amount} ${currency}`;
   }
 }
 

@@ -89,7 +89,7 @@ test("rows show plan, price in the coach's currency, status, and due state (over
   ]);
   const maya = rowFor(page, "Maya Patel");
   await expect(maya).toContainText("Monthly coaching · Monthly");
-  await expect(maya).toContainText("₹4,999.00");
+  await expect(maya).toContainText("₹4,999");
   // Overdue: the orange pill with dark text (the palette has no red).
   const overdue = maya.getByText("3 days overdue");
   await expect(overdue).toBeVisible();
@@ -98,7 +98,7 @@ test("rows show plan, price in the coach's currency, status, and due state (over
   const soon = rowFor(page, "Arjun Rao").getByText("Due in 2 days");
   await expect(soon).toBeVisible();
   await expect(soon).toHaveCSS("color", "rgb(146, 64, 14)");
-  await expect(rowFor(page, "Arjun Rao")).toContainText("₹12,000.00");
+  await expect(rowFor(page, "Arjun Rao")).toContainText("₹12,000");
   // A paused plan is never shown as overdue.
   await expect(rowFor(page, "Dev Shah")).not.toContainText("overdue");
   await expect(rowFor(page, "Dev Shah")).toContainText("Paused");
@@ -140,7 +140,7 @@ test("record payment: amount pre-filled from the plan, date today, and it advanc
   await expect(form).toHaveCount(0);
   expect(server.payments).toEqual([{ clientId: "c-maya", amount: 4999, paidOn: iso(0), method: "Cash", note: "" }]);
   await expect(maya).not.toContainText("overdue");
-  await expect(maya).toContainText("Last payment ₹4,999.00");
+  await expect(maya).toContainText("Last payment ₹4,999");
 });
 
 test("a One-time plan says its due date will not move", async ({ page }) => {
@@ -192,8 +192,8 @@ test("the client's own My plan: name, price, status, next due, last payment with
   await expect(mine).toContainText("Active");
   await expect(mine).toContainText("Dec 15, 2026");
   await expect(mine).toContainText("Nov 15, 2026");
-  await expect(mine).toContainText("₹4,999.00 per month");
-  await expect(mine).toContainText("Nov 15, 2026 · ₹4,999.00");
+  await expect(mine).toContainText("₹4,999 per month");
+  await expect(mine).toContainText("Nov 15, 2026 · ₹4,999");
 });
 
 test("a client with no plan sees a plain note", async ({ page }) => {

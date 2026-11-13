@@ -16,7 +16,7 @@ export function MyPlanSection() {
   const plan = useQuery({ queryKey: queryKeys.myPlan, queryFn: getMyPlan, retry: false });
   return (
     <section aria-label="My plan" className="mt-6 rounded-lg border border-border bg-surface2 p-4 text-left">
-      <h2 className="text-base">My plan</h2>
+      <h2 className="card-title">My plan</h2>
       {plan.isPending ? (
         <p className="mt-2 text-sm text-dim">Loading...</p>
       ) : plan.isError ? (
@@ -32,7 +32,7 @@ export function MyPlanSection() {
           {plan.data.plan.priceAmount != null && (
             <>
               <dt className="text-dim">Price</dt>
-              <dd className="font-mono text-text">
+              <dd className="text-text">
                 {formatMoney(plan.data.plan.priceAmount, plan.data.currency)} <span className="font-body text-dim">{perCycle(plan.data.plan.billingCycle)}</span>
               </dd>
             </>
@@ -49,7 +49,7 @@ export function MyPlanSection() {
           <dd className="text-text">
             {plan.data.lastPaymentDate ? dayText(plan.data.lastPaymentDate) : "None recorded yet"}
             {plan.data.lastPaymentDate && plan.data.lastPaymentAmount != null && (
-              <span className="font-mono"> · {formatMoney(plan.data.lastPaymentAmount, plan.data.currency)}</span>
+              <span> · {formatMoney(plan.data.lastPaymentAmount, plan.data.currency)}</span>
             )}
           </dd>
         </dl>
@@ -72,7 +72,7 @@ export function MySessionsSection() {
   const tz = sessions.data?.timezone ?? undefined;
   return (
     <section aria-label="My sessions" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
-      <h2 className="text-base">My sessions</h2>
+      <h2 className="card-title">My sessions</h2>
       {sessions.isPending ? (
         <p className="mt-2 text-sm text-dim">Loading...</p>
       ) : sessions.isError ? (
@@ -88,7 +88,7 @@ export function MySessionsSection() {
               <li key={s.id} className="py-2 text-sm">
                 <p className="font-semibold text-text">{s.title}</p>
                 <p className="text-dim">
-                  {fmtDay(s.startsAt, tz)} · <span className="font-mono text-text">{fmtTime(s.startsAt, tz)} - {fmtTime(s.endsAt, tz)}</span> · {s.type}
+                  {fmtDay(s.startsAt, tz)} · <span className="text-text">{fmtTime(s.startsAt, tz)} - {fmtTime(s.endsAt, tz)}</span> · {s.type}
                 </p>
                 {s.location && <p className="break-words text-dim">{s.location}</p>}
               </li>
@@ -111,7 +111,7 @@ export function MyStreaksSection() {
   const d = streaks.data;
   return (
     <section aria-label="My streaks" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
-      <h2 className="text-base">My streaks</h2>
+      <h2 className="card-title">My streaks</h2>
       {streaks.isPending ? (
         <p className="mt-2 text-sm text-dim">Loading...</p>
       ) : streaks.isError ? (
@@ -122,9 +122,9 @@ export function MyStreaksSection() {
         <p className="mt-2 text-sm text-dim">Not enough data yet</p>
       ) : (
         <p className="mt-2 text-sm text-text">
-          Check-in streak <span className="font-mono">{d.checkInStreak === 1 ? "1 day" : `${d.checkInStreak} days`}</span> · Habits, last 7 days{" "}
-          <span className="font-mono">{d.habitPercent === null ? "none yet" : `${d.habitPercent}%`}</span> · Workouts this week{" "}
-          <span className="font-mono">{d.workoutsThisWeek}</span>
+          Check-in streak <span className="font-semibold">{d.checkInStreak === 1 ? "1 day" : `${d.checkInStreak} days`}</span> · Habits, last 7 days{" "}
+          <span className="font-semibold">{d.habitPercent === null ? "none yet" : `${d.habitPercent}%`}</span> · Workouts this week{" "}
+          <span className="font-semibold">{d.workoutsThisWeek}</span>
         </p>
       )}
     </section>

@@ -136,8 +136,8 @@ test("payment history: date, amount in the coach's currency, plan and method", a
   });
   await page.goto("/client/me");
   const rows = page.getByRole("list", { name: "Payments" }).getByRole("listitem");
-  await expect(rows.first()).toContainText("2026-11-01");
-  await expect(rows.first()).toContainText("₹4,999.00");
+  await expect(rows.first()).toContainText("Sun, 1 Nov");
+  await expect(rows.first()).toContainText("₹4,999");
   await expect(rows.first()).toContainText("UPI");
   await expect(rows.last()).toContainText("₹1,25,000.50"); // Indian grouping for INR
 });

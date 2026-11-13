@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { changeMyPassword, deleteMyAccount, getMyAccount, getMyPayments, getMyProfile, queryKeys, saveMyAccount, saveMyProfile } from "../api";
 import { LoadingState, plainErrorMessage } from "../components/States";
+import { formatDay } from "../lib/dates";
 import { formatMoney } from "../lib/money";
 import { navigate } from "../route";
 import type { ClientProfile, MyAccount } from "../types";
@@ -114,7 +115,7 @@ function ProfileSection({ account, profile }: { account: MyAccount; profile: Cli
   }
   return (
     <section aria-labelledby="profile-h" className={card}>
-      <h2 id="profile-h" className="text-base">
+      <h2 id="profile-h" className="card-title">
         Profile
       </h2>
       <form onSubmit={submit} noValidate aria-label="Profile" className="mt-2 grid gap-3">
@@ -207,7 +208,7 @@ function SignInSection({ account }: { account: MyAccount }) {
   if (account.googleConnected) {
     return (
       <section aria-labelledby="signin-h" className={card}>
-        <h2 id="signin-h" className="text-base">
+        <h2 id="signin-h" className="card-title">
           Sign-in
         </h2>
         <p className="mt-2 text-sm text-text">
@@ -232,7 +233,7 @@ function SignInSection({ account }: { account: MyAccount }) {
   }
   return (
     <section aria-labelledby="signin-h" className={card}>
-      <h2 id="signin-h" className="text-base">
+      <h2 id="signin-h" className="card-title">
         Change password
       </h2>
       <form onSubmit={submit} noValidate aria-label="Change password" className="mt-2 grid gap-3 sm:max-w-sm">
@@ -278,7 +279,7 @@ function TimezoneSection({ account }: { account: MyAccount }) {
   });
   return (
     <section aria-labelledby="tz-h" className={card}>
-      <h2 id="tz-h" className="text-base">
+      <h2 id="tz-h" className="card-title">
         Timezone
       </h2>
       <p className="mt-1 text-sm text-dim">
@@ -314,7 +315,7 @@ function PaymentsSection() {
   const payments = useQuery({ queryKey: queryKeys.myPayments, queryFn: getMyPayments });
   return (
     <section aria-labelledby="pay-h" className={card}>
-      <h2 id="pay-h" className="text-base">
+      <h2 id="pay-h" className="card-title">
         Payment history
       </h2>
       {payments.isPending ? (
@@ -327,8 +328,8 @@ function PaymentsSection() {
         <ul aria-label="Payments" className="mt-2 divide-y divide-border">
           {payments.data.map((p) => (
             <li key={p.id} className="flex flex-wrap gap-x-3 py-2 text-sm">
-              <span className="font-mono text-text">{p.paidOn}</span>
-              <span className="font-mono font-semibold text-text">{formatMoney(p.amount, p.currency)}</span>
+              <span className="text-text">{formatDay(p.paidOn)}</span>
+              <span className="font-semibold text-text">{formatMoney(p.amount, p.currency)}</span>
               <span className="text-dim">{p.planName}</span>
               <span className="text-dim">{p.method}</span>
             </li>
@@ -373,7 +374,7 @@ function DeleteSection({ account }: { account: MyAccount }) {
   const invalid = (f: "password" | "word") => (error?.field === f ? { "aria-invalid": true as const, "aria-describedby": "del-error" } : {});
   return (
     <section aria-labelledby="del-h" className="mt-6 rounded-lg border border-accent p-4 text-left">
-      <h2 id="del-h" className="text-base">
+      <h2 id="del-h" className="card-title">
         Delete my account
       </h2>
       <p className="mt-1 text-sm text-dim">

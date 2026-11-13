@@ -2,6 +2,7 @@
 // Nutrition plan's targets and meals, and the weekly check-in day. Today and yesterday only - the server
 // refuses anything older.
 import { useState, type FormEvent } from "react";
+import { formatDay } from "../lib/dates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addMyProgress,
@@ -66,7 +67,7 @@ export function TodayHabits({ today }: { today: string }) {
   if (habits.isError) {
     return (
       <section aria-label="Today's habits" className="card p-4">
-        <h2 className="font-body text-base font-bold">Habits</h2>
+        <h2 className="card-title">Habits</h2>
         <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
           {plainErrorMessage(habits.error)}
         </p>
@@ -76,7 +77,7 @@ export function TodayHabits({ today }: { today: string }) {
   if (habits.data.habits.length === 0) return null;
   return (
     <section aria-label="Today's habits" className="card p-4">
-      <h2 className="font-body text-base font-bold">Habits</h2>
+      <h2 className="card-title">Habits</h2>
       <ul className="mt-2 grid gap-1">
         {habits.data.habits.map((h) => {
           const done = local[h.id] ?? h.week[h.week.length - 1] === true;
@@ -344,6 +345,7 @@ function CheckInForm({
           <input
             id="ci-sleep"
             inputMode="decimal"
+            placeholder="7.5"
             value={sleep}
             onChange={(e) => setSleep(e.target.value)}
             className={inputClass}
@@ -359,6 +361,7 @@ function CheckInForm({
           <input
             id="ci-water"
             inputMode="decimal"
+            placeholder="2"
             value={water}
             onChange={(e) => setWater(e.target.value)}
             className={inputClass}
@@ -374,6 +377,7 @@ function CheckInForm({
           <input
             id="ci-steps"
             inputMode="numeric"
+            placeholder="8000"
             value={steps}
             onChange={(e) => setSteps(e.target.value)}
             className={inputClass}
@@ -403,13 +407,12 @@ function CheckInForm({
           Saved. Your coach can see it.
         </p>
       )}
-      <button
-        type="submit"
-        disabled={save.isPending}
-        className="btn btn-primary min-h-11"
-      >
-        {save.isPending ? "Saving..." : "Save check-in"}
-      </button>
+      {/* The save stays reachable while filling the form on a phone. */}
+      <div className="sticky bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-10 -mx-1 bg-bg px-1 py-2 sm:static sm:m-0 sm:bg-transparent sm:p-0">
+        <button type="submit" disabled={save.isPending} className="btn btn-primary min-h-11 w-full sm:w-auto">
+          {save.isPending ? "Saving..." : "Save check-in"}
+        </button>
+      </div>
     </form>
   );
 }
@@ -529,6 +532,21 @@ export function WeeklyPage() {
                 onChange={(e) => setAdherence(e.target.value)}
                 className={inputClass}
               />
+              <div className="mt-1.5 flex gap-1.5" role="group" aria-label="Plan followed quick picks">
+                {[50, 70, 90, 100].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setAdherence(String(v))}
+                    aria-pressed={adherence === String(v)}
+                    className={`min-h-9 flex-1 rounded-lg border px-1 text-xs font-semibold ${
+                      adherence === String(v) ? "border-accent2 text-accent2" : "border-border bg-surface2 text-text hover:border-dim"
+                    }`}
+                  >
+                    {v}%
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label
@@ -592,13 +610,13 @@ function PastCheckIns({
   const shown = [...logs].reverse().slice(0, 8);
   return (
     <section aria-label="Past check-ins" className="card mt-4 p-4">
-      <h2 className="font-body text-base font-bold">Past check-ins</h2>
+      <h2 className="card-title">Past check-ins</h2>
       <ul className="mt-2 divide-y divide-border text-sm">
         {shown.map((l) => (
           <li key={l.id} className="flex flex-wrap gap-x-4 py-2">
-            <span className="font-mono text-dim">{l.date}</span>
+            <span className="text-dim">{formatDay(l.date)}</span>
             {l.weightKg != null && (
-              <span className="font-mono text-text">
+              <span className="font-semibold text-text">
                 {units === "lb"
                   ? round1(l.weightKg * LB_PER_KG)
                   : round1(l.weightKg)}{" "}
@@ -638,8 +656,8 @@ export function NutritionExtras({ plan }: { plan: ClientAssignment }) {
     <div className="mt-5 grid gap-3">
       {hasTargets && (
         <section aria-label="Daily targets" className="card p-4">
-          <h2 className="font-body text-base font-bold">Your daily targets</h2>
-          <p className="mt-1 font-mono text-lg text-text">
+          <h2 className="card-title">Your daily targets</h2>
+          <p className="mt-1 text-lg font-semibold text-text">
             {t!.calorieTarget != null && <span>{t!.calorieTarget} kcal</span>}
             {t!.calorieTarget != null && t!.proteinTargetG != null && " · "}
             {t!.proteinTargetG != null && (
@@ -650,7 +668,7 @@ export function NutritionExtras({ plan }: { plan: ClientAssignment }) {
       )}
       {meals.length > 0 && (
         <section aria-label="Meals" className="card p-4">
-          <h2 className="font-body text-base font-bold">
+          <h2 className="card-title">
             Meals your coach picked
           </h2>
           <ul className="mt-2 divide-y divide-border">
@@ -660,7 +678,7 @@ export function NutritionExtras({ plan }: { plan: ClientAssignment }) {
                   {m.name}{" "}
                   <span className="font-normal text-dim">· {m.mealType}</span>
                 </p>
-                <p className="font-mono text-xs text-dim">
+                <p className="text-xs text-dim">
                   {m.calories} kcal · P {m.proteinG}g · C {m.carbsG}g · F{" "}
                   {m.fatG}g
                 </p>
@@ -669,7 +687,7 @@ export function NutritionExtras({ plan }: { plan: ClientAssignment }) {
           </ul>
           <p className="mt-2 text-xs text-dim">
             Together:{" "}
-            <span className="font-mono">
+            <span className="font-semibold">
               {total.kcal} kcal · {round1(total.p)} g protein
             </span>
           </p>

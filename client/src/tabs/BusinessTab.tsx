@@ -9,6 +9,7 @@ import { Schedule } from "../components/Schedule";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
 import { formatDay } from "../lib/dates";
+import { formatMoney } from "../lib/money";
 import {
   BILLING_CYCLES,
   PAYMENT_METHODS,
@@ -47,11 +48,7 @@ function matches(filter: Filter, plan: ClientPlan, today: string): boolean {
 
 /** Formats an amount in the coach's currency (the data stores a number and an ISO code, never a symbol). */
 export function money(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency }).format(amount);
-  } catch {
-    return `${amount.toFixed(2)} ${currency}`;
-  }
+  return formatMoney(amount, currency);
 }
 
 const dayText = (iso: string) => formatDay(iso);
