@@ -1138,3 +1138,16 @@ and record it here.
   `e2e-ui/demo-widget.spec.ts`): the beacon is page-wide and unrelated to what they measure.
 - If Cloudflare's dashboard is ever switched back to automatic injection, REMOVE the tag first -
   two beacons double-count every visit.
+
+## The pinned "old way -> Progress" scene (owner, Nov 2026)
+
+- Its GSAP timeline in `motion.ts` DERIVES every time from `beats.length`. It used to hardcode beat
+  indices, so removing one beat from `BEATS` left it animating an index that no longer existed and
+  showed the final "Progress." panel two steps early, next to a tangle that was still on screen.
+  If you add or remove a beat, nothing needs changing here - keep it that way.
+- The last beat is a PAIR: the "Progress." panel (left) and the client card (right) fade in together
+  and fade out together before the pin releases. Never give them separate timings - one of them
+  alone on screen reads as a broken layout.
+- The four scattered numbers are one client's weight recorded in four apps, none agreeing. They sit
+  in the gaps between tiles and carry the note "one weight, four answers"; without it they look like
+  numbers spilled at random.

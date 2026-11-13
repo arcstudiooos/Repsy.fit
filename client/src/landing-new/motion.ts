@@ -174,17 +174,22 @@ export function startMotion(root: HTMLElement): () => void {
         scrollTrigger: { trigger: nb, start: "top top", end: "+=2600", pin: "[data-nb-pin]", scrub: 0.7, anticipatePin: 1 },
       });
       const swap = (from: number, to: number, at: number) => {
-        tl.to(beats[from], { autoAlpha: 0, y: -24, duration: 0.3 }, at).fromTo(beats[to], { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.3 }, at + 0.15);
+        tl.to(beats[from], { autoAlpha: 0, y: -24, duration: 0.3 }, at).fromTo(beats[to], { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.3, immediateRender: false }, at + 0.15);
       };
+      // Times are DERIVED from how many beats the markup has, never hardcoded: a beat added to or
+      // removed from BEATS used to leave this timeline animating an index that no longer existed,
+      // which showed the last beat two steps early (owner, Nov 2026).
+      const last = beats.length - 1; // the "Progress." panel, which pairs with the client card
       gsap.set(beats.slice(1), { autoAlpha: 0 });
-      swap(0, 1, 0.5);
-      tl.to("[data-nb-layer='1']", { autoAlpha: 1, duration: 0.3, stagger: 0.1 }, 0.6);
-      swap(1, 2, 1.4);
-      tl.to("[data-nb-layer='2']", { autoAlpha: 1, duration: 0.3, stagger: 0.1 }, 1.5);
-      swap(2, 3, 2.3);
+      let at = 0.5;
+      for (let i = 1; i < last; i++) {
+        swap(i - 1, i, at);
+        tl.to(`[data-nb-layer='${i}']`, { autoAlpha: 1, duration: 0.3, stagger: 0.1 }, at + 0.1);
+        at += 0.9;
+      }
       // Enough: the threads snap, every tile is pulled into the centre and the tangle is gone.
-      tl.to(threads, { opacity: 0, duration: 0.2, stagger: 0.03 }, 2.4);
-      tl.to("[data-nb-layer]", { autoAlpha: 0, duration: 0.2 }, 2.4);
+      tl.to(threads, { opacity: 0, duration: 0.2, stagger: 0.03 }, at);
+      tl.to("[data-nb-layer]", { autoAlpha: 0, duration: 0.2 }, at);
       tl.to(
         tiles,
         {
@@ -199,12 +204,22 @@ export function startMotion(root: HTMLElement): () => void {
           ease: "power3.in",
           stagger: 0.05,
         },
-        2.55,
+        at + 0.15,
       );
-      tl.to("[data-nb-book]", { autoAlpha: 0, duration: 0.2 }, 3.1);
-      swap(3, 4, 3.2);
-      tl.fromTo("[data-nb-app]", { autoAlpha: 0, rotateY: 40, scale: 0.92 }, { autoAlpha: 1, rotateY: 0, scale: 1, duration: 0.6, ease: "power2.out" }, 3.45);
-      tl.to({}, { duration: 0.4 });
+      tl.to("[data-nb-book]", { autoAlpha: 0, duration: 0.2 }, at + 0.7);
+      // The last beat is a PAIR - the "Progress." panel on the left and the client card on the right
+      // are one thought - so they arrive together and fade out together, and neither is ever left
+      // standing alone while the other side is empty.
+      tl.to(beats[last - 1], { autoAlpha: 0, y: -24, duration: 0.3 }, at + 0.8);
+      tl.fromTo(beats[last], { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.45, immediateRender: false }, at + 0.95);
+      tl.fromTo(
+        "[data-nb-app]",
+        { autoAlpha: 0, rotateY: 40, scale: 0.92 },
+        { autoAlpha: 1, rotateY: 0, scale: 1, duration: 0.45, ease: "power2.out", immediateRender: false },
+        at + 0.95,
+      );
+      tl.to([beats[last], "[data-nb-app]"], { autoAlpha: 0, duration: 0.3 }, at + 1.9);
+      tl.to({}, { duration: 0.25 });
     }
 
     /* ---------- generic reveals ---------- */

@@ -1445,22 +1445,30 @@ function Tangle() {
           )}
         </div>
       ))}
-      {/* beat 3: the numbers that never agree */}
+      {/* beat 3: one client's weight, written down in four places, agreeing with none of them.
+          Positioned in the gaps between the app tiles, with a note saying what they are - without
+          it they read as numbers spilled at random (owner, Nov 2026). */}
       <div data-nb-layer="2" className="pointer-events-none absolute inset-0">
         {[
-          ["80.0", "12%", "76%"],
-          ["82.5", "70%", "18%"],
-          ["79.6 ??", "40%", "92%"],
-          ["+2.5?", "6%", "40%"],
+          ["80.0", "44%", "6%"],
+          ["82.5", "2%", "34%"],
+          ["79.6 ??", "52%", "66%"],
+          ["+2.5?", "22%", "88%"],
         ].map(([n, l, tp]) => (
           <span
             key={n}
             className="ln-mono absolute rounded-full px-2.5 py-1 text-[0.8rem] font-bold"
-            style={{ left: l, top: tp, background: "var(--card)" }}
+            style={{ left: l, top: tp, background: "var(--card)", border: "1px solid var(--line)" }}
           >
             {n}
           </span>
         ))}
+        <span
+          className="ln-hand absolute left-0 top-[74%] w-max text-[1.2rem]"
+          style={{ color: "var(--orange-deep)" }}
+        >
+          one weight, four answers
+        </span>
       </div>
       <p
         className="ln-hand absolute bottom-0 right-2 text-[1.5rem]"
