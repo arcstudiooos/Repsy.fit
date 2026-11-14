@@ -37,6 +37,10 @@ billingRouter.get("/me", async (req: Request, res: Response) => {
           clientId: process.env.PAYPAL_CLIENT_ID,
           environment: process.env.PAYPAL_ENV === "live" ? "live" : "sandbox",
           plans: Object.fromEntries(PLAN_TIERS.map((t: PlanTier) => [t, planIdFor(t)])),
+          // Stamped onto the subscription at checkout so PayPal itself records who it belongs to.
+          // /confirm then refuses any subscription whose custom_id is a different coach. Without
+          // it, ownership rests only on "has someone else claimed this id already".
+          customId: coachIdOf(req),
         }
       : null,
   });

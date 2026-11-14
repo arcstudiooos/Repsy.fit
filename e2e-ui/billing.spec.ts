@@ -20,6 +20,7 @@ const billing = (over: Billing = {}): Billing => ({
     clientId: "test-client-id",
     environment: "sandbox",
     plans: { Solo: "P-SOLO", Pro: "P-PRO", Studio: "P-STUDIO" },
+    customId: "coach-1",
   },
   ...over,
 });

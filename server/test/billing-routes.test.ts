@@ -57,6 +57,8 @@ describe("GET /api/billing/me", () => {
     expect(res.body).toMatchObject({ status: "trialing", canWrite: true, needsSubscription: true });
     expect(res.body.paypal.plans.Solo).toBe(SOLO);
     expect(res.body.paypal.environment).toBe("sandbox");
+    // The checkout stamps this onto the subscription, which is how PayPal records the owner.
+    expect(res.body.paypal.customId).toBe(TEST_COACH_ID);
     // The secret must never leave the server.
     expect(JSON.stringify(res.body)).not.toContain("test-secret");
   });

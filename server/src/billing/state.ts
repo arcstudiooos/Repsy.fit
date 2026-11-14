@@ -42,7 +42,10 @@ export type BillingState = {
 };
 
 const DAY_MS = 86_400_000;
-const daysBetween = (from: Date, to: Date) => Math.ceil((to.getTime() - from.getTime()) / DAY_MS);
+/** Whole days that have passed. Rounds DOWN: five minutes ago is zero days ago, not one. */
+const daysSince = (from: Date, to: Date) => Math.floor((to.getTime() - from.getTime()) / DAY_MS);
+/** Whole days remaining, rounded UP: any part of a day left still counts as a day. */
+const daysUntil = (from: Date, to: Date) => Math.ceil((to.getTime() - from.getTime()) / DAY_MS);
 
 export function billingState(coach: BillingFields, now: Date = new Date()): BillingState {
   const tier = coach.planTier;
@@ -56,7 +59,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
 
   // A cancelled subscription keeps working until the paid period runs out.
   if (coach.billingStatus === "cancelled" && paidThrough) {
-    const left = daysBetween(now, coach.periodEndsAt as Date);
+    const left = daysUntil(now, coach.periodEndsAt as Date);
     return {
       status: "active",
       tier,
@@ -69,7 +72,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
 
   // A failed payment: full access for the grace period, then read-only.
   if (coach.billingStatus === "past_due" && coach.pastDueSince) {
-    const left = GRACE_DAYS - daysBetween(coach.pastDueSince, now);
+    const left = GRACE_DAYS - daysSince(coach.pastDueSince, now);
     if (left > 0) {
       return {
         status: "past_due",
@@ -77,7 +80,8 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
         canWrite: true,
         daysLeft: left,
         needsSubscription: false,
-        message: `Your last payment did not go through. Please update it within ${left} ${left === 1 ? "day" : "days"} to keep adding plans.`,
+        // The card already says the payment failed; repeating it here printed the sentence twice.
+        message: `Please update it within ${left} ${left === 1 ? "day" : "days"} to keep adding plans.`,
       };
     }
     return {
@@ -92,7 +96,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
 
   // The free trial.
   if (coach.billingStatus === "trialing" && coach.trialEndsAt && coach.trialEndsAt > now) {
-    const left = daysBetween(now, coach.trialEndsAt);
+    const left = daysUntil(now, coach.trialEndsAt);
     return {
       status: "trialing",
       tier,

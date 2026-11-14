@@ -41,7 +41,11 @@ describe("billingState", () => {
   it("a failed payment keeps full access for the grace period, then goes read-only", () => {
     const fresh = billingState(coach({ billingStatus: "past_due", pastDueSince: days(-1), paypalSubscriptionId: "I-1" }), NOW);
     expect(fresh).toMatchObject({ status: "past_due", canWrite: true, daysLeft: GRACE_DAYS - 1 });
-    expect(fresh.message).toContain("did not go through");
+    // The screen says "your last payment did not go through" above this, so the message must not
+    // repeat it - and a failure minutes ago has the FULL grace period left, not one day less.
+    expect(fresh.message).toBe("Please update it within 6 days to keep adding plans.");
+    const justNow = billingState(coach({ billingStatus: "past_due", pastDueSince: new Date(NOW.getTime() - 60_000), paypalSubscriptionId: "I-1" }), NOW);
+    expect(justNow.daysLeft).toBe(GRACE_DAYS);
 
     const lapsed = billingState(coach({ billingStatus: "past_due", pastDueSince: days(-GRACE_DAYS), paypalSubscriptionId: "I-1" }), NOW);
     expect(lapsed).toMatchObject({ status: "read_only", canWrite: false });
