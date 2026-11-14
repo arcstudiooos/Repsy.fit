@@ -1,142 +1,104 @@
-// What a coach's subscription means TODAY (Nov 2026). One place decides it, so every route and
-// every screen agrees.
+// What a coach's plan means TODAY (owner, Nov 2026).
 //
-// The owner's rule: a billing problem must never cost a coach access to live client data, and must
-// never touch their clients. So a lapsed account goes READ-ONLY - everything is still visible and
-// exportable, nothing new can be created - and the clients' own app keeps working regardless.
+// The pricing is by client count: free forever with 2 clients, and paying raises the limit. That
+// makes this far simpler than the trial-and-lockout model it replaced:
 //
-// Nothing here talks to PayPal: it reads the stored state (set by the webhook) plus the clock.
-
-/** The three tiers, in the order they are shown. */
-export const PLAN_TIERS = ["Solo", "Pro", "Studio"] as const;
-export type PlanTier = (typeof PLAN_TIERS)[number];
-export const isPlanTier = (v: unknown): v is PlanTier => PLAN_TIERS.includes(v as PlanTier);
+//   - There is no trial to expire and no read-only state. Every feature works on every plan.
+//   - A coach who stops paying drops back to the free limit. They keep every client they have
+//     (see billing/limit.ts) and simply cannot add more until they pay again.
+//   - So a billing problem can never cost a coach their data, and can never reach their clients.
+//
+// Nothing here talks to PayPal: it reads the stored state plus the clock.
+import { clientLimitFor, FREE_TIER, planFor } from "./plans.js";
 
 /** The stored columns this needs. Kept narrow so tests can build one by hand. */
 export type BillingFields = {
   planTier: string;
   billingStatus: string;
-  trialEndsAt: Date | null;
   periodEndsAt: Date | null;
   pastDueSince: Date | null;
   paypalSubscriptionId: string | null;
 };
 
-/** Days a failed payment keeps full access before the account goes read-only. */
+/** Days a failed payment keeps the paid client limit before dropping to the free one. */
 export const GRACE_DAYS = 7;
-/** Length of the free trial a new account gets. */
-export const TRIAL_DAYS = 7;
 
 export type BillingState = {
-  /** What the coach is told. */
-  status: "trialing" | "active" | "past_due" | "read_only";
+  /** free = on the free plan; active = paying; past_due = payment failed, still on the paid limit. */
+  status: "free" | "active" | "past_due";
+  /** The plan key (billing/plans.ts), e.g. "Free" or "Pro20". */
   tier: string;
-  /** False once a lapsed account may only read: creating and assigning stop here. */
-  canWrite: boolean;
-  /** Days left in the trial or grace period; null when neither applies. */
+  /** How many clients this plan allows right now. */
+  clientLimit: number;
+  /** Dollars per month, 0 on the free plan. */
+  price: number;
+  /** Days left of the grace period after a failed payment, else null. */
   daysLeft: number | null;
-  /** True while they have never subscribed (so the UI can ask them to). */
-  needsSubscription: boolean;
-  /** Plain words for the banner, or null when nothing needs saying. */
+  /** True when they are on the free plan (so the UI can offer the paid ones). */
+  isFree: boolean;
+  /** Plain words, or null when nothing needs saying. */
   message: string | null;
-  /** The date the plan next renews (or ends, once cancelled), ISO. Null when neither applies. */
+  /** When the plan next renews (or ends, once cancelled), ISO. Null on the free plan. */
   renewsOn: string | null;
 };
 
 const DAY_MS = 86_400_000;
-/** Whole days that have passed. Rounds DOWN: five minutes ago is zero days ago, not one. */
 const daysSince = (from: Date, to: Date) => Math.floor((to.getTime() - from.getTime()) / DAY_MS);
-/** Whole days remaining, rounded UP: any part of a day left still counts as a day. */
 const daysUntil = (from: Date, to: Date) => Math.ceil((to.getTime() - from.getTime()) / DAY_MS);
 
+const free = (over: Partial<BillingState> = {}): BillingState => ({
+  status: "free",
+  tier: FREE_TIER,
+  clientLimit: clientLimitFor(FREE_TIER),
+  price: 0,
+  daysLeft: null,
+  isFree: true,
+  message: null,
+  renewsOn: null,
+  ...over,
+});
+
 export function billingState(coach: BillingFields, now: Date = new Date()): BillingState {
-  const tier = coach.planTier;
-  const subscribed = coach.paypalSubscriptionId !== null;
-
-  // Paid up: the period they bought has not ended yet (a cancellation still runs to the end).
+  const plan = planFor(coach.planTier);
   const paidThrough = coach.periodEndsAt !== null && coach.periodEndsAt > now;
-  if (coach.billingStatus === "active" && paidThrough) {
-    return {
-      status: "active",
-      tier,
-      canWrite: true,
-      daysLeft: null,
-      needsSubscription: false,
-      message: null,
-      renewsOn: (coach.periodEndsAt as Date).toISOString(),
-    };
-  }
+  if (plan.price === 0) return free();
 
-  // A cancelled subscription keeps working until the paid period runs out.
+  const onPaidPlan = (over: Partial<BillingState>): BillingState => ({
+    status: "active",
+    tier: plan.key,
+    clientLimit: plan.clients,
+    price: plan.price,
+    daysLeft: null,
+    isFree: false,
+    message: null,
+    renewsOn: coach.periodEndsAt ? coach.periodEndsAt.toISOString() : null,
+    ...over,
+  });
+
+  if (coach.billingStatus === "active" && paidThrough) return onPaidPlan({});
+
+  // Cancelled: the plan runs to the end of the period already paid for, then the free limit returns.
   if (coach.billingStatus === "cancelled" && paidThrough) {
     const left = daysUntil(now, coach.periodEndsAt as Date);
-    return {
-      status: "active",
-      tier,
-      canWrite: true,
-      daysLeft: left,
-      needsSubscription: true,
-      message: `Your plan is cancelled and ends in ${left} ${left === 1 ? "day" : "days"}. You keep everything until then.`,
-      renewsOn: (coach.periodEndsAt as Date).toISOString(),
-    };
+    return onPaidPlan({
+      message: `Your plan is cancelled and ends in ${left} ${left === 1 ? "day" : "days"}. You keep every client you have after that - the free plan just covers ${clientLimitFor(FREE_TIER)} new ones.`,
+    });
   }
 
-  // A failed payment: full access for the grace period, then read-only.
+  // A failed payment keeps the paid limit for the grace period.
   if (coach.billingStatus === "past_due" && coach.pastDueSince) {
     const left = GRACE_DAYS - daysSince(coach.pastDueSince, now);
     if (left > 0) {
-      return {
+      return onPaidPlan({
         status: "past_due",
-        tier,
-        canWrite: true,
         daysLeft: left,
-        needsSubscription: false,
-        // The card already says the payment failed; repeating it here printed the sentence twice.
-        message: `Please update it within ${left} ${left === 1 ? "day" : "days"} to keep adding plans.`,
-        renewsOn: null,
-      };
+        message: `Your last payment did not go through. Please update it within ${left} ${left === 1 ? "day" : "days"} to stay on ${plan.clients} clients.`,
+      });
     }
-    return {
-      status: "read_only",
-      tier,
-      canWrite: false,
-      daysLeft: 0,
-      needsSubscription: false,
-      message: "Your last payment did not go through, so new plans are paused. Everything you already have stays here, and your clients are unaffected.",
-      renewsOn: null,
-    };
   }
 
-  // The free trial.
-  if (coach.billingStatus === "trialing" && coach.trialEndsAt && coach.trialEndsAt > now) {
-    const left = daysUntil(now, coach.trialEndsAt);
-    return {
-      status: "trialing",
-      tier,
-      canWrite: true,
-      daysLeft: left,
-      needsSubscription: true,
-      message: `${left} ${left === 1 ? "day" : "days"} left of your free trial.`,
-      renewsOn: coach.trialEndsAt.toISOString(),
-    };
-  }
-
-  // Trial over, or a subscription that ended: read-only until they pay.
-  return {
-    status: "read_only",
-    tier,
-    canWrite: false,
-    daysLeft: 0,
-    needsSubscription: !subscribed || !paidThrough,
-    message: subscribed
-      ? "Your plan has ended, so new plans are paused. Everything you already have stays here, and your clients are unaffected."
-      : "Your free trial has ended, so new plans are paused. Everything you already have stays here, and your clients are unaffected.",
-    renewsOn: null,
-  };
+  // The paid plan has lapsed: back to the free limit, keeping every client they already have.
+  return free({
+    message: `Your plan has ended, so you are back on the free plan. You keep every client you have - the free plan just covers ${clientLimitFor(FREE_TIER)} new ones.`,
+  });
 }
-
-/** The 402 body every write route sends when the account may only read. */
-export const BILLING_BLOCKED = "Your plan has ended. You can still see and export everything; choose a plan to add new ones.";
-
-/** The trial a brand-new account gets, counted from now. */
-export const trialEnd = (from: Date = new Date()) => new Date(from.getTime() + TRIAL_DAYS * DAY_MS);

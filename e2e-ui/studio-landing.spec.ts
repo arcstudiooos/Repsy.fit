@@ -137,14 +137,17 @@ test("FAQ chat: six questions, tapping one shows Repsy's answer, tapping again h
   await expect(page.locator("#faq [role=status]")).toHaveCount(0);
 });
 
-test("pricing shows the three published plans and the trial", async ({ page }) => {
+test("pricing shows the free plan, the paid sizes and the studio conversation", async ({ page }) => {
   await open(page);
   const plans = page.locator("#pricing").getByTestId("plan");
   await expect(plans).toHaveCount(3);
-  await expect(plans.nth(0)).toContainText("$39");
-  await expect(plans.nth(1)).toContainText("$89");
-  await expect(plans.nth(2)).toContainText("$199");
-  await expect(page.locator("#pricing")).toContainText("7-day free trial");
+  // Free first: it is what most people should start on, and it never expires.
+  await expect(plans.nth(0)).toContainText("Free");
+  await expect(plans.nth(0)).toContainText("Up to 2 clients");
+  // Pro is a size picker, priced from the smallest step.
+  await expect(plans.nth(1)).toContainText("$17");
+  await expect(plans.nth(2)).toContainText("Let's talk");
+  await expect(page.locator("#pricing")).toContainText("Free for your first two clients");
 });
 
 test("the lead form posts to /api/leads and confirms", async ({ page }) => {
@@ -324,22 +327,26 @@ test("the nav gets a backdrop once the page scrolls, and narrow screens get a se
   await expect(header).toHaveClass(/is-stuck/);
 });
 
-test("pricing: a most-popular badge, plain client limits and a rupee switch", async ({ page }) => {
+test("pricing: the size picker changes the price, and rupees are labelled as approximate", async ({ page }) => {
   await page.goto("/#pricing");
   const plans = page.getByTestId("plan");
   await expect(plans).toHaveCount(3);
   // Scene elements stay hidden until scrolled into view, so bring pricing in first.
   await plans.first().scrollIntoViewIfNeeded();
-  await expect(plans.nth(1)).toContainText("Most popular");
-  await expect(plans.nth(1)).toContainText("Up to 100 clients");
-  await expect(plans.nth(2)).toContainText("No client limit");
-  await expect(page.getByText("Client limit to be announced")).toHaveCount(0);
-  await expect(plans.nth(0)).toContainText("$39");
+  const pro = plans.nth(1);
+  await expect(pro).toContainText("Most coaches start here");
+  await expect(pro).toContainText("$17");
+
+  // Picking a bigger roster shows that roster's price: this IS the pricing, not a detail.
+  await pro.getByTestId("plan-size").selectOption("Pro20");
+  await expect(pro).toContainText("$45");
+
   const rupees = page.getByRole("button", { name: "Indian rupees" });
   await rupees.scrollIntoViewIfNeeded();
   await rupees.click();
-  await expect(plans.nth(0)).toContainText("\u20b93300");
-  await expect(plans.nth(0)).toContainText("Billed in US dollars ($39)");
+  // Billing is in dollars, so the rupee figure must always say so.
+  await expect(pro).toContainText("Billed in US dollars ($45)");
+  await expect(plans.nth(0)).toContainText("Free");
 });
 
 test("real product screenshots and the FAQ answers are in the markup", async ({ page }) => {

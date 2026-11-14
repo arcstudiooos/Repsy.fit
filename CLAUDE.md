@@ -1249,3 +1249,20 @@ A third party being broken must degrade one feature, never the server.
 
 Half-switching environments is what caused it. `PAYPAL_ENV`, the client id, the secret, the webhook
 id and the three plan ids belong to ONE environment and must be changed in a single save.
+
+## Pricing by roster size (owner, Nov 2026) - REPLACES the trial-and-lockout model
+
+- Free forever for 2 clients; paying raises the client limit and NOTHING else. Every feature is in
+  every plan. There is no trial, no read-only state and no lockout: those were deleted, not disabled.
+- `server/src/billing/plans.ts` is the single source of the ladder (Free 2, Pro5 17, Pro10 25,
+  Pro20 45, Pro50 90, Pro100 150). `client/src/landing-new/content.ts` and `seo.json` must agree;
+  tests fail if they drift. PayPal plans are immutable, so a price change means NEW plans in BOTH
+  environments via `server/scripts/paypal-plans.mjs` - never edit one by hand.
+- The limit bites in exactly two places: creating a client, and ACCEPTING someone from the waiting
+  list. Declining is always allowed, so a coach at their limit can still clear the queue. Demo
+  clients (`isDemo`) and people who have not been accepted yet never count.
+- A coach over their limit after a downgrade keeps every client; only adding stops. The billing
+  screen disables a plan smaller than the current roster rather than letting them buy it.
+- Limit checks FAIL OPEN: a database hiccup must never look like a full roster.
+- Two local env files, never one: `server/.env` (sandbox) and `server/.env.live`. Duplicate keys in
+  a single file silently let the LAST win, which once pointed live credentials at sandbox.

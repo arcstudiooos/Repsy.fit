@@ -104,34 +104,47 @@ export const BEATS = [
   { title: "Enough.", body: "One place." },
 ];
 
-export const PLANS = [
-  {
-    name: "Solo",
-    price: 39,
-    clients: "Up to 30 clients",
-    features: [
-      "AI Coach with each client's context",
-      "Suggested plans with reasoning",
-      "Manual Planner, templates and meals",
-      "Check-ins, habits and progress charts",
-      "Client message log, schedule and payment records",
-    ],
-  },
-  {
-    name: "Pro",
-    price: 89,
-    clients: "Up to 100 clients",
-    badge: "Most popular",
-    features: ["Everything in Solo - no feature is locked", "Room for a full book of clients", "Weekly AI summary for every client"],
-    dark: true,
-  },
-  {
-    name: "Studio",
-    price: 199,
-    clients: "No client limit",
-    features: ["Everything in Pro - no feature is locked", "Take on as many clients as you can coach", "One place for a studio's whole roster"],
-  },
+/** Pricing by roster size (owner, Nov 2026). Free forever for 2 clients; paying raises the limit
+ *  and nothing else - every feature is in every plan. These numbers must match
+ *  server/src/billing/plans.ts, and a test fails if they drift. */
+export const FREE_PLAN = {
+  name: "Starter",
+  price: 0,
+  clients: 2,
+  blurb: "For your first clients, or for trying the whole thing out properly.",
+  features: [
+    "Every feature, with no time limit",
+    "AI plans with the reasoning shown",
+    "Check-ins, habits and progress charts",
+    "Your clients get the web app - nothing to install",
+  ],
+};
+
+/** The paid steps. One price per roster size; the feature list never changes. */
+export const PLAN_STEPS = [
+  { key: "Pro5", clients: 5, price: 17 },
+  { key: "Pro10", clients: 10, price: 25 },
+  { key: "Pro20", clients: 20, price: 45 },
+  { key: "Pro50", clients: 50, price: 90 },
+  { key: "Pro100", clients: 100, price: 150 },
 ];
+
+export const PRO_PLAN = {
+  name: "Pro",
+  blurb: "For a book of clients that is filling up. Pick the size you need and change it whenever.",
+  features: [
+    "Everything in Starter - no feature is ever locked",
+    "Move up or down a size any time",
+    "Cancel whenever: you keep every client you have",
+  ],
+};
+
+export const ENTERPRISE_PLAN = {
+  name: "Studio",
+  blurb: "For gyms and studios past a hundred clients, or a team of coaches under one roof.",
+  cta: "Email us",
+  features: ["More than 100 clients", "We will work out what fits", "Same product, same data promises"],
+};
 
 /** Rough INR shown beside the dollar price. Billing is in USD; this is a convenience only, so it is
  *  deliberately rounded and labelled "about". Update when the rate drifts far (owner, Nov 2026). */
@@ -140,7 +153,7 @@ export const RUPEES_PER_USD = 84;
 /** Plain promises shown above pricing. Every line is something the product actually does today -
  *  no testimonial or customer count is implied until there are real ones to quote. */
 export const TRUST = [
-  { k: "7 days", v: "free trial, no card to start" },
+  { k: "Free", v: "for your first 2 clients, with no time limit" },
   { k: "0", v: "apps for your clients to install" },
   { k: "Any time", v: "export your data, or delete it all" },
   { k: "Never", v: "your clients' data used to train AI models" },

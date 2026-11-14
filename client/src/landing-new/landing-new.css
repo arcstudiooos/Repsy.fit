@@ -728,3 +728,31 @@
     display: none;
   }
 }
+
+/* The roster-size picker inside the Pro card (Nov 2026). It sits on the dark card, so it borrows
+   the card's own paper colour rather than introducing one. 44px tall: it is a real tap target. */
+.ln-select {
+  appearance: none;
+  min-height: 44px;
+  padding: 0 2.2rem 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--paper) 28%, transparent);
+  background-color: color-mix(in srgb, var(--paper) 10%, transparent);
+  background-image: linear-gradient(45deg, transparent 50%, var(--paper) 50%),
+    linear-gradient(135deg, var(--paper) 50%, transparent 50%);
+  background-position: right 1.15rem center, right 0.85rem center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  color: var(--paper);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.ln-select:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
+/* The options list is drawn by the OS, which does not inherit the card's dark colours. */
+.ln-select option {
+  color: var(--ink);
+  background: var(--paper);
+}

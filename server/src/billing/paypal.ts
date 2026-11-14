@@ -5,21 +5,24 @@
 //
 // Everything that MATTERS is verified here, server-side. The browser tells us a subscription id;
 // it could tell us anything, so we ask PayPal what that id actually is before believing it.
-import { PLAN_TIERS, type PlanTier } from "./state.js";
+import { PLANS, type PlanDef } from "./plans.js";
 
 const BASE = () => (process.env.PAYPAL_ENV === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com");
 
+/** The plans a coach can actually buy: everything except the free one. */
+export const paidPlans = (): PlanDef[] => PLANS.filter((p) => p.price > 0);
+
 export const paypalConfigured = () =>
-  Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET && planIdFor("Solo"));
+  Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET && paidPlans().every((p) => planIdFor(p.key)));
 
 /** The plan id for a tier, from the environment. Not secret: it appears in the checkout. */
-export function planIdFor(tier: PlanTier): string | undefined {
+export function planIdFor(tier: string): string | undefined {
   return process.env[`PAYPAL_PLAN_${tier.toUpperCase()}`];
 }
 
 /** The tier a plan id belongs to, or undefined if it is not one of ours. */
-export function tierForPlanId(planId: string): PlanTier | undefined {
-  return PLAN_TIERS.find((t) => planIdFor(t) === planId);
+export function tierForPlanId(planId: string): string | undefined {
+  return paidPlans().find((p) => planIdFor(p.key) === planId)?.key;
 }
 
 /** Cached because PayPal's token lasts hours and every webhook would otherwise fetch a new one. */

@@ -11,6 +11,7 @@ vi.unmock("../src/billing/current.js");
 const { prisma } = vi.hoisted(() => ({
   prisma: {
     coach: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    client: { count: vi.fn() },
   },
 }));
 vi.mock("../src/db.js", () => ({ prisma }));
@@ -29,11 +30,10 @@ vi.mock("../src/billing/paypal.js", async (orig) => {
 const { app } = await import("../src/app.js");
 
 const DAY = 86_400_000;
-const SOLO = "P-SOLO-TEST";
+const SOLO = "P-PRO5-TEST"; // the smallest paid plan
 const row = (over: Record<string, unknown> = {}) => ({
-  planTier: "Solo",
-  billingStatus: "trialing",
-  trialEndsAt: new Date(Date.now() + 3 * DAY),
+  planTier: "Free",
+  billingStatus: "free",
   periodEndsAt: null,
   pastDueSince: null,
   paypalSubscriptionId: null,
@@ -42,9 +42,15 @@ const row = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Pinned, never inherited: a developer's local .env must not change what the tests assert.
+  process.env.PAYPAL_ENV = "sandbox";
   process.env.PAYPAL_CLIENT_ID = "test-client";
   process.env.PAYPAL_CLIENT_SECRET = "test-secret";
-  process.env.PAYPAL_PLAN_SOLO = SOLO;
+  process.env.PAYPAL_PLAN_PRO5 = SOLO;
+  for (const [k, v] of [["PRO10", "P-10"], ["PRO20", "P-20"], ["PRO50", "P-50"], ["PRO100", "P-100"]]) {
+    process.env[`PAYPAL_PLAN_${k}`] = v;
+  }
+  prisma.client.count.mockResolvedValue(0);
   process.env.PAYPAL_WEBHOOK_ID = "WH-TEST";
   prisma.coach.findUnique.mockResolvedValue(row());
   prisma.coach.findFirst.mockResolvedValue(null);
@@ -52,11 +58,21 @@ beforeEach(() => {
 });
 
 describe("GET /api/billing/me", () => {
-  it("reports the trial and hands over the public plan ids", async () => {
+  it("reports the free plan, the usage and the public plan ids", async () => {
+    prisma.client.count.mockResolvedValue(1);
     const res = await request(app).get("/api/billing/me");
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: "trialing", canWrite: true, needsSubscription: true });
-    expect(res.body.paypal.plans.Solo).toBe(SOLO);
+    expect(res.body).toMatchObject({ status: "free", tier: "Free", clientLimit: 2, isFree: true, clientsUsed: 1 });
+    // The screen draws the ladder from this, so it must carry every tier and price.
+    expect(res.body.catalogue).toEqual([
+      { key: "Free", clients: 2, price: 0 },
+      { key: "Pro5", clients: 5, price: 17 },
+      { key: "Pro10", clients: 10, price: 25 },
+      { key: "Pro20", clients: 20, price: 45 },
+      { key: "Pro50", clients: 50, price: 90 },
+      { key: "Pro100", clients: 100, price: 150 },
+    ]);
+    expect(res.body.paypal.plans.Pro5).toBe(SOLO);
     expect(res.body.paypal.environment).toBe("sandbox");
     // The checkout stamps this onto the subscription, which is how PayPal records the owner.
     expect(res.body.paypal.customId).toBe(TEST_COACH_ID);
@@ -76,13 +92,13 @@ describe("POST /api/billing/confirm", () => {
     });
     // The route re-reads the row after writing it, and that read is the response.
     prisma.coach.findUnique.mockResolvedValue(
-      row({ billingStatus: "active", periodEndsAt: new Date(Date.now() + 30 * DAY), paypalSubscriptionId: "I-REAL" }),
+      row({ planTier: "Pro5", billingStatus: "active", periodEndsAt: new Date(Date.now() + 30 * DAY), paypalSubscriptionId: "I-REAL" }),
     );
     const res = await request(app).post("/api/billing/confirm").send({ subscriptionId: "I-REAL" });
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ status: "active", canWrite: true });
+    expect(res.body).toMatchObject({ status: "active", tier: "Pro5", clientLimit: 5 });
     expect(prisma.coach.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ planTier: "Solo", billingStatus: "active" }) }),
+      expect.objectContaining({ data: expect.objectContaining({ planTier: "Pro5", billingStatus: "active" }) }),
     );
   });
 
@@ -124,12 +140,12 @@ describe("POST /api/billing/cancel", () => {
   it("keeps access until the end of the period already paid for", async () => {
     const end = new Date(Date.now() + 12 * DAY);
     prisma.coach.findUnique
-      .mockResolvedValueOnce(row({ billingStatus: "active", periodEndsAt: end, paypalSubscriptionId: "I-REAL" }))
-      .mockResolvedValue(row({ billingStatus: "cancelled", periodEndsAt: end, paypalSubscriptionId: "I-REAL" }));
+      .mockResolvedValueOnce(row({ planTier: "Pro5", billingStatus: "active", periodEndsAt: end, paypalSubscriptionId: "I-REAL" }))
+      .mockResolvedValue(row({ planTier: "Pro5", billingStatus: "cancelled", periodEndsAt: end, paypalSubscriptionId: "I-REAL" }));
     cancelSubscription.mockResolvedValue(true);
     const res = await request(app).post("/api/billing/cancel").send({});
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ canWrite: true, daysLeft: 12 });
+    expect(res.body).toMatchObject({ status: "active", clientLimit: 5 });
     expect(res.body.message).toContain("ends in 12 days");
   });
 
@@ -230,7 +246,7 @@ describe("payments, as proof", () => {
   ];
 
   it("reports what PayPal charged, with the reference a coach can quote", async () => {
-    prisma.coach.findUnique.mockResolvedValue({ paypalSubscriptionId: "I-REAL", planTier: "Solo" });
+    prisma.coach.findUnique.mockResolvedValue({ paypalSubscriptionId: "I-REAL", planTier: "Pro5" });
     listTransactions.mockResolvedValue(paid);
     const res = await request(app).get("/api/billing/payments");
     expect(res.status).toBe(200);
@@ -240,7 +256,7 @@ describe("payments, as proof", () => {
   });
 
   it("says nothing rather than inventing a payment when there is no subscription", async () => {
-    prisma.coach.findUnique.mockResolvedValue({ paypalSubscriptionId: null, planTier: "Solo" });
+    prisma.coach.findUnique.mockResolvedValue({ paypalSubscriptionId: null, planTier: "Free" });
     const res = await request(app).get("/api/billing/payments");
     expect(res.body).toEqual({ reference: null, payments: [] });
   });
@@ -248,7 +264,7 @@ describe("payments, as proof", () => {
   it("downloads the same payments as a CSV an accountant can read", async () => {
     prisma.coach.findUnique.mockResolvedValue({
       paypalSubscriptionId: "I-REAL",
-      planTier: "Solo",
+      planTier: "Pro5",
       name: "Alex",
       email: "alex@example.com",
     });
@@ -282,7 +298,7 @@ describe("when PayPal is unreachable or misconfigured", () => {
     prisma.coach.findUnique.mockResolvedValue(row());
     const res = await request(app).get("/api/billing/me");
     expect(res.status).toBe(200);
-    expect(res.body.status).toBe("trialing");
+    expect(res.body.status).toBe("free");
   });
 
   it("answers the webhook rather than letting the error escape", async () => {

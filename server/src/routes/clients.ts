@@ -3,6 +3,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { z } from "zod";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { prisma } from "../db.js";
+import { refuseIfFull } from "../billing/limit.js";
 import { strictWith } from "../validation.js";
 
 // Every route here sits behind requireCoach (Prompt 45): all queries filter by the signed-in
@@ -109,6 +110,9 @@ clientsRouter.get(
 function decide(to: "active" | "declined") {
   return asyncHandler(async (req, res) => {
     const { clientId } = req.params as { clientId: string };
+    // Accepting someone is what fills a seat, so the limit is checked here rather than at the door.
+    // Declining is always allowed: a coach at their limit must still be able to clear the queue.
+    if (to === "active" && (await refuseIfFull(coachIdOf(req), res))) return;
     // One conditional update: a double click or two tabs can't flip a decided client again.
     const { count } = await prisma.client.updateMany({
       where: { id: clientId, coachId: coachIdOf(req), joinStatus: "pending" },
@@ -133,6 +137,9 @@ clientsRouter.post(
       res.status(400).json({ error: validationMessage(parsed.error) });
       return;
     }
+    // The plan's client limit. Refused BEFORE anything is written, so a full roster never leaves a
+    // half-created client behind.
+    if (await refuseIfFull(coachIdOf(req), res)) return;
     const client = await prisma.client.create({ data: { ...parsed.data, coachId: coachIdOf(req) } });
     res.status(201).json(client);
   }),

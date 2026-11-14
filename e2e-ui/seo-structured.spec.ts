@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { FAQ_CHAT, PLANS } from "../client/src/landing-new/content";
+import { FAQ_CHAT, FREE_PLAN, PLAN_STEPS } from "../client/src/landing-new/content";
 
 const seo = JSON.parse(readFileSync(path.join(__dirname, "../client/src/landing-new/seo.json"), "utf8")) as {
   hero: { h1: string; lead: string };
@@ -15,7 +15,12 @@ const dist = (f: string) => readFileSync(path.join(__dirname, "../client/dist", 
 
 test("the landing copy and the crawlable shell say the same things", async ({ page }) => {
   // Prices and client limits come from one place.
-  expect(seo.plans.map((p) => [p.name, p.price, p.clients])).toEqual(PLANS.map((p) => [p.name, p.price, p.clients]));
+  // The prices in seo.json (what crawlers and AI assistants read) must match the ones on the page.
+  expect(seo.plans.map((p) => p.price)).toEqual([FREE_PLAN.price, ...PLAN_STEPS.map((s) => s.price)]);
+  expect(seo.plans.map((p) => p.clients)).toEqual([
+    `Up to ${FREE_PLAN.clients} clients, free forever`,
+    ...PLAN_STEPS.map((s) => `Up to ${s.clients} clients`),
+  ]);
   await page.goto("/");
   // textContent, not innerText: scene elements stay hidden until scrolled into view.
   await expect(page.getByTestId("studio-landing")).toBeVisible();
@@ -38,7 +43,7 @@ test("index.html carries the shell and valid structured data", () => {
   const types = blocks.map((b) => b["@type"]);
   expect(types).toEqual(["WebSite", "Organization", "SoftwareApplication", "FAQPage"]);
   const app = blocks[2] as { offers: { name: string; price: string }[] };
-  expect(app.offers.map((o) => `${o.name} ${o.price}`)).toEqual(PLANS.map((p) => `${p.name} ${p.price}`));
+  expect(app.offers.map((o) => Number(o.price))).toEqual([FREE_PLAN.price, ...PLAN_STEPS.map((s) => s.price)]);
   const faqLd = blocks[3] as { mainEntity: { name: string }[] };
   expect(faqLd.mainEntity).toHaveLength(FAQ_CHAT.length);
   // The shell is plain markup: no runnable inline script is added (the CSP forbids them).
@@ -70,7 +75,7 @@ test("llms.txt and the speculation rules are built", () => {
   // llms.txt gets quoted verbatim by AI assistants, so it carries the same facts as the page.
   const llms = dist("llms.txt");
   expect(llms).toContain(seo.hero.lead);
-  for (const p of PLANS) expect(llms).toContain(`${p.name}: $${p.price} per month`);
+  for (const s of PLAN_STEPS) expect(llms).toContain(`$${s.price} per month`);
   expect(llms).toContain("gives no medical advice");
   for (const f of FAQ_CHAT) expect(llms).toContain(f.q);
   // The llmstxt.org shape an audit checks: H1, blockquote, prose, then H2 sections of LINK lists.

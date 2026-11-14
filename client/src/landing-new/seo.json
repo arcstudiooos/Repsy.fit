@@ -34,13 +34,40 @@
     }
   ],
   "plans": [
-    { "name": "Solo", "price": 39, "clients": "Up to 30 clients" },
-    { "name": "Pro", "price": 89, "clients": "Up to 100 clients" },
-    { "name": "Studio", "price": 199, "clients": "No client limit" }
+    {
+      "name": "Starter",
+      "price": 0,
+      "clients": "Up to 2 clients, free forever"
+    },
+    {
+      "name": "Pro 5",
+      "price": 17,
+      "clients": "Up to 5 clients"
+    },
+    {
+      "name": "Pro 10",
+      "price": 25,
+      "clients": "Up to 10 clients"
+    },
+    {
+      "name": "Pro 20",
+      "price": 45,
+      "clients": "Up to 20 clients"
+    },
+    {
+      "name": "Pro 50",
+      "price": 90,
+      "clients": "Up to 50 clients"
+    },
+    {
+      "name": "Pro 100",
+      "price": 150,
+      "clients": "Up to 100 clients"
+    }
   ],
-  "trial": "Every plan starts with a 7-day free trial, with no card to start.",
+  "trial": "Free for your first 2 clients, with no time limit and no card.",
   "pricingPage": {
     "title": "Repsy Coach pricing - plans from $39 a month",
-    "description": "Repsy Coach pricing: Solo $39, Pro $89 and Studio $199 a month, every feature in every plan. 7-day free trial, no card to start."
+    "description": "Repsy Coach pricing: free for 2 clients, then $17 a month for 5 clients up to $150 for 100. Every feature is in every plan."
   }
 }

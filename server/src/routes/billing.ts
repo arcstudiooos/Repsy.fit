@@ -11,15 +11,24 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler } from "./clients.js";
-import { billingState, isPlanTier, PLAN_TIERS, type PlanTier } from "../billing/state.js";
-import { cancelSubscription, getSubscription, listTransactions, paypalConfigured, planIdFor, tierForPlanId } from "../billing/paypal.js";
+import { billingState } from "../billing/state.js";
+import { ENTERPRISE_FROM, PLANS } from "../billing/plans.js";
+import { countClients } from "../billing/limit.js";
+import {
+  cancelSubscription,
+  getSubscription,
+  listTransactions,
+  paidPlans,
+  paypalConfigured,
+  planIdFor,
+  tierForPlanId,
+} from "../billing/paypal.js";
 
 export const billingRouter = Router();
 
 const BILLING_SELECT = {
   planTier: true,
   billingStatus: true,
-  trialEndsAt: true,
   periodEndsAt: true,
   pastDueSince: true,
   paypalSubscriptionId: true,
@@ -32,12 +41,16 @@ billingRouter.get("/me", asyncHandler(async (req: Request, res: Response) => {
   const state = billingState(coach);
   res.json({
     ...state,
+    // What the screen needs to show "4 of 5 clients" and to grey out plans that are too small.
+    clientsUsed: await countClients(coachIdOf(req)),
+    enterpriseFrom: ENTERPRISE_FROM,
+    catalogue: PLANS.map((p) => ({ key: p.key, clients: p.clients, price: p.price })),
     // Plan ids are public (they appear in the PayPal checkout), the client id is too.
     paypal: paypalConfigured()
       ? {
           clientId: process.env.PAYPAL_CLIENT_ID,
           environment: process.env.PAYPAL_ENV === "live" ? "live" : "sandbox",
-          plans: Object.fromEntries(PLAN_TIERS.map((t: PlanTier) => [t, planIdFor(t)])),
+          plans: Object.fromEntries(paidPlans().map((p) => [p.key, planIdFor(p.key)])),
           // Stamped onto the subscription at checkout so PayPal itself records who it belongs to.
           // /confirm then refuses any subscription whose custom_id is a different coach. Without
           // it, ownership rests only on "has someone else claimed this id already".
@@ -146,12 +159,3 @@ billingRouter.get("/payments.csv", asyncHandler(async (req: Request, res: Respon
   res.setHeader("Content-Disposition", 'attachment; filename="repsy-payments.csv"');
   res.send(csv);
 }));
-
-/** The tier a coach is choosing, used only to hand the right plan id to the PayPal button. */
-billingRouter.get("/plan/:tier", (req: Request, res: Response) => {
-  const tier = req.params.tier;
-  if (!isPlanTier(tier)) return res.status(404).json({ error: "No such plan." });
-  const planId = planIdFor(tier as PlanTier);
-  if (!planId) return res.status(503).json({ error: "Payments are not set up yet." });
-  res.json({ tier, planId });
-});

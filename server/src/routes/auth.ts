@@ -22,7 +22,6 @@ import { requireCoach, coachIdOf } from "../auth/requireCoach.js";
 import { appBaseUrl, hashToken, issueResetToken, resetLink } from "../auth/resetToken.js";
 import { asyncHandler } from "./clients.js";
 import { googleAuthRouter } from "./googleAuth.js";
-import { trialEnd } from "../billing/state.js";
 
 export const FORGOT_REPLY = "If that email exists, a reset link is on its way.";
 export const BAD_RESET = "This reset link is not valid any more. Please ask for a new one.";
@@ -67,7 +66,7 @@ authRouter.post(
     const passwordHash = await hashPassword(password);
     try {
       const coach = await prisma.$transaction(async (tx) => {
-        const created = await tx.coach.create({ data: { name, email, passwordHash, trialEndsAt: trialEnd() } });
+        const created = await tx.coach.create({ data: { name, email, passwordHash } });
         await claimDemoData(tx, created.id);
         return created;
       });

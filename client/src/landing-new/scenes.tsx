@@ -10,7 +10,10 @@ import {
   FAQ_CHAT,
   FEED,
   MORE,
-  PLANS,
+  FREE_PLAN,
+  PLAN_STEPS,
+  PRO_PLAN,
+  ENTERPRISE_PLAN,
   PLATES,
   RIBBON,
   ROAD,
@@ -1703,6 +1706,9 @@ export function Trust() {
 
 export function Pricing() {
   const [inr, setInr] = useState(false);
+  // The roster size a visitor picks. Defaults to the smallest paid step, so the headline price is
+  // the one most coaches will actually start on rather than the biggest number on the page.
+  const [step, setStep] = useState(PLAN_STEPS[0]);
   const shown = (usd: number) => (inr ? `₹${Math.round((usd * RUPEES_PER_USD) / 100) * 100}` : `$${usd}`);
   return (
     <section
@@ -1720,8 +1726,8 @@ export function Pricing() {
         className="mt-5 text-center text-[0.9rem]"
         style={{ color: "var(--mute)" }}
       >
-        Every plan starts with a 7-day free trial. Every feature is in every plan - you only pay for
-        how many clients you coach.
+        Free for your first two clients, with no time limit. Every feature is in every plan - you
+        only pay for how many clients you coach.
       </p>
       <div data-rise className="mt-6 flex justify-center">
         <div role="group" aria-label="Show prices in" className="ln-switch">
@@ -1739,62 +1745,109 @@ export function Pricing() {
         </div>
       </div>
       <div className="mx-auto mt-14 grid max-w-5xl gap-4 md:grid-cols-3">
-        {PLANS.map((p) => (
-          <article
-            key={p.name}
-            data-rise
-            data-testid="plan"
-            aria-labelledby={`ln-plan-${p.name}`}
-            className={
-              "flex flex-col rounded-[22px] p-7 " +
-              (p.dark ? "ln-dark" : "ln-white")
-            }
-          >
-            <h3 id={`ln-plan-${p.name}`} className="text-[1.05rem] font-bold">
-              {p.name}
-            </h3>
-            {p.badge && (
-              <p className="ln-badge" aria-label={`${p.name}: ${p.badge}`}>
-                {p.badge}
-              </p>
-            )}
-            <p className="mt-4 flex items-baseline gap-2">
-              <span className="ln-display text-[3.6rem]">{shown(p.price)}</span>
-              <span
-                className="text-[0.85rem]"
-                style={{ color: p.dark ? "var(--soft)" : "var(--mute)" }}
-              >
-                per month
-              </span>
-            </p>
-            <p
-              className="mt-1 text-[0.82rem]"
-              style={{ color: p.dark ? "var(--soft)" : "var(--mute)" }}
+        {/* Starter: free forever. Listed first because it is what most people should start on. */}
+        <article data-rise data-testid="plan" aria-labelledby="ln-plan-starter" className="flex flex-col rounded-[22px] p-7 ln-white">
+          <h3 id="ln-plan-starter" className="text-[1.05rem] font-bold">
+            {FREE_PLAN.name}
+          </h3>
+          <p className="mt-4 flex items-baseline gap-2">
+            <span className="ln-display text-[3.6rem]">Free</span>
+            <span className="text-[0.85rem]" style={{ color: "var(--mute)" }}>
+              forever
+            </span>
+          </p>
+          <p className="mt-1 text-[0.82rem]" style={{ color: "var(--mute)" }}>
+            Up to {FREE_PLAN.clients} clients
+          </p>
+          <p className="mt-3 text-[0.84rem]" style={{ color: "var(--mute)" }}>
+            {FREE_PLAN.blurb}
+          </p>
+          <ul className="mt-6 flex-1 space-y-2.5 text-[0.88rem]">
+            {FREE_PLAN.features.map((f) => (
+              <li key={f} className="flex gap-2.5">
+                <Icon name="check" size={16} className="ln-tick mt-0.5 flex-none" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <a href="#get" className="ln-btn mt-8 w-full">
+            Start for free
+          </a>
+        </article>
+
+        {/* Pro: one price per roster size. The selector IS the pricing - a coach picks their size. */}
+        <article data-rise data-testid="plan" aria-labelledby="ln-plan-pro" className="flex flex-col rounded-[22px] p-7 ln-dark">
+          <h3 id="ln-plan-pro" className="text-[1.05rem] font-bold">
+            {PRO_PLAN.name}
+          </h3>
+          <p className="ln-badge" aria-label="Pro: most coaches start here">
+            Most coaches start here
+          </p>
+          <p className="mt-4 flex items-baseline gap-2">
+            <span className="ln-display text-[3.6rem]">{shown(step.price)}</span>
+            <span className="text-[0.85rem]" style={{ color: "var(--soft)" }}>
+              per month
+            </span>
+          </p>
+          <label className="mt-3 block text-[0.82rem]" style={{ color: "var(--soft)" }}>
+            <span className="sr-only">How many clients do you coach?</span>
+            <select
+              data-testid="plan-size"
+              className="ln-select w-full"
+              value={step.key}
+              onChange={(e) => setStep(PLAN_STEPS.find((s) => s.key === e.target.value) ?? PLAN_STEPS[0])}
             >
-              {p.clients}
-            </p>
-            {inr && (
-              <p className="mt-1 text-[0.72rem]" style={{ color: p.dark ? "var(--soft)" : "var(--mute)" }}>
-                Billed in US dollars (${p.price}); the rupee figure is approximate.
-              </p>
-            )}
-            <ul className="mt-6 flex-1 space-y-2.5 text-[0.88rem]">
-              {p.features.map((f) => (
-                <li key={f} className="flex gap-2.5">
-                  <Icon
-                    name="check"
-                    size={16}
-                    className="ln-tick mt-0.5 flex-none"
-                  />
-                  {f}
-                </li>
+              {PLAN_STEPS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.clients} clients - {shown(s.price)} a month
+                </option>
               ))}
-            </ul>
-            <a href="#get" className="ln-btn mt-8 w-full">
-              Start free
-            </a>
-          </article>
-        ))}
+            </select>
+          </label>
+          {inr && (
+            <p className="mt-2 text-[0.72rem]" style={{ color: "var(--soft)" }}>
+              Billed in US dollars (${step.price}); the rupee figure is approximate.
+            </p>
+          )}
+          <ul className="mt-6 flex-1 space-y-2.5 text-[0.88rem]">
+            {PRO_PLAN.features.map((f) => (
+              <li key={f} className="flex gap-2.5">
+                <Icon name="check" size={16} className="ln-tick mt-0.5 flex-none" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <a href="#get" className="ln-btn mt-8 w-full">
+            Start free, upgrade later
+          </a>
+        </article>
+
+        {/* Studio: a conversation, not a checkout. */}
+        <article data-rise data-testid="plan" aria-labelledby="ln-plan-studio" className="flex flex-col rounded-[22px] p-7 ln-white">
+          <h3 id="ln-plan-studio" className="text-[1.05rem] font-bold">
+            {ENTERPRISE_PLAN.name}
+          </h3>
+          <p className="mt-4 flex items-baseline gap-2">
+            <span className="ln-display text-[3.6rem]">Let's talk</span>
+          </p>
+          <p className="mt-1 text-[0.82rem]" style={{ color: "var(--mute)" }}>
+            More than {PLAN_STEPS[PLAN_STEPS.length - 1].clients} clients
+          </p>
+          <p className="mt-3 text-[0.84rem]" style={{ color: "var(--mute)" }}>
+            {ENTERPRISE_PLAN.blurb}
+          </p>
+          <ul className="mt-6 flex-1 space-y-2.5 text-[0.88rem]">
+            {ENTERPRISE_PLAN.features.map((f) => (
+              <li key={f} className="flex gap-2.5">
+                <Icon name="check" size={16} className="ln-tick mt-0.5 flex-none" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <a href="mailto:hello@repsy.fit?subject=Coaching%20more%20than%20100%20clients" className="ln-btn mt-8 w-full">
+            {ENTERPRISE_PLAN.cta}
+          </a>
+        </article>
       </div>
     </section>
   );

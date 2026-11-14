@@ -1,37 +1,38 @@
-// The one line a coach sees about their plan without going looking for it (Nov 2026).
+// The one line a coach sees about their plan without going looking for it (owner, Nov 2026).
 //
-// Shown only when there is something worth saying: days left near the end of a trial, a failed
-// payment, or a lapsed plan. On a healthy paid account it renders nothing at all - a permanent
-// billing banner is just noise a coach learns to ignore.
+// It speaks only when there is something to act on: a roster that is full, or a payment that
+// failed. On a healthy plan - free or paid - it renders nothing at all. There is no trial counting
+// down any more, so there is nothing to nag about, and a permanent billing banner is just noise a
+// coach learns to ignore.
 import { useQuery } from "@tanstack/react-query";
 import { getBilling, queryKeys } from "../api";
 import { navigate } from "../route";
 
-/** Days left at which a trial starts being mentioned. Earlier than this it is just pestering. */
-const NAG_FROM = 4;
-
 export function BillingBanner() {
   const { data } = useQuery({ queryKey: queryKeys.billing, queryFn: getBilling, staleTime: 60_000 });
-  if (!data || !data.message) return null;
-  const quiet = data.status === "trialing" && (data.daysLeft ?? 99) > NAG_FROM;
-  if (quiet) return null;
+  if (!data) return null;
 
-  const urgent = !data.canWrite || data.status === "past_due";
+  const full = data.clientsUsed >= data.clientLimit;
+  const failing = data.status === "past_due";
+  if (!full && !failing) return null;
+
+  const text = failing
+    ? (data.message ?? "Your last payment did not go through.")
+    : data.isFree
+      ? `You are coaching ${data.clientsUsed} of ${data.clientLimit} clients on the free plan. Move up a plan to add more.`
+      : `You are at ${data.clientsUsed} of ${data.clientLimit} clients. Move up a plan to add more.`;
+
   return (
     <div
       data-testid="billing-banner"
-      role={urgent ? "alert" : undefined}
+      role={failing ? "alert" : undefined}
       className={`mt-4 flex flex-wrap items-center gap-3 rounded-card border px-4 py-3 text-sm ${
-        urgent ? "border-amber bg-surface2 font-semibold text-amber-text" : "border-border bg-surface2 text-dim"
+        failing ? "border-amber bg-surface2 font-semibold text-amber-text" : "border-border bg-surface2 text-dim"
       }`}
     >
-      <span>{data.message}</span>
-      <button
-        type="button"
-        className="btn btn-secondary ml-auto min-h-10"
-        onClick={() => navigate("/app/account")}
-      >
-        {data.needsSubscription ? "Choose a plan" : "Open billing"}
+      <span>{text}</span>
+      <button type="button" className="btn btn-secondary ml-auto min-h-10" onClick={() => navigate("/app/account")}>
+        {failing ? "Open billing" : "See plans"}
       </button>
     </div>
   );

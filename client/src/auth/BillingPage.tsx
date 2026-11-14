@@ -1,9 +1,13 @@
-// The coach's own plan (Nov 2026): what they are on, what happens next, and how to pay.
+// The coach's own plan (owner, Nov 2026): what they are on, how much of it they are using, and how
+// to move up.
 //
-// The PayPal SDK is the only third-party script in the coach app, and it is loaded HERE, on demand,
-// never on app start: a coach who never opens this screen never fetches it. The button hands us a
-// subscription id, which the server then checks with PayPal before believing a word of it
-// (src/routes/billing.ts) - so nothing here can grant access by itself.
+// Pricing is by client count. Everyone is free forever with 2 clients; paying raises the limit and
+// nothing else. So this screen never threatens anyone: there is no trial running out and no access
+// to lose. The worst it says is "you are full, here is how to fit more".
+//
+// The PayPal SDK is the only third-party script in the coach app and it is loaded HERE, on demand -
+// a coach who never opens this screen never fetches it. The subscription it returns is verified
+// server-side before anything is believed (src/routes/billing.ts).
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,18 +18,15 @@ import {
   getPayments,
   queryKeys,
   type BillingMe,
+  type PlanOption,
 } from "../api";
 import { LoadingState } from "../components/States";
 
-/** "14 December 2026" - the date a coach will actually recognise on their statement. */
+/** "14 December 2026" - the date a coach will recognise on their statement. */
 const longDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 
-const TIERS = [
-  { tier: "Solo", price: 39, clients: "Up to 30 clients" },
-  { tier: "Pro", price: 89, clients: "Up to 100 clients" },
-  { tier: "Studio", price: 199, clients: "No client limit" },
-] as const;
+const clientWord = (n: number) => `${n} ${n === 1 ? "client" : "clients"}`;
 
 type PayPalButtons = {
   Buttons: (config: Record<string, unknown>) => { render: (el: HTMLElement) => Promise<void> };
@@ -48,8 +49,7 @@ function loadPaypal(clientId: string): Promise<PayPalButtons> {
   }
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    // vault=true and intent=subscription are what make this a subscription button rather than a
-    // one-off payment. The client id is public.
+    // vault=true and intent=subscription make this a subscription button. The client id is public.
     script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription`;
     script.dataset.paypalSdk = "true";
     script.onload = () => (window.paypal ? resolve(window.paypal) : reject(new Error("PayPal did not load.")));
@@ -61,11 +61,13 @@ function loadPaypal(clientId: string): Promise<PayPalButtons> {
 function PayButton({
   planId,
   clientId,
+  customId,
   tier,
   onApproved,
 }: {
   planId: string;
   clientId: string;
+  customId: string;
   tier: string;
   onApproved: (subscriptionId: string) => void;
 }) {
@@ -83,8 +85,9 @@ function PayButton({
         return paypal
           .Buttons({
             style: { shape: "pill", color: "blue", layout: "vertical", label: "subscribe" },
-            createSubscription: (_data: unknown, actions: { subscription: { create: (o: unknown) => Promise<string> } }) =>
-              actions.subscription.create({ plan_id: planId }),
+            createSubscription: (_d: unknown, actions: { subscription: { create: (o: unknown) => Promise<string> } }) =>
+              // custom_id ties the subscription to this coach inside PayPal itself.
+              actions.subscription.create({ plan_id: planId, custom_id: customId }),
             onApprove: (data: { subscriptionID?: string }) => {
               if (data.subscriptionID) onApproved(data.subscriptionID);
             },
@@ -96,60 +99,56 @@ function PayButton({
     return () => {
       cancelled = true;
     };
-  }, [planId, clientId, onApproved]);
+  }, [planId, clientId, customId, onApproved]);
 
   return (
     <div className="grid gap-2">
-      <div ref={box} data-testid={`paypal-button-${tier}`} aria-label={`Subscribe to ${tier} with PayPal`} />
-      {error ? <p role="alert" className="text-sm font-semibold text-amber-text">{error}</p> : null}
-    </div>
-  );
-}
-
-function StatusCard({ billing }: { billing: BillingMe }) {
-  // Four states, four plain sentences. No badge a coach has to decode.
-  const tone =
-    billing.status === "read_only" || billing.status === "past_due"
-      ? "border-amber bg-surface2"
-      : "border-border bg-surface2";
-  return (
-    <div className={`rounded-xl border p-4 ${tone}`} data-testid="billing-status">
-      <p className="font-semibold text-text">
-        {billing.status === "active" && `You are on ${billing.tier}.`}
-        {billing.status === "trialing" && `You are on a free trial of ${billing.tier}.`}
-        {billing.status === "past_due" && "Your last payment did not go through."}
-        {billing.status === "read_only" && "New plans are paused."}
-      </p>
-      {billing.message ? <p className="mt-1 text-sm text-dim">{billing.message}</p> : null}
-      {!billing.canWrite ? (
-        <p className="mt-2 text-sm text-dim">
-          Everything you have is still here and still exportable, and your clients are unaffected.
+      <div ref={box} data-testid={`paypal-button-${tier}`} aria-label={`Subscribe to ${clientWord(Number(tier))} with PayPal`} />
+      {error ? (
+        <p role="alert" className="text-sm font-semibold text-amber-text">
+          {error}
         </p>
       ) : null}
     </div>
   );
 }
 
-/**
- * The moment after paying. A coach has just handed over money and the old screen simply redrew
- * itself - so it felt like nothing had happened. This says it plainly, with the three facts that
- * make it feel real: what they are on, what was charged, and when it happens again.
- */
+/** Where they are: the plan, and how much of it is used. */
+function StatusCard({ billing }: { billing: BillingMe }) {
+  const full = billing.clientsUsed >= billing.clientLimit;
+  return (
+    <div
+      className={`rounded-xl border p-4 ${full || billing.status === "past_due" ? "border-amber" : "border-border"} bg-surface2`}
+      data-testid="billing-status"
+    >
+      <p className="font-semibold text-text">
+        {billing.isFree ? `You are on the free plan: ${clientWord(billing.clientLimit)}.` : `You are on the ${clientWord(billing.clientLimit)} plan, $${billing.price} a month.`}
+      </p>
+      <p className="mt-1 text-sm text-dim">
+        {billing.clientsUsed} of {billing.clientLimit} used.
+        {full ? " Move up a plan to add more - everything you have stays exactly as it is." : ""}
+      </p>
+      {billing.message ? <p className="mt-2 text-sm text-dim">{billing.message}</p> : null}
+      {billing.renewsOn && !billing.isFree ? (
+        <p className="mt-1 text-sm text-dim">Renews on {longDate(billing.renewsOn)}.</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** The moment after paying: say it plainly, with the facts that make it real. */
 function JustSubscribed({ billing, onDone }: { billing: BillingMe; onDone: () => void }) {
-  const price = TIERS.find((t) => t.tier === billing.tier)?.price;
-  // The reference a coach can quote if they ever need to ask PayPal or us about this payment.
   const { data } = useQuery({ queryKey: queryKeys.billingPayments, queryFn: getPayments });
   return (
     <div className="rounded-xl border border-accent bg-surface2 p-5" data-testid="billing-welcome" role="status">
-      <h3 className="card-title">You're on {billing.tier}. Welcome aboard.</h3>
+      <h3 className="card-title">You are on the {clientWord(billing.clientLimit)} plan. Welcome aboard.</h3>
       <p className="mt-2 text-sm text-dim">
-        {price ? `Your payment of $${price} went through` : "Your payment went through"}
-        {billing.renewsOn ? `, and your plan renews on ${longDate(billing.renewsOn)}.` : "."} PayPal emails you a
-        receipt.
+        Your payment of ${billing.price} went through
+        {billing.renewsOn ? `, and it renews on ${longDate(billing.renewsOn)}.` : "."} PayPal emails you a receipt.
       </p>
       <p className="mt-2 text-sm text-dim">
-        Every feature is yours now - AI plans, the Manual Planner, templates, check-ins and progress charts - and you
-        can cancel any time without losing a thing.
+        Every feature was already yours - this only raises how many clients you can coach here. Cancel any time and you
+        keep every one of them.
       </p>
       {data?.reference ? (
         <p className="mt-3 text-sm text-dim">
@@ -214,7 +213,6 @@ function Payments() {
 export default function BillingPage() {
   const qc = useQueryClient();
   const [chosen, setChosen] = useState<string | null>(null);
-  // Shown once, right after paying - not on every later visit to this page.
   const [justSubscribed, setJustSubscribed] = useState(false);
   const billingQuery = useQuery({ queryKey: queryKeys.billing, queryFn: getBilling });
 
@@ -222,6 +220,7 @@ export default function BillingPage() {
     mutationFn: confirmSubscription,
     onSuccess: (fresh) => {
       qc.setQueryData(queryKeys.billing, fresh);
+      void qc.invalidateQueries({ queryKey: queryKeys.billingPayments });
       setChosen(null);
       setJustSubscribed(true);
     },
@@ -232,10 +231,17 @@ export default function BillingPage() {
   });
 
   if (billingQuery.isPending) return <LoadingState />;
-  // Quietly. This section sits on the Account page beside the name and password forms, so a billing
-  // hiccup must not shout "Something went wrong" over the whole page, and must not add a second
-  // alert for a screen reader to announce.
-  if (billingQuery.isError)
+  // A response that is not billing data (an old server, a proxy, a test that mocks every call with
+  // []) must not take the Account page down with it: the delete form and the password form live on
+  // the same screen. Anything unrecognisable is treated as "could not load".
+  const usable =
+    !billingQuery.isError &&
+    billingQuery.data &&
+    typeof billingQuery.data === "object" &&
+    Array.isArray((billingQuery.data as { catalogue?: unknown }).catalogue);
+  // Quietly: this sits beside the name and password forms, so a billing hiccup must not shout over
+  // the whole Account page or add a second alert for a screen reader.
+  if (!usable)
     return (
       <div className="grid gap-2">
         <p className="text-sm text-dim">We could not load your plan just now. Nothing has changed.</p>
@@ -244,11 +250,13 @@ export default function BillingPage() {
         </button>
       </div>
     );
-  const billing = billingQuery.data;
+  const billing = billingQuery.data as BillingMe;
 
   if (justSubscribed && billing.status === "active") {
     return <JustSubscribed billing={billing} onDone={() => setJustSubscribed(false)} />;
   }
+
+  const paidPlans: PlanOption[] = billing.catalogue.filter((p) => p.price > 0);
 
   return (
     <div className="grid gap-4">
@@ -261,32 +269,36 @@ export default function BillingPage() {
         </p>
       ) : null}
 
-      {billing.needsSubscription && billing.paypal ? (
+      {billing.paypal ? (
         <section className="grid gap-3">
-          <h3 className="card-title">Choose a plan</h3>
+          <h3 className="card-title">{billing.isFree ? "Coach more clients" : "Change plan"}</h3>
           <p className="text-sm text-dim">
-            Every feature is in every plan. The tiers differ only by how many clients you coach, and you can change or
-            cancel any time.
+            Every feature is in every plan. You are paying for roster size, nothing else, and you can change or cancel
+            any time.
           </p>
           {billing.paypal.environment === "sandbox" ? (
             <p className="text-sm text-dim">PayPal is in test mode: no real money moves.</p>
           ) : null}
-          <ul className="grid gap-3 sm:grid-cols-3">
-            {TIERS.map((t) => {
-              const planId = billing.paypal?.plans[t.tier];
-              const picked = chosen === t.tier;
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {paidPlans.map((plan) => {
+              const planId = billing.paypal?.plans[plan.key];
+              const picked = chosen === plan.key;
+              const current = plan.key === billing.tier;
+              // A plan smaller than their roster would be a downgrade they cannot use.
+              const tooSmall = plan.clients < billing.clientsUsed;
               return (
-                <li key={t.tier} className="rounded-xl border border-border p-4">
-                  <p className="font-semibold text-text">{t.tier}</p>
-                  <p className="text-sm text-dim">
-                    ${t.price} per month · {t.clients}
-                  </p>
-                  {picked && planId && billing.paypal ? (
+                <li key={plan.key} className="rounded-xl border border-border p-4" data-testid={`plan-${plan.key}`}>
+                  <p className="font-semibold text-text">{clientWord(plan.clients)}</p>
+                  <p className="text-sm text-dim">${plan.price} a month</p>
+                  {current ? (
+                    <p className="mt-3 text-sm font-semibold text-text">Your plan</p>
+                  ) : picked && planId && billing.paypal ? (
                     <div className="mt-3">
                       <PayButton
                         planId={planId}
                         clientId={billing.paypal.clientId}
-                        tier={t.tier}
+                        customId={billing.paypal.customId}
+                        tier={String(plan.clients)}
                         onApproved={(id) => confirm.mutate(id)}
                       />
                     </div>
@@ -294,33 +306,38 @@ export default function BillingPage() {
                     <button
                       type="button"
                       className="btn btn-primary mt-3 min-h-10 w-full"
-                      disabled={!planId}
-                      onClick={() => setChosen(t.tier)}
+                      disabled={!planId || tooSmall}
+                      onClick={() => setChosen(plan.key)}
                     >
-                      {planId ? `Choose ${t.tier}` : "Not available"}
+                      {tooSmall ? `Too small for ${clientWord(billing.clientsUsed)}` : `Choose ${plan.clients}`}
                     </button>
                   )}
                 </li>
               );
             })}
           </ul>
+          <p className="text-sm text-dim">
+            More than {billing.enterpriseFrom} clients?{" "}
+            <a className="font-semibold text-accent2 underline underline-offset-4" href="mailto:hello@repsy.fit?subject=Coaching%20more%20than%20100%20clients">
+              Email us
+            </a>{" "}
+            and we will sort something out.
+          </p>
         </section>
-      ) : null}
-
-      {billing.paypal === null ? (
+      ) : (
         <p className="text-sm text-dim">
           Payments are not switched on yet. Nothing is being charged, and nothing you do here is limited.
         </p>
-      ) : null}
+      )}
 
       <Payments />
 
-      {!billing.needsSubscription && billing.status === "active" ? (
+      {!billing.isFree && billing.status !== "past_due" ? (
         <section className="grid gap-2">
           <h3 className="card-title">Cancel</h3>
           <p className="text-sm text-dim">
-            You keep everything until the end of the period you have already paid for. Nothing is deleted, and your
-            clients are not told.
+            You stay on this plan until the end of the period you have paid for, then go back to the free plan. You keep
+            every client you have - the free plan just covers {billing.catalogue[0].clients} new ones.
           </p>
           <button
             type="button"
@@ -330,7 +347,11 @@ export default function BillingPage() {
           >
             {cancel.isPending ? "Cancelling..." : "Cancel my plan"}
           </button>
-          {cancel.isError ? <p role="alert" className="text-sm font-semibold text-amber-text">{(cancel.error as Error).message}</p> : null}
+          {cancel.isError ? (
+            <p role="alert" className="text-sm font-semibold text-amber-text">
+              {(cancel.error as Error).message}
+            </p>
+          ) : null}
         </section>
       ) : null}
     </div>

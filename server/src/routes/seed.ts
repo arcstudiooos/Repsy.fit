@@ -77,6 +77,7 @@ seedRouter.post(
         clients.push(
           await tx.client.create({
             data: {
+              isDemo: true,
               ...demo,
               coachId,
               // Distinct createdAt keeps the roster in this order (the list sorts by createdAt).
@@ -286,6 +287,7 @@ seedRouter.post(
           clients.push(
             await tx.client.create({
               data: {
+                isDemo: true,
                 ...profile,
                 weightKg: endKg,
                 coachId,

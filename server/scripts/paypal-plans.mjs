@@ -35,10 +35,14 @@ const PRODUCT = {
 
 // Must stay in step with PLANS in client/src/landing-new/content.ts. The landing page and PayPal
 // disagreeing about a price is the worst kind of bug: the coach sees one number and pays another.
+// Must stay in step with PLANS in server/src/billing/plans.ts. The free tier has no PayPal plan:
+// nobody subscribes to it.
 const PLANS = [
-  { tier: "Solo", price: "39.00", clients: "Up to 30 clients" },
-  { tier: "Pro", price: "89.00", clients: "Up to 100 clients" },
-  { tier: "Studio", price: "199.00", clients: "No client limit" },
+  { tier: "Pro5", price: "17.00", clients: "Up to 5 clients" },
+  { tier: "Pro10", price: "25.00", clients: "Up to 10 clients" },
+  { tier: "Pro20", price: "45.00", clients: "Up to 20 clients" },
+  { tier: "Pro50", price: "90.00", clients: "Up to 50 clients" },
+  { tier: "Pro100", price: "150.00", clients: "Up to 100 clients" },
 ];
 
 const auth = "Basic " + Buffer.from(`${ID}:${SECRET}`).toString("base64");
@@ -88,7 +92,7 @@ const byName = new Map((existing.json.plans ?? []).map((p) => [p.name, p]));
 const results = [];
 
 for (const plan of PLANS) {
-  const name = `Repsy Coach - ${plan.tier}`;
+  const name = `Repsy Coach - ${plan.clients.replace("Up to ", "")}`;
   const found = byName.get(name);
   if (found) {
     results.push([plan.tier, found.id, found.status, "already existed"]);
@@ -130,5 +134,6 @@ for (const row of results) {
   const [tier, id, status, what] = row;
   console.log(`  ${tier.padEnd(7)} ${id}  (${status}, ${what})`);
 }
-console.log(`\nPut these in Render as PAYPAL_PLAN_SOLO, PAYPAL_PLAN_PRO and PAYPAL_PLAN_STUDIO.`);
+console.log("\nPut these in Render, one variable per plan:");
+for (const row of results) console.log(`  PAYPAL_PLAN_${row[0].toUpperCase()}=${row[1]}`);
 console.log("Plan ids are not secret - they appear in the checkout - so they are safe to paste anywhere.");

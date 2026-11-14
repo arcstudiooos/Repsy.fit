@@ -34,8 +34,9 @@ model Coach {
 
   // ---- The coach's own subscription to Repsy (Nov 2026). One per coach; PayPal holds the money,
   // this holds only what the app needs to decide what the coach may do today.
-  /// "Solo" | "Pro" | "Studio". The tier they are on (or were on, once it lapses).
-  planTier        String    @default("Solo")
+  /// The plan key from src/billing/plans.ts: "Free" (2 clients) or "Pro5".."Pro100". It decides
+  /// ONE thing - how many clients may be added. Every feature is in every plan.
+  planTier        String    @default("Free")
   /// "trialing" | "active" | "past_due" | "cancelled" | "expired". Set from PayPal webhooks, except
   /// "trialing" which starts at sign-up and "expired" which is reached by time passing.
   billingStatus   String    @default("trialing")
@@ -190,6 +191,9 @@ model Client {
   focus     String   @default("")
   notes     String   @default("")
   createdAt DateTime @default(now())
+  /// Sample data created by the demo buttons. Demo clients never count towards the plan's client
+  /// limit: blocking the demo to protect a quota would be a strange way to welcome a new coach.
+  isDemo    Boolean  @default(false)
   /// Client sign-in (Prompt 65): the email the client signs in with. Set only when the client sets
   /// a password from an invite sent to that address. Unique when set.
   loginEmail    String?  @unique

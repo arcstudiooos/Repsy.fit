@@ -466,19 +466,31 @@ export const updateName = (name: string) => request<Coach>("PATCH", "/auth/me", 
 /** Account page: needs the current password (204); other sessions are signed out, this one stays. */
 export const changePassword = (input: ChangePasswordInput) => request<void>("POST", "/auth/change-password", input);
 
-// ---- The coach's own subscription (Nov 2026) ----
-// `paypal` is null until payments are configured, and carries only public values: the client id and
-// the plan ids both appear in the PayPal checkout itself.
+// ---- The coach's own plan (Nov 2026) ----
+// Pricing is by client count: free forever with 2 clients, and paying raises the limit. There is no
+// trial and no lockout - a coach who stops paying keeps every client and just cannot add more.
+// `paypal` is null until payments are configured, and carries only public values.
+export type PlanOption = { key: string; clients: number; price: number };
 export type BillingMe = {
-  status: "trialing" | "active" | "past_due" | "read_only";
+  status: "free" | "active" | "past_due";
   tier: string;
-  canWrite: boolean;
+  clientLimit: number;
+  price: number;
   daysLeft: number | null;
-  needsSubscription: boolean;
+  isFree: boolean;
   message: string | null;
-  /** When the plan next renews (or ends, once cancelled), ISO. Null when neither applies. */
   renewsOn: string | null;
-  paypal: { clientId: string; environment: "sandbox" | "live"; plans: Record<string, string | undefined> } | null;
+  /** Clients on the roster now (demo data and unaccepted requests do not count). */
+  clientsUsed: number;
+  /** Above this many clients, coaches talk to us instead of buying a plan. */
+  enterpriseFrom: number;
+  catalogue: PlanOption[];
+  paypal: {
+    clientId: string;
+    environment: "sandbox" | "live";
+    plans: Record<string, string | undefined>;
+    customId: string;
+  } | null;
 };
 export const getBilling = () => request<BillingMe>("GET", "/billing/me");
 /** Hands PayPal's subscription id to the server, which checks it with PayPal before believing it. */
