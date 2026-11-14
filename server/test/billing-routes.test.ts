@@ -321,3 +321,43 @@ describe("when PayPal is unreachable or misconfigured", () => {
     expect(prisma.coach.update).not.toHaveBeenCalled();
   });
 });
+
+describe("every billing route answers with the same shape", () => {
+  // The screen replaces its cached plan with whatever these return, and treats a reply without a
+  // catalogue as junk. A cancel that answered with a half-body made the page say "we could not
+  // load your plan" immediately after a successful cancellation.
+  const isFullBody = (body: Record<string, unknown>) =>
+    Array.isArray(body.catalogue) &&
+    (body.catalogue as unknown[]).length === 6 &&
+    typeof body.clientsUsed === "number" &&
+    typeof body.enterpriseFrom === "number" &&
+    typeof body.tier === "string" &&
+    typeof body.clientLimit === "number" &&
+    "paypal" in body;
+
+  it("GET /me", async () => {
+    prisma.coach.findUnique.mockResolvedValue(row());
+    const res = await request(app).get("/api/billing/me");
+    expect(isFullBody(res.body), JSON.stringify(res.body)).toBe(true);
+  });
+
+  it("POST /confirm", async () => {
+    getSubscription.mockResolvedValue({
+      id: "I-REAL",
+      status: "ACTIVE",
+      planId: SOLO,
+      nextBillingAt: new Date(Date.now() + 30 * DAY),
+      customId: TEST_COACH_ID,
+    });
+    prisma.coach.findUnique.mockResolvedValue(row({ planTier: "Pro5", billingStatus: "active", periodEndsAt: new Date(Date.now() + 30 * DAY), paypalSubscriptionId: "I-REAL" }));
+    const res = await request(app).post("/api/billing/confirm").send({ subscriptionId: "I-REAL" });
+    expect(isFullBody(res.body), JSON.stringify(res.body)).toBe(true);
+  });
+
+  it("POST /cancel", async () => {
+    prisma.coach.findUnique.mockResolvedValue(row({ planTier: "Pro5", billingStatus: "active", periodEndsAt: new Date(Date.now() + 10 * DAY), paypalSubscriptionId: "I-REAL" }));
+    cancelSubscription.mockResolvedValue(true);
+    const res = await request(app).post("/api/billing/cancel").send({});
+    expect(isFullBody(res.body), JSON.stringify(res.body)).toBe(true);
+  });
+});

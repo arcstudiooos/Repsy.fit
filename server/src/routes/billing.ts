@@ -34,31 +34,46 @@ const BILLING_SELECT = {
   paypalSubscriptionId: true,
 } as const;
 
-/** What the billing screen shows: the state, and the plan ids the checkout button needs. */
-billingRouter.get("/me", asyncHandler(async (req: Request, res: Response) => {
-  const coach = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: BILLING_SELECT });
-  if (!coach) return res.status(404).json({ error: "We could not find your account." });
-  const state = billingState(coach);
-  res.json({
-    ...state,
-    // What the screen needs to show "4 of 5 clients" and to grey out plans that are too small.
-    clientsUsed: await countClients(coachIdOf(req)),
+/**
+ * ONE body for every billing route. /me, /confirm and /cancel all answer with exactly this, because
+ * the screen replaces its cached data with whatever these return - a reply missing `catalogue` made
+ * the page decide it had junk and show "we could not load your plan" right after a cancellation.
+ */
+async function billingPayload(coachId: string, coach: {
+  planTier: string;
+  billingStatus: string;
+  periodEndsAt: Date | null;
+  pastDueSince: Date | null;
+  paypalSubscriptionId: string | null;
+}) {
+  return {
+    ...billingState(coach),
+    clientsUsed: await countClients(coachId),
     enterpriseFrom: ENTERPRISE_FROM,
     catalogue: PLANS.map((p) => ({ key: p.key, clients: p.clients, price: p.price })),
-    // Plan ids are public (they appear in the PayPal checkout), the client id is too.
+    // Plan ids and the client id are public: they appear in the PayPal checkout itself.
     paypal: paypalConfigured()
       ? {
           clientId: process.env.PAYPAL_CLIENT_ID,
           environment: process.env.PAYPAL_ENV === "live" ? "live" : "sandbox",
           plans: Object.fromEntries(paidPlans().map((p) => [p.key, planIdFor(p.key)])),
-          // Stamped onto the subscription at checkout so PayPal itself records who it belongs to.
-          // /confirm then refuses any subscription whose custom_id is a different coach. Without
-          // it, ownership rests only on "has someone else claimed this id already".
-          customId: coachIdOf(req),
+          // Stamped onto the subscription at checkout so PayPal records who it belongs to.
+          customId: coachId,
         }
       : null,
-  });
-}));
+  };
+}
+
+/** What the billing screen shows: the state, and the plan ids the checkout button needs. */
+billingRouter.get(
+  "/me",
+  asyncHandler(async (req: Request, res: Response) => {
+    const coachId = coachIdOf(req);
+    const coach = await prisma.coach.findUnique({ where: { id: coachId }, select: BILLING_SELECT });
+    if (!coach) return void res.status(404).json({ error: "We could not find your account." });
+    res.json(await billingPayload(coachId, coach));
+  }),
+);
 
 const ConfirmSchema = z.object({
   subscriptionId: z
@@ -107,7 +122,7 @@ billingRouter.post("/confirm", asyncHandler(async (req: Request, res: Response) 
     },
   });
   const fresh = await prisma.coach.findUnique({ where: { id: coachId }, select: BILLING_SELECT });
-  res.json(billingState(fresh!));
+  res.json(await billingPayload(coachId, fresh!));
 }));
 
 /** Ends the plan at PayPal. Access continues to the end of the period already paid for. */
@@ -119,7 +134,7 @@ billingRouter.post("/cancel", asyncHandler(async (req: Request, res: Response) =
   // The webhook confirms this too; writing it now means the screen is honest immediately.
   await prisma.coach.update({ where: { id: coachIdOf(req) }, data: { billingStatus: "cancelled" } });
   const fresh = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: BILLING_SELECT });
-  res.json(billingState(fresh!));
+  res.json(await billingPayload(coachIdOf(req), fresh!));
 }));
 
 /**

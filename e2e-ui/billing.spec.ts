@@ -141,6 +141,11 @@ test("cancelling asks first, needs the word typed, and promises the clients are 
   await dialog.getByRole("button", { name: "Cancel my plan" }).click();
   await expect.poll(() => cancelCalls).toBe(1);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // After cancelling, the plan is still on screen. The page must not fall back to "we could not
+  // load your plan" because the reply was missing a field.
+  await expect(page.getByTestId("billing-status")).toBeVisible();
+  await expect(page.getByText("We could not load your plan just now.")).toHaveCount(0);
 });
 
 test("when payments are not configured, nothing threatens the coach", async ({ page }) => {

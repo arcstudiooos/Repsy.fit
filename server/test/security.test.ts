@@ -233,7 +233,11 @@ describe("the client app: every /api/client-auth route is accounted for", () => 
     expect(JSON.stringify(login.body)).not.toMatch(/\$2b\$|passwordHash|googleSub|google-sub-secret/);
   });
 
-  it("client sign-in, joining and password reset are rate limited", async () => {
+  // 22 real requests through the whole stack, and each client-auth attempt hashes a password on
+  // purpose (slow by design). On a loaded machine that overran the default 5s budget and failed a
+  // suite that was otherwise green, which teaches people to ignore red builds. The work is the
+  // same; it just needs room.
+  it("client sign-in, joining and password reset are rate limited", { timeout: 30_000 }, async () => {
     let last = 0;
     for (let i = 0; i < 11; i++) last = (await supertest(app).post("/api/client-auth/login").send({ email: "x@y.io", password: "nope-nope-1" })).status;
     expect(last).toBe(429);
