@@ -218,3 +218,17 @@ Anything built from this doc still obeys `CLAUDE.md`:
 | Summary / settings | `1 Summary`, `1 profile top right menu`, `Settings options` |
 
 Originals: `C:\Users\ranes\Desktop\Repsy inspo`
+
+---
+
+## Build log
+
+| Feature | Shipped | Notes |
+|---|---|---|
+| W1 Exercise library | 15 Nov 2026 | 65 seeded stock movements + the coach's own. Stock is read-only; "copy to my library" to edit. Verified live (15/15). |
+| W3 Structured workouts (data) | 15 Nov 2026 | `Section -> Exercise`, per-set reps as arrays. `details` is now a derived rendering, so old readers keep working; legacy plans are parsed on demand rather than migrated. |
+
+**Incident, 15 Nov 2026.** The structured-workout release was green everywhere and still 500'd in
+production: two phantom columns reached the Prisma schema that no migration created. Unit tests mock
+Prisma, so only a live check found it. Added `schema-migration-parity.test.ts`. Full write-up in
+CLAUDE.md, "Never let the schema and the migrations disagree".

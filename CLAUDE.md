@@ -1306,3 +1306,50 @@ the features that follow it.
   A test asserts no `<iframe>`/`<video>` renders.
 - Lives in Library -> **Exercises** (4th view, after Templates). `LIBRARY_VIEWS` and the
   `openLibrary` fixture type must be changed together.
+
+## Structured workouts (Inspo W3/W5/W6/W7/W8/W9, Nov 2026)
+
+- A workout is `Assignment -> WorkoutSection[] -> WorkoutExercise[]`. Per-set numbers are **arrays**:
+  `repsPerSet [12, 12, 10]` IS "12, 12, 10 reps". A third table per set would buy nothing.
+- **`details` is now a DERIVED rendering, and must stay that way.** Saving a structure regenerates
+  `details` via `renderDetails()` in exactly the numbered-line format the Manual Planner always
+  wrote, so every older reader (client-app checklist, CSV export, the AI) keeps working untouched.
+- **Legacy plans are never migrated.** `GET .../structure` parses `details` on demand
+  (`parseDetails`), so the whole back catalogue shows in the structured view. An assignment has
+  EITHER stored sections OR a parseable blob - never a half-migrated mix.
+- `renderDetails` output MUST stay parseable by `client/src/clientApp/planLines.ts`. Its regex
+  anchors on `Rest Ns` coming straight after the optional load, so **nothing may be inserted between
+  the load and the rest** - RPE and notes go on the following indented line. A test round-trips
+  through the real client parser (imported, not copied) to keep this honest.
+- Clearing a structure (`sections: []`) must NOT overwrite `details`: a coach's typed words survive.
+- An `exerciseId` the coach cannot see is **downgraded to a plain name**, never rejected, so one
+  stale id can never fail a save. Deleting a library exercise sets the link NULL and keeps the name.
+- `PROTOCOLS` / `RECORD_FIELDS` are mirrored in `client/src/types.ts`; a drift test fails CI if the
+  two disagree (same convention as content.ts vs billing/plans.ts).
+
+## Never let the schema and the migrations disagree (15 Nov 2026, learned the hard way)
+
+The structured-workout release passed 954 unit tests, CI, `check-migration` and smoke, then **500'd
+on every read in production**.
+
+Cause: a find-and-replace added `sections WorkoutSection[]` to THREE models instead of one - the
+anchor text was byte-identical in `Assignment`, `ChatMessage` and `ProgressLog` - and then
+`prisma format` added the reciprocal foreign keys `chatMessageId` / `progressLogId` to
+`WorkoutSection`. Those columns existed in the schema and the generated client but **no migration
+created them**, so every SELECT and INSERT named a column that was not there.
+
+Rules that came out of it:
+1. **Unit tests cannot catch this**: they mock Prisma. `check-migration` only APPLIES migrations, it
+   never compares them to the schema. `server/test/schema-migration-parity.test.ts` now parses both
+   as text and fails on any column in the schema that no migration creates. Keep it passing.
+2. **Always use `rw(path, pairs)`** (asserts exactly one match) for repo edits. A bare
+   `str.replace()` replaces EVERY occurrence, and this schema has several models with identical
+   relation+index blocks.
+3. **Re-read the schema after `prisma format`.** It silently adds the other half of any relation it
+   finds, which can invent columns no migration knows about.
+4. **A new table or column is not shipped until a LIVE check exercises it.** The 500 was found by
+   `prompts/exercise_live_check.py`, not by CI. `deleteMany` kept working (it names no columns) while
+   `findMany`/`create` failed - when diagnosing, widen the probe one call at a time
+   (`prompts/structure_probe.py`) instead of re-running a whole suite.
+5. Live-check scripts must clean up in **`try/finally`**: a crash mid-run leaves a throwaway coach
+   whose random password was only ever in memory, i.e. an account nothing can delete.

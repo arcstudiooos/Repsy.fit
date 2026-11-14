@@ -3,6 +3,7 @@ import { PlanDetails, inline } from "../components/FormattedText";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteAssignment, listAssignments, queryKeys, updateAssignment, updateAssignmentStatus } from "../api";
 import { PlanEditor, planProblem, type PlanFields } from "../components/PlanEditor";
+import { WorkoutBuilder } from "../components/WorkoutBuilder";
 import { ManualAssignmentForm, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { MenuButton } from "../components/MenuButton";
@@ -179,6 +180,8 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
   });
   // Nov 2026: Edit (title, details, why, date) with the same editor as the AI Coach card, saved by PATCH.
   const [editing, setEditing] = useState<PlanFields | null>(null);
+  // Inspo W3: the structured builder, open on this plan. Only ever one of editing/building at once.
+  const [building, setBuilding] = useState(false);
   const [editProblem, setEditProblem] = useState<string | null>(null);
   const editMutation = useMutation({
     mutationFn: (plan: PlanFields) =>
@@ -213,6 +216,23 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
   const busy = statusMutation.isPending || deleteMutation.isPending || editMutation.isPending;
   const error = statusMutation.error ?? deleteMutation.error;
   const isDone = assignment.status === "Done";
+
+  if (building) {
+    return (
+      <li id={`assignment-${assignment.id}`} className="card p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${TYPE_CHIP[assignment.type]}`}>{assignment.type}</span>
+          <h3 className="card-title">{assignment.title}</h3>
+        </div>
+        <WorkoutBuilder
+          clientId={clientId}
+          assignmentId={assignment.id}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: queryKeys.assignments(clientId) })}
+          onClose={() => setBuilding(false)}
+        />
+      </li>
+    );
+  }
 
   if (editing) {
     const idPrefix = `edit-${assignment.id}`;
@@ -294,6 +314,10 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
             label={`More actions for ${assignment.title}`}
             items={[
               { label: "Edit", disabled: busy, onSelect: startEdit },
+              // Only a workout has sections and sets; a Nutrition or Habit plan stays plain text.
+              ...(assignment.type === "Workout"
+                ? [{ label: "Build sets and reps", disabled: busy, onSelect: () => setBuilding(true) }]
+                : []),
               {
                 label: deleteMutation.isPending ? "Deleting..." : "Delete",
                 disabled: busy,

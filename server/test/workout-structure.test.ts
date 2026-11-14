@@ -46,6 +46,21 @@ const section = (over: Partial<SectionInput> = {}): SectionInput => ({
   ...over,
 });
 
+describe("the client's copy of the estimate has not drifted", () => {
+  // The builder shows a live "Estimated time" while the coach types, so the arithmetic is duplicated
+  // in client/src/components/WorkoutBuilder.tsx. If the two ever disagree, the number jumps the
+  // moment the plan is saved - so the constants and the shape are pinned here.
+  it("the client uses the same constants", async () => {
+    const builder = await readFile(new URL("../../client/src/components/WorkoutBuilder.tsx", import.meta.url), "utf8");
+    expect(builder).toContain("const SECONDS_PER_REP = 3;");
+    expect(builder).toContain("const FALLBACK_SET_SEC = 45;");
+    // The two branches that matter: a timed protocol is its window, and rest skips the last set.
+    expect(builder).toContain("TIMED_PROTOCOLS.includes(section.protocol) && section.durationSec");
+    expect(builder).toContain("Math.max(0, sets - 1) * ex.restSec");
+    expect(builder).toContain("Math.max(0, rounds - 1) * section.restSec");
+  });
+});
+
 describe("the client's copy of the constants has not drifted", () => {
   // PROTOCOLS and RECORD_FIELDS are written out in client/src/types.ts so the UI can render them
   // without importing server code. Same convention as content.ts vs billing/plans.ts: duplicate,

@@ -253,7 +253,8 @@ test("Edit (in the ⋯ menu) changes title, details, why and date with PATCH; Ca
   await openTab(page, "Plans");
   const more = panel(page).getByRole("button", { name: "More actions for Squat day" });
   await more.click();
-  await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Delete"]);
+  // "Squat day" is a Workout, so the structured builder is offered too (Inspo W3).
+  await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Build sets and reps", "Delete"]);
   await page.getByRole("menuitem", { name: "Edit" }).click();
   const editor = panel(page).getByRole("form", { name: "Edit Squat day" });
   await expect(editor.getByLabel("Title")).toBeFocused();
