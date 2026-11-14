@@ -2,6 +2,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
+import { allowedExerciseIds, deriveStructure, writeSections } from "../workouts/persist.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
 import {
@@ -134,6 +135,10 @@ assignmentsRouter.post(
     const assignment = await prisma.assignment.create({
       data: { ...fields, ...(mealIds.length > 0 ? { mealIds } : {}), clientId: client.id, coachId },
     });
+    // Inspo A1/A2: if the words already read as a structured workout - which is how the AI writes
+    // them - give it real structure too, so the builder opens on it. Best-effort by design: it
+    // never rewrites `details` and never fails the save.
+    await deriveStructure(assignment);
     res.status(201).json(assignment);
   }),
 );
@@ -279,50 +284,12 @@ assignmentsRouter.put(
 
     // Any exerciseId must be one this coach can actually see: their own, or Repsy stock. An id that
     // is not is kept as a plain name rather than rejected, so one stale id never fails the save.
-    const ids = [...new Set(sections.flatMap((s) => s.exercises.map((e) => e.exerciseId).filter((x): x is string => !!x)))];
-    const allowed = new Set(
-      ids.length
-        ? (
-            await prisma.exercise.findMany({
-              where: { id: { in: ids }, OR: [{ coachId: assignment.coachId }, { coachId: null }] },
-              select: { id: true },
-            })
-          ).map((e) => e.id)
-        : [],
-    );
+    const allowed = await allowedExerciseIds(assignment.coachId, sections);
 
     const details = renderDetails(sections);
     await prisma.$transaction(async (tx) => {
       // Replace rather than diff: a workout is small, and this keeps `order` contiguous for free.
-      await tx.workoutSection.deleteMany({ where: { assignmentId: assignment.id } });
-      for (const [order, section] of sections.entries()) {
-        await tx.workoutSection.create({
-          data: {
-            assignmentId: assignment.id,
-            order,
-            protocol: section.protocol,
-            sets: section.sets,
-            restSec: section.restSec,
-            durationSec: section.durationSec ?? null,
-            notes: section.notes,
-            exercises: {
-              create: section.exercises.map((e, exOrder) => ({
-                order: exOrder,
-                exerciseId: e.exerciseId && allowed.has(e.exerciseId) ? e.exerciseId : null,
-                name: e.name,
-                repsPerSet: e.repsPerSet,
-                loadPerSet: e.loadPerSet,
-                durationSec: e.durationSec ?? null,
-                distanceM: e.distanceM ?? null,
-                rpe: e.rpe ?? null,
-                restSec: e.restSec,
-                notes: e.notes,
-                recordFields: e.recordFields,
-              })),
-            },
-          },
-        });
-      }
+      await writeSections(tx, assignment.id, sections, allowed);
       // Only overwrite `details` when there is something to render: clearing the structure must not
       // wipe the words a coach typed.
       if (sections.length) {
