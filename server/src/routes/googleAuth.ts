@@ -35,6 +35,7 @@ import {
 } from "../auth/google.js";
 import { clientFail, finishClientGoogle } from "./clientGoogle.js";
 import { asyncHandler } from "./clients.js";
+import { trialEnd } from "../billing/state.js";
 
 export const googleAuthRouter = Router();
 
@@ -91,7 +92,7 @@ async function coachFor(who: GoogleIdentity): Promise<{ id: string; sessionVersi
   }
   const passwordHash = await unguessablePassword();
   return prisma.$transaction(async (tx) => {
-    const created = await tx.coach.create({ data: { name: who.name, email: who.email, passwordHash, googleSub: who.sub } });
+    const created = await tx.coach.create({ data: { name: who.name, email: who.email, passwordHash, googleSub: who.sub, trialEndsAt: trialEnd() } });
     await claimDemoData(tx, created.id);
     return created;
   });

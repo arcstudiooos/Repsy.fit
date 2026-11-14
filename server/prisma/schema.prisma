@@ -32,6 +32,23 @@ model Coach {
   approveNewClients Boolean @default(false)
   createdAt    DateTime @default(now())
 
+  // ---- The coach's own subscription to Repsy (Nov 2026). One per coach; PayPal holds the money,
+  // this holds only what the app needs to decide what the coach may do today.
+  /// "Solo" | "Pro" | "Studio". The tier they are on (or were on, once it lapses).
+  planTier        String    @default("Solo")
+  /// "trialing" | "active" | "past_due" | "cancelled" | "expired". Set from PayPal webhooks, except
+  /// "trialing" which starts at sign-up and "expired" which is reached by time passing.
+  billingStatus   String    @default("trialing")
+  /// End of the 7-day free trial, set at sign-up. Null for accounts created before billing existed.
+  trialEndsAt     DateTime?
+  /// End of the period already paid for: access lasts until here even after a cancellation.
+  periodEndsAt    DateTime?
+  /// When a payment first failed. Access stays full for the grace period after this, then read-only.
+  pastDueSince    DateTime?
+  /// PayPal's subscription id (I-XXXXXXXX) and the plan id it is on. Null until they subscribe.
+  paypalSubscriptionId String? @unique
+  paypalPlanId    String?
+
   resetTokens  PasswordResetToken[]
   clients      Client[]
   assignments  Assignment[]

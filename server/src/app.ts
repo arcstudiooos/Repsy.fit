@@ -3,6 +3,7 @@ import { assignmentsRouter } from "./routes/assignments.js";
 import { autoAssignRouter } from "./routes/autoAssign.js";
 import { chatRouter } from "./routes/chat.js";
 import { inboundMailRouter } from "./routes/inboundMail.js";
+import { requirePaidWrite } from "./billing/guard.js";
 import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
@@ -104,6 +105,24 @@ app.use("/api/business", requireCoach);
 app.use("/api/appointments", requireCoach);
 app.use("/api/reports", requireCoach);
 app.use("/api/join-code", requireCoach);
+
+// Read-only when the plan has lapsed (Nov 2026). On the route groups that CREATE coaching work;
+// never on reads, exports, deletes, account settings, billing itself, or anything a client calls.
+// A coach who stops paying keeps every screen and every export - only new plans stop.
+for (const group of [
+  "/api/clients",
+  "/api/templates",
+  "/api/meals",
+  "/api/macros",
+  "/api/messages",
+  "/api/appointments",
+  "/api/checkins",
+  "/api/review-queue",
+  "/api/weekly-summary",
+  "/api/seed",
+]) {
+  app.use(group, requirePaidWrite);
+}
 
 app.use("/api/reports", reportsRouter);
 // Prompt 76: the coach's join code (coach-only) and its public lookup (signed-out clients).

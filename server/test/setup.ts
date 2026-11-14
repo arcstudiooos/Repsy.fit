@@ -5,3 +5,18 @@
 import { vi } from "vitest";
 
 vi.mock("../src/auth/sessionCheck.js", () => ({ isSessionCurrent: async () => true }));
+
+// Billing (Nov 2026): the same trick for the per-write "is this plan paid?" lookup. Mocked route
+// tests sign in as a coach that exists only inside their own prisma mock, so by default that coach
+// is on a healthy paid plan. Tests about billing itself call
+// vi.unmock("../src/billing/current.js") and set up their own rows.
+vi.mock("../src/billing/current.js", () => ({
+  billingFor: async () => ({
+    planTier: "Solo",
+    billingStatus: "active",
+    trialEndsAt: null,
+    periodEndsAt: new Date(Date.now() + 30 * 86_400_000),
+    pastDueSince: null,
+    paypalSubscriptionId: "I-TEST",
+  }),
+}));

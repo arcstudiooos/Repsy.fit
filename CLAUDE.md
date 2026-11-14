@@ -1151,3 +1151,23 @@ and record it here.
 - The four scattered numbers are one client's weight recorded in four apps, none agreeing. They sit
   in the gaps between tiles and carry the note "one weight, four answers"; without it they look like
   numbers spilled at random.
+
+## The coach's own subscription (owner, Nov 2026) - STAGE 1
+
+- Columns on `coaches`: `planTier`, `billingStatus`, `trialEndsAt`, `periodEndsAt`, `pastDueSince`,
+  `paypalSubscriptionId`, `paypalPlanId`. PayPal holds the money; these hold only what the app needs
+  to decide what a coach may do today.
+- `src/billing/state.ts` is the ONE place that decides. The owner's rule: a billing problem never
+  hides a coach's data and never reaches their clients. A lapsed account goes READ-ONLY - every
+  screen, export and delete still works, only NEW plans stop - and the client app is untouched.
+  7-day trial, 7-day grace period after a failed payment, and a cancelled plan runs to the end of
+  the period already paid for.
+- `requirePaidWrite` (src/billing/guard.ts) sits on the write routes. It FAILS OPEN: if the billing
+  row can't be read, the write proceeds. A database hiccup must never look like an expired plan.
+- It is OFF unless `BILLING_ENFORCED=true`. Nothing refuses a coach's work until the checkout flow
+  exists for them to pay with. Turn it on in Render when stage 3 ships.
+- Mocked route tests get a healthy paid plan from `test/setup.ts`, which mocks
+  `src/billing/current.js` the same way it mocks `sessionCheck`. Tests about billing call
+  `vi.unmock("../src/billing/current.js")`.
+- Still to come: stage 2 (PayPal checkout + webhook, sandbox first) and stage 3 (billing screen,
+  trial banner, dunning emails).
