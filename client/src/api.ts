@@ -47,6 +47,9 @@ import type {
   NewExercise,
   ClientSnapshot,
   CoachForm,
+  NewProgram,
+  Program,
+  ProgramPreview,
   FormSubmission,
   NewCoachForm,
   WorkoutSectionInput,
@@ -240,6 +243,20 @@ export const createTemplate = (input: NewWorkoutTemplate) => request<WorkoutTemp
 export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
+
+// ----- Programs (Inspo W10) -----
+export const listPrograms = () => request<Program[]>("GET", "/programs");
+export const getProgram = (id: string) => request<Program>("GET", `/programs/${id}`);
+export const createProgram = (input: NewProgram) => request<Program>("POST", "/programs", input);
+export const updateProgram = (id: string, input: NewProgram) => request<Program>("PUT", `/programs/${id}`, input);
+export const deleteProgram = (id: string) => request<void>("DELETE", `/programs/${id}`);
+export const copyProgram = (id: string) => request<Program>("POST", `/programs/${id}/copy`);
+/** What assigning would create. Saves nothing. */
+export const previewProgram = (id: string, clientId: string, startDate: string) =>
+  request<ProgramPreview>("POST", `/programs/${id}/preview`, { clientId, startDate });
+/** Materialises real assignments on the client's calendar. */
+export const assignProgram = (id: string, clientId: string, startDate: string) =>
+  request<{ created: number; startDate: string }>("POST", `/programs/${id}/assign`, { clientId, startDate });
 
 // ----- Forms (Inspo C1/C2) -----
 /** The coach's own forms plus Repsy's samples. */
@@ -594,6 +611,8 @@ export const queryKeys = {
   exercises: (query: ExerciseQuery = {}) => ["exercises", query] as const,
   clientSnapshot: (clientId: string) => ["clients", clientId, "snapshot"] as const,
   forms: ["forms"] as const,
+  programs: ["programs"] as const,
+  program: (id: string) => ["programs", id] as const,
   form: (formId: string) => ["forms", formId] as const,
   submissions: (formId: string) => ["forms", formId, "submissions"] as const,
   structure: (clientId: string, assignmentId: string) =>

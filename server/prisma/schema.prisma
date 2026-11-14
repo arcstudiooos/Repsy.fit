@@ -75,6 +75,7 @@ model Coach {
   meals            Meal[]
   exercises        Exercise[]
   forms            Form[]
+  programs         Program[]
 
   @@map("coaches")
 }
@@ -498,6 +499,63 @@ model WorkoutTemplate {
 
   @@index([coachId])
   @@map("workout_templates")
+}
+
+/// A reusable multi-week plan (Inspo W10, Nov 2026).
+///
+/// A Program is a TEMPLATE. Assigning it MATERIALISES ordinary Assignment rows on real dates, and
+/// from then on the two are independent: the whole app already reads assignments, so the client app,
+/// checklist, exports, snapshot cards and the calendar all work with no knowledge of programs - and
+/// a coach can change one client's week without editing the template everyone else is on.
+model Program {
+  id          String   @id @default(cuid())
+  coachId     String
+  coach       Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  phases ProgramPhase[]
+
+  @@index([coachId])
+  @@map("programs")
+}
+
+/// A block within a program ("Phase 1 - Base", 4 weeks).
+model ProgramPhase {
+  id        String  @id @default(cuid())
+  programId String
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  order     Int
+  name      String
+  /// How many weeks this phase runs for. Its items repeat per week only if the coach writes them.
+  weeks     Int     @default(1)
+
+  items ProgramItem[]
+
+  @@index([programId, order])
+  @@map("program_phases")
+}
+
+/// One planned thing, at a week and weekday inside its phase.
+///
+/// `week` is 1-based within the phase; `weekday` is 0 = Sunday ... 6 = Saturday, matching habits and
+/// `Date.getUTCDay()`. There is no date here on purpose: a template has no calendar until it is
+/// assigned a start date.
+model ProgramItem {
+  id      String       @id @default(cuid())
+  phaseId String
+  phase   ProgramPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  week    Int
+  weekday Int
+  /// Matches Assignment.type.
+  type    String
+  title   String
+  details String       @default("")
+
+  @@index([phaseId, week, weekday])
+  @@map("program_items")
 }
 
 /// A coach's intake or assessment form (Inspo C1/C2, Nov 2026).

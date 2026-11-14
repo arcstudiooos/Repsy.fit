@@ -1458,3 +1458,37 @@ in `types.ts` so the picker opens with no round trip, guarded by `habit-presets-
 the same convention as PROTOCOLS, RECORD_FIELDS and the meal categories.
 
 A preset FILLS THE BOX (name + its usual days) and never saves on its own. The coach still chooses.
+
+## Programs: reusable multi-week plans (Inspo W10, Nov 2026)
+
+`Program -> ProgramPhase -> ProgramItem`, where an item sits at a (`week`, `weekday`) inside its
+phase and carries NO date. A program is a TEMPLATE.
+
+**Assigning MATERIALISES ordinary `assignments`.** This is the decision the whole feature rests on.
+Every reader in the app - the client app, the checklist, exports, the snapshot cards, the Plans
+calendar - already understands an assignment, and none of them need to learn about programs. It also
+means a coach can change ONE client's week without editing the template every other client is on.
+The rows are stamped `source: "program"`; after that, template and assignments are independent, and
+deleting a program deliberately leaves the assignments alone (the delete dialog says so).
+
+**A start date is NOT snapped to a Monday.** A coach who starts a client on a Wednesday means
+Wednesday; snapping would silently drop the first days of the plan. So `startDate` anchors week 1,
+and an item's weekday is placed within that same week-of-program: `(weekday - startWeekday + 7) % 7`
+days after the start. There is a test that NOTHING ever lands before the start date, for every
+possible start weekday. The UI says this outright under the date box.
+
+Phases run back to back: phase 2 week 1 is the week after phase 1's last week. An item whose `week`
+exceeds its phase's `weeks` is DROPPED rather than spilling into the next phase - a phase shortened
+from 4 weeks to 2 can leave week-3 items behind, and silently moving them would be worse.
+
+**Assigning always goes through `POST /:id/preview`,** which returns the dates and saves nothing.
+Committing eight weeks of a client's calendar unseen is not something to ask of a coach. In the UI
+the commit button does not exist until a preview has been seen, and changing the client or the date
+drops the stale preview rather than letting it be committed.
+
+All the assignments are created in ONE transaction, so a half-assigned program cannot exist. Each
+materialised workout then goes through `deriveStructure`, so a program's plans arrive with real sets
+and reps (Inspo A1/A2 composes with this).
+
+Phases and items are written whole on update (delete + recreate in a transaction), which keeps
+`order` contiguous for free - the same pattern as a workout's sections.

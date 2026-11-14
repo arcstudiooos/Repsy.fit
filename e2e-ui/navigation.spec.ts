@@ -172,7 +172,7 @@ test("Library is a Business view", async ({ page }) => {
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();
   const views = page.getByRole("group", { name: "Business view" }).getByRole("button");
-  await expect(views).toHaveText(["Payments", "Schedule", "Engagement", "Forms", "Reports", "Library"]);
+  await expect(views).toHaveText(["Payments", "Schedule", "Engagement", "Programs", "Forms", "Reports", "Library"]);
   await views.filter({ hasText: "Library" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Library" })).toBeVisible();
 });

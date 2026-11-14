@@ -512,6 +512,40 @@ export interface WorkoutTemplate {
 }
 export type NewWorkoutTemplate = Pick<WorkoutTemplate, "name" | "exercises"> & Partial<Pick<WorkoutTemplate, "focus" | "notes">>;
 
+/** Inspo W10: a reusable multi-week program. A template - it has no dates until it is assigned. */
+export interface ProgramItem {
+  id?: string;
+  /** 1-based within its phase. */
+  week: number;
+  /** 0 = Sunday ... 6 = Saturday. */
+  weekday: number;
+  type: AssignmentType;
+  title: string;
+  details: string;
+}
+export interface ProgramPhase {
+  id?: string;
+  name: string;
+  weeks: number;
+  items: ProgramItem[];
+}
+export interface Program {
+  id: string;
+  name: string;
+  description: string;
+  phases: ProgramPhase[];
+  totalWeeks: number;
+  totalItems: number;
+  createdAt: string;
+}
+export type NewProgram = Pick<Program, "name"> & Partial<Pick<Program, "description" | "phases">>;
+/** What assigning WOULD create: shown before a coach commits weeks of a client's calendar. */
+export interface ProgramPreview {
+  startDate: string;
+  count: number;
+  items: { date: string; type: AssignmentType; title: string; details: string; phaseName: string }[];
+}
+
 /** The question types a form can hold (Inspo C1). Mirrors QUESTION_TYPES in server forms/schema.ts. */
 export const QUESTION_TYPES = ["single", "multi", "text", "longtext", "number", "date", "scale"] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];

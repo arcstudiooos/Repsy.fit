@@ -7,6 +7,7 @@ import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../a
 import { Engagement } from "../components/Engagement";
 import { Schedule } from "../components/Schedule";
 import { FormsView } from "../components/FormsView";
+import { ProgramsView } from "../components/ProgramsView";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
 import { formatDay } from "../lib/dates";
@@ -55,7 +56,7 @@ export function money(amount: number, currency: string): string {
 const dayText = (iso: string) => formatDay(iso);
 
 // Library (templates, meals, macro calculator) moved here from its own top-level tab (Nov 2026).
-const VIEWS = ["Payments", "Schedule", "Engagement", "Forms", "Reports", "Library"] as const;
+const VIEWS = ["Payments", "Schedule", "Engagement", "Programs", "Forms", "Reports", "Library"] as const;
 export type BusinessView = (typeof VIEWS)[number];
 type View = BusinessView;
 
@@ -96,7 +97,9 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked, lib
           </button>
         ))}
       </div>
-      {view === "Forms" ? (
+      {view === "Programs" ? (
+        <ProgramsView clients={clients} />
+      ) : view === "Forms" ? (
         <FormsView clients={clients} />
       ) : view === "Library" ? (
         <div className="mt-4">

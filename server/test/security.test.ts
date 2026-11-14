@@ -46,6 +46,23 @@ const COACH_ROUTES: [string, string][] = [
   ["get", "/api/clients/c1/plan"],
   ["get", "/api/clients/c1/plan/payments"],
   ["post", "/api/clients/c1/auto-assign"],
+  // Inspo W1/C1/W10: each of these is mounted with its OWN app.use(path, requireCoach) line, and
+  // this list is the only thing that proves it. A router mounted without its guard ships wide open
+  // while every signed-in test still passes.
+  ["get", "/api/exercises"],
+  ["post", "/api/exercises"],
+  ["post", "/api/exercises/e1/copy"],
+  ["get", "/api/forms"],
+  ["post", "/api/forms"],
+  ["get", "/api/forms/f1/submissions"],
+  ["post", "/api/forms/f1/submissions"],
+  ["get", "/api/programs"],
+  ["post", "/api/programs"],
+  ["put", "/api/programs/p1"],
+  ["delete", "/api/programs/p1"],
+  ["post", "/api/programs/p1/copy"],
+  ["post", "/api/programs/p1/preview"],
+  ["post", "/api/programs/p1/assign"],
   ["get", "/api/templates"],
   ["get", "/api/meals"],
   ["post", "/api/macros"],
