@@ -47,7 +47,12 @@ paypalWebhookRouter.post("/", async (req: Request, res: Response) => {
   if (!sub) return res.status(204).end();
 
   const now = new Date();
-  const data: Record<string, unknown> = { periodEndsAt: sub.nextBillingAt };
+  const data: Record<string, unknown> = {};
+  // NEVER overwrite periodEndsAt with null. PayPal reports next_billing_time: null once a
+  // subscription is cancelled or suspended - nothing more will be billed - but the coach has
+  // already PAID through that date and keeps access until then. Copying the null straight in put a
+  // coach who cancelled into read-only the same second, which is the opposite of the promise.
+  if (sub.nextBillingAt) data.periodEndsAt = sub.nextBillingAt;
   const tier = tierForPlanId(sub.planId);
   if (tier) data.planTier = tier;
 

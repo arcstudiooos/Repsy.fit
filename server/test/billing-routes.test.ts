@@ -196,3 +196,28 @@ describe("the PayPal webhook", () => {
     expect(prisma.coach.update).not.toHaveBeenCalled();
   });
 });
+
+describe("the paid-through date", () => {
+  const send = (body: unknown) =>
+    request(app).post("/api/paypal/webhook").set("Content-Type", "application/json").send(JSON.stringify(body));
+
+  it("survives a cancellation, so a coach keeps the month they paid for", async () => {
+    verifyWebhook.mockResolvedValue(true);
+    prisma.coach.findUnique.mockResolvedValue({ id: TEST_COACH_ID, pastDueSince: null });
+    // PayPal reports no next billing once cancelled; the date already paid through must stay.
+    getSubscription.mockResolvedValue({ id: "I-REAL", status: "CANCELLED", planId: SOLO, nextBillingAt: null, customId: TEST_COACH_ID });
+    await send({ event_type: "BILLING.SUBSCRIPTION.CANCELLED", resource: { id: "I-REAL" } });
+    const data = prisma.coach.update.mock.calls[0][0].data;
+    expect(data.billingStatus).toBe("cancelled");
+    expect(data).not.toHaveProperty("periodEndsAt");
+  });
+
+  it("is still updated when PayPal gives a new one", async () => {
+    verifyWebhook.mockResolvedValue(true);
+    const next = new Date(Date.now() + 30 * DAY);
+    prisma.coach.findUnique.mockResolvedValue({ id: TEST_COACH_ID, pastDueSince: null });
+    getSubscription.mockResolvedValue({ id: "I-REAL", status: "ACTIVE", planId: SOLO, nextBillingAt: next, customId: TEST_COACH_ID });
+    await send({ event_type: "BILLING.SUBSCRIPTION.ACTIVATED", resource: { id: "I-REAL" } });
+    expect(prisma.coach.update.mock.calls[0][0].data.periodEndsAt).toEqual(next);
+  });
+});
