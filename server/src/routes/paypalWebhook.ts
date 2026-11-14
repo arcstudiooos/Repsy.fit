@@ -9,12 +9,15 @@
 import { Router, type Request, type Response } from "express";
 import { prisma } from "../db.js";
 import { getSubscription, tierForPlanId, verifyWebhook } from "../billing/paypal.js";
+import { asyncHandler } from "./clients.js";
 
 export const paypalWebhookRouter = Router();
 
 type Event = { event_type?: string; resource?: { id?: string; status?: string; plan_id?: string } };
 
-paypalWebhookRouter.post("/", async (req: Request, res: Response) => {
+paypalWebhookRouter.post(
+  "/",
+  asyncHandler(async (req: Request, res: Response) => {
   if (!process.env.PAYPAL_WEBHOOK_ID) return res.status(503).json({ error: "Webhook not configured." });
 
   // express.raw gives a Buffer: the signature is over the exact bytes PayPal sent.
@@ -85,6 +88,7 @@ paypalWebhookRouter.post("/", async (req: Request, res: Response) => {
 
   await prisma.coach.update({ where: { id: coach.id }, data });
   // No body, nothing logged beyond the type: PayPal only needs the 204.
-  console.log(`PayPal webhook handled: ${type} -> ${sub.status}`);
-  res.status(204).end();
-});
+    console.log(`PayPal webhook handled: ${type} -> ${sub.status}`);
+    res.status(204).end();
+  }),
+);

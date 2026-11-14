@@ -1237,3 +1237,15 @@ Sandbox needs a PERSONAL sandbox account to pay with: the Business one is the se
 refuses ("You are logging in to the account of the seller"), and a real PayPal account does not
 exist in sandbox at all. Create the Personal buyer with country United States - the Indian test
 buyers drag in a phone-OTP flow that sandbox cannot deliver.
+
+### Async routes and third parties (14 Nov 2026, learned the hard way)
+
+Express 4 does NOT catch a rejected promise from an async handler: it becomes an unhandled
+rejection and Node kills the process. Live PayPal credentials pointed at the sandbox endpoint made
+the token call throw, and the whole site went 502 - including coaches creating clients, which has
+nothing to do with billing. Every async route goes through `asyncHandler` (routes/clients.ts), and
+`billing/paypal.ts` never throws: a bad key, an outage or a network failure all return ok:false.
+A third party being broken must degrade one feature, never the server.
+
+Half-switching environments is what caused it. `PAYPAL_ENV`, the client id, the secret, the webhook
+id and the three plan ids belong to ONE environment and must be changed in a single save.

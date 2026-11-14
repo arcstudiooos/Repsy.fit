@@ -25,6 +25,9 @@ export function tierForPlanId(planId: string): PlanTier | undefined {
 /** Cached because PayPal's token lasts hours and every webhook would otherwise fetch a new one. */
 let cached: { token: string; expiresAt: number } | null = null;
 
+/** Thrown only inside this module; every exported function turns it into a quiet failure. */
+class PaypalUnavailable extends Error {}
+
 async function accessToken(): Promise<string> {
   if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
   const auth = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64");
@@ -33,20 +36,31 @@ async function accessToken(): Promise<string> {
     headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
     body: "grant_type=client_credentials",
   });
-  if (!res.ok) throw new Error(`PayPal token request failed (${res.status})`);
+  if (!res.ok) throw new PaypalUnavailable(`PayPal token request failed (${res.status})`);
   const json = (await res.json()) as { access_token: string; expires_in: number };
   cached = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 };
   return json.access_token;
 }
 
+/**
+ * Never throws. A wrong key, an expired secret, PayPal being down or the network failing all come
+ * back as ok:false, because the alternative - an error escaping an async route - takes the whole
+ * server down and stops coaches doing work that has nothing to do with billing. That happened once,
+ * with live credentials pointed at the sandbox endpoint.
+ */
 async function call(method: string, path: string, body?: unknown) {
-  const res = await fetch(`${BASE()}${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  return { ok: res.ok, status: res.status, json: text ? (JSON.parse(text) as Record<string, unknown>) : {} };
+  try {
+    const res = await fetch(`${BASE()}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, json: text ? (JSON.parse(text) as Record<string, unknown>) : {} };
+  } catch (err) {
+    console.error(`PayPal call failed: ${method} ${path}`, err instanceof Error ? err.message : err);
+    return { ok: false, status: 0, json: {} as Record<string, unknown> };
+  }
 }
 
 export type PaypalSubscription = {

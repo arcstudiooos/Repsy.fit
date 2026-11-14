@@ -264,3 +264,34 @@ describe("payments, as proof", () => {
     expect(lines[1]).toContain('"alex@example.com"');
   });
 });
+
+describe("when PayPal is unreachable or misconfigured", () => {
+  // This is the scenario that took the server down: live credentials pointed at the sandbox
+  // endpoint. A billing problem must stay a billing problem.
+  it("answers /confirm with a plain error instead of crashing", async () => {
+    getSubscription.mockRejectedValue(new Error("PayPal token request failed (401)"));
+    const res = await request(app).post("/api/billing/confirm").send({ subscriptionId: "I-REAL" });
+    expect([400, 500, 502]).toContain(res.status);
+    expect(res.status).not.toBe(0);
+    expect(prisma.coach.update).not.toHaveBeenCalled();
+  });
+
+  it("still serves the billing screen, because /me never calls PayPal", async () => {
+    getSubscription.mockRejectedValue(new Error("PayPal is down"));
+    listTransactions.mockRejectedValue(new Error("PayPal is down"));
+    prisma.coach.findUnique.mockResolvedValue(row());
+    const res = await request(app).get("/api/billing/me");
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("trialing");
+  });
+
+  it("answers the webhook rather than letting the error escape", async () => {
+    verifyWebhook.mockRejectedValue(new Error("PayPal is down"));
+    const res = await request(app)
+      .post("/api/paypal/webhook")
+      .set("Content-Type", "application/json")
+      .send(JSON.stringify({ event_type: "BILLING.SUBSCRIPTION.ACTIVATED", resource: { id: "I-REAL" } }));
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(prisma.coach.update).not.toHaveBeenCalled();
+  });
+});

@@ -10,6 +10,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
+import { asyncHandler } from "./clients.js";
 import { billingState, isPlanTier, PLAN_TIERS, type PlanTier } from "../billing/state.js";
 import { cancelSubscription, getSubscription, listTransactions, paypalConfigured, planIdFor, tierForPlanId } from "../billing/paypal.js";
 
@@ -25,7 +26,7 @@ const BILLING_SELECT = {
 } as const;
 
 /** What the billing screen shows: the state, and the plan ids the checkout button needs. */
-billingRouter.get("/me", async (req: Request, res: Response) => {
+billingRouter.get("/me", asyncHandler(async (req: Request, res: Response) => {
   const coach = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: BILLING_SELECT });
   if (!coach) return res.status(404).json({ error: "We could not find your account." });
   const state = billingState(coach);
@@ -44,7 +45,7 @@ billingRouter.get("/me", async (req: Request, res: Response) => {
         }
       : null,
   });
-});
+}));
 
 const ConfirmSchema = z.object({
   subscriptionId: z
@@ -58,7 +59,7 @@ const ConfirmSchema = z.object({
  * Called by the browser right after PayPal approves. It is a HINT, not an instruction: the
  * subscription is fetched from PayPal and only its real plan and status are stored.
  */
-billingRouter.post("/confirm", async (req: Request, res: Response) => {
+billingRouter.post("/confirm", asyncHandler(async (req: Request, res: Response) => {
   const parsed = ConfirmSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Please try again." });
   if (!paypalConfigured()) return res.status(503).json({ error: "Payments are not set up yet." });
@@ -94,10 +95,10 @@ billingRouter.post("/confirm", async (req: Request, res: Response) => {
   });
   const fresh = await prisma.coach.findUnique({ where: { id: coachId }, select: BILLING_SELECT });
   res.json(billingState(fresh!));
-});
+}));
 
 /** Ends the plan at PayPal. Access continues to the end of the period already paid for. */
-billingRouter.post("/cancel", async (req: Request, res: Response) => {
+billingRouter.post("/cancel", asyncHandler(async (req: Request, res: Response) => {
   const coach = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: BILLING_SELECT });
   if (!coach?.paypalSubscriptionId) return res.status(400).json({ error: "There is no plan to cancel." });
   const done = await cancelSubscription(coach.paypalSubscriptionId, "Cancelled by the coach in Repsy.");
@@ -106,13 +107,13 @@ billingRouter.post("/cancel", async (req: Request, res: Response) => {
   await prisma.coach.update({ where: { id: coachIdOf(req) }, data: { billingStatus: "cancelled" } });
   const fresh = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: BILLING_SELECT });
   res.json(billingState(fresh!));
-});
+}));
 
 /**
  * What PayPal has actually charged. Proof a coach can keep: PayPal is the payer of record, so every
  * figure here comes from PayPal and none of it is calculated by us.
  */
-billingRouter.get("/payments", async (req: Request, res: Response) => {
+billingRouter.get("/payments", asyncHandler(async (req: Request, res: Response) => {
   const coach = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: { paypalSubscriptionId: true, planTier: true } });
   if (!coach?.paypalSubscriptionId) return res.json({ reference: null, payments: [] });
   res.json({
@@ -120,10 +121,10 @@ billingRouter.get("/payments", async (req: Request, res: Response) => {
     tier: coach.planTier,
     payments: await listTransactions(coach.paypalSubscriptionId),
   });
-});
+}));
 
 /** The same payments as a file, for an accountant or an expense claim. */
-billingRouter.get("/payments.csv", async (req: Request, res: Response) => {
+billingRouter.get("/payments.csv", asyncHandler(async (req: Request, res: Response) => {
   const coach = await prisma.coach.findUnique({
     where: { id: coachIdOf(req) },
     select: { paypalSubscriptionId: true, planTier: true, name: true, email: true },
@@ -144,7 +145,7 @@ billingRouter.get("/payments.csv", async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", 'attachment; filename="repsy-payments.csv"');
   res.send(csv);
-});
+}));
 
 /** The tier a coach is choosing, used only to hand the right plan id to the PayPal button. */
 billingRouter.get("/plan/:tier", (req: Request, res: Response) => {
