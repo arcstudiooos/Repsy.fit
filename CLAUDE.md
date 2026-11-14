@@ -1219,3 +1219,21 @@ and record it here.
 - A section embedded in another page (billing inside Account) must fail QUIETLY: no `role="alert"`,
   no full-page error card. Two alerts on one page break `getByRole("alert")` in every other test
   there, and a screen reader announces a billing hiccup over whatever the coach was doing.
+
+### Stage 2 verified in sandbox (14 Nov 2026)
+
+Run end to end against production with sandbox keys: subscribe (real $39 charge, ACTIVE), confirm,
+forged webhook refused 401, suspend -> past_due with the grace period, reactivate -> cleared,
+cancel -> access kept to the end of the paid period. Two bugs only a live run could find:
+
+- `Cross-Origin-Opener-Policy: same-origin` severed PayPal's popup from the page that opened it:
+  the popup loaded and reported nothing. It must stay `same-origin-allow-popups`.
+- PayPal reports `next_billing_time: null` once a subscription is cancelled or suspended. Copying
+  that into `periodEndsAt` put a coach who cancelled into read-only instantly, destroying the month
+  they had paid for. NEVER overwrite `periodEndsAt` with null - only write it when PayPal sends a
+  date. Tested in billing-routes.test.ts.
+
+Sandbox needs a PERSONAL sandbox account to pay with: the Business one is the seller and PayPal
+refuses ("You are logging in to the account of the seller"), and a real PayPal account does not
+exist in sandbox at all. Create the Personal buyer with country United States - the Indian test
+buyers drag in a phone-OTP flow that sandbox cannot deliver.
