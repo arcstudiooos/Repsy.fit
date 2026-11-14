@@ -26,6 +26,11 @@ type Props = {
   onPrefillUsed?: () => void;
   /** Opens Business > Library's macro calculator pre-filled from this client (the one macro link, next to Nutrition plans). */
   onOpenMacroCalculator?: (clientId: string) => void;
+  /** Inspo W13: reopen the structured builder on this assignment (from the unsaved-changes banner). */
+  resumeBuildId?: string | null;
+  onResumeBuildUsed?: () => void;
+  /** Builds the "Continue editing" action for a draft: App navigates back here, then reopens it. */
+  onRegisterBuildResume?: (clientId: string, assignmentId: string) => () => void;
 };
 
 type Filter = "All" | AssignmentType;
@@ -33,7 +38,16 @@ const FILTERS: Filter[] = ["All", ...ASSIGNMENT_TYPES];
 
 // Plans (the Manual Planner; a sub-tab of the client workspace since Nov 2026): everything assigned to the selected client
 // (GET /api/clients/:clientId/assignments, newest first), with instant type filters.
-export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed, onOpenMacroCalculator }: Props) {
+export function PlannerTab({
+  client,
+  onOpenAiCoach,
+  prefill,
+  onPrefillUsed,
+  onOpenMacroCalculator,
+  resumeBuildId = null,
+  onResumeBuildUsed,
+  onRegisterBuildResume,
+}: Props) {
   const [filter, setFilter] = useState<Filter>("All");
   // The form reads the template on its first render; after that the parent forgets it, so coming
   // back to this tab later starts from an empty form again.
@@ -116,7 +130,13 @@ export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed, onOp
         ) : (
           <ul aria-label="Assignments" className="mt-4 flex flex-col gap-3">
             {shown.map((a) => (
-              <AssignmentCard key={a.id} assignment={a} />
+              <AssignmentCard
+                  key={a.id}
+                  assignment={a}
+                  openBuilder={resumeBuildId === a.id}
+                  onBuilderOpened={onResumeBuildUsed}
+                  registerResume={onRegisterBuildResume}
+                />
             ))}
           </ul>
         )}
@@ -160,7 +180,18 @@ export function PlannerTab({ client, onOpenAiCoach, prefill, onPrefillUsed, onOp
   );
 }
 
-function AssignmentCard({ assignment }: { assignment: Assignment }) {
+function AssignmentCard({
+  assignment,
+  openBuilder = false,
+  onBuilderOpened,
+  registerResume,
+}: {
+  assignment: Assignment;
+  /** Open the structured builder straight away (the unsaved-changes banner sent us back here). */
+  openBuilder?: boolean;
+  onBuilderOpened?: () => void;
+  registerResume?: (clientId: string, assignmentId: string) => () => void;
+}) {
   const queryClient = useQueryClient();
   const { clientId } = assignment;
   // The list, the Clients tab counts (same assignments cache) and Progress completion numbers.
@@ -181,7 +212,13 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
   // Nov 2026: Edit (title, details, why, date) with the same editor as the AI Coach card, saved by PATCH.
   const [editing, setEditing] = useState<PlanFields | null>(null);
   // Inspo W3: the structured builder, open on this plan. Only ever one of editing/building at once.
-  const [building, setBuilding] = useState(false);
+  const [building, setBuilding] = useState(openBuilder);
+  // Reopened from the unsaved-changes banner: open, then tell App the request was used up.
+  useEffect(() => {
+    if (!openBuilder) return;
+    setBuilding(true);
+    onBuilderOpened?.();
+  }, [openBuilder, onBuilderOpened]);
   const [editProblem, setEditProblem] = useState<string | null>(null);
   const editMutation = useMutation({
     mutationFn: (plan: PlanFields) =>
@@ -227,8 +264,13 @@ function AssignmentCard({ assignment }: { assignment: Assignment }) {
         <WorkoutBuilder
           clientId={clientId}
           assignmentId={assignment.id}
+          title={assignment.title}
           onSaved={() => void queryClient.invalidateQueries({ queryKey: queryKeys.assignments(clientId) })}
           onClose={() => setBuilding(false)}
+          // The resume action must survive this card unmounting (the coach navigated away), so it
+          // is built by App, which can navigate back. Falling back to a local reopen keeps the
+          // builder usable on its own.
+          onResume={registerResume?.(clientId, assignment.id) ?? (() => setBuilding(true))}
         />
       </li>
     );

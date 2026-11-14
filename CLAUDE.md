@@ -1353,3 +1353,39 @@ Rules that came out of it:
    (`prompts/structure_probe.py`) instead of re-running a whole suite.
 5. Live-check scripts must clean up in **`try/finally`**: a crash mid-run leaves a throwaway coach
    whose random password was only ever in memory, i.e. an account nothing can delete.
+
+## Shared helpers go in leaf modules (15 Nov 2026, learned the hard way)
+
+Adding `import { clientToday } from "./clientTracking.js"` to `routes/clients.ts` created
+
+    routes/clients.ts -> routes/clientTracking.ts -> routes/measurements.ts -> routes/clients.ts
+
+With ES modules that is not an error, it is a TIMING bug: `measurements.ts` evaluated while
+`clients.ts` was still half-initialised, so `asyncHandler` was `undefined` and every route wrapping
+it threw "asyncHandler is not a function" **at import time**. 88 of 98 server test files failed at
+once, and `tsc` was completely happy.
+
+- **A helper two routers share belongs in a LEAF module** (no imports of its own), never in one of
+  the routers. `clientToday` now lives in `src/clients/snapshot.ts` for exactly this reason.
+- `server/test/no-import-cycles.test.ts` walks every import under `src/` and prints the exact loop.
+  Keep it passing; it is cheap and this bug is invisible to the type checker.
+- **Run the WHOLE server suite before shipping, not just the new file.** The new tests passed in
+  isolation throughout; only the full run exposed it.
+
+## The client snapshot (Inspo C4/C5, Nov 2026)
+
+`GET /api/clients/:clientId/snapshot` - one request for the row above a client's workspace.
+
+- **The streak rule, defined once in `src/clients/snapshot.ts`:** a day counts when the client
+  finished an assignment, filled in a daily check-in, or logged progress. The current streak is the
+  run of counting days ending **today or yesterday** - yesterday deliberately, so a coach at 9am does
+  not see a three-week streak reported as 0 because the day is young. Older runs read 0.
+- **Blanks, never confident zeroes.** No data shows as "not logged yet" / "no streak yet". `0%`
+  adherence for a client nobody has measured is a lie; a test asserts the row never prints it.
+- **The snapshot fails invisibly.** It is a glance, not the page: on error or junk the row is simply
+  absent and the workspace stays usable (the same fail-small rule the Account sections learned).
+- `isDay()` guards NaN because **`new Date(NaN).toISOString()` throws** - without it one junk date
+  turns the endpoint into a 500.
+- Pure formatting lives in `client/src/lib/snapshotFormat.ts` and is unit-tested from the server
+  suite, because the e2e fixture pins `/api/auth/me` to one mock coach and a browser test therefore
+  cannot change the coach's units.

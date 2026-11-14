@@ -227,6 +227,8 @@ Originals: `C:\Users\ranes\Desktop\Repsy inspo`
 |---|---|---|
 | W1 Exercise library | 15 Nov 2026 | 65 seeded stock movements + the coach's own. Stock is read-only; "copy to my library" to edit. Verified live (15/15). |
 | W3 Structured workouts (data) | 15 Nov 2026 | `Section -> Exercise`, per-set reps as arrays. `details` is now a derived rendering, so old readers keep working; legacy plans are parsed on demand rather than migrated. |
+| W3/W5/W6/W7/W8/W9 Workout builder | 15 Nov 2026 | Plans -> "Build sets and reps": sections, 8 protocols, per-set reps, live estimated time, record-from-user chips. Reorder by button (no new deps, keyboard-friendly); catalogue via native `datalist`. |
+| C4/C5 Client snapshot | 15 Nov 2026 | Five cards above the workspace: weight (coach's unit), adherence, last workout, streak, workouts done. Blanks not zeroes; fails invisibly. |
 
 **Incident, 15 Nov 2026.** The structured-workout release was green everywhere and still 500'd in
 production: two phantom columns reached the Prisma schema that no migration created. Unit tests mock

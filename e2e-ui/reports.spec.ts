@@ -132,3 +132,17 @@ test("the roster CSV download sits with the other exports in Reports (not in Pay
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download roster CSV" }).click()]);
   expect(download.suggestedFilename()).toBe("roster-2026-11-11.csv");
 });
+
+test("each CSV export says what is inside it before you download it (Inspo C4)", async ({ page }) => {
+  await mockApi(page);
+  const exports = page.getByRole("group", { name: "CSV exports" });
+  // A coach should not have to download a file to find out what it holds.
+  await expect(exports).toContainText("weight, adherence, workouts done");
+  await expect(exports).toContainText("Waist, chest, arm and hip in cm, body fat %");
+  await expect(exports).toContainText("What they paid and when");
+  await expect(exports).toContainText("type, title, the full details, why");
+  // Every export still has its own download, and the label says which file it is.
+  for (const label of ["progress logs", "measurements", "payments", "assignments"]) {
+    await expect(exports.getByRole("button", { name: `Download ${label}` })).toBeVisible();
+  }
+});

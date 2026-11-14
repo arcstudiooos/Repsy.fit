@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getStructure, listExercises, queryKeys, saveStructure } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
+import { clearDraft, getDraft, setDraft } from "./UnsavedChangesBanner";
 import {
   PROTOCOLS,
   RECORD_FIELDS,
@@ -98,12 +99,16 @@ export function clockLabel(totalSeconds: number): string {
 type Props = {
   clientId: string;
   assignmentId: string;
+  /** What the plan is called, for the unsaved-changes banner. */
+  title?: string;
   /** Called after a successful save, so the plan list can refetch the regenerated text. */
   onSaved: () => void;
   onClose: () => void;
+  /** Bring the coach back to this builder from the banner. */
+  onResume?: () => void;
 };
 
-export function WorkoutBuilder({ clientId, assignmentId, onSaved, onClose }: Props) {
+export function WorkoutBuilder({ clientId, assignmentId, title = "this workout", onSaved, onClose, onResume }: Props) {
   const structureQuery = useQuery({
     queryKey: queryKeys.structure(clientId, assignmentId),
     queryFn: () => getStructure(clientId, assignmentId),
@@ -115,15 +120,21 @@ export function WorkoutBuilder({ clientId, assignmentId, onSaved, onClose }: Pro
   const [open, setOpen] = useState<string>(""); // "s-e" of the exercise showing advanced fields
   const [error, setError] = useState<string | null>(null);
 
-  // Load the server's answer once. A plan with no stored structure arrives parsed from its text,
-  // so the builder opens on what the coach already wrote rather than on nothing.
+  // Load once, preferring a draft the coach already started: they may have navigated away and come
+  // back through the unsaved-changes banner, in which case the server's copy is the stale one.
+  // Otherwise a plan with no stored structure arrives parsed from its text, so the builder opens on
+  // what the coach already wrote rather than on nothing.
   useEffect(() => {
-    if (structureQuery.data && sections === null) setSections(structureQuery.data.sections.map((s) => ({ ...s })));
-  }, [structureQuery.data, sections]);
+    if (!structureQuery.data || sections !== null) return;
+    const draft = getDraft();
+    const unsaved = draft?.id === assignmentId ? (draft.payload as WorkoutSectionInput[] | undefined) : undefined;
+    setSections((unsaved ?? structureQuery.data.sections).map((s) => ({ ...s })));
+  }, [structureQuery.data, sections, assignmentId]);
 
   const saveMutation = useMutation({
     mutationFn: () => saveStructure(clientId, assignmentId, sections ?? []),
     onSuccess: () => {
+      clearDraft(assignmentId);
       onSaved();
       onClose();
     },
@@ -131,6 +142,31 @@ export function WorkoutBuilder({ clientId, assignmentId, onSaved, onClose }: Pro
   });
 
   const estimate = useMemo(() => estimateSeconds(sections ?? []), [sections]);
+
+  // Inspo W13: once the coach has changed something, say so anywhere they navigate. Compared against
+  // the server's answer, so merely opening the builder is not "unsaved changes".
+  const loaded = structureQuery.data?.sections;
+  const dirty = sections !== null && loaded !== undefined && JSON.stringify(sections) !== JSON.stringify(loaded);
+  useEffect(() => {
+    if (!dirty) {
+      clearDraft(assignmentId);
+      return;
+    }
+    setDraft({
+      id: assignmentId,
+      label: title,
+      kind: "workout",
+      payload: sections,
+      resume: () => onResume?.(),
+      discard: () => {
+        setSections(loaded ? loaded.map((s) => ({ ...s })) : []);
+        onClose();
+      },
+    });
+  }, [dirty, assignmentId, title, loaded, onResume, onClose]);
+
+  // NOTE: no clear-on-unmount. Navigating away unmounts this component, and that is exactly when
+  // the banner has to stay up. The draft is cleared explicitly on save, discard and Cancel instead.
 
   if (structureQuery.isPending) return <LoadingState />;
   if (structureQuery.isError) return <ErrorState error={structureQuery.error} onRetry={() => void structureQuery.refetch()} />;
@@ -458,7 +494,14 @@ export function WorkoutBuilder({ clientId, assignmentId, onSaved, onClose }: Pro
         >
           {saveMutation.isPending ? "Saving..." : "Save workout"}
         </button>
-        <button type="button" className="btn btn-secondary min-h-11" onClick={onClose}>
+        <button
+          type="button"
+          className="btn btn-secondary min-h-11"
+          onClick={() => {
+            clearDraft(assignmentId);
+            onClose();
+          }}
+        >
           Cancel
         </button>
         {sections.length > 0 && (

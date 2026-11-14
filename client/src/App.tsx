@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientHeader, initials } from "./ClientHeader";
 import { ClientSnapshotCards } from "./components/ClientSnapshotCards";
+import { UnsavedChangesBanner } from "./components/UnsavedChangesBanner";
 import { MenuButton } from "./components/MenuButton";
 import { BillingBanner } from "./auth/BillingBanner";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./components/States";
@@ -273,6 +274,11 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   // mid-send never loses one (Prompt 64).
   const [chat, setChat] = useState<ChatState>({ pendingBy: {}, drafts: {} });
   const clearPlannerPrefill = useCallback(() => setPlannerPrefill(null), []);
+  // Inspo W13: "Continue editing" on the unsaved-changes banner. The builder lives inside Plans, so
+  // resuming has to come back here - select the client, open Plans, and tell PlannerTab which
+  // assignment to reopen. Same shape as plannerPrefill above.
+  const [resumeBuildId, setResumeBuildId] = useState<string | null>(null);
+  const clearResumeBuild = useCallback(() => setResumeBuildId(null), []);
   // Prompt 61: the client whose details should pre-fill the Library's macro calculator (used once).
   const [macroClientId, setMacroClientId] = useState<string | null>(null);
   const clearMacroClientId = useCallback(() => setMacroClientId(null), []);
@@ -371,6 +377,12 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
               prefill={plannerPrefill}
               onPrefillUsed={clearPlannerPrefill}
               onOpenMacroCalculator={openMacroCalculator}
+              resumeBuildId={resumeBuildId}
+              onResumeBuildUsed={clearResumeBuild}
+              onRegisterBuildResume={(clientId, assignmentId) => () => {
+                setResumeBuildId(assignmentId);
+                openWorkspace(clientId, "plans");
+              }}
             />
           ) : subTab === "progress" ? (
             <Suspense fallback={<LoadingState />}>
@@ -504,6 +516,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
               aria-labelledby={`tab-${activeTab}`}
               className="card mt-4 p-4 sm:mt-0 sm:rounded-t-none sm:border-t-0 sm:p-6"
             >
+              {/* Inspo W13: unsaved work says so wherever the coach navigates, without trapping them. */}
+              <UnsavedChangesBanner />
               {/* The demo buttons vanish once there are clients, so their result is said here. */}
               {(seedDemo.message ?? seedSixMonth.message) && (
                 <p role="status" className="mb-3 text-sm font-semibold text-accent2">

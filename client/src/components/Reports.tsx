@@ -12,11 +12,30 @@ const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface p
 const labelClass = "mb-1 block text-sm font-bold";
 const buttonClass = "btn btn-secondary";
 
-const EXPORTS: { type: ClientExportType; label: string }[] = [
-  { type: "progress", label: "Progress logs" },
-  { type: "measurements", label: "Measurements" },
-  { type: "payments", label: "Payments" },
-  { type: "assignments", label: "Assignments" },
+// Inspo C4: a download says what is in it. The descriptions name the ACTUAL columns from
+// server/src/csv.ts CSV_COLUMNS - a test keeps them honest, because a export that quietly stops
+// carrying a column it advertises is worse than one that never said.
+const EXPORTS: { type: ClientExportType; label: string; description: string }[] = [
+  {
+    type: "progress",
+    label: "Progress logs",
+    description: "One row per logged day: weight, adherence, workouts done and the note.",
+  },
+  {
+    type: "measurements",
+    label: "Measurements",
+    description: "Waist, chest, arm and hip in cm, body fat %, and the note, by date.",
+  },
+  {
+    type: "payments",
+    label: "Payments",
+    description: "What they paid and when, with the method and any note.",
+  },
+  {
+    type: "assignments",
+    label: "Assignments",
+    description: "Every plan by date: type, title, the full details, why, and whether it was done.",
+  },
 ];
 
 const MEASURES = [
@@ -117,19 +136,28 @@ export function Reports({ clients }: { clients: Client[] }) {
           </div>
         </div>
 
-        <div role="group" aria-label="CSV exports" className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-bold">Download CSV:</span>
-          {EXPORTS.map((e) => (
-            <button
-              key={e.type}
-              type="button"
-              disabled={!clientId || csv.isPending}
-              onClick={() => checkRange() && csv.mutate(e.type)}
-              className={buttonClass + " disabled:opacity-60"}
-            >
-              {e.label}
-            </button>
-          ))}
+        {/* Inspo C4: each export is a card that says what is inside it, rather than a bare button
+            whose contents a coach has to download to discover. */}
+        <div role="group" aria-label="CSV exports" className="mt-3">
+          <p className="text-sm font-bold">Download a CSV</p>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+            {EXPORTS.map((e) => (
+              <li key={e.type} className="flex flex-col gap-2 rounded-card border border-border bg-surface2 p-3">
+                <div>
+                  <p className="font-semibold text-text">{e.label}</p>
+                  <p className="mt-0.5 text-sm text-dim">{e.description}</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={!clientId || csv.isPending}
+                  onClick={() => checkRange() && csv.mutate(e.type)}
+                  className={buttonClass + " min-h-10 self-start disabled:opacity-60"}
+                >
+                  {csv.isPending ? "Preparing..." : `Download ${e.label.toLowerCase()}`}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
         <p className="mt-1 text-xs text-dim">Dates are YYYY-MM-DD. Photos are not included in exports.</p>
         {(csv.isError || report.isError) && (
