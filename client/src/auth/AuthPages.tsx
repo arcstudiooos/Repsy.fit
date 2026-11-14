@@ -91,6 +91,9 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // The coach's weight unit, asked once at sign-up because it changes every weight they read.
+  // Defaults to kg (the stored unit); the field only shows on the register screen.
+  const [units, setUnits] = useState<"kg" | "lb">("kg");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -104,7 +107,7 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
     setBusy(true);
     try {
       const coach: Coach = isRegister
-        ? await register(RegisterSchema.parse({ name, email, password }))
+        ? await register(RegisterSchema.parse({ name, email, password, units }))
         : await login(LoginSchema.parse({ email, password }));
       // Whatever an earlier coach left in this browser must never show for this one.
       queryClient.clear();
@@ -138,6 +141,29 @@ export default function AuthPages({ mode }: { mode: "login" | "register" }) {
             onChange={setPassword}
             error={errors.password}
           />
+          {isRegister && (
+            <fieldset className="grid gap-2">
+              <legend className="mb-1 text-sm font-bold">Weights shown in</legend>
+              <p className="-mt-1 mb-1 text-xs text-dim">How you read client weights. You can change it any time.</p>
+              <div className="flex gap-2" role="radiogroup" aria-label="Weight unit">
+                {(["kg", "lb"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    role="radio"
+                    aria-checked={units === u}
+                    onClick={() => setUnits(u)}
+                    className={
+                      "min-h-11 flex-1 rounded-lg border text-sm font-semibold " +
+                      (units === u ? "border-accent bg-surface2 text-text" : "border-border text-dim")
+                    }
+                  >
+                    {u === "kg" ? "Kilograms (kg)" : "Pounds (lb)"}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
           {!isRegister && (
             <p className="-mt-2 text-sm">
               <InternalLink to="/forgot-password">Forgot password?</InternalLink>

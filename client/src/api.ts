@@ -256,6 +256,9 @@ export const listPayments = (clientId: string) => request<Payment[]>("GET", `/cl
 /** Deletes the coach and every record they own. Cannot be undone (Prompt 73). */
 export const deleteAccount = (password: string) => request<void>("DELETE", "/auth/account", { password, confirm: "DELETE" });
 export const updateCurrency = (currency: Currency) => request<Coach>("PATCH", "/auth/currency", { currency });
+/** The coach's weight unit and country. Country suggests a currency only when none was set. */
+export const updateProfile = (patch: { units?: "kg" | "lb"; country?: string }) =>
+  request<Coach>("PATCH", "/auth/profile", patch);
 /** The signed-in CLIENT's own plan (name, status, next due) and last payment date. */
 export const getMyPlan = () => request<MyPlan>("GET", "/client-auth/my-plan");
 

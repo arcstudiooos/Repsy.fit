@@ -27,7 +27,37 @@ const newPassword = z
   .min(PASSWORD_MIN_LENGTH, `Your password needs at least ${PASSWORD_MIN_LENGTH} characters.`)
   .refine((p) => new TextEncoder().encode(p).length <= PASSWORD_MAX_BYTES, "That password is too long. Please use a shorter one (72 bytes at most; emoji and accents count double).");
 
-export const RegisterSchema = z.object({ name, email, password: newPassword });
+/** Weight unit the coach reads the dashboard in. Stored weights are always kg. */
+export const COACH_UNITS = ["kg", "lb"] as const;
+const units = z.enum(COACH_UNITS, { error: "Please choose kg or lb." });
+/** ISO-3166 alpha-2. Kept loose on purpose: a two-letter code, upper-cased; the UI supplies the list. */
+const country = z
+  .string()
+  .trim()
+  .length(2, "Please choose your country.")
+  .transform((c) => c.toUpperCase());
+
+// Sign-up takes the unit up front (it changes every weight the coach sees) and the country
+// (it sets the currency default). Both are optional so an older client, or Google sign-up, still works.
+export const RegisterSchema = z.object({
+  name,
+  email,
+  password: newPassword,
+  units: units.optional(),
+  country: country.optional(),
+});
+
+/** Account settings: the coach's weight unit and country, edited together. */
+export const UpdateProfileSchema = strictWith(
+  z.object({ units: units.optional(), country: country.optional() }),
+  "Only your units and country can be changed here.",
+).refine((v) => v.units !== undefined || v.country !== undefined, {
+  error: "Nothing to change.",
+});
+
+/** The currency that fits a country, from the two Repsy supports. */
+export const currencyForCountry = (iso: string | null | undefined): (typeof COACH_CURRENCIES)[number] =>
+  iso === "IN" ? "INR" : "USD";
 
 export const LoginSchema = z.object({
   email,

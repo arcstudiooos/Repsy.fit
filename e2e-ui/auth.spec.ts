@@ -53,11 +53,12 @@ async function mockApi(page: Page): Promise<Mock> {
       return route.fulfill({ json: found.coach });
     }
     if (path === "/api/auth/register" && req.method() === "POST") {
-      const { name, email, password } = req.postDataJSON() as { name: string; email: string; password: string };
+      const body = req.postDataJSON() as { name: string; email: string; password: string; units?: string };
+      const { name, email, password } = body;
       if (mock.coaches[email.toLowerCase()]) {
         return route.fulfill({ status: 409, json: { error: "That email is already registered." } });
       }
-      const coach = { id: `coach-${Object.keys(mock.coaches).length + 1}`, name, email: email.toLowerCase(), createdAt: new Date().toISOString() };
+      const coach = { id: `coach-${Object.keys(mock.coaches).length + 1}`, name, email: email.toLowerCase(), createdAt: new Date().toISOString(), units: body.units ?? "kg", country: null };
       mock.coaches[coach.email] = { coach, password };
       mock.clientsByCoach[coach.id] = [];
       mock.signedIn = coach.id;
@@ -203,4 +204,31 @@ test("the session is not kept in localStorage or sessionStorage", async ({ page 
   await expect(page.getByRole("button", { name: "Account menu for Alice Coach" })).toBeVisible();
   const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
   expect(stored).not.toMatch(/token|jwt|session|alice/i);
+});
+
+test("register: the coach picks a weight unit, and it is sent", async ({ page }) => {
+  const { calls } = await mockApi(page);
+  let sentUnits: string | undefined;
+  await page.route("**/api/auth/register", async (route) => {
+    sentUnits = (route.request().postDataJSON() as { units?: string }).units;
+    await route.fallback();
+  });
+  await page.goto("/register");
+  await page.getByLabel("Name").fill("Lee Coach");
+  await page.getByLabel("Email").fill("lee@example.com");
+  await page.getByLabel("Password").fill("lee-password-123");
+  // Default is kg; the coach chooses pounds.
+  await expect(page.getByRole("radio", { name: "Kilograms (kg)" })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("radio", { name: "Pounds (lb)" }).click();
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page).toHaveURL(/\/app$/);
+  expect(sentUnits).toBe("lb");
+  // Login never shows the unit picker: it is a sign-up choice only.
+  void calls;
+});
+
+test("login has no weight-unit picker", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/login");
+  await expect(page.getByRole("radiogroup", { name: "Weight unit" })).toHaveCount(0);
 });

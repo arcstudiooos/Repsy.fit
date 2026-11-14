@@ -1266,3 +1266,17 @@ id and the three plan ids belong to ONE environment and must be changed in a sin
 - Limit checks FAIL OPEN: a database hiccup must never look like a full roster.
 - Two local env files, never one: `server/.env` (sandbox) and `server/.env.live`. Duplicate keys in
   a single file silently let the LAST win, which once pointed live credentials at sandbox.
+
+## The coach's profile: weight unit and country (owner, Nov 2026)
+
+- `coaches.units` ("kg"|"lb", default kg) and `coaches.country` (ISO alpha-2, nullable). Stored
+  weights are ALWAYS kg; `units` only changes how the COACH reads them, independent of each client's
+  own unit. Country sets the currency default (IN -> INR, else USD) and is the seed for future
+  payment routing (Razorpay vs PayPal).
+- Captured at sign-up (units picker only, keeps the form short - no confirm-password, no gender:
+  collecting data you don't use is a DPDP liability). Country lives in Account settings next to
+  currency. Both editable via PATCH /api/auth/profile; currency is only SUGGESTED from country when
+  the coach has not already set one, never overridden.
+- The payoff is real: the coach-side ProgressCharts was hardcoded to kg and now takes coach.units.
+  If you add a new coach-facing weight display, read coach.units (queryKeys.me) - do not hardcode kg.
+- Measurements.tsx header and Reports CSV still say "kg" - a known follow-up, not swept yet.

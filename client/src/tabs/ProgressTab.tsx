@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getHabitWeek, listAssignments, listProgress, queryKeys } from "../api";
+import { getHabitWeek, listAssignments, listProgress, queryKeys, getMe } from "../api";
 import { localToday } from "./AiCoachTab";
 import { ErrorState, LoadingState } from "../components/States";
 import { CheckInForm } from "../components/CheckInForm";
@@ -16,6 +16,8 @@ type Props = {
 // Progress tab: the selected client's stat cards from ALL their progress logs
 // (GET /api/clients/:clientId/progress, oldest first) and assignments.
 export function ProgressTab({ client }: Props) {
+  // The coach reads weights in their own unit (Nov 2026). It is already in the cache from sign-in.
+  const coachUnits = useQuery({ queryKey: queryKeys.me, queryFn: getMe }).data?.units ?? "kg";
   const progressQuery = useQuery({
     queryKey: queryKeys.progress(client?.id ?? "none"),
     queryFn: () => listProgress(client!.id),
@@ -84,7 +86,7 @@ export function ProgressTab({ client }: Props) {
             value={stats.planCompletion === null ? null : `${stats.planCompletion}%`}
           />
         </div>
-        <ProgressCharts logs={logs} assignments={assignmentsQuery.data ?? []} />
+        <ProgressCharts logs={logs} assignments={assignmentsQuery.data ?? []} units={coachUnits} />
         <CheckInForm clientId={client.id} />
         <CheckInList clientId={client.id} logs={logs} />
       </>

@@ -2,10 +2,11 @@
 // current one; other devices are signed out). No delete-account in v2.
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { changePassword, deleteAccount, queryKeys, updateCurrency, updateName } from "../api";
+import { changePassword, deleteAccount, queryKeys, updateCurrency, updateName, updateProfile } from "../api";
 import { ChangePasswordSchema, UpdateNameSchema } from "../authSchemas";
 import { plainErrorMessage } from "../components/States";
 import { CURRENCIES, type Coach, type Currency } from "../types";
+import { COUNTRIES } from "../countries";
 import { TextField, validate, type FieldErrors } from "./AuthPages";
 import { lazy, Suspense } from "react";
 import { LoadingState } from "../components/States";
@@ -54,6 +55,99 @@ function NameForm({ coach }: { coach: Coach }) {
       )}
       <button type="submit" disabled={busy} className="btn btn-primary min-h-11 justify-self-start">
         {busy ? "Please wait..." : "Save name"}
+      </button>
+    </form>
+  );
+}
+
+/** The coach's weight unit and country (Nov 2026). Units change how weights read; country sets the
+ *  currency default. */
+function ProfileForm({ coach }: { coach: Coach }) {
+  const queryClient = useQueryClient();
+  const [units, setUnits] = useState<"kg" | "lb">(coach.units ?? "kg");
+  const [country, setCountry] = useState(coach.country ?? "");
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const dirty = units !== (coach.units ?? "kg") || country !== (coach.country ?? "");
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setServerError(null);
+    setSaved(false);
+    setBusy(true);
+    try {
+      const updated = await updateProfile({ units, ...(country ? { country } : {}) });
+      queryClient.setQueryData(queryKeys.me, updated);
+      // Currency may have changed with the country, so prices refresh.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.businessPlans });
+      setSaved(true);
+    } catch (err) {
+      setServerError(plainErrorMessage(err));
+    }
+    setBusy(false);
+  }
+
+  return (
+    <form onSubmit={submit} noValidate aria-label="Profile settings" className="grid max-w-sm gap-4">
+      <fieldset>
+        <legend className="mb-1 block text-sm font-bold">Weights shown in</legend>
+        <div className="flex gap-2" role="radiogroup" aria-label="Weight unit">
+          {(["kg", "lb"] as const).map((u) => (
+            <button
+              key={u}
+              type="button"
+              role="radio"
+              aria-checked={units === u}
+              onClick={() => {
+                setUnits(u);
+                setSaved(false);
+              }}
+              className={
+                "min-h-11 flex-1 rounded-lg border text-sm font-semibold " +
+                (units === u ? "border-accent bg-surface2 text-text" : "border-border text-dim")
+              }
+            >
+              {u === "kg" ? "Kilograms (kg)" : "Pounds (lb)"}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-dim">How you read client weights. Stored values never change.</p>
+      </fieldset>
+      <div>
+        <label htmlFor="account-country" className="mb-1 block text-sm font-bold">
+          Country
+        </label>
+        <select
+          id="account-country"
+          value={country}
+          onChange={(e) => {
+            setCountry(e.target.value);
+            setSaved(false);
+          }}
+          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+        >
+          <option value="">Not set</option>
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-dim">Sets your currency the first time. Change the currency below any time.</p>
+      </div>
+      {serverError && (
+        <p role="alert" className="text-sm font-semibold text-amber-text">
+          {serverError}
+        </p>
+      )}
+      {saved && (
+        <p role="status" className="text-sm font-semibold text-accent2">
+          Saved.
+        </p>
+      )}
+      <button type="submit" disabled={busy || !dirty} className="btn btn-primary min-h-11 justify-self-start">
+        {busy ? "Please wait..." : "Save"}
       </button>
     </form>
   );
@@ -335,6 +429,10 @@ export default function AccountPage({ coach }: { coach: Coach }) {
       <section className="grid gap-3">
         <h3 className="card-title">Name</h3>
         <NameForm coach={coach} />
+      </section>
+      <section className="grid gap-3">
+        <h3 className="card-title">Units and country</h3>
+        <ProfileForm coach={coach} />
       </section>
       <section className="grid gap-3">
         <h3 className="card-title">Currency</h3>

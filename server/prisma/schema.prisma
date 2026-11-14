@@ -20,6 +20,12 @@ model Coach {
   /// Prompt 68: the one currency all of this coach's plan prices and payments are in (ISO code,
   /// "INR" or "USD"). Data never stores a symbol; the UI formats the amount with this code.
   currency     String   @default("INR")
+  /// The coach's own weight unit, "kg" or "lb". Stored weights are always kg; this is only how the
+  /// coach reads them across the dashboard, independent of what each client picked (Nov 2026).
+  units        String   @default("kg")
+  /// ISO-3166 alpha-2, e.g. "IN" or "US". Set at sign-up or in settings; sets the currency default
+  /// and, later, which payment method a coach is offered. Null for accounts made before this.
+  country      String?
   /// "Continue with Google": the Google account's stable id (OIDC `sub`), set on first Google
   /// sign-in. NULL for coaches who have never used Google. Unique when set.
   googleSub    String?  @unique

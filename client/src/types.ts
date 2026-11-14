@@ -679,11 +679,17 @@ export interface Coach {
   createdAt: string;
   /** Prompt 68: the currency of plan prices and payments. */
   currency?: Currency;
+  /** The coach's weight unit across the dashboard (Nov 2026). Stored weights are always kg. */
+  units?: "kg" | "lb";
+  /** ISO-3166 alpha-2, or null. Sets the currency default and later the payment method. */
+  country?: string | null;
 }
 export interface RegisterInput {
   name: string;
   email: string;
   password: string;
+  units?: "kg" | "lb";
+  country?: string;
 }
 export type LoginInput = Pick<RegisterInput, "email" | "password">;
 /** Password reset and account settings (Prompt 47). */

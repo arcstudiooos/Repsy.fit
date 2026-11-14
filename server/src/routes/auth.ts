@@ -15,6 +15,8 @@ import {
   ResetSchema,
   UpdateCurrencySchema,
   UpdateNameSchema,
+  UpdateProfileSchema,
+  currencyForCountry,
 } from "../auth/schemas.js";
 import { clearSessionCookie, sessionSecret, setSessionCookie } from "../auth/session.js";
 import { deliverResetEmail } from "../auth/mailer.js";
@@ -35,8 +37,8 @@ const AUTH_DOWN = "Sign-in is not available right now. Please try again later.";
 // A real bcrypt hash of a random string, so an unknown email costs the same time as a wrong password.
 export const DUMMY_HASH = "$2b$12$CwTycUXWue0Thq9StjUM0uJ8.gIEG9mP2LzvQe4gGSx0Q1l5hQ8se";
 
-type PublicCoach = { id: string; name: string; email: string; createdAt: Date; currency: string };
-const publicCoach = (c: PublicCoach): PublicCoach => ({ id: c.id, name: c.name, email: c.email, createdAt: c.createdAt, currency: c.currency });
+type PublicCoach = { id: string; name: string; email: string; createdAt: Date; currency: string; units: string; country: string | null };
+const publicCoach = (c: PublicCoach): PublicCoach => ({ id: c.id, name: c.name, email: c.email, createdAt: c.createdAt, currency: c.currency, units: c.units, country: c.country });
 
 /** In production without SESSION_SECRET: log once per request and refuse with a plain message. */
 export function secretMissing(res: Response): boolean {
@@ -62,11 +64,21 @@ authRouter.post(
       res.status(400).json({ error: parsed.error.issues[0].message });
       return;
     }
-    const { name, email, password } = parsed.data;
+    const { name, email, password, units, country } = parsed.data;
     const passwordHash = await hashPassword(password);
     try {
       const coach = await prisma.$transaction(async (tx) => {
-        const created = await tx.coach.create({ data: { name, email, passwordHash } });
+        const created = await tx.coach.create({
+          data: {
+            name,
+            email,
+            passwordHash,
+            ...(units ? { units } : {}),
+            // Country sets the currency the coach is billed and shows prices in. They can change
+            // either later in settings.
+            ...(country ? { country, currency: currencyForCountry(country) } : {}),
+          },
+        });
         await claimDemoData(tx, created.id);
         return created;
       });
@@ -183,6 +195,32 @@ authRouter.patch(
       return;
     }
     const coach = await prisma.coach.update({ where: { id: coachIdOf(req) }, data: { currency: parsed.data.currency } });
+    res.json(publicCoach(coach));
+  }),
+);
+
+// PATCH /api/auth/profile { units?, country? } -> 200 coach. Units change how weights read; country
+// sets the currency default (only when the coach has not already chosen one that differs).
+authRouter.patch(
+  "/profile",
+  requireCoach,
+  asyncHandler(async (req, res) => {
+    const parsed = UpdateProfileSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const { units, country } = parsed.data;
+    const data: { units?: string; country?: string; currency?: string } = {};
+    if (units) data.units = units;
+    if (country) {
+      data.country = country;
+      // Changing country suggests the matching currency. It is only a suggestion: a coach who has
+      // deliberately set, say, USD while living in India keeps it.
+      const current = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: { country: true, currency: true } });
+      if (!current?.country) data.currency = currencyForCountry(country);
+    }
+    const coach = await prisma.coach.update({ where: { id: coachIdOf(req) }, data });
     res.json(publicCoach(coach));
   }),
 );
