@@ -359,3 +359,19 @@ describe("request size", () => {
     expect(ok.status).not.toBe(413);
   });
 });
+
+describe("headers an SEO audit asked for", () => {
+  it("switches off camera, microphone, geolocation and payment for the page", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.headers["permissions-policy"]).toContain("camera=()");
+    expect(res.headers["permissions-policy"]).toContain("geolocation=()");
+  });
+
+  it("points the marketing host at the speculation rules, and the app host at nothing", async () => {
+    const marketing = await request(app).get("/api/health").set("Host", "repsy.fit");
+    expect(marketing.headers["speculation-rules"]).toBe('"/speculation-rules.json"');
+    // Prefetching signed-in pages would spend a coach's data for nothing.
+    const appHost = await request(app).get("/api/health").set("Host", "app.repsy.fit");
+    expect(appHost.headers["speculation-rules"]).toBeUndefined();
+  });
+});

@@ -1171,3 +1171,20 @@ and record it here.
   `vi.unmock("../src/billing/current.js")`.
 - Still to come: stage 2 (PayPal checkout + webhook, sandbox first) and stage 3 (billing screen,
   trial banner, dunning emails).
+
+## Readable without JavaScript (owner, Nov 2026)
+
+- The prerendered shell lives INSIDE `#root`, not in `<noscript>`. It was moved to `<noscript>`
+  after the owner saw a flash of unstyled text; an SEO audit then measured the cost - every fetcher
+  that does not run JavaScript read NINE words. Both problems have one cause:
+  `landing-new.css` is bundled into the LAZY landing chunk, so at first paint it does not exist.
+  The shell's own styles are therefore inlined in `<head>` by `prerender-seo.mjs`. Do not move
+  those rules into a stylesheet - the flash comes straight back.
+- Verify after any change to the shell: build, then load the page with JavaScript disabled. It must
+  look like the cream hero, not like raw text. 491 words is the current baseline (was 9).
+- `llms.txt` is generated from `seo.json` and gets quoted verbatim by AI assistants, so every line
+  in it must be literally true. No marketing adjectives.
+- Speculation rules are served as `/speculation-rules.json` with a `Speculation-Rules` response
+  header, never as an inline `<script type="speculationrules">`, which would need a CSP exception.
+  Marketing host only: prefetching signed-in pages spends a coach's data for nothing.
+- `og:url` must follow the canonical on every generated page.

@@ -138,7 +138,16 @@ test.describe("production server", () => {
     expect(map.status()).toBe(200);
     expect(await map.text()).toContain("<loc>https://repsy.fit/pricing</loc>");
     expect(await (await request.get("/robots.txt")).text()).toContain("Sitemap: https://repsy.fit/sitemap.xml");
+    // The brief AI assistants read, and the prefetch list Chrome follows.
+    const llms = await request.get("/llms.txt");
+    expect(llms.status()).toBe(200);
+    expect(await llms.text()).toContain("Repsy");
+    expect((await request.get("/speculation-rules.json")).status()).toBe(200);
     const home = await request.get("/");
-    expect(await home.text()).toContain("application/ld+json");
+    const homeHtml = await home.text();
+    expect(homeHtml).toContain("application/ld+json");
+    // Readable without JavaScript: several AI fetchers never run it.
+    expect(homeHtml).toContain("data-seo-shell");
+    expect(home.headers()["permissions-policy"]).toContain("camera=()");
   });
 });

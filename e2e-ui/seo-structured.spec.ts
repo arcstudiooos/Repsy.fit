@@ -26,12 +26,14 @@ test("the landing copy and the crawlable shell say the same things", async ({ pa
 
 test("index.html carries the shell and valid structured data", () => {
   const html = dist("index.html");
-  // The shell sits in <noscript>: in #root it flashed on screen, unstyled, before React booted.
-  const noscript = /<noscript>([\s\S]*?)<\/noscript>/.exec(html)?.[1] ?? "";
-  expect(noscript).toContain("data-seo-shell");
-  expect(html).toContain('<div id="root"></div>');
-  expect(noscript).toContain(seo.hero.h1);
-  for (const f of FAQ_CHAT) expect(noscript).toContain(f.a.slice(0, 50));
+  // The shell sits INSIDE #root. It was in <noscript> for a while to stop a flash of unstyled text,
+  // but an SEO audit showed non-rendering crawlers then read nine words, so it is back - with its
+  // styles inlined in the head (landing-new.css is in the lazy chunk and is not there at first paint).
+  const shell = html.slice(html.indexOf('<div id="root">'), html.indexOf("</body>"));
+  expect(shell).toContain("data-seo-shell");
+  expect(shell).toContain(seo.hero.h1);
+  expect(html).toMatch(/<style>[^<]*\[data-seo-shell\]\{min-height:100svh/);
+  for (const f of FAQ_CHAT) expect(shell).toContain(f.a.slice(0, 50));
   const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
   const types = blocks.map((b) => b["@type"]);
   expect(types).toEqual(["WebSite", "Organization", "SoftwareApplication", "FAQPage"]);
@@ -62,4 +64,31 @@ test("/pricing is its own page and opens at the prices", async ({ page }) => {
   // The dev/preview server serves index.html for it; what matters is that the app shows the landing.
   await expect(page.getByTestId("studio-landing")).toBeVisible();
   await expect(page.locator("#pricing")).toBeInViewport({ timeout: 10_000 });
+});
+
+test("llms.txt and the speculation rules are built", () => {
+  // llms.txt gets quoted verbatim by AI assistants, so it carries the same facts as the page.
+  const llms = dist("llms.txt");
+  expect(llms).toContain(seo.hero.lead);
+  for (const p of PLANS) expect(llms).toContain(`${p.name}: $${p.price} per month`);
+  expect(llms).toContain("gives no medical advice");
+  for (const f of FAQ_CHAT) expect(llms).toContain(f.q);
+
+  const rules = JSON.parse(dist("speculation-rules.json")) as { prefetch: { urls: string[] }[] };
+  expect(rules.prefetch[0].urls).toEqual(["/pricing", "/register", "/login"]);
+});
+
+test("the pricing page's og:url matches its canonical", () => {
+  // They disagreed before: a share of /pricing pointed search engines at the home page.
+  const html = dist("pricing.html");
+  const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+  const ogUrl = /<meta property="og:url" content="([^"]+)"/.exec(html)?.[1];
+  expect(canonical).toBe("https://repsy.fit/pricing");
+  expect(ogUrl).toBe(canonical);
+});
+
+test("the home page's meta description fits in a search result", () => {
+  const desc = /<meta name="description" content="([^"]+)"/.exec(dist("index.html"))?.[1] ?? "";
+  expect(desc.length).toBeGreaterThan(70);
+  expect(desc.length).toBeLessThanOrEqual(160);
 });

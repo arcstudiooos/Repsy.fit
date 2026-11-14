@@ -43,6 +43,13 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  // Nothing here uses a camera, a microphone, geolocation or payment APIs in the page. Saying so
+  // switches them off for the page and for anything it embeds (an SEO audit flagged the absence).
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()");
+  // Speculation rules (Nov 2026): Chrome prefetches the likely next pages. Pointed at as a file
+  // rather than an inline <script type="speculationrules">, which would need a CSP exception.
+  // Only on the marketing host: prefetching signed-in pages would waste a coach's data.
+  if (!/^app\./i.test(String(req.headers.host ?? ""))) res.setHeader("Speculation-Rules", '"/speculation-rules.json"');
   // Only over HTTPS: sending HSTS on plain-http local dev would pin localhost to https.
   if (isHttps(req)) res.setHeader("Strict-Transport-Security", `max-age=${HSTS_SECONDS}; includeSubDomains`);
   // app.repsy.fit serves the same pages as repsy.fit (one server, two hosts). Only the marketing

@@ -1,11 +1,14 @@
 // Runs after `vite build` (and after prerender-legal.mjs). Three jobs, all for crawlers:
 //
-// 1. A static shell in a <noscript> block in dist/index.html, built from src/landing-new/seo.json:
-//    the hero, the six section blurbs, the three prices and the FAQ. The landing itself is a lazy
-//    React chunk, so without this a crawler that doesn't run JavaScript sees an empty page.
-//    It lives in <noscript> on purpose: inside #root it was briefly painted, unstyled, before React
-//    booted (the owner saw the flash). Crawlers that don't run scripts still read it, Google renders
-//    the real page, and nobody sees a flash of raw text.
+// 1. A static shell INSIDE #root in dist/index.html, built from src/landing-new/seo.json: the hero,
+//    the six section blurbs, the three prices and the FAQ. The landing itself is a lazy React
+//    chunk, so without this a fetcher that doesn't run JavaScript sees nine words.
+//    It was in <noscript> for a while, because unstyled markup in #root flashed before React booted
+//    (the owner saw it). An SEO audit then showed the cost: <noscript> is not counted as content,
+//    so the page read as empty to every non-rendering crawler. It is back in #root, and
+//    landing-new.css styles [data-seo-shell] to look like the hero at first paint - the stylesheet
+//    is render-blocking, so the styles are there before the shell is painted, and React replaces
+//    the whole thing on mount. Below-hero text is visually hidden but stays readable to crawlers.
 // 2. Structured data (JSON-LD): WebSite, Organization, SoftwareApplication with its three offers,
 //    and FAQPage from src/landing-new/content.ts. A ld+json block is data, not script, so the
 //    'script-src self' CSP does not apply to it.
@@ -87,14 +90,31 @@ const ld = [
 const indexPath = path.join(dist, "index.html");
 let html = fs.readFileSync(indexPath, "utf8");
 if (!html.includes('<div id="root"></div>')) throw new Error("prerender-seo: index.html has no empty #root to fill");
-html = html.replace('<div id="root"></div>', `<div id="root"></div>\n<noscript>${shell}</noscript>`).replace("</head>", `${ld}\n</head>`);
+// The shell's own styles go INLINE in the head, not in landing-new.css: that stylesheet is bundled
+// into the lazy landing chunk, so at first paint it does not exist yet - which is exactly why the
+// shell flashed as unstyled text before. Inline <style> is allowed by the CSP (style-src has
+// 'unsafe-inline' for Tailwind-style attributes); an inline <script> would not be.
+const shellCss = `<style>
+#root:has([data-seo-shell]){background:#faf7f2}
+[data-seo-shell]{min-height:100svh;margin:0;padding:18vh 7vw 6rem;background:#faf7f2;color:#1a1a1a;font:17px/1.6 Geist,ui-sans-serif,system-ui,sans-serif}
+[data-seo-shell] h1{margin:0 0 1rem;max-width:22ch;font:400 clamp(2.6rem,7vw,5rem)/1.02 "Instrument Serif",Georgia,serif;letter-spacing:-.01em;color:#141414}
+[data-seo-shell]>p:first-of-type{margin:0;max-width:46ch;font-size:clamp(1.05rem,2.2vw,1.35rem);color:#6b6560}
+[data-seo-shell] section,[data-seo-shell]>p:not(:first-of-type){position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+</style>`;
+html = html
+  .replace('<div id="root"></div>', `<div id="root">${shell}</div>`)
+  .replace("</head>", `${shellCss}\n${ld}\n</head>`);
 fs.writeFileSync(indexPath, html);
 
 // ---------- /pricing: same app, its own title and description ----------
 const pricing = html
   .replace(/<title>[^<]*<\/title>/, `<title>${esc(seo.pricingPage.title)}</title>`)
   .replace(/(<meta name="description" content=")[^"]*(")/, `$1${esc(seo.pricingPage.description)}$2`)
-  .replace(`<link rel="canonical" href="${SITE}/" />`, `<link rel="canonical" href="${SITE}/pricing" />`);
+  .replace(`<link rel="canonical" href="${SITE}/" />`, `<link rel="canonical" href="${SITE}/pricing" />`)
+  // og:url follows the canonical: a share of /pricing must not point search engines at /.
+  .replace(`<meta property="og:url" content="${SITE}/" />`, `<meta property="og:url" content="${SITE}/pricing" />`)
+  .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${esc(seo.pricingPage.title)}$2`)
+  .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${esc(seo.pricingPage.description)}$2`);
 fs.writeFileSync(path.join(dist, "pricing.html"), pricing);
 
 // ---------- a real 404 page (served with status 404) ----------
@@ -153,4 +173,46 @@ Sitemap: ${SITE}/sitemap.xml
 `,
 );
 
-console.log(`SEO prerendered: index shell (${shell.length} chars), ${faq.length} FAQ answers, pricing.html, not-found.html, sitemap.xml, robots.txt`);
+// ---------- llms.txt: the plain-text brief for AI assistants ----------
+// Same facts as the page, in the order an assistant needs them. No marketing adjectives: these get
+// quoted verbatim in answers, so every line here has to be literally true.
+const llms = `# ${seo.name}
+
+> ${seo.hero.lead}
+
+${seo.sections.map((s) => `## ${s.h}\n${s.p}`).join("\n\n")}
+
+## Plans
+${seo.plans.map((p) => `- ${p.name}: $${p.price} per month, ${p.clients}. Every feature is in every plan; the tiers differ only by how many clients you coach.`).join("\n")}
+${seo.trial}
+
+## Questions coaches ask
+${faq.map((f) => `### ${f.q}\n${f.a}`).join("\n\n")}
+
+## Links
+- Home: ${SITE}/
+- Pricing: ${SITE}/pricing
+- Start free: ${SITE}/register
+- Coach log in: ${SITE}/login
+- Client sign in: ${SITE}/client/login
+- Privacy: ${SITE}/privacy
+- Terms: ${SITE}/terms
+
+## Notes
+- Repsy is software for coaches. It gives no medical advice and takes no payments from a coach's clients.
+- Clients use a web app at ${SITE}/client - there is nothing to install.
+`;
+fs.writeFileSync(path.join(dist, "llms.txt"), llms);
+
+// ---------- speculation rules ----------
+// Chrome prefetches these the moment a link looks likely, so the next page is already there. Served
+// as a JSON file and pointed at by a response header (see server/src/security.ts): an inline
+// <script type="speculationrules"> would need a CSP exception, and the CSP stays strict.
+fs.writeFileSync(
+  path.join(dist, "speculation-rules.json"),
+  JSON.stringify({
+    prefetch: [{ source: "list", urls: ["/pricing", "/register", "/login"], eagerness: "moderate" }],
+  }) + "\n",
+);
+
+console.log(`SEO prerendered: index shell (${shell.length} chars), ${faq.length} FAQ answers, pricing.html, not-found.html, sitemap.xml, robots.txt, llms.txt, speculation-rules.json`);
