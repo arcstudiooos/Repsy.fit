@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createTemplate, deleteTemplate, listClients, listTemplates, queryKeys, updateTemplate } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MealLibrary } from "../components/MealLibrary";
+import { ExerciseLibrary } from "../components/ExerciseLibrary";
 import { MacroCalculator } from "../components/MacroCalculator";
 import { ExercisePicker, rowsFromTemplate, templateFromRows, type DoseRow, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
@@ -19,7 +20,7 @@ const inputClass =
 const smallButton = "btn btn-secondary";
 
 // UI batch 4: the three Library tools are separate views (same switch pattern as the Business views).
-export const LIBRARY_VIEWS = ["Templates", "Meals", "Macro calculator"] as const;
+export const LIBRARY_VIEWS = ["Templates", "Exercises", "Meals", "Macro calculator"] as const;
 export type LibraryView = (typeof LIBRARY_VIEWS)[number];
 
 type Props = {
@@ -59,6 +60,8 @@ export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClient
       </div>
       {view === "Meals" ? (
         <MealLibrary />
+      ) : view === "Exercises" ? (
+        <ExerciseLibrary />
       ) : view === "Macro calculator" ? (
         <MacroCalculator initialClientId={macroClientId} onPrefillUsed={onMacroPrefillUsed} />
       ) : (

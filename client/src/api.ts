@@ -30,6 +30,7 @@ import type {
   LoginInput,
   MacroInput,
   MacroResult,
+  Exercise,
   Meal,
   Measurement,
   MessageThread,
@@ -43,6 +44,7 @@ import type {
   NewClientPlan,
   NewDailyCheckIn,
   NewLead,
+  NewExercise,
   NewMeal,
   NewMeasurement,
   NewPayment,
@@ -231,6 +233,24 @@ export const createTemplate = (input: NewWorkoutTemplate) => request<WorkoutTemp
 export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
+
+// ----- Library: exercises (Inspo W1) -----
+/** Filters for the exercise library. Everything is optional; omitted means "no filter". */
+export type ExerciseQuery = { scope?: "all" | "stock" | "mine"; q?: string; equipment?: string; muscleGroup?: string };
+
+/** The catalogue the signed-in coach can see: the stock set plus their own, A-Z. */
+export const listExercises = (query: ExerciseQuery = {}) => {
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(query)) if (v) params.set(k, String(v));
+  const qs = params.toString();
+  return request<Exercise[]>("GET", `/exercises${qs ? `?${qs}` : ""}`);
+};
+export const createExercise = (input: NewExercise) => request<Exercise>("POST", "/exercises", input);
+export const updateExercise = (exerciseId: string, input: NewExercise) =>
+  request<Exercise>("PUT", `/exercises/${exerciseId}`, input);
+export const deleteExercise = (exerciseId: string) => request<void>("DELETE", `/exercises/${exerciseId}`);
+/** Copy a stock movement into the coach's own library so they can change it. */
+export const copyExercise = (exerciseId: string) => request<Exercise>("POST", `/exercises/${exerciseId}/copy`);
 
 // ----- Library: meals (per coach, Prompt 60) -----
 /** The signed-in coach's meals, A-Z by name. */
@@ -539,6 +559,7 @@ export const queryKeys = {
   myPayments: ["client-account", "payments"] as const,
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
+  exercises: (query: ExerciseQuery = {}) => ["exercises", query] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,
   mySessions: ["client-account", "my-sessions"] as const,
   myStreaks: (date: string) => ["client-account", "my-streaks", date] as const,

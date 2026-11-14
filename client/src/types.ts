@@ -516,6 +516,50 @@ export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
 /** A coach's reusable meal (Prompt 60). Coach-level. Every value is typed in by the coach. */
+/** Equipment tags for the exercise library (Inspo W1). Mirrors EQUIPMENT in server routes/exercises.ts. */
+export const EQUIPMENT = [
+  "Bodyweight",
+  "Barbell",
+  "Dumbbell",
+  "Kettlebell",
+  "Machine",
+  "Cable",
+  "Resistance band",
+  "Pull up bar",
+  "Medicine ball",
+  "Other",
+] as const;
+export type Equipment = (typeof EQUIPMENT)[number];
+
+/** Muscle groups. Mirrors MUSCLE_GROUPS in server routes/exercises.ts. */
+export const MUSCLE_GROUPS = [
+  "Chest",
+  "Back",
+  "Shoulders",
+  "Arms",
+  "Legs",
+  "Glutes",
+  "Core",
+  "Full body",
+  "Cardio",
+  "Mobility",
+] as const;
+export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
+
+/** One movement in the catalogue. `stock` true = seeded by Repsy, shared, read-only to the coach. */
+export interface Exercise {
+  id: string;
+  name: string;
+  equipment: Equipment;
+  muscleGroup: MuscleGroup;
+  /** A link only; Repsy never hosts or embeds it. Empty string when there is none. */
+  mediaUrl: string;
+  instructions: string;
+  stock: boolean;
+}
+export type NewExercise = Pick<Exercise, "name"> &
+  Partial<Pick<Exercise, "equipment" | "muscleGroup" | "mediaUrl" | "instructions">>;
+
 export interface Meal {
   id: string;
   coachId: string;

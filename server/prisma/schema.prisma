@@ -9,70 +9,71 @@ datasource db {
 
 /// A coach account (Prompt 43). Passwords are stored only as a bcrypt hash.
 model Coach {
-  id           String   @id @default(cuid())
-  name         String
+  id                String   @id @default(cuid())
+  name              String
   /// Stored lower-case; one account per email.
-  email        String   @unique
-  passwordHash String
+  email             String   @unique
+  passwordHash      String
   /// Prompt 47: session tokens carry this number; a password change or reset raises it, which
   /// ends every session issued before (tokens from before Prompt 47 count as 0).
-  sessionVersion Int     @default(0)
+  sessionVersion    Int      @default(0)
   /// Prompt 68: the one currency all of this coach's plan prices and payments are in (ISO code,
   /// "INR" or "USD"). Data never stores a symbol; the UI formats the amount with this code.
-  currency     String   @default("INR")
+  currency          String   @default("INR")
   /// The coach's own weight unit, "kg" or "lb". Stored weights are always kg; this is only how the
   /// coach reads them across the dashboard, independent of what each client picked (Nov 2026).
-  units        String   @default("kg")
+  units             String   @default("kg")
   /// ISO-3166 alpha-2, e.g. "IN" or "US". Set at sign-up or in settings; sets the currency default
   /// and, later, which payment method a coach is offered. Null for accounts made before this.
-  country      String?
+  country           String?
   /// "Continue with Google": the Google account's stable id (OIDC `sub`), set on first Google
   /// sign-in. NULL for coaches who have never used Google. Unique when set.
-  googleSub    String?  @unique
+  googleSub         String?  @unique
   /// Prompt 76: the coach's join code (e.g. ANNA-7K2Q8M), stored upper-case, made on first use.
   /// Clients sign up under this coach with it. A new code replaces the old one at once.
-  joinCode     String?  @unique
+  joinCode          String?  @unique
   /// Prompt 76: false = the code is turned off (the public lookup answers the same 404 as unknown).
-  joinCodeActive Boolean @default(true)
+  joinCodeActive    Boolean  @default(true)
   /// Prompt 76: when true, clients who join with the code wait for the coach's approval (Prompt 77/84).
-  approveNewClients Boolean @default(false)
-  createdAt    DateTime @default(now())
+  approveNewClients Boolean  @default(false)
+  createdAt         DateTime @default(now())
 
   // ---- The coach's own subscription to Repsy (Nov 2026). One per coach; PayPal holds the money,
   // this holds only what the app needs to decide what the coach may do today.
   /// The plan key from src/billing/plans.ts: "Free" (2 clients) or "Pro5".."Pro100". It decides
   /// ONE thing - how many clients may be added. Every feature is in every plan.
-  planTier        String    @default("Free")
+  planTier             String    @default("Free")
   /// "trialing" | "active" | "past_due" | "cancelled" | "expired". Set from PayPal webhooks, except
   /// "trialing" which starts at sign-up and "expired" which is reached by time passing.
-  billingStatus   String    @default("trialing")
+  billingStatus        String    @default("trialing")
   /// End of the 7-day free trial, set at sign-up. Null for accounts created before billing existed.
-  trialEndsAt     DateTime?
+  trialEndsAt          DateTime?
   /// End of the period already paid for: access lasts until here even after a cancellation.
-  periodEndsAt    DateTime?
+  periodEndsAt         DateTime?
   /// When a payment first failed. Access stays full for the grace period after this, then read-only.
-  pastDueSince    DateTime?
+  pastDueSince         DateTime?
   /// PayPal's subscription id (I-XXXXXXXX) and the plan id it is on. Null until they subscribe.
-  paypalSubscriptionId String? @unique
-  paypalPlanId    String?
+  paypalSubscriptionId String?   @unique
+  paypalPlanId         String?
 
-  resetTokens  PasswordResetToken[]
-  clients      Client[]
-  assignments  Assignment[]
-  progressLogs ProgressLog[]
-  chatMessages ChatMessage[]
-  weeklySummaries WeeklySummary[]
-  reviewItems  ReviewItem[]
-  dailyCheckIns DailyCheckIn[]
-  habits       Habit[]
-  measurements Measurement[]
-  threadMessages ThreadMessage[]
-  clientInvites ClientInvite[]
-  clientPlans  ClientPlan[]
-  payments     Payment[]
-  appointments Appointment[]
+  resetTokens      PasswordResetToken[]
+  clients          Client[]
+  assignments      Assignment[]
+  progressLogs     ProgressLog[]
+  chatMessages     ChatMessage[]
+  weeklySummaries  WeeklySummary[]
+  reviewItems      ReviewItem[]
+  dailyCheckIns    DailyCheckIn[]
+  habits           Habit[]
+  measurements     Measurement[]
+  threadMessages   ThreadMessage[]
+  clientInvites    ClientInvite[]
+  clientPlans      ClientPlan[]
+  payments         Payment[]
+  appointments     Appointment[]
   workoutTemplates WorkoutTemplate[]
-  meals        Meal[]
+  meals            Meal[]
+  exercises        Exercise[]
 
   @@map("coaches")
 }
@@ -183,70 +184,70 @@ model PasswordResetToken {
 }
 
 model Client {
-  id        String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   /// Owning coach (FK to Coach). NULL = demo data not yet claimed by a coach (see claimDemoData).
-  coachId   String?
-  coach     Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  name      String
-  goal      String   @default("General fitness")
-  age       Int?
-  weightKg  Float?
-  heightCm  Float?
+  coachId              String?
+  coach                Coach?    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name                 String
+  goal                 String    @default("General fitness")
+  age                  Int?
+  weightKg             Float?
+  heightCm             Float?
   /// One of: Beginner, Intermediate, Advanced
-  level     String   @default("Beginner")
-  focus     String   @default("")
-  notes     String   @default("")
-  createdAt DateTime @default(now())
+  level                String    @default("Beginner")
+  focus                String    @default("")
+  notes                String    @default("")
+  createdAt            DateTime  @default(now())
   /// Sample data created by the demo buttons. Demo clients never count towards the plan's client
   /// limit: blocking the demo to protect a quota would be a strange way to welcome a new coach.
-  isDemo    Boolean  @default(false)
+  isDemo               Boolean   @default(false)
   /// Client sign-in (Prompt 65): the email the client signs in with. Set only when the client sets
   /// a password from an invite sent to that address. Unique when set.
-  loginEmail    String?  @unique
+  loginEmail           String?   @unique
   /// NULL until the client sets a password from their invite link. Never returned by any API
   /// (the Prisma client omits it globally - see src/db.ts).
-  passwordHash  String?
+  passwordHash         String?
   /// Raised when the client's password is (re)set, ending every older client session.
-  clientSessionVersion Int @default(0)
+  clientSessionVersion Int       @default(0)
   /// Prompt 77: "active" | "pending" (joined with the code while the coach approves new clients) |
   /// "declined". Pending / declined clients can sign in but every client-data route answers 403.
-  joinStatus    String   @default("active")
+  joinStatus           String    @default("active")
   /// Prompt 77: how the record started: "coach" (added by the coach) or "code" (joined with the code).
-  joinedVia     String   @default("coach")
+  joinedVia            String    @default("coach")
   /// Prompt 77: the client's display unit for weight, "kg" or "lb". Weights are always stored in kg.
-  units         String   @default("kg")
+  units                String    @default("kg")
   /// Prompt 77: when the client finished (or skipped) the welcome questions. NULL = not shown yet.
-  onboardedAt   DateTime?
+  onboardedAt          DateTime?
   /// Prompt 78: the Google account ("sub") this client signs in with. Separate from Coach.googleSub:
   /// a coach's Google account never signs in as a client, and the other way round.
-  googleSub     String?  @unique
+  googleSub            String?   @unique
   /// Prompt 83: the client's own timezone override (IANA name, e.g. "Asia/Kolkata"); null = the device's.
-  timezone      String?
+  timezone             String?
   /// When the client explicitly agreed that their coach and Repsy may store the health details they enter
   /// (weight, height, injuries). Asked separately from sign-up.
-  healthConsentAt DateTime?
+  healthConsentAt      DateTime?
   /// Prompt 78: the last Google sign-in (Prompt 83 lets a Google-only client delete their account
   /// within 5 minutes of a fresh one).
-  lastGoogleAuthAt DateTime?
+  lastGoogleAuthAt     DateTime?
   /// Prompt 80: the client's daily targets, set by the coach from the macro calculator. NULL = none set.
-  calorieTarget  Int?
-  proteinTargetG Float?
+  calorieTarget        Int?
+  proteinTargetG       Float?
   /// Prompt 80: the weekday (0 = Sunday ... 6 = Saturday) the client is asked for their weekly check-in.
-  weeklyCheckInDay Int @default(0)
+  weeklyCheckInDay     Int       @default(0)
 
-  assignments  Assignment[]
+  assignments    Assignment[]
   passwordResets ClientPasswordResetToken[]
-  chatMessages ChatMessage[]
-  progressLogs ProgressLog[]
-  reviewItems  ReviewItem[]
-  dailyCheckIns DailyCheckIn[]
-  habits       Habit[]
-  measurements Measurement[]
+  chatMessages   ChatMessage[]
+  progressLogs   ProgressLog[]
+  reviewItems    ReviewItem[]
+  dailyCheckIns  DailyCheckIn[]
+  habits         Habit[]
+  measurements   Measurement[]
   threadMessages ThreadMessage[]
-  invites      ClientInvite[]
-  plan         ClientPlan?
-  payments     Payment[]
-  appointments Appointment[]
+  invites        ClientInvite[]
+  plan           ClientPlan?
+  payments       Payment[]
+  appointments   Appointment[]
 
   @@index([coachId])
   @@map("clients")
@@ -280,31 +281,31 @@ model Appointment {
 }
 
 model Assignment {
-  id        String   @id @default(cuid())
+  id           String    @id @default(cuid())
   /// Owning coach (FK to Coach). NULL = unclaimed demo data.
-  coachId   String?
-  coach     Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  clientId  String
+  coachId      String?
+  coach        Coach?    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId     String
   /// One of: Workout, Nutrition, Habit, Recovery
-  type      String
-  title     String
-  details   String
-  reasoning String   @default("")
+  type         String
+  title        String
+  details      String
+  reasoning    String    @default("")
   /// One of: ai, manual
-  source    String   @default("manual")
+  source       String    @default("manual")
   /// One of: Active, Done, Paused
-  status    String   @default("Active")
+  status       String    @default("Active")
   /// YYYY-MM-DD
-  date      String
-  createdAt DateTime @default(now())
+  date         String
+  createdAt    DateTime  @default(now())
   /// Prompt 79: when it was marked Done, and by whom ("coach" | "client"). NULL while not done.
   completedAt  DateTime?
   completedBy  String?
   /// Prompt 79: the client's own "how hard was it" (1-10) and note when THEY finished it.
   clientEffort Int?
-  clientNote   String   @default("")
+  clientNote   String    @default("")
   /// Prompt 80: meals from the coach's library attached to a Nutrition plan (the coach's own meals only).
-  mealIds      String[] @default([])
+  mealIds      String[]  @default([])
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
@@ -414,14 +415,14 @@ model DailyCheckIn {
 /// A daily habit the coach tracks for one client (Prompt 54), up to 8 active per client.
 /// Archiving sets `active` to false - the habit and its logs are kept as history.
 model Habit {
-  id        String     @id @default(cuid())
+  id        String   @id @default(cuid())
   coachId   String
-  coach     Coach      @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
   clientId  String
-  client    Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   name      String
-  active    Boolean    @default(true)
-  createdAt DateTime   @default(now())
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   logs HabitLog[]
 
@@ -432,14 +433,14 @@ model Habit {
 
 /// One day of one habit (Prompt 54). One row per habit per day; `done` false = ticked off again.
 model HabitLog {
-  id      String  @id @default(cuid())
-  habitId String
-  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  habitId   String
+  habit     Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
   /// YYYY-MM-DD
-  date    String
-  done    Boolean @default(true)
+  date      String
+  done      Boolean @default(true)
   /// Prompt 80: who ticked it: "coach" or "client". A client never changes a coach's tick.
-  enteredBy String @default("coach")
+  enteredBy String  @default("coach")
 
   @@unique([habitId, date])
   @@map("habit_logs")
@@ -487,6 +488,33 @@ model WorkoutTemplate {
   @@map("workout_templates")
 }
 
+/// One movement in the exercise catalogue (Inspo W1, Nov 2026).
+///
+/// `coachId` NULL means a Repsy stock exercise: seeded by migration, visible to every coach, and
+/// never editable or deletable by them. A row WITH a coachId is that coach's own exercise. This is
+/// the atom a structured workout is built from, so nothing here is client-specific.
+model Exercise {
+  id           String   @id @default(cuid())
+  /// NULL = Repsy stock catalogue, shared by all coaches.
+  coachId      String?
+  coach        Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name         String
+  /// One of EQUIPMENT (see routes/exercises.ts): Bodyweight, Barbell, Dumbbell, ...
+  equipment    String   @default("Bodyweight")
+  /// One of MUSCLE_GROUPS: Chest, Back, Legs, Core, Full body, Cardio, ...
+  muscleGroup  String   @default("Full body")
+  /// Optional demo link (a URL only; Repsy never hosts or proxies the video).
+  mediaUrl     String   @default("")
+  /// How to perform it, in the coach's words. Shown in the exercise detail.
+  instructions String   @default("")
+  createdAt    DateTime @default(now())
+
+  /// A coach cannot have two exercises with the same name; stock names are unique among stock.
+  @@unique([coachId, name])
+  @@index([coachId])
+  @@map("exercises")
+}
+
 /// A coach's reusable meal (Prompt 60). `mealType` is Breakfast / Lunch / Dinner / Snack (checked by zod).
 /// Every macro value is coach-entered: nothing is fetched or calculated. Coach-level, never shared.
 model Meal {
@@ -512,27 +540,27 @@ model Meal {
 /// because a parked suggestion is not an assignment yet and must not appear in the planner, and a
 /// flagged log must stay exactly as logged. Decided rows are kept forever: history, never deleted.
 model ReviewItem {
-  id        String   @id @default(cuid())
-  coachId   String
-  coach     Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  coachId      String
+  coach        Coach     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   /// One of: suggestion, checkin
-  kind      String
+  kind         String
   /// One of: Pending, Approved, Dismissed
-  status    String   @default("Pending")
-  title     String
-  summary   String   @default("")
+  status       String    @default("Pending")
+  title        String
+  summary      String    @default("")
   /// Suggestions only: the assignment to create on approve (Workout / Nutrition / Habit / Recovery).
-  type      String?
-  details   String   @default("")
-  reasoning String   @default("")
+  type         String?
+  details      String    @default("")
+  reasoning    String    @default("")
   /// checkin items: the ProgressLog this row is about.
-  sourceId  String?
+  sourceId     String?
   /// Set when an approved suggestion became a real assignment.
   assignmentId String?
-  createdAt DateTime @default(now())
-  decidedAt DateTime?
+  createdAt    DateTime  @default(now())
+  decidedAt    DateTime?
 
   @@index([coachId, status])
   @@index([clientId])

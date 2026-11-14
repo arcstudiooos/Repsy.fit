@@ -1280,3 +1280,29 @@ id and the three plan ids belong to ONE environment and must be changed in a sin
 - The payoff is real: the coach-side ProgressCharts was hardcoded to kg and now takes coach.units.
   If you add a new coach-facing weight display, read coach.units (queryKeys.me) - do not hardcode kg.
 - Measurements.tsx header and Reports CSV still say "kg" - a known follow-up, not swept yet.
+
+## The exercise library (Inspo W1, Nov 2026)
+
+The catalogue a structured workout is built from. `docs/INSPO_FEATURES.md` is the source of this and
+the features that follow it.
+
+- ONE table, two kinds of row. `exercises.coachId` NULL = a **Repsy stock** movement: seeded by
+  migration `20261115090000_exercise_library` (65 of them), shared by every coach, and **read-only**
+  to them. A row with a coachId belongs to that coach.
+- A coach "edits" a stock movement by **copying** it (`POST /api/exercises/:id/copy`), which lands in
+  their own library as "Name (copy)", numbering further copies so it never 409s. The shared set
+  never drifts.
+- Every write looks the row up **scoped by coachId**, so a stock row and another coach's row are
+  both simply 404 - there is no separate "is this stock?" check to forget.
+- Two unique indexes on purpose: `exercises_coachId_name_key` is the `@@unique([coachId, name])` the
+  Prisma schema declares (NULL != NULL in Postgres, so it does not constrain stock), and
+  `exercises_stock_name_key` is a **partial** index Prisma cannot express that stops a duplicate
+  stock movement.
+- Seed ids are **literal and deterministic** (`stk_back_squat`), not `gen_random_uuid()`: no
+  dependency on a Postgres version or extension, stock rows are stably referenceable, and a replay
+  of the migration is genuinely a no-op.
+- `mediaUrl` is **a link, never an embed**. It is rendered as an `<a target="_blank">`, so CSP is
+  untouched and a coach can point at YouTube, Vimeo or their own file. zod requires `https://`.
+  A test asserts no `<iframe>`/`<video>` renders.
+- Lives in Library -> **Exercises** (4th view, after Templates). `LIBRARY_VIEWS` and the
+  `openLibrary` fixture type must be changed together.
