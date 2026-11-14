@@ -466,12 +466,31 @@ export const updateName = (name: string) => request<Coach>("PATCH", "/auth/me", 
 /** Account page: needs the current password (204); other sessions are signed out, this one stays. */
 export const changePassword = (input: ChangePasswordInput) => request<void>("POST", "/auth/change-password", input);
 
+// ---- The coach's own subscription (Nov 2026) ----
+// `paypal` is null until payments are configured, and carries only public values: the client id and
+// the plan ids both appear in the PayPal checkout itself.
+export type BillingMe = {
+  status: "trialing" | "active" | "past_due" | "read_only";
+  tier: string;
+  canWrite: boolean;
+  daysLeft: number | null;
+  needsSubscription: boolean;
+  message: string | null;
+  paypal: { clientId: string; environment: "sandbox" | "live"; plans: Record<string, string | undefined> } | null;
+};
+export const getBilling = () => request<BillingMe>("GET", "/billing/me");
+/** Hands PayPal's subscription id to the server, which checks it with PayPal before believing it. */
+export const confirmSubscription = (subscriptionId: string) =>
+  request<BillingMe>("POST", "/billing/confirm", { subscriptionId });
+export const cancelPlan = () => request<BillingMe>("POST", "/billing/cancel");
+
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.
 export const queryKeys = {
   me: ["auth", "me"] as const,
   clients: ["clients"] as const,
   joinCode: ["join-code"] as const,
+  billing: ["billing"] as const,
   assignments: (clientId: string) => ["clients", clientId, "assignments"] as const,
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,

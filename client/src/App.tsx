@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientHeader, initials } from "./ClientHeader";
 import { MenuButton } from "./components/MenuButton";
+import { BillingBanner } from "./auth/BillingBanner";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./components/States";
 import { navigate } from "./route";
 import { AiCoachTab } from "./tabs/AiCoachTab";
@@ -470,6 +471,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <Header coach={coach} onLogout={onLogout} loggingOut={loggingOut} />
       <main className="mx-auto max-w-[1100px] px-4 pb-10">
+        {/* Silent on a healthy plan; speaks up near the end of a trial or after a failed payment. */}
+        {onAccount ? null : <BillingBanner />}
         {onAccount ? (
           <section className="card mt-4 p-6" aria-label="Account">
             <p className="mb-4 text-sm">

@@ -4,6 +4,8 @@ import { autoAssignRouter } from "./routes/autoAssign.js";
 import { chatRouter } from "./routes/chat.js";
 import { inboundMailRouter } from "./routes/inboundMail.js";
 import { requirePaidWrite } from "./billing/guard.js";
+import { billingRouter } from "./routes/billing.js";
+import { paypalWebhookRouter } from "./routes/paypalWebhook.js";
 import { clientsRouter } from "./routes/clients.js";
 import { progressRouter } from "./routes/progress.js";
 import { seedRouter } from "./routes/seed.js";
@@ -62,6 +64,11 @@ app.use(securityHeaders);
 // (mounted before express.json, which would re-serialise it and break the signature).
 app.use("/api/inbound/resend", express.raw({ type: "*/*", limit: "1mb" }));
 app.use("/api/inbound", inboundMailRouter);
+
+// PayPal's webhook signature is over the exact bytes sent, so this must be raw and must sit
+// BEFORE express.json(). It carries no session: PayPal is not a signed-in coach.
+app.use("/api/paypal/webhook", express.raw({ type: "*/*", limit: "512kb" }));
+app.use("/api/paypal/webhook", paypalWebhookRouter);
 // 32 KB is far above anything the app sends (the longest field is 6,000 characters) and far below
 // what an attacker needs to make a validator chew through memory - see the zod advisory note in
 // CLAUDE.md. Oversized bodies get a 413 before any parsing or validation happens.
@@ -105,6 +112,9 @@ app.use("/api/business", requireCoach);
 app.use("/api/appointments", requireCoach);
 app.use("/api/reports", requireCoach);
 app.use("/api/join-code", requireCoach);
+// The coach's own billing screen. Signed in, but never behind the paywall: a lapsed account has to
+// be able to reach the page that lets it pay.
+app.use("/api/billing", requireCoach);
 
 // Read-only when the plan has lapsed (Nov 2026). On the route groups that CREATE coaching work;
 // never on reads, exports, deletes, account settings, billing itself, or anything a client calls.
@@ -127,6 +137,7 @@ for (const group of [
 app.use("/api/reports", reportsRouter);
 // Prompt 76: the coach's join code (coach-only) and its public lookup (signed-out clients).
 app.use("/api/join-code", joinCodeRouter);
+app.use("/api/billing", billingRouter);
 app.use("/api/join", publicJoinRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/macros", macrosRouter);

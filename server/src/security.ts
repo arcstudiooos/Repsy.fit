@@ -22,11 +22,16 @@ export const CONTENT_SECURITY_POLICY = [
   "form-action 'self'",
   // Cloudflare Web Analytics' beacon (owner, Nov 2026). Cookieless: no personal data, no consent
   // banner needed. Nothing else third-party may run.
-  "script-src 'self' https://static.cloudflareinsights.com",
+  // PayPal's checkout SDK (Nov 2026). It is the only third-party script besides the analytics
+  // beacon, it is loaded on the billing screen alone, and the subscription it returns is still
+  // verified server-side before anything is believed.
+  "script-src 'self' https://static.cloudflareinsights.com https://www.paypal.com https://www.sandbox.paypal.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob:",
-  "connect-src 'self' https://static.cloudflareinsights.com https://cloudflareinsights.com",
+  "img-src 'self' data: blob: https://www.paypal.com https://www.paypalobjects.com",
+  "connect-src 'self' https://static.cloudflareinsights.com https://cloudflareinsights.com https://www.paypal.com https://www.sandbox.paypal.com",
+  // The approval window PayPal opens, and the card-field iframes inside it.
+  "frame-src https://www.paypal.com https://www.sandbox.paypal.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");

@@ -7,6 +7,11 @@
 //
 // Nothing here talks to PayPal: it reads the stored state (set by the webhook) plus the clock.
 
+/** The three tiers, in the order they are shown. */
+export const PLAN_TIERS = ["Solo", "Pro", "Studio"] as const;
+export type PlanTier = (typeof PLAN_TIERS)[number];
+export const isPlanTier = (v: unknown): v is PlanTier => PLAN_TIERS.includes(v as PlanTier);
+
 /** The stored columns this needs. Kept narrow so tests can build one by hand. */
 export type BillingFields = {
   planTier: string;

@@ -1188,3 +1188,24 @@ and record it here.
   header, never as an inline `<script type="speculationrules">`, which would need a CSP exception.
   Marketing host only: prefetching signed-in pages spends a coach's data for nothing.
 - `og:url` must follow the canonical on every generated page.
+
+## PayPal subscriptions (owner, Nov 2026) - STAGE 2
+
+- Env: `PAYPAL_ENV` (sandbox|live), `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`,
+  `PAYPAL_PLAN_SOLO|PRO|STUDIO`. Client id and plan ids are PUBLIC (they appear in the checkout);
+  only the secret is a secret. Sandbox and live have DIFFERENT plan ids and webhook ids - swapping
+  the keys without swapping both silently breaks every event.
+- `server/scripts/paypal-plans.mjs` creates the product and all three plans through the API and is
+  idempotent. Use it for live too; never hand-build plans in the dashboard, or sandbox and live drift.
+- PayPal plans are IMMUTABLE. A price change means a NEW plan; existing subscribers keep the one
+  they signed up on. Change `PLANS` in content.ts and the plan ids together, never one alone.
+- The browser is never trusted. `/api/billing/confirm` takes a subscription id, asks PayPal what it
+  really is, and refuses: an unknown id (400), another coach's (409), a plan that is not ours (400).
+- The webhook is the source of truth for everything after checkout. It verifies with PayPal before
+  believing anything, answers 204 to events for unknown subscriptions (or PayPal retries for days),
+  and never logs bodies. `pastDueSince` is set on the FIRST failure only - retries must not restart
+  the grace period.
+- CSP: PayPal is the only new third-party origin, and `server/test/security.test.ts` pins the exact
+  allowlist. Adding another origin has to be a deliberate edit there.
+- The SDK is loaded on demand inside BillingPage, never at app start.
+- Still off in production: `BILLING_ENFORCED` stays false until the sandbox cycle passes end to end.

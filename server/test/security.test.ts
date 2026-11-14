@@ -262,11 +262,21 @@ describe("security headers", () => {
   it("the policy refuses inline scripts and framing, and allows only our own origin to be called", () => {
     expect(CONTENT_SECURITY_POLICY).toContain("script-src 'self'");
     expect(CONTENT_SECURITY_POLICY).not.toContain("'unsafe-eval'");
-    // The ONLY third party that may run or be called is Cloudflare's cookieless analytics beacon.
+    // The allowlist is pinned on purpose: adding a third party must be a deliberate edit here.
+    // Exactly two are allowed to run - Cloudflare's cookieless beacon, and PayPal's checkout SDK
+    // on the billing screen. Anything PayPal's SDK reports is still verified server-side.
     const scriptSrc = /script-src ([^;]*)/.exec(CONTENT_SECURITY_POLICY)?.[1] ?? "";
-    expect(scriptSrc.trim()).toBe("'self' https://static.cloudflareinsights.com");
+    expect(scriptSrc.trim()).toBe(
+      "'self' https://static.cloudflareinsights.com https://www.paypal.com https://www.sandbox.paypal.com",
+    );
     const connectSrc = /connect-src ([^;]*)/.exec(CONTENT_SECURITY_POLICY)?.[1] ?? "";
-    expect(connectSrc.trim()).toBe("'self' https://static.cloudflareinsights.com https://cloudflareinsights.com");
+    expect(connectSrc.trim()).toBe(
+      "'self' https://static.cloudflareinsights.com https://cloudflareinsights.com https://www.paypal.com https://www.sandbox.paypal.com",
+    );
+    // Framing: we frame PayPal's approval window, and nobody may frame us.
+    expect(/frame-src ([^;]*)/.exec(CONTENT_SECURITY_POLICY)?.[1].trim()).toBe(
+      "https://www.paypal.com https://www.sandbox.paypal.com",
+    );
     // 'unsafe-inline' is allowed for STYLE only (inline style attributes), never for script.
     expect(CONTENT_SECURITY_POLICY).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
     expect(/script-src [^;]*unsafe-inline/.test(CONTENT_SECURITY_POLICY)).toBe(false);

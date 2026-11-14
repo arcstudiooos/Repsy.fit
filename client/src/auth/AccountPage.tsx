@@ -7,6 +7,10 @@ import { ChangePasswordSchema, UpdateNameSchema } from "../authSchemas";
 import { plainErrorMessage } from "../components/States";
 import { CURRENCIES, type Coach, type Currency } from "../types";
 import { TextField, validate, type FieldErrors } from "./AuthPages";
+import { lazy, Suspense } from "react";
+import { LoadingState } from "../components/States";
+
+const BillingPage = lazy(() => import("./BillingPage"));
 
 function NameForm({ coach }: { coach: Coach }) {
   const queryClient = useQueryClient();
@@ -342,6 +346,13 @@ export default function AccountPage({ coach }: { coach: Coach }) {
           Signed in with Google and never set a password? Use "Forgot password?" on the log-in page to set one first.
         </p>
         <PasswordForm />
+      </section>
+      <section className="grid gap-3">
+        {/* The coach's own subscription. Lazy: the PayPal SDK is only fetched if this is opened. */}
+        <h3 className="card-title">Plan and billing</h3>
+        <Suspense fallback={<LoadingState />}>
+          <BillingPage />
+        </Suspense>
       </section>
       <section className="grid gap-3">
         <h3 className="card-title">Your data</h3>
