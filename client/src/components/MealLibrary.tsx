@@ -17,8 +17,9 @@ const smallButton = "btn btn-secondary";
 const num = (n: number) => String(Math.round(n * 10) / 10);
 
 /** The one-line macro summary used on the card and in the assignment details. */
-export function macroLine(m: Pick<Meal, "calories" | "proteinG" | "carbsG" | "fatG">): string {
-  return `${m.calories} kcal · Protein ${num(m.proteinG)}g · Carbs ${num(m.carbsG)}g · Fat ${num(m.fatG)}g`;
+export function macroLine(m: Pick<Meal, "calories" | "proteinG" | "carbsG" | "fatG"> & { fiberG?: number }): string {
+  const fibre = m.fiberG ? ` · Fibre ${num(m.fiberG)}g` : "";
+  return `${m.calories} kcal · Protein ${num(m.proteinG)}g · Carbs ${num(m.carbsG)}g · Fat ${num(m.fatG)}g${fibre}`;
 }
 
 /** Assignment details for a meal: its name, macros and steps (as the coach entered them). */
@@ -287,6 +288,7 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
   const [proteinG, setProteinG] = useState(meal ? String(meal.proteinG) : "");
   const [carbsG, setCarbsG] = useState(meal ? String(meal.carbsG) : "");
   const [fatG, setFatG] = useState(meal ? String(meal.fatG) : "");
+  const [fiberG, setFiberG] = useState(meal?.fiberG ? String(meal.fiberG) : "");
   const [ingredients, setIngredients] = useState(meal?.ingredients ?? "");
   const [steps, setSteps] = useState(meal?.steps ?? "");
   const [formError, setFormError] = useState<string | null>(null);
@@ -308,9 +310,27 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
     for (const [label, v] of [["Protein", macros.proteinG], ["Carbs", macros.carbsG], ["Fat", macros.fatG]] as const) {
       if (!Number.isFinite(v) || v < 0 || v > 1000) return setFormError(`${label} must be a number from 0 to 1000.`);
     }
+    // Fibre is optional: blank means "not recorded", so it is left out of the request entirely and
+    // the server's default of 0 applies. An empty box must never read as NaN and block the save.
+    const fibre = fiberG.trim() === "" ? null : toNumber(fiberG);
+    if (fibre !== null && (!Number.isFinite(fibre) || fibre < 0 || fibre > 1000)) {
+      return setFormError("Fibre must be a number from 0 to 1000.");
+    }
     setFormError(null);
-    save.mutate({ name: name.trim(), mealType, calories: kcal, ...macros, ingredients: ingredients.trim(), steps: steps.trim() });
+    save.mutate({
+      name: name.trim(),
+      mealType,
+      calories: kcal,
+      ...macros,
+      ...(fibre === null ? {} : { fiberG: fibre }),
+      ingredients: ingredients.trim(),
+      steps: steps.trim(),
+    });
   }
+
+  // Protein and carbs are 4 kcal/g, fat is 9. Fibre is not added: its calories are already inside
+  // the carbohydrate figure, and double-counting it would overstate every meal.
+  const derivedCalories = Math.round(toNumber(proteinG) * 4 + toNumber(carbsG) * 4 + toNumber(fatG) * 9);
 
   const problem = formError ?? (save.isError ? plainErrorMessage(save.error) : null);
   const numberField = (id: string, label: string, value: string, set: (v: string) => void, step: string) => (
@@ -363,6 +383,24 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
             {numberField("meal-carbs", "Carbs (g)", carbsG, setCarbsG, "any")}
             {numberField("meal-fat", "Fat (g)", fatG, setFatG, "any")}
           </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {numberField("meal-fiber", "Fibre (g)", fiberG, setFiberG, "any")}
+          </div>
+          {/* Inspo N2, but kept as a ONE-SHOT helper rather than a mode: this form's promise is that
+              every number is the coach's own. The button fills the calories box and then gets out of
+              the way, so what is saved is still exactly what is on screen. */}
+          {derivedCalories > 0 && (
+            <p className="mt-2 text-sm">
+              <button
+                type="button"
+                onClick={() => setCalories(String(derivedCalories))}
+                className="min-h-10 font-semibold text-accent underline"
+              >
+                Use {derivedCalories} kcal from the macros
+              </button>
+              <span className="ml-1 text-xs text-dim">(4 per g of protein and carbs, 9 per g of fat)</span>
+            </p>
+          )}
         </fieldset>
         <div>
           <label htmlFor="meal-ingredients" className="mb-1 block text-sm font-semibold text-text">

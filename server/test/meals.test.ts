@@ -49,9 +49,10 @@ describe("POST /api/meals", () => {
   it("saves a meal (201) owned by the signed-in coach, ignoring a coachId in the body", async () => {
     const res = await request(app).post("/api/meals").send({ ...BODY, name: "  Oats & eggs ", coachId: "evil" });
     expect(res.status).toBe(201);
-    expect(prismaMock.meal.create).toHaveBeenCalledWith({ data: { ...BODY, coachId: "coach-1" } });
+    // fiberG is always written since Nov 2026 (Inspo N2): zod defaults it to 0 when not sent.
+    expect(prismaMock.meal.create).toHaveBeenCalledWith({ data: { ...BODY, fiberG: 0, coachId: "coach-1" } });
     expect(Object.keys(res.body).sort()).toEqual(
-      ["calories", "carbsG", "coachId", "createdAt", "fatG", "id", "ingredients", "mealType", "name", "proteinG", "steps"],
+      ["calories", "carbsG", "coachId", "createdAt", "fatG", "fiberG", "id", "ingredients", "mealType", "name", "proteinG", "steps"],
     );
   });
 
@@ -60,7 +61,7 @@ describe("POST /api/meals", () => {
     void ingredients;
     void steps;
     await request(app).post("/api/meals").send(min);
-    expect(prismaMock.meal.create).toHaveBeenCalledWith({ data: { ...min, ingredients: "", steps: "", coachId: "coach-1" } });
+    expect(prismaMock.meal.create).toHaveBeenCalledWith({ data: { ...min, ingredients: "", steps: "", fiberG: 0, coachId: "coach-1" } });
   });
 
   it("rejects a missing name, a bad meal type and bad macro values", async () => {
@@ -94,7 +95,7 @@ describe("PUT /api/meals/:mealId", () => {
     expect(res.status).toBe(200);
     expect(prismaMock.meal.updateMany).toHaveBeenCalledWith({
       where: { id: "m1", coachId: "coach-1" },
-      data: { ...BODY, name: "Bowl", mealType: "Lunch" },
+      data: { ...BODY, name: "Bowl", mealType: "Lunch", fiberG: 0 },
     });
   });
 

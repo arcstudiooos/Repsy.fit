@@ -7,7 +7,32 @@ import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, validationMessage } from "./clients.js";
 
-export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
+/**
+ * Inspo N4: when the meal is eaten, in the order of a day.
+ *
+ * The four original names - Breakfast, Lunch, Dinner, Snack - are KEPT EXACTLY, because every meal
+ * saved before Nov 2026 holds one of them and `mealType` is plain TEXT with no migration. The rest
+ * are the workout-relative and edge-of-day slots a nutrition coach actually plans around.
+ */
+export const MEAL_TYPES = [
+  "On waking up",
+  "Early morning",
+  "Breakfast",
+  "After breakfast",
+  "Mid-morning",
+  "Morning snack",
+  "Lunch",
+  "Snack",
+  "Evening snack",
+  "Dinner",
+  "After dinner",
+  "Bed time",
+  "Before workout",
+  "During workout",
+  "Between workouts",
+  "After workout",
+  "Non-training day",
+] as const;
 
 const macro = (label: string) =>
   z
@@ -17,7 +42,7 @@ const macro = (label: string) =>
 
 const MealSchema = z.object({
   name: z.string({ error: "name is required." }).trim().min(1, "name is required.").max(100, "name must be 100 characters or fewer."),
-  mealType: z.enum(MEAL_TYPES, { error: "mealType must be Breakfast, Lunch, Dinner or Snack." }),
+  mealType: z.enum(MEAL_TYPES, { error: `mealType must be one of: ${MEAL_TYPES.join(", ")}.` }),
   calories: z
     .number({ error: (issue) => (issue.input === undefined ? "calories is required." : "calories must be a whole number from 0 to 10000.") })
     .int("calories must be a whole number from 0 to 10000.")
@@ -26,6 +51,7 @@ const MealSchema = z.object({
   proteinG: macro("proteinG"),
   carbsG: macro("carbsG"),
   fatG: macro("fatG"),
+  fiberG: macro("fiberG").default(0),
   ingredients: z.string().trim().max(2000, "ingredients must be 2000 characters or fewer.").default(""),
   steps: z.string().trim().max(4000, "steps must be 4000 characters or fewer.").default(""),
 });

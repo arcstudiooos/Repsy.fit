@@ -604,6 +604,8 @@ model Meal {
   proteinG    Float
   carbsG      Float
   fatG        Float
+  /// Inspo N2: the fourth macro. Defaults to 0 so every meal saved before Nov 2026 stays valid.
+  fiberG      Float    @default(0)
   ingredients String   @default("")
   steps       String   @default("")
   createdAt   DateTime @default(now())

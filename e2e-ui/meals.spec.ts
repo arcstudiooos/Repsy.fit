@@ -212,3 +212,66 @@ test("Assign to client saves a Nutrition assignment with the meal name, macros, 
     })}`,
   ]);
 });
+
+test("fibre is optional: a blank box never blocks the save (Inspo N2)", async ({ page }) => {
+  const { calls } = await openMeals(page);
+  await page.getByRole("button", { name: "New meal" }).click();
+  const form = page.getByRole("form", { name: "New meal" });
+  await form.getByLabel("Meal name").fill("Plain rice");
+  await form.getByLabel("Calories (kcal)").fill("200");
+  await form.getByLabel("Protein (g)").fill("4");
+  await form.getByLabel("Carbs (g)").fill("45");
+  await form.getByLabel("Fat (g)").fill("0");
+  // Fibre left empty on purpose.
+  await form.getByRole("button", { name: "Save meal" }).click();
+  await expect(page.getByRole("list", { name: "Meals" }).getByRole("heading", { level: 4 })).toContainText(["Plain rice"]);
+  // Blank fibre is left out of the request entirely rather than sent as 0 or NaN.
+  expect(calls[0]).not.toContain("fiberG");
+});
+
+test("fibre is saved and shown when the coach records it", async ({ page }) => {
+  const { calls } = await openMeals(page);
+  await page.getByRole("button", { name: "New meal" }).click();
+  const form = page.getByRole("form", { name: "New meal" });
+  await form.getByLabel("Meal name").fill("Lentil salad");
+  await form.getByLabel("Calories (kcal)").fill("300");
+  await form.getByLabel("Protein (g)").fill("18");
+  await form.getByLabel("Carbs (g)").fill("40");
+  await form.getByLabel("Fat (g)").fill("6");
+  await form.getByLabel("Fibre (g)").fill("11.5");
+  await form.getByRole("button", { name: "Save meal" }).click();
+  expect(calls[0]).toContain('"fiberG":11.5');
+  // The card shows it beside the other macros.
+  await expect(page.getByRole("list", { name: "Meals" })).toContainText("Fibre 11.5g");
+});
+
+test("the calories helper fills the box from the macros, and the coach stays in control", async ({ page }) => {
+  await openMeals(page);
+  await page.getByRole("button", { name: "New meal" }).click();
+  const form = page.getByRole("form", { name: "New meal" });
+  await form.getByLabel("Protein (g)").fill("25");
+  await form.getByLabel("Carbs (g)").fill("30");
+  await form.getByLabel("Fat (g)").fill("8");
+  // 25*4 + 30*4 + 8*9 = 292. Fibre is NOT added: its calories are already inside the carbs.
+  const helper = form.getByRole("button", { name: /Use 292 kcal from the macros/ });
+  await expect(helper).toBeVisible();
+  await expect(form.getByLabel("Calories (kcal)")).toHaveValue("");
+  await helper.click();
+  await expect(form.getByLabel("Calories (kcal)")).toHaveValue("292");
+  // Still editable afterwards: it is a one-shot helper, not a mode.
+  await form.getByLabel("Calories (kcal)").fill("300");
+  await expect(form.getByLabel("Calories (kcal)")).toHaveValue("300");
+});
+
+test("the meal categories cover the whole day, with the original four still there (Inspo N4)", async ({ page }) => {
+  await openMeals(page);
+  await page.getByRole("button", { name: "New meal" }).click();
+  const type = page.getByRole("form", { name: "New meal" }).getByLabel("Type");
+  const options = await type.locator("option").allTextContents();
+  // The four names every pre-existing meal holds must still be offered.
+  for (const old of ["Breakfast", "Lunch", "Dinner", "Snack"]) expect(options).toContain(old);
+  // And the workout-relative slots that made this worth doing.
+  for (const slot of ["Before workout", "After workout", "Non-training day"]) expect(options).toContain(slot);
+  await type.selectOption("After workout");
+  await expect(type).toHaveValue("After workout");
+});

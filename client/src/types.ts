@@ -512,7 +512,26 @@ export interface WorkoutTemplate {
 }
 export type NewWorkoutTemplate = Pick<WorkoutTemplate, "name" | "exercises"> & Partial<Pick<WorkoutTemplate, "focus" | "notes">>;
 
-export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
+/** Inspo N4: when the meal is eaten. Mirrors MEAL_TYPES in server routes/meals.ts (drift-tested). */
+export const MEAL_TYPES = [
+  "On waking up",
+  "Early morning",
+  "Breakfast",
+  "After breakfast",
+  "Mid-morning",
+  "Morning snack",
+  "Lunch",
+  "Snack",
+  "Evening snack",
+  "Dinner",
+  "After dinner",
+  "Bed time",
+  "Before workout",
+  "During workout",
+  "Between workouts",
+  "After workout",
+  "Non-training day",
+] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
 /** A coach's reusable meal (Prompt 60). Coach-level. Every value is typed in by the coach. */
@@ -633,12 +652,14 @@ export interface Meal {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  /** Inspo N2: the fourth macro. 0 when the coach did not record it. */
+  fiberG: number;
   ingredients: string;
   steps: string;
   createdAt: string;
 }
 export type NewMeal = Pick<Meal, "name" | "mealType" | "calories" | "proteinG" | "carbsG" | "fatG"> &
-  Partial<Pick<Meal, "ingredients" | "steps">>;
+  Partial<Pick<Meal, "fiberG" | "ingredients" | "steps">>;
 
 export const SEXES = ["Female", "Male"] as const;
 export type Sex = (typeof SEXES)[number];
