@@ -3,6 +3,8 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { z } from "zod";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { prisma } from "../db.js";
+import { clientToday, currentStreak, longestStreak } from "../clients/snapshot.js";
+import { addDays } from "../habits.js";
 import { refuseIfFull } from "../billing/limit.js";
 import { strictWith } from "../validation.js";
 
@@ -213,5 +215,64 @@ clientsRouter.patch(
       return;
     }
     res.json(await prisma.client.update({ where: { id: client.id }, data: parsed.data }));
+  }),
+);
+
+// GET /api/clients/:clientId/snapshot - the numbers a coach wants at a glance (Inspo C4/C5).
+//
+// One request for the whole header: latest weight, recent adherence, last workout, current streak,
+// and lifetime totals. Everything is scoped to this coach, and a client who has done nothing yet
+// answers with nulls and zeroes rather than an error.
+clientsRouter.get(
+  "/:clientId/snapshot",
+  asyncHandler(async (req, res) => {
+    const coachId = coachIdOf(req);
+    const client = await findClient(req.params.clientId, coachId);
+    if (!client) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+    const today = clientToday(req);
+    const since = addDays(today, -(ADHERENCE_CARD_DAYS - 1));
+
+    const [latestWeight, adherence, lastWorkout, doneWorkouts, checkInDays, progressDays, doneDays] = await Promise.all([
+      prisma.progressLog.findFirst({
+        where: { clientId: client.id, coachId, weightKg: { not: null } },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+        select: { weightKg: true, date: true },
+      }),
+      prisma.progressLog.aggregate({
+        where: { coachId, clientId: client.id, adherence: { not: null }, date: { gte: since } },
+        _avg: { adherence: true },
+      }),
+      prisma.assignment.findFirst({
+        where: { clientId: client.id, coachId, type: "Workout" },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+        select: { date: true, title: true },
+      }),
+      prisma.assignment.count({ where: { clientId: client.id, coachId, type: "Workout", status: "Done" } }),
+      // The three things that make a day "count" for the streak.
+      prisma.dailyCheckIn.findMany({ where: { clientId: client.id, coachId }, select: { date: true } }),
+      prisma.progressLog.findMany({ where: { clientId: client.id, coachId }, select: { date: true } }),
+      prisma.assignment.findMany({
+        where: { clientId: client.id, coachId, status: "Done" },
+        select: { date: true },
+      }),
+    ]);
+
+    const activeDays = [...checkInDays, ...progressDays, ...doneDays].map((r) => r.date);
+    const mean = adherence._avg.adherence;
+
+    res.json({
+      latestWeightKg: latestWeight?.weightKg ?? null,
+      latestWeightOn: latestWeight?.date ?? null,
+      adherencePercent: mean == null ? null : Math.round(mean),
+      adherenceDays: ADHERENCE_CARD_DAYS,
+      lastWorkoutOn: lastWorkout?.date ?? null,
+      lastWorkoutTitle: lastWorkout?.title ?? null,
+      totalWorkoutsDone: doneWorkouts,
+      currentStreak: currentStreak({ activeDays, today }),
+      longestStreak: longestStreak(activeDays),
+    });
   }),
 );

@@ -3,11 +3,12 @@ import { ThemeSwitch } from "./components/ThemeSwitch";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientHeader, initials } from "./ClientHeader";
+import { ClientSnapshotCards } from "./components/ClientSnapshotCards";
 import { MenuButton } from "./components/MenuButton";
 import { BillingBanner } from "./auth/BillingBanner";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "./components/States";
 import { navigate } from "./route";
-import { AiCoachTab } from "./tabs/AiCoachTab";
+import { AiCoachTab, localToday } from "./tabs/AiCoachTab";
 import { ClientsTab } from "./tabs/ClientsTab";
 import { HomeTab, useReviewQueueCount } from "./tabs/HomeTab";
 import type { TemplatePrefill } from "./components/ManualAssignmentForm";
@@ -357,6 +358,9 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           </button>
         </p>
         {clientHeader}
+        {/* Inspo C4/C5: the numbers a coach wants before reading anything. Workspace only - the AI
+            Coach tab shares ClientHeader but does not want a stats row. */}
+        <ClientSnapshotCards clientId={selectedClient.id} units={coach?.units ?? "kg"} today={localToday()} />
         <SubTabBar active={subTab} onSelect={setSubTab} clientName={selectedClient.name} />
         <div role="tabpanel" id={`subpanel-${subTab}`} aria-labelledby={`subtab-${subTab}`}>
           {subTab === "plans" ? (

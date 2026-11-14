@@ -516,6 +516,24 @@ export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
 /** A coach's reusable meal (Prompt 60). Coach-level. Every value is typed in by the coach. */
+/**
+ * The numbers above a client's workspace (Inspo C4/C5). Nulls mean "no data yet" and are shown as
+ * blanks, never as zero.
+ */
+export interface ClientSnapshot {
+  latestWeightKg: number | null;
+  latestWeightOn: string | null;
+  adherencePercent: number | null;
+  /** The window the adherence average covers, so the card can say so. */
+  adherenceDays: number;
+  lastWorkoutOn: string | null;
+  lastWorkoutTitle: string | null;
+  totalWorkoutsDone: number;
+  /** Consecutive days with a finished plan, check-in or progress log, ending today or yesterday. */
+  currentStreak: number;
+  longestStreak: number;
+}
+
 /** How a section is run (Inspo W5). Mirrors PROTOCOLS in server src/workouts/structure.ts. */
 export const PROTOCOLS = ["Warm up", "Regular", "Superset", "Circuit", "AMRAP", "EMOM", "TABATA", "Cool-down"] as const;
 export type Protocol = (typeof PROTOCOLS)[number];

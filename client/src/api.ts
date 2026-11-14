@@ -45,6 +45,7 @@ import type {
   NewDailyCheckIn,
   NewLead,
   NewExercise,
+  ClientSnapshot,
   WorkoutSectionInput,
   WorkoutStructure,
   NewMeal,
@@ -235,6 +236,10 @@ export const createTemplate = (input: NewWorkoutTemplate) => request<WorkoutTemp
 export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
+
+// ----- Client snapshot (Inspo C4/C5) -----
+/** The glanceable numbers for one client: weight, adherence, last workout, streak, totals. */
+export const getClientSnapshot = (clientId: string) => request<ClientSnapshot>("GET", `/clients/${clientId}/snapshot`);
 
 // ----- Structured workouts (Inspo W3) -----
 /** The workout's structure. Always answers: a legacy plan is parsed from its text on demand. */
@@ -570,6 +575,7 @@ export const queryKeys = {
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   exercises: (query: ExerciseQuery = {}) => ["exercises", query] as const,
+  clientSnapshot: (clientId: string) => ["clients", clientId, "snapshot"] as const,
   structure: (clientId: string, assignmentId: string) =>
     ["clients", clientId, "assignments", assignmentId, "structure"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,
