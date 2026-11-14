@@ -7,7 +7,7 @@ import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
 import { isDateString } from "./assignments.js";
-import { GRID_DAYS, MAX_ACTIVE_HABITS, habitStreaks, lastDays } from "../habits.js";
+import { GRID_DAYS, MAX_ACTIVE_HABITS, habitStreaks, isScheduled, lastDays, recurrenceLabel } from "../habits.js";
 
 // Mounted at /api/clients/:clientId/habits
 export const habitsRouter = Router({ mergeParams: true });
@@ -20,10 +20,29 @@ const NameSchema = z
   .min(1, "name is required.")
   .max(60, "name must be 60 characters or fewer.");
 
-const NewHabitSchema = z.object({ name: NameSchema });
+/**
+ * Inspo C3: the weekdays a habit is expected on, 0 = Sunday ... 6 = Saturday.
+ *
+ * Omitted means every day, which is what every habit written before recurrence existed means. An
+ * empty list would mean a habit nobody is ever expected to do, so it is refused.
+ */
+const DaysSchema = z
+  .array(z.number().int().min(0, "A day must be 0 (Sunday) to 6 (Saturday).").max(6, "A day must be 0 (Sunday) to 6 (Saturday)."))
+  .min(1, "Choose at least one day, or leave it on every day.")
+  .max(7, "There are only seven days in a week.")
+  .transform((d) => [...new Set(d)].sort((a, b) => a - b));
+
+const NewHabitSchema = z.object({ name: NameSchema, days: DaysSchema.optional() });
 const UpdateHabitSchema = z
-  .object({ name: NameSchema.optional(), active: z.boolean({ error: "active must be true or false." }).optional() })
-  .refine((v) => v.name !== undefined || v.active !== undefined, "Nothing to change: send a name or active.");
+  .object({
+    name: NameSchema.optional(),
+    active: z.boolean({ error: "active must be true or false." }).optional(),
+    days: DaysSchema.optional(),
+  })
+  .refine(
+    (v) => v.name !== undefined || v.active !== undefined || v.days !== undefined,
+    "Nothing to change: send a name, active or days.",
+  );
 const LogSchema = z.object({ done: z.boolean({ error: (issue) => (issue.input === undefined ? "done is required." : "done must be true or false.") }) });
 
 /** The client when it belongs to the signed-in coach; otherwise replies 404 and returns null. */
@@ -91,8 +110,19 @@ habitsRouter.get(
       days,
       habits: habits.map(({ logs, ...habit }) => {
         const doneDates = logs.filter((l) => l.done).map((l) => l.date);
-        const { current, best } = habitStreaks(doneDates, date);
-        return { ...habit, week: days.map((d) => doneDates.includes(d)), currentStreak: current, bestStreak: best };
+        // The streak counts SCHEDULED days only: a Mon/Wed/Fri habit must not break every Tuesday.
+        const { current, best } = habitStreaks(doneDates, date, habit.days);
+        return {
+          ...habit,
+          week: days.map((d) => doneDates.includes(d)),
+          // Which of the seven shown days this habit was actually expected on, so the grid can tell
+          // "missed" from "not asked for".
+          weekScheduled: days.map((d) => isScheduled(d, habit.days)),
+          scheduledToday: isScheduled(date, habit.days),
+          recurrence: recurrenceLabel(habit.days),
+          currentStreak: current,
+          bestStreak: best,
+        };
       }),
     });
   }),
@@ -111,7 +141,14 @@ habitsRouter.post(
     if (!client) return;
     const coachId = coachIdOf(req);
     const habit = await withHabitLimit(client.id, coachId, (tx) =>
-      tx.habit.create({ data: { clientId: client.id, coachId, name: parsed.data.name } }),
+      tx.habit.create({
+        data: {
+          clientId: client.id,
+          coachId,
+          name: parsed.data.name,
+          ...(parsed.data.days ? { days: parsed.data.days } : {}),
+        },
+      }),
     );
     if (habit === "limit") {
       res.status(400).json({ error: LIMIT_MESSAGE });

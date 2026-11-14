@@ -1428,3 +1428,33 @@ id, so renaming a label must never orphan it.
 
 The client app does not post to forms yet - the coach fills them in. Nothing in the UI pretends
 otherwise.
+
+## Habit recurrence and the preset library (Inspo C3, Nov 2026)
+
+`habits.days` is `Int[]`, 0 = Sunday ... 6 = Saturday, defaulting to all seven.
+
+**All seven means "every day", and that is what every habit written before recurrence existed
+means.** This is the whole safety argument for the change: `isScheduled` treats a full (or empty)
+list as every day, and `habitStreaks` with a full list behaves exactly as it did before - its twelve
+original tests pass untouched. Keep them that way; they are the guarantee, not legacy.
+
+**`habitStreaks` skips unscheduled days.** A day the habit was never expected on is not counted and
+is NOT a break. Without that, a Mon/Wed/Fri habit loses its streak every Tuesday and recurrence is
+worse than useless. "Consecutive" therefore means "the previous SCHEDULED day", not "yesterday".
+
+The API never requires `days`: omitting it keeps every day. An EMPTY list is refused - a habit nobody
+is ever expected to do is meaningless. The UI enforces the same thing by falling back to every day
+when the last weekday is switched off.
+
+`GET /habits` also returns `recurrence` (the server's own wording: "Every day", "Weekdays",
+"Mon, Wed, Fri"), `scheduledToday`, and `weekScheduled` - which of the seven shown days it was
+expected on, so the grid can tell a MISS from a day that was never asked for. In the UI an
+unexpected day is faint and its label says "(not expected)", but it stays tickable: a client who did
+it anyway deserves the credit.
+
+**Presets are CODE, not a table** (`server/src/habitPresets.ts`): read-only, never queried, never
+edited, and a table would mean a migration every time one is reworded. The client keeps its own copy
+in `types.ts` so the picker opens with no round trip, guarded by `habit-presets-drift.test.ts` -
+the same convention as PROTOCOLS, RECORD_FIELDS and the meal categories.
+
+A preset FILLS THE BOX (name + its usual days) and never saves on its own. The coach still chooses.

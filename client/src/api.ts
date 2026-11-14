@@ -212,8 +212,9 @@ export const saveDailyCheckIn = (clientId: string, input: NewDailyCheckIn) =>
 export const getHabitWeek = (clientId: string, date: string) =>
   request<HabitWeek>("GET", `/clients/${enc(clientId)}/habits?date=${enc(date)}`);
 /** Adds a habit. 400 when the client already has 8 active ones. */
-export const addHabit = (clientId: string, name: string) =>
-  request<HabitRecord>("POST", `/clients/${enc(clientId)}/habits`, { name });
+/** `days` (Inspo C3) are the weekdays it is expected on; omitted means every day. */
+export const addHabit = (clientId: string, name: string, days?: number[]) =>
+  request<HabitRecord>("POST", `/clients/${enc(clientId)}/habits`, { name, ...(days && days.length < 7 ? { days } : {}) });
 /** Renames and / or archives (`active: false`) a habit. Archiving keeps its history. */
 export const updateHabit = (clientId: string, habitId: string, input: HabitUpdate) =>
   request<HabitRecord>("PATCH", `/clients/${enc(clientId)}/habits/${enc(habitId)}`, input);

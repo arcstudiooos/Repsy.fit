@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addHabit, getHabitWeek, queryKeys, setHabitDone, updateHabit } from "../api";
+import { EVERY_DAY, HABIT_CATEGORIES, HABIT_PRESETS, WEEKDAY_LABELS, WEEKDAY_ORDER } from "../types";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import type { Habit } from "../types";
 
@@ -16,12 +17,18 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.habits(clientId) });
 
   const [name, setName] = useState("");
+  // Inspo C3: the preset library and the recurrence for the habit being added.
+  const [picking, setPicking] = useState(false);
+  const [days, setDays] = useState<number[]>(EVERY_DAY);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
   const add = useMutation({
-    mutationFn: (habitName: string) => addHabit(clientId, habitName),
+    mutationFn: ({ habitName, habitDays }: { habitName: string; habitDays: number[] }) =>
+      addHabit(clientId, habitName, habitDays),
     onSuccess: () => {
       setName("");
+      setDays(EVERY_DAY);
+      setPicking(false);
       return refresh();
     },
   });
@@ -47,7 +54,7 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
 
   function submitNew(e: FormEvent) {
     e.preventDefault();
-    if (name.trim()) add.mutate(name.trim());
+    if (name.trim()) add.mutate({ habitName: name.trim(), habitDays: days });
   }
 
   return (
@@ -122,7 +129,81 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
             <button type="submit" disabled={full || add.isPending} className="btn btn-primary">
               {add.isPending ? "Adding..." : "Add habit"}
             </button>
+            <button type="button" disabled={full} className="btn btn-secondary" onClick={() => setPicking(!picking)}>
+              {picking ? "Hide examples" : "Pick from examples"}
+            </button>
           </form>
+
+          {/* Which days it is expected on. Every day is the default, and what every older habit means. */}
+          <div role="group" aria-label="Which days" className="mt-3">
+            <p className="mb-1 text-sm font-bold">Which days</p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                aria-pressed={days.length >= 7}
+                onClick={() => setDays(EVERY_DAY)}
+                className={
+                  "min-h-10 rounded-full border px-3 text-sm font-semibold " +
+                  (days.length >= 7 ? "border-text bg-text text-bg" : "border-border text-text hover:border-dim")
+                }
+              >
+                Every day
+              </button>
+              {WEEKDAY_ORDER.map((d) => {
+                const on = days.length < 7 && days.includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={WEEKDAY_LABELS[d]}
+                    onClick={() => {
+                      // Coming from "every day", the first tap means "only this day".
+                      const base = days.length >= 7 ? [] : days;
+                      const next = base.includes(d) ? base.filter((x) => x !== d) : [...base, d];
+                      // Never leave a habit nobody is ever expected to do.
+                      setDays(next.length === 0 ? EVERY_DAY : next);
+                    }}
+                    className={
+                      "min-h-10 min-w-10 rounded-full border px-3 text-sm font-semibold " +
+                      (on ? "border-text bg-text text-bg" : "border-border text-text hover:border-dim")
+                    }
+                  >
+                    {WEEKDAY_LABELS[d]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {picking && (
+            <div className="mt-3 grid gap-3">
+              {HABIT_CATEGORIES.map((category) => (
+                <div key={category}>
+                  <p className="mb-1 text-sm font-bold">{category}</p>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {HABIT_PRESETS.filter((x) => x.category === category).map((preset) => (
+                      <li key={preset.name}>
+                        <button
+                          type="button"
+                          disabled={full}
+                          // A preset fills the box and its usual days in: it never saves on its own,
+                          // so the coach still chooses.
+                          onClick={() => {
+                            setName(preset.name);
+                            setDays(preset.days);
+                          }}
+                          className="min-h-10 rounded-full border border-border px-3 text-sm text-text hover:border-dim disabled:opacity-60"
+                        >
+                          {preset.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
           {full && <p className="mt-2 text-sm text-dim">That's {MAX_HABITS} habits. Archive one to add another.</p>}
         </>
       )}
@@ -183,6 +264,10 @@ function HabitRow({
         ) : (
           <>
             <span className="font-semibold text-text">{habit.name}</span>
+            {/* Inspo C3: say so when a habit is not an every-day one. */}
+            {habit.recurrence && habit.recurrence !== "Every day" && (
+              <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-xs text-dim">{habit.recurrence}</span>
+            )}
             <span className="ml-2 inline-flex gap-2">
               <button type="button" aria-label={`Rename ${habit.name}`} onClick={() => onEdit({ id: habit.id, name: habit.name })} className={linkButton}>
                 Rename
@@ -196,19 +281,26 @@ function HabitRow({
       </th>
       {days.map((d, i) => {
         const done = habit.week[i];
+        // A day the habit was never expected on is NOT a miss. It stays tickable (a client who did
+        // it anyway deserves the credit) but it is drawn faintly so the row reads honestly.
+        const expected = habit.weekScheduled?.[i] ?? true;
         return (
           <td key={d} className="px-1 py-2 text-center">
             <button
               type="button"
               aria-pressed={done}
-              aria-label={`${habit.name} on ${d}`}
+              aria-label={`${habit.name} on ${d}${expected ? "" : " (not expected)"}`}
               onClick={() => onTick(d, !done)}
               className={
                 "h-9 w-9 rounded-lg border text-sm font-bold " +
-                (done ? "border-accent2 bg-accent2 text-white" : "border-border bg-surface2 text-dim hover:border-dim")
+                (done
+                  ? "border-accent2 bg-accent2 text-white"
+                  : expected
+                    ? "border-border bg-surface2 text-dim hover:border-dim"
+                    : "border-transparent bg-transparent text-dim opacity-40 hover:border-border")
               }
             >
-              {done ? "✓" : ""}
+              {done ? "✓" : expected ? "" : "·"}
             </button>
           </td>
         );

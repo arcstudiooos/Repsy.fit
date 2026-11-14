@@ -737,6 +737,30 @@ export interface MacroResult {
 }
 
 /** A habit the coach tracks for one client (Prompt 54), with its this-week ticks and streaks. */
+/**
+ * Inspo C3: the habit preset library. Duplicated from server/src/habitPresets.ts for an instant
+ * picker with no round trip; a drift test keeps the two identical.
+ */
+export const HABIT_CATEGORIES = ["Nutrition", "Movement", "Sleep and recovery", "Mind", "Lifestyle"] as const;
+export type HabitCategory = (typeof HABIT_CATEGORIES)[number];
+export interface HabitPreset {
+  name: string;
+  category: HabitCategory;
+  days: number[];
+}
+/** Mon-first, as a coach reads a week. 0 = Sunday, matching the server. */
+export const WEEKDAY_ORDER: readonly number[] = [1, 2, 3, 4, 5, 6, 0];
+export const WEEKDAY_LABELS: Record<number, string> = {
+  0: "Sun",
+  1: "Mon",
+  2: "Tue",
+  3: "Wed",
+  4: "Thu",
+  5: "Fri",
+  6: "Sat",
+};
+export const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+
 export interface Habit {
   id: string;
   coachId: string;
@@ -745,6 +769,14 @@ export interface Habit {
   /** false = archived (hidden from the grid, history kept) */
   active: boolean;
   createdAt: string;
+  /** Inspo C3: the weekdays this habit is expected on. All seven = every day. */
+  days: number[];
+  /** "Every day", "Weekdays", "Mon, Wed, Fri" - the server's own wording. */
+  recurrence: string;
+  /** Is it expected today? A habit not due today is not a miss. */
+  scheduledToday: boolean;
+  /** Which of `HabitWeek.days` it was expected on, same order. */
+  weekScheduled: boolean[];
   /** Done flags for `HabitWeek.days`, same order. */
   week: boolean[];
   currentStreak: number;
@@ -880,3 +912,46 @@ export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
 }
+
+const EVERY = EVERY_DAY;
+const WEEKDAYS = [1, 2, 3, 4, 5];
+
+/** Inspo C3: must match server/src/habitPresets.ts exactly (drift-tested). */
+export const HABIT_PRESETS: readonly HabitPreset[] = [
+  // Nutrition
+  { name: "Drink 3 litres of water", category: "Nutrition", days: EVERY },
+  { name: "Eat protein with every meal", category: "Nutrition", days: EVERY },
+  { name: "Five portions of vegetables", category: "Nutrition", days: EVERY },
+  { name: "No sugary drinks", category: "Nutrition", days: EVERY },
+  { name: "Log every meal", category: "Nutrition", days: EVERY },
+  { name: "Cook dinner at home", category: "Nutrition", days: WEEKDAYS },
+  { name: "No late-night snacking", category: "Nutrition", days: EVERY },
+  { name: "Eat breakfast within an hour of waking", category: "Nutrition", days: EVERY },
+  // Movement
+  { name: "10,000 steps", category: "Movement", days: EVERY },
+  { name: "Train as planned", category: "Movement", days: [1, 3, 5] },
+  { name: "Ten minutes of stretching", category: "Movement", days: EVERY },
+  { name: "Take the stairs", category: "Movement", days: WEEKDAYS },
+  { name: "A twenty minute walk after dinner", category: "Movement", days: EVERY },
+  { name: "Stand up every hour", category: "Movement", days: WEEKDAYS },
+  { name: "Warm up before training", category: "Movement", days: [1, 3, 5] },
+  // Sleep and recovery
+  { name: "Seven hours of sleep", category: "Sleep and recovery", days: EVERY },
+  { name: "In bed by 11pm", category: "Sleep and recovery", days: EVERY },
+  { name: "No screens an hour before bed", category: "Sleep and recovery", days: EVERY },
+  { name: "Wake at the same time", category: "Sleep and recovery", days: EVERY },
+  { name: "A rest day, properly", category: "Sleep and recovery", days: [0] },
+  // Mind
+  { name: "Ten minutes of meditation", category: "Mind", days: EVERY },
+  { name: "Write down three things that went well", category: "Mind", days: EVERY },
+  { name: "Ten minutes outside in daylight", category: "Mind", days: EVERY },
+  { name: "No phone for the first thirty minutes", category: "Mind", days: EVERY },
+  { name: "Read for fifteen minutes", category: "Mind", days: EVERY },
+  // Lifestyle
+  { name: "Weigh in", category: "Lifestyle", days: [1] },
+  { name: "Take progress photos", category: "Lifestyle", days: [0] },
+  { name: "Plan tomorrow the night before", category: "Lifestyle", days: EVERY },
+  { name: "Message your coach", category: "Lifestyle", days: [0] },
+  { name: "No alcohol", category: "Lifestyle", days: EVERY },
+  { name: "Pack a gym bag the night before", category: "Lifestyle", days: [0, 2, 4] },
+];

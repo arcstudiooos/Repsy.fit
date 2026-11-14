@@ -431,6 +431,9 @@ model Habit {
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   name      String
   active    Boolean  @default(true)
+  /// Inspo C3: the weekdays this habit is expected on, 0 = Sunday ... 6 = Saturday. All seven is
+  /// "every day", which is what every habit written before recurrence existed means.
+  days      Int[]    @default([0, 1, 2, 3, 4, 5, 6])
   createdAt DateTime @default(now())
 
   logs HabitLog[]
