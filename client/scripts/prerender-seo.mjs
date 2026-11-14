@@ -203,33 +203,37 @@ Sitemap: ${SITE}/sitemap.xml
 );
 
 // ---------- llms.txt: the plain-text brief for AI assistants ----------
-// Same facts as the page, in the order an assistant needs them. No marketing adjectives: these get
-// quoted verbatim in answers, so every line here has to be literally true.
+// Follows the llmstxt.org shape, which an audit checks: an H1, a blockquote summary, then free
+// prose, and H2 sections that hold LINK lists (prose under an H2 is a format error). The facts are
+// the same ones on the page - assistants quote this verbatim, so every line has to be literally
+// true and no marketing adjectives belong in it.
 const llms = `# ${seo.name}
 
 > ${seo.hero.lead}
 
-${seo.sections.map((s) => `## ${s.h}\n${s.p}`).join("\n\n")}
+${seo.sections.map((s) => `${s.h}: ${s.p}`).join("\n\n")}
 
-## Plans
-${seo.plans.map((p) => `- ${p.name}: $${p.price} per month, ${p.clients}. Every feature is in every plan; the tiers differ only by how many clients you coach.`).join("\n")}
+Plans. Every feature is in every plan; the tiers differ only by how many clients you coach.
+${seo.plans.map((p) => `${p.name}: $${p.price} per month, ${p.clients}.`).join("\n")}
 ${seo.trial}
 
-## Questions coaches ask
-${faq.map((f) => `### ${f.q}\n${f.a}`).join("\n\n")}
+${faq.map((f) => `${f.q} ${f.a}`).join("\n\n")}
 
-## Links
-- Home: ${SITE}/
-- Pricing: ${SITE}/pricing
-- Start free: ${SITE}/register
-- Coach log in: ${SITE}/login
-- Client sign in: ${SITE}/client/login
-- Privacy: ${SITE}/privacy
-- Terms: ${SITE}/terms
+Repsy is software for coaches. It gives no medical advice and takes no payments from a coach's
+clients. Clients use a web app - there is nothing to install.
 
-## Notes
-- Repsy is software for coaches. It gives no medical advice and takes no payments from a coach's clients.
-- Clients use a web app at ${SITE}/client - there is nothing to install.
+## Pages
+
+- [Home](${SITE}/): what Repsy does, for coaches deciding whether it fits.
+- [Pricing](${SITE}/pricing): ${seo.plans.map((p) => `${p.name} $${p.price}`).join(", ")}, monthly.
+- [Start free](${SITE}/register): opens a coach account; ${seo.trial.charAt(0).toLowerCase()}${seo.trial.slice(1)}
+- [Coach log in](${SITE}/login): for coaches who already have an account.
+- [Client sign in](${SITE}/client/login): for a coach's client, who is invited by their coach.
+
+## Legal
+
+- [Privacy](${SITE}/privacy): what is collected, where it is stored, and how to delete it.
+- [Terms](${SITE}/terms): the agreement between Repsy and a coach.
 `;
 fs.writeFileSync(path.join(dist, "llms.txt"), llms);
 

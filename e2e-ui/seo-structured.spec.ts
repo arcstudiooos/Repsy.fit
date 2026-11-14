@@ -73,6 +73,14 @@ test("llms.txt and the speculation rules are built", () => {
   for (const p of PLANS) expect(llms).toContain(`${p.name}: $${p.price} per month`);
   expect(llms).toContain("gives no medical advice");
   for (const f of FAQ_CHAT) expect(llms).toContain(f.q);
+  // The llmstxt.org shape an audit checks: H1, blockquote, prose, then H2 sections of LINK lists.
+  expect(llms.startsWith("# Repsy Coach\n\n> ")).toBe(true);
+  for (const section of llms.split(/^## /m).slice(1)) {
+    expect(section).toMatch(/^- \[[^\]]+\]\(https:\/\/repsy\.fit[^)]*\):/m);
+    for (const line of section.split("\n").filter((l) => l.trim() && !l.startsWith("- ") && l !== section.split("\n")[0])) {
+      throw new Error(`prose under an H2 in llms.txt: ${line}`);
+    }
+  }
 
   const rules = JSON.parse(dist("speculation-rules.json")) as { prefetch: { urls: string[] }[] };
   expect(rules.prefetch[0].urls).toEqual(["/pricing", "/register", "/login"]);
