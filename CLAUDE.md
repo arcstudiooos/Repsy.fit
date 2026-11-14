@@ -1209,3 +1209,13 @@ and record it here.
   allowlist. Adding another origin has to be a deliberate edit there.
 - The SDK is loaded on demand inside BillingPage, never at app start.
 - Still off in production: `BILLING_ENFORCED` stays false until the sandbox cycle passes end to end.
+
+## Running the UI tests honestly (Nov 2026)
+
+- `npm run test:ui` serves the BUILT `client/dist` through `vite preview`, and reuses an already
+  running preview server outside CI. So a local pass can be a pass against a STALE build: after any
+  client change, run `npm run build -w client` BEFORE `npm run test:ui`, or CI will disagree with
+  you - which is exactly how a broken Account page reached CI once.
+- A section embedded in another page (billing inside Account) must fail QUIETLY: no `role="alert"`,
+  no full-page error card. Two alerts on one page break `getByRole("alert")` in every other test
+  there, and a screen reader announces a billing hiccup over whatever the coach was doing.

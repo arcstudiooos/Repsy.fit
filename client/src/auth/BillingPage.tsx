@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelPlan, confirmSubscription, getBilling, queryKeys, type BillingMe } from "../api";
-import { ErrorState, LoadingState } from "../components/States";
+import { LoadingState } from "../components/States";
 
 const TIERS = [
   { tier: "Solo", price: 39, clients: "Up to 30 clients" },
@@ -136,7 +136,18 @@ export default function BillingPage() {
   });
 
   if (billingQuery.isPending) return <LoadingState />;
-  if (billingQuery.isError) return <ErrorState error={billingQuery.error} onRetry={() => billingQuery.refetch()} />;
+  // Quietly. This section sits on the Account page beside the name and password forms, so a billing
+  // hiccup must not shout "Something went wrong" over the whole page, and must not add a second
+  // alert for a screen reader to announce.
+  if (billingQuery.isError)
+    return (
+      <div className="grid gap-2">
+        <p className="text-sm text-dim">We could not load your plan just now. Nothing has changed.</p>
+        <button type="button" className="btn btn-secondary min-h-10 justify-self-start" onClick={() => billingQuery.refetch()}>
+          Try again
+        </button>
+      </div>
+    );
   const billing = billingQuery.data;
 
   return (
