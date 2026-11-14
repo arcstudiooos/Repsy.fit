@@ -1389,3 +1389,42 @@ once, and `tsc` was completely happy.
 - Pure formatting lives in `client/src/lib/snapshotFormat.ts` and is unit-tested from the server
   suite, because the e2e fixture pins `/api/auth/me` to one mock coach and a browser test therefore
   cannot change the coach's units.
+
+## Forms: intake and assessment (Inspo C1/C2, Nov 2026)
+
+Repsy had no forms at all, and intake is the first thing a coach does with a new client.
+Business -> Forms. Backend `src/forms/schema.ts` (zod + readers) and `src/routes/forms.ts`.
+
+**Questions are JSONB, not a table.** A form is read and written whole, never queried by question,
+and a question's shape differs by type (only a choice has `options`). The cost is that the column
+can hold ANYTHING, including whatever an older release wrote - so:
+
+* `readQuestions()` **drops** a question it cannot parse and returns the count; it never throws.
+  Nine good questions beat an error page, and a form stays openable forever.
+* `readAnswers()` does the same, falling back to `{}`.
+* Nothing reads `form.questions` directly. Go through those two functions.
+
+**A submission snapshots the questions it was `asked`.** Answers stay readable after the coach edits
+or deletes the form they came from; without it, editing a form silently rewrites history and last
+year's intake becomes a list of orphaned values. The UI renders a submission against `asked`, NOT
+against the form's current questions. There is a test that changes the question and proves the old
+wording still shows.
+
+**A sample form is `coachId` NULL** - seeded by migration, shared, read-only, copied to be changed.
+Exactly the same rule as a stock exercise, so it is one pattern learned once. Every write looks the
+row up scoped by `coachId`, so a sample and another coach's form are both simply a 404: there is no
+"is this a sample?" check anyone can forget.
+
+**`answerProblem()` is the server's own check.** A choice answer must be one of the options the coach
+offered - someone posting straight at the API cannot invent one. A question that is no longer asked
+is ignored rather than rejected, so a stale answer never blocks a save.
+
+Four samples are seeded (Client intake, Weekly progress check, Nutrition assessment, Fitness
+assessment) with literal ids (`frm_client_intake`), so replay is a no-op. The intake wording is
+India-aware on purpose: Eggetarian, Jain, tiffin service, "walked past the gym".
+
+Question ids are generated from the label but are STABLE once made: an answer is stored against the
+id, so renaming a label must never orphan it.
+
+The client app does not post to forms yet - the coach fills them in. Nothing in the UI pretends
+otherwise.

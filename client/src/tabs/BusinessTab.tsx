@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Engagement } from "../components/Engagement";
 import { Schedule } from "../components/Schedule";
+import { FormsView } from "../components/FormsView";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
 import { formatDay } from "../lib/dates";
@@ -54,7 +55,7 @@ export function money(amount: number, currency: string): string {
 const dayText = (iso: string) => formatDay(iso);
 
 // Library (templates, meals, macro calculator) moved here from its own top-level tab (Nov 2026).
-const VIEWS = ["Payments", "Schedule", "Engagement", "Reports", "Library"] as const;
+const VIEWS = ["Payments", "Schedule", "Engagement", "Forms", "Reports", "Library"] as const;
 export type BusinessView = (typeof VIEWS)[number];
 type View = BusinessView;
 
@@ -95,7 +96,9 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked, lib
           </button>
         ))}
       </div>
-      {view === "Library" ? (
+      {view === "Forms" ? (
+        <FormsView clients={clients} />
+      ) : view === "Library" ? (
         <div className="mt-4">
           <Suspense fallback={<LoadingState />}>{library}</Suspense>
         </div>

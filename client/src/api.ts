@@ -46,6 +46,9 @@ import type {
   NewLead,
   NewExercise,
   ClientSnapshot,
+  CoachForm,
+  FormSubmission,
+  NewCoachForm,
   WorkoutSectionInput,
   WorkoutStructure,
   NewMeal,
@@ -236,6 +239,19 @@ export const createTemplate = (input: NewWorkoutTemplate) => request<WorkoutTemp
 export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
+
+// ----- Forms (Inspo C1/C2) -----
+/** The coach's own forms plus Repsy's samples. */
+export const listForms = () => request<CoachForm[]>("GET", "/forms");
+export const getForm = (formId: string) => request<CoachForm>("GET", `/forms/${formId}`);
+export const createForm = (input: NewCoachForm) => request<CoachForm>("POST", "/forms", input);
+export const updateForm = (formId: string, input: NewCoachForm) => request<CoachForm>("PUT", `/forms/${formId}`, input);
+export const deleteForm = (formId: string) => request<void>("DELETE", `/forms/${formId}`);
+/** Copy a sample (or one of your own) into your forms so it can be changed. */
+export const copyForm = (formId: string) => request<CoachForm>("POST", `/forms/${formId}/copy`);
+export const listSubmissions = (formId: string) => request<FormSubmission[]>("GET", `/forms/${formId}/submissions`);
+export const submitForm = (formId: string, clientId: string, answers: Record<string, string | string[]>) =>
+  request<{ id: string; createdAt: string }>("POST", `/forms/${formId}/submissions`, { clientId, answers });
 
 // ----- Client snapshot (Inspo C4/C5) -----
 /** The glanceable numbers for one client: weight, adherence, last workout, streak, totals. */
@@ -576,6 +592,9 @@ export const queryKeys = {
   businessPlans: ["business", "plans"] as const,
   exercises: (query: ExerciseQuery = {}) => ["exercises", query] as const,
   clientSnapshot: (clientId: string) => ["clients", clientId, "snapshot"] as const,
+  forms: ["forms"] as const,
+  form: (formId: string) => ["forms", formId] as const,
+  submissions: (formId: string) => ["forms", formId, "submissions"] as const,
   structure: (clientId: string, assignmentId: string) =>
     ["clients", clientId, "assignments", assignmentId, "structure"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,

@@ -512,6 +512,56 @@ export interface WorkoutTemplate {
 }
 export type NewWorkoutTemplate = Pick<WorkoutTemplate, "name" | "exercises"> & Partial<Pick<WorkoutTemplate, "focus" | "notes">>;
 
+/** The question types a form can hold (Inspo C1). Mirrors QUESTION_TYPES in server forms/schema.ts. */
+export const QUESTION_TYPES = ["single", "multi", "text", "longtext", "number", "date", "scale"] as const;
+export type QuestionType = (typeof QUESTION_TYPES)[number];
+/** Types whose answer is chosen from `options`. */
+export const CHOICE_TYPES: readonly QuestionType[] = ["single", "multi"];
+
+/** How each type reads in the builder's dropdown. */
+export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  single: "Pick one",
+  multi: "Pick any",
+  text: "Short text",
+  longtext: "Long text",
+  number: "A number",
+  date: "A date",
+  scale: "A rating",
+};
+
+export interface FormQuestion {
+  id: string;
+  type: QuestionType;
+  label: string;
+  help: string;
+  required: boolean;
+  options: string[];
+}
+
+/** A coach's intake or assessment form. `sample` true = Repsy's, read-only, copy it to change it. */
+export interface CoachForm {
+  id: string;
+  name: string;
+  description: string;
+  questions: FormQuestion[];
+  active: boolean;
+  sample: boolean;
+  createdAt: string;
+  submissionCount: number;
+}
+export type NewCoachForm = Pick<CoachForm, "name"> &
+  Partial<Pick<CoachForm, "description" | "questions" | "active">>;
+
+/** One client's answers, with the questions AS ASKED when they answered. */
+export interface FormSubmission {
+  id: string;
+  clientId: string;
+  clientName: string;
+  answers: Record<string, string | string[]>;
+  asked: FormQuestion[];
+  createdAt: string;
+}
+
 /** Inspo N4: when the meal is eaten. Mirrors MEAL_TYPES in server routes/meals.ts (drift-tested). */
 export const MEAL_TYPES = [
   "On waking up",
