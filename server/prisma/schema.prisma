@@ -352,10 +352,9 @@ model ChatMessage {
   content   String
   createdAt DateTime @default(now())
 
-  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
   /// Inspo W3: the structured form of this workout. EMPTY for every plan written before Nov 2026
   /// and for AI/prose plans - `details` stays the source of truth there and is parsed on demand.
-  sections WorkoutSection[]
 
   @@index([clientId])
   @@index([coachId])
@@ -379,10 +378,9 @@ model ProgressLog {
   enteredBy    String   @default("coach")
   createdAt    DateTime @default(now())
 
-  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
   /// Inspo W3: the structured form of this workout. EMPTY for every plan written before Nov 2026
   /// and for AI/prose plans - `details` stays the source of truth there and is parsed on demand.
-  sections WorkoutSection[]
 
   @@index([clientId])
   @@index([coachId])
@@ -518,11 +516,7 @@ model WorkoutSection {
   durationSec  Int?
   notes        String     @default("")
 
-  exercises     WorkoutExercise[]
-  chatMessage   ChatMessage?      @relation(fields: [chatMessageId], references: [id])
-  chatMessageId String?
-  progressLog   ProgressLog?      @relation(fields: [progressLogId], references: [id])
-  progressLogId String?
+  exercises WorkoutExercise[]
 
   @@unique([assignmentId, order])
   @@index([assignmentId])
