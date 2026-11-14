@@ -47,7 +47,11 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // A sensible default; the pages whose URL carries a one-time token override this with "no-referrer".
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY);
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  // "same-origin-allow-popups", not "same-origin": PayPal's checkout opens a popup that must talk
+  // back to the page that opened it, and strict same-origin severs that link - the popup opens,
+  // loads, and reports nothing, which looks like a blank window. This still isolates US from any
+  // page that opens US; it only preserves the opener link for popups we open ourselves.
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   // Nothing here uses a camera, a microphone, geolocation or payment APIs in the page. Saying so
   // switches them off for the page and for anything it embeds (an SEO audit flagged the absence).
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()");

@@ -249,7 +249,9 @@ describe("security headers", () => {
     expect(res.headers["x-frame-options"]).toBe("DENY");
     expect(res.headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(res.headers["content-security-policy"]).toBe(CONTENT_SECURITY_POLICY);
-    expect(res.headers["cross-origin-opener-policy"]).toBe("same-origin");
+    // allow-popups is deliberate: PayPal's checkout popup must be able to report back to us.
+    // It must never be dropped entirely - that would let another page keep a handle on ours.
+    expect(res.headers["cross-origin-opener-policy"]).toBe("same-origin-allow-popups");
     expect(res.headers["x-powered-by"]).toBeUndefined();
   });
 
