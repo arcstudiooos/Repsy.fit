@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteAssignment, listAssignments, queryKeys, updateAssignment, updateAssignmentStatus } from "../api";
 import { PlanEditor, planProblem, type PlanFields } from "../components/PlanEditor";
 import { WorkoutBuilder } from "../components/WorkoutBuilder";
+import { PlanGrid } from "../components/PlanGrid";
 import { ManualAssignmentForm, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { MenuButton } from "../components/MenuButton";
@@ -16,7 +17,7 @@ import {
   type AssignmentType,
   type Client,
 } from "../types";
-import { TYPE_CHIP } from "./AiCoachTab";
+import { TYPE_CHIP, localToday } from "./AiCoachTab";
 
 type Props = {
   client: Client | null;
@@ -54,6 +55,11 @@ export function PlannerTab({
   const [startFrom] = useState(prefill ?? null);
   // Nov 2026: the New assignment form opens from "+ New plan" (already open for a Library template).
   const [formOpen, setFormOpen] = useState(!!startFrom);
+  // Inspo W11: List or Calendar. The list stays the default - it is what a coach opens Plans for -
+  // and the calendar is for seeing a block, and its gaps, at once.
+  const [view, setView] = useState<"List" | "Calendar">("List");
+  // A date clicked in the grid, used once to pre-fill the new-plan form.
+  const [dateFromGrid, setDateFromGrid] = useState<string | null>(null);
   useEffect(() => {
     if (startFrom) onPrefillUsed?.();
   }, [startFrom, onPrefillUsed]);
@@ -104,6 +110,23 @@ export function PlannerTab({
   } else {
     body = (
       <>
+        {/* Inspo W11: List is the default; Calendar is for seeing a block, and its gaps, at once. */}
+        <div role="group" aria-label="Plans view" className="mb-3 flex flex-wrap gap-2">
+          {(["List", "Calendar"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => setView(v)}
+              className={
+                "min-h-10 rounded-full border px-4 text-sm font-semibold " +
+                (view === v ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+              }
+            >
+              {v}
+            </button>
+          ))}
+        </div>
         <div role="group" aria-label="Filter by type" className="flex flex-wrap gap-2">
           {FILTERS.map((f) => {
             const isActive = f === filter;
@@ -123,7 +146,23 @@ export function PlannerTab({
             );
           })}
         </div>
-        {shown.length === 0 ? (
+        {view === "Calendar" ? (
+          <PlanGrid
+            assignments={shown}
+            today={localToday()}
+            onOpen={(id) => {
+              // Back to the list, where the card can actually be read and acted on.
+              setView("List");
+              // The card has id="assignment-<id>", set when the list renders.
+              requestAnimationFrame(() => document.getElementById(`assignment-${id}`)?.scrollIntoView({ block: "center" }));
+            }}
+            onAdd={(date) => {
+              setDateFromGrid(date);
+              setFormOpen(true);
+              setView("List");
+            }}
+          />
+        ) : shown.length === 0 ? (
           <p className="mt-4 rounded-card bg-surface2 px-4 py-6 text-center text-dim">
             No {filter} assignments for this client.
           </p>
@@ -167,11 +206,16 @@ export function PlannerTab({
       {client && formOpen && (
         <div className="mt-4">
           <ManualAssignmentForm
-            key={client.id}
+            // The date is in the key so picking a different day in the grid reopens the form on it.
+            key={`${client.id}:${dateFromGrid ?? ""}`}
             clientId={client.id}
             onCreated={onCreated}
             prefill={startFrom}
-            onCancel={() => setFormOpen(false)}
+            startDate={dateFromGrid ?? undefined}
+            onCancel={() => {
+              setFormOpen(false);
+              setDateFromGrid(null);
+            }}
           />
         </div>
       )}

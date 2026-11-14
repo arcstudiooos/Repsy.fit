@@ -157,17 +157,19 @@ type Props = {
   prefill?: TemplatePrefill | null;
   /** Nov 2026: the form opens from "+ New plan"; Cancel closes it without saving. */
   onCancel?: () => void;
+  /** Inspo W11: the day clicked in the calendar grid, used as the plan's date. */
+  startDate?: string;
 };
 
 // Manual create form: same shape as AI plans (type, title, details, reasoning, date),
 // saved with source "manual" via POST /api/clients/:clientId/assignments.
-export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel }: Props) {
+export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel, startDate }: Props) {
   const queryClient = useQueryClient();
   const [type, setType] = useState<AssignmentType>("Workout");
   const [title, setTitle] = useState(prefill?.template.name ?? "");
   const [details, setDetails] = useState(prefill?.template.notes ?? "");
   const [reasoning, setReasoning] = useState(prefill ? `From template: ${prefill.template.name}` : "");
-  const [date, setDate] = useState(() => prefill?.date || localToday());
+  const [date, setDate] = useState(() => startDate || prefill?.date || localToday());
   // Picked exercises with their dose (Workout only). Kept while the type changes; saved as the details.
   const [exercises, setExercises] = useState<DoseRow[]>(() => (prefill ? rowsFromTemplate(prefill.template.exercises) : []));
   // Prompt 80: meals from the library on a Nutrition plan (the client sees them with their macros).

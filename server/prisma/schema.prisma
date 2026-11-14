@@ -74,6 +74,7 @@ model Coach {
   workoutTemplates WorkoutTemplate[]
   meals            Meal[]
   exercises        Exercise[]
+  forms            Form[]
 
   @@map("coaches")
 }
@@ -235,19 +236,20 @@ model Client {
   /// Prompt 80: the weekday (0 = Sunday ... 6 = Saturday) the client is asked for their weekly check-in.
   weeklyCheckInDay     Int       @default(0)
 
-  assignments    Assignment[]
-  passwordResets ClientPasswordResetToken[]
-  chatMessages   ChatMessage[]
-  progressLogs   ProgressLog[]
-  reviewItems    ReviewItem[]
-  dailyCheckIns  DailyCheckIn[]
-  habits         Habit[]
-  measurements   Measurement[]
-  threadMessages ThreadMessage[]
-  invites        ClientInvite[]
-  plan           ClientPlan?
-  payments       Payment[]
-  appointments   Appointment[]
+  assignments     Assignment[]
+  passwordResets  ClientPasswordResetToken[]
+  chatMessages    ChatMessage[]
+  progressLogs    ProgressLog[]
+  reviewItems     ReviewItem[]
+  dailyCheckIns   DailyCheckIn[]
+  habits          Habit[]
+  measurements    Measurement[]
+  threadMessages  ThreadMessage[]
+  invites         ClientInvite[]
+  plan            ClientPlan?
+  payments        Payment[]
+  appointments    Appointment[]
+  formSubmissions FormSubmission[]
 
   @@index([coachId])
   @@map("clients")
@@ -493,6 +495,56 @@ model WorkoutTemplate {
 
   @@index([coachId])
   @@map("workout_templates")
+}
+
+/// A coach's intake or assessment form (Inspo C1/C2, Nov 2026).
+///
+/// `questions` is JSON, not a table: a form is read and written whole, never queried by question,
+/// and a question's shape differs by type (options only exist for a choice). The shape is validated
+/// by zod on the way in (src/forms/schema.ts), so the JSON is never trusted on the way out.
+model Form {
+  id          String   @id @default(cuid())
+  /// NULL = a Repsy sample form, shared by every coach and read-only to them (same rule as
+  /// Exercise): seeded by migration, copied into a coach's own forms when they want to change it.
+  coachId     String?
+  coach       Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @default("")
+  /// FormQuestion[] - see src/forms/schema.ts.
+  questions   Json     @default("[]")
+  /// A coach can retire a form without deleting the answers already given.
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions FormSubmission[]
+
+  @@index([coachId])
+  @@map("forms")
+}
+
+/// One client's answers to one form (Inspo C1).
+///
+/// `answers` is JSON keyed by question id. Answers are kept even if the form's questions change
+/// afterwards, which is why the questions are snapshotted here too: a submission must still be
+/// readable years later, exactly as it was asked.
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  coachId   String
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Record<questionId, string | string[]>.
+  answers   Json     @default("{}")
+  /// The questions as they were when this was answered.
+  asked     Json     @default("[]")
+  createdAt DateTime @default(now())
+
+  @@index([formId, createdAt])
+  @@index([clientId])
+  @@index([coachId])
+  @@map("form_submissions")
 }
 
 /// One block of a structured workout (Inspo W3/W5, Nov 2026).
