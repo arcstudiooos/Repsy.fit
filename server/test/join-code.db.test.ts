@@ -17,7 +17,7 @@ describe.skipIf(!process.env.DATABASE_URL)("join codes (database)", () => {
 
   it("gives each coach their own code and looks it up in any case", async () => {
     const [a, b] = await Promise.all(
-      emails.map((email, i) => prisma.coach.create({ data: { email, name: i ? "Bea" : "Anna", passwordHash: "x" } })),
+      emails.map((email, i) => prisma.coach.create({ data: { planTier: "Pro100", email, name: i ? "Bea" : "Anna", passwordHash: "x" } })),
     );
     // Two first requests at once still give one code (the conditional write in assignNewCode).
     const [r1, r2] = await Promise.all([asCoach(app, a.id).get("/api/join-code"), asCoach(app, a.id).get("/api/join-code")]);

@@ -17,7 +17,7 @@ describe.skipIf(!process.env.DATABASE_URL)("approving clients (database)", () =>
   });
 
   it("pending -> approved shows in the list; declined loses data access; rules hold", async () => {
-    const [a, b] = await Promise.all(emails.map((email, i) => prisma.coach.create({ data: { email, name: `Coach ${i}`, passwordHash: "x" } })));
+    const [a, b] = await Promise.all(emails.map((email, i) => prisma.coach.create({ data: { planTier: "Pro100", email, name: `Coach ${i}`, passwordHash: "x" } })));
     // One after the other: the waiting list is oldest first, so their order must be fixed.
     const make = (n: string) => prisma.client.create({ data: { coachId: a.id, name: n, loginEmail: `${n}-84-${stamp}@example.com`, passwordHash: "$2b$12$x", joinStatus: "pending", joinedVia: "code" } });
     const pat = await make("pat");

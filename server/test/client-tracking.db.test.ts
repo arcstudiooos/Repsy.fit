@@ -19,7 +19,7 @@ describe.skipIf(!process.env.DATABASE_URL)("client tracking (database)", () => {
   });
 
   it("writes only the client's own records and queues the weekly check-in for review", async () => {
-    const coach = await prisma.coach.create({ data: { email: coachEmail, name: "Coach 80", passwordHash: "x" } });
+    const coach = await prisma.coach.create({ data: { planTier: "Pro100", email: coachEmail, name: "Coach 80", passwordHash: "x" } });
     const [maya, sam] = await Promise.all(
       ["maya", "sam"].map((n) => prisma.client.create({ data: { coachId: coach.id, name: n, loginEmail: `${n}-80-${stamp}@example.com`, passwordHash: "$2b$12$x" } })),
     );

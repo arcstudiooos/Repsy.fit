@@ -17,7 +17,7 @@ describe.skipIf(!process.env.DATABASE_URL)("auto-assign (database)", () => {
   let api: ReturnType<typeof asCoach>;
 
   beforeAll(async () => {
-    coachId = (await prisma.coach.create({ data: { name: "Test", email: `${tag}@example.com`, passwordHash: "x" } })).id;
+    coachId = (await prisma.coach.create({ data: { planTier: "Pro100", name: "Test", email: `${tag}@example.com`, passwordHash: "x" } })).id;
     api = asCoach(app, coachId);
   });
 

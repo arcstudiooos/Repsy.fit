@@ -19,7 +19,7 @@ describe.skipIf(!process.env.DATABASE_URL)("client account deletion (database)",
   });
 
   it("cascades the client's records and leaves the coach and other clients alone", async () => {
-    const coach = await prisma.coach.create({ data: { email: coachEmail, name: "Coach 83", passwordHash: "x" } });
+    const coach = await prisma.coach.create({ data: { planTier: "Pro100", email: coachEmail, name: "Coach 83", passwordHash: "x" } });
     const passwordHash = await hashPassword("client-password-1");
     const maya = await prisma.client.create({ data: { coachId: coach.id, name: "Maya", loginEmail: `maya-83-${stamp}@example.com`, passwordHash } });
     const sam = await prisma.client.create({ data: { coachId: coach.id, name: "Sam" } });

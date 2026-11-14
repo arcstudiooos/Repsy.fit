@@ -19,7 +19,7 @@ describe.skipIf(!process.env.DATABASE_URL)("coach <-> client messages (database)
 
   beforeAll(async () => {
     for (const n of ["a", "b"]) {
-      coachIds.push((await prisma.coach.create({ data: { name: "Test", email: `${tag}-${n}@example.com`, passwordHash: "x" } })).id);
+      coachIds.push((await prisma.coach.create({ data: { planTier: "Pro100", name: "Test", email: `${tag}-${n}@example.com`, passwordHash: "x" } })).id);
     }
     api = asCoach(app, coachIds[0]);
     otherApi = asCoach(app, coachIds[1]);

@@ -17,7 +17,7 @@ describe.skipIf(!process.env.DATABASE_URL)("sleep & recovery (database)", () => 
   let clientId = "";
 
   beforeAll(async () => {
-    coachId = (await prisma.coach.create({ data: { name: "Test", email: `${tag}@example.com`, passwordHash: "x" } })).id;
+    coachId = (await prisma.coach.create({ data: { planTier: "Pro100", name: "Test", email: `${tag}@example.com`, passwordHash: "x" } })).id;
     api = asCoach(app, coachId);
     clientId = (await api.post("/api/clients").send({ name: "Sleep Probe" })).body.id;
   });

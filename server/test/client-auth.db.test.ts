@@ -34,7 +34,7 @@ describe.skipIf(!process.env.DATABASE_URL)("client invite and sign-in (database)
   beforeAll(async () => {
     resetRateLimits();
     for (const n of ["a", "b"]) {
-      coachIds.push((await prisma.coach.create({ data: { name: `Coach ${n}`, email: `${tag}-${n}@example.com`, passwordHash: "x" } })).id);
+      coachIds.push((await prisma.coach.create({ data: { planTier: "Pro100", name: `Coach ${n}`, email: `${tag}-${n}@example.com`, passwordHash: "x" } })).id);
     }
     coach = asCoach(app, coachIds[0]);
     otherCoach = asCoach(app, coachIds[1]);

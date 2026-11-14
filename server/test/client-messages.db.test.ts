@@ -18,7 +18,7 @@ describe.skipIf(!process.env.DATABASE_URL)("client messages (database)", () => {
   });
 
   it("unread counts work both ways and stay inside the client's own thread", async () => {
-    const coach = await prisma.coach.create({ data: { email: coachEmail, name: "Coach 82", passwordHash: "x" } });
+    const coach = await prisma.coach.create({ data: { planTier: "Pro100", email: coachEmail, name: "Coach 82", passwordHash: "x" } });
     const [maya, sam] = await Promise.all(
       ["maya", "sam"].map((n) => prisma.client.create({ data: { coachId: coach.id, name: n, loginEmail: `${n}-82-${stamp}@example.com`, passwordHash: "$2b$12$x" } })),
     );

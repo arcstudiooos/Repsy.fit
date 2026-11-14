@@ -22,7 +22,7 @@ describe.skipIf(!process.env.DATABASE_URL)("plans and payments (database)", () =
 
   beforeAll(async () => {
     for (const n of ["a", "b"]) {
-      coachIds.push((await prisma.coach.create({ data: { name: "Coach", email: `${tag}-${n}@example.com`, passwordHash: "x" } })).id);
+      coachIds.push((await prisma.coach.create({ data: { planTier: "Pro100", name: "Coach", email: `${tag}-${n}@example.com`, passwordHash: "x" } })).id);
     }
     coach = asCoach(app, coachIds[0]);
     otherCoach = asCoach(app, coachIds[1]);

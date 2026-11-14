@@ -22,7 +22,7 @@ describe.skipIf(!process.env.DATABASE_URL)("joining with a code (database)", () 
   });
 
   it("creates the client under the code's coach only; pending clients wait; the profile saves", async () => {
-    const [a, b] = await Promise.all(coachEmails.map((email, i) => prisma.coach.create({ data: { email, name: i ? "Bea" : "Anna", passwordHash: "x" } })));
+    const [a, b] = await Promise.all(coachEmails.map((email, i) => prisma.coach.create({ data: { planTier: "Pro100", email, name: i ? "Bea" : "Anna", passwordHash: "x" } })));
     const code = (await asCoach(app, a.id).get("/api/join-code")).body.code as string;
 
     const joined = await supertest(app).post("/api/client-auth/join").send({ code, name: "Maya", email: clientEmail, password: "correct horse battery" });

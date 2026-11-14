@@ -20,8 +20,8 @@ describe.skipIf(!process.env.DATABASE_URL)("route protection by coach (database)
   let bLogId = "";
 
   beforeAll(async () => {
-    aId = (await prisma.coach.create({ data: { name: "A", email: `${tag}-a@example.com`, passwordHash: "x" } })).id;
-    bId = (await prisma.coach.create({ data: { name: "B", email: `${tag}-b@example.com`, passwordHash: "x" } })).id;
+    aId = (await prisma.coach.create({ data: { planTier: "Pro100", name: "A", email: `${tag}-a@example.com`, passwordHash: "x" } })).id;
+    bId = (await prisma.coach.create({ data: { planTier: "Pro100", name: "B", email: `${tag}-b@example.com`, passwordHash: "x" } })).id;
     const b = asCoach(app, bId);
     bClientId = (await b.post("/api/clients").send({ name: `${tag} B client` })).body.id;
     bAssignmentId = (

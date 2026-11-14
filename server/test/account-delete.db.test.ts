@@ -85,7 +85,7 @@ describe.skipIf(!process.env.DATABASE_URL)("deletion removes everything (databas
   beforeAll(async () => {
     for (const n of ["victim", "kept"]) {
       coachIds.push(
-        (await prisma.coach.create({ data: { name: "Test", email: `${tag}-${n}@example.com`, passwordHash: await hashPassword("right-password-1") } })).id,
+        (await prisma.coach.create({ data: { planTier: "Pro100", name: "Test", email: `${tag}-${n}@example.com`, passwordHash: await hashPassword("right-password-1") } })).id,
       );
     }
     api = asCoach(app, coachIds[0]);

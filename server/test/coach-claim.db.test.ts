@@ -76,9 +76,9 @@ describe.skipIf(!url || isRenderDb)("coach accounts and demo-data claim (databas
 
   it("coachId is a real foreign key and email is unique", async () => {
     await expect(prisma.client.create({ data: { name: `${tag} Orphan`, coachId: "no-such-coach" } })).rejects.toThrow();
-    await prisma.coach.create({ data: { name: "Once", email: `${tag}-dup@example.com`, passwordHash: "x" } });
+    await prisma.coach.create({ data: { planTier: "Pro100", name: "Once", email: `${tag}-dup@example.com`, passwordHash: "x" } });
     await expect(
-      prisma.coach.create({ data: { name: "Dup", email: `${tag}-dup@example.com`, passwordHash: "x" } }),
+      prisma.coach.create({ data: { planTier: "Pro100", name: "Dup", email: `${tag}-dup@example.com`, passwordHash: "x" } }),
     ).rejects.toThrow();
   });
 });
