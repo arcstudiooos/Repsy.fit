@@ -11,7 +11,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { billingState, isPlanTier, PLAN_TIERS, type PlanTier } from "../billing/state.js";
-import { cancelSubscription, getSubscription, paypalConfigured, planIdFor, tierForPlanId } from "../billing/paypal.js";
+import { cancelSubscription, getSubscription, listTransactions, paypalConfigured, planIdFor, tierForPlanId } from "../billing/paypal.js";
 
 export const billingRouter = Router();
 
@@ -106,6 +106,44 @@ billingRouter.post("/cancel", async (req: Request, res: Response) => {
   await prisma.coach.update({ where: { id: coachIdOf(req) }, data: { billingStatus: "cancelled" } });
   const fresh = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: BILLING_SELECT });
   res.json(billingState(fresh!));
+});
+
+/**
+ * What PayPal has actually charged. Proof a coach can keep: PayPal is the payer of record, so every
+ * figure here comes from PayPal and none of it is calculated by us.
+ */
+billingRouter.get("/payments", async (req: Request, res: Response) => {
+  const coach = await prisma.coach.findUnique({ where: { id: coachIdOf(req) }, select: { paypalSubscriptionId: true, planTier: true } });
+  if (!coach?.paypalSubscriptionId) return res.json({ reference: null, payments: [] });
+  res.json({
+    reference: coach.paypalSubscriptionId,
+    tier: coach.planTier,
+    payments: await listTransactions(coach.paypalSubscriptionId),
+  });
+});
+
+/** The same payments as a file, for an accountant or an expense claim. */
+billingRouter.get("/payments.csv", async (req: Request, res: Response) => {
+  const coach = await prisma.coach.findUnique({
+    where: { id: coachIdOf(req) },
+    select: { paypalSubscriptionId: true, planTier: true, name: true, email: true },
+  });
+  if (!coach?.paypalSubscriptionId) return res.status(400).json({ error: "There are no payments yet." });
+  const rows = await listTransactions(coach.paypalSubscriptionId);
+  const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const csv = [
+    ["Date", "Amount", "Currency", "Status", "PayPal transaction", "Plan", "Subscription", "Billed to"]
+      .map(esc)
+      .join(","),
+    ...rows.map((r) =>
+      [r.time.slice(0, 10), r.amount, r.currency, r.status, r.id, coach.planTier, coach.paypalSubscriptionId ?? "", coach.email]
+        .map((v) => esc(String(v)))
+        .join(","),
+    ),
+  ].join("\r\n");
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="repsy-payments.csv"');
+  res.send(csv);
 });
 
 /** The tier a coach is choosing, used only to hand the right plan id to the PayPal button. */

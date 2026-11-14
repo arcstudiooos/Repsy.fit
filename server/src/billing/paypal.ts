@@ -77,6 +77,38 @@ export async function getSubscription(id: string): Promise<PaypalSubscription | 
   return parse(res.json);
 }
 
+export type PaypalTransaction = {
+  id: string;
+  time: string;
+  amount: string;
+  currency: string;
+  status: string;
+};
+
+/**
+ * The payments PayPal has actually taken for a subscription. PayPal is the payer of record - we
+ * never invent a number here, we report what it says. Defaults to the last two years, which is
+ * PayPal's own limit for this endpoint.
+ */
+export async function listTransactions(subscriptionId: string): Promise<PaypalTransaction[]> {
+  const end = new Date();
+  const start = new Date(end.getTime() - 730 * 86_400_000);
+  const query = `start_time=${start.toISOString()}&end_time=${end.toISOString()}`;
+  const res = await call("GET", `/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/transactions?${query}`);
+  if (!res.ok) return [];
+  const rows = (res.json.transactions ?? []) as Record<string, unknown>[];
+  return rows.map((t) => {
+    const gross = (t.amount_with_breakdown as { gross_amount?: { value?: string; currency_code?: string } })?.gross_amount;
+    return {
+      id: String(t.id),
+      time: String(t.time),
+      amount: String(gross?.value ?? ""),
+      currency: String(gross?.currency_code ?? ""),
+      status: String(t.status),
+    };
+  });
+}
+
 /** Ends a subscription at PayPal. The webhook then confirms it; this does not write to the db. */
 export async function cancelSubscription(id: string, reason: string): Promise<boolean> {
   const res = await call("POST", `/v1/billing/subscriptions/${encodeURIComponent(id)}/cancel`, { reason });

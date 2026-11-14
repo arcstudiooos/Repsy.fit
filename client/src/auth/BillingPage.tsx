@@ -6,7 +6,15 @@
 // (src/routes/billing.ts) - so nothing here can grant access by itself.
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { cancelPlan, confirmSubscription, getBilling, queryKeys, type BillingMe } from "../api";
+import {
+  cancelPlan,
+  confirmSubscription,
+  downloadPaymentsCsv,
+  getBilling,
+  getPayments,
+  queryKeys,
+  type BillingMe,
+} from "../api";
 import { LoadingState } from "../components/States";
 
 /** "14 December 2026" - the date a coach will actually recognise on their statement. */
@@ -129,6 +137,8 @@ function StatusCard({ billing }: { billing: BillingMe }) {
  */
 function JustSubscribed({ billing, onDone }: { billing: BillingMe; onDone: () => void }) {
   const price = TIERS.find((t) => t.tier === billing.tier)?.price;
+  // The reference a coach can quote if they ever need to ask PayPal or us about this payment.
+  const { data } = useQuery({ queryKey: queryKeys.billingPayments, queryFn: getPayments });
   return (
     <div className="rounded-xl border border-accent bg-surface2 p-5" data-testid="billing-welcome" role="status">
       <h3 className="card-title">You're on {billing.tier}. Welcome aboard.</h3>
@@ -141,10 +151,63 @@ function JustSubscribed({ billing, onDone }: { billing: BillingMe; onDone: () =>
         Every feature is yours now - AI plans, the Manual Planner, templates, check-ins and progress charts - and you
         can cancel any time without losing a thing.
       </p>
+      {data?.reference ? (
+        <p className="mt-3 text-sm text-dim">
+          Reference <span className="font-mono">{data.reference}</span> - quote this if you ever need to ask about a
+          payment.
+        </p>
+      ) : null}
       <button type="button" className="btn btn-primary mt-4 min-h-10" onClick={onDone}>
         Back to coaching
       </button>
     </div>
+  );
+}
+
+/** Every payment PayPal has taken, with the ids that prove it. */
+function Payments() {
+  const { data, isPending } = useQuery({ queryKey: queryKeys.billingPayments, queryFn: getPayments });
+  const csv = useMutation({ mutationFn: downloadPaymentsCsv });
+  if (isPending || !data?.reference) return null;
+
+  return (
+    <section className="grid gap-3" data-testid="billing-payments">
+      <h3 className="card-title">Payments</h3>
+      <p className="text-sm text-dim">
+        Subscription reference <span className="font-mono">{data.reference}</span>. PayPal holds the money and emails
+        you a receipt for each payment; this is the same record.
+      </p>
+      {data.payments.length === 0 ? (
+        <p className="text-sm text-dim">No payments have been taken yet.</p>
+      ) : (
+        <ul className="grid gap-2">
+          {data.payments.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-border p-3">
+              <span className="font-semibold text-text">
+                {p.currency === "USD" ? "$" : ""}
+                {p.amount} {p.currency !== "USD" ? p.currency : ""}
+              </span>
+              <span className="text-sm text-dim">{longDate(p.time)}</span>
+              <span className="text-sm text-dim">{p.status === "COMPLETED" ? "Paid" : p.status}</span>
+              <span className="ml-auto font-mono text-xs text-dim">{p.id}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button
+        type="button"
+        className="btn btn-secondary min-h-10 justify-self-start"
+        disabled={csv.isPending || data.payments.length === 0}
+        onClick={() => csv.mutate()}
+      >
+        {csv.isPending ? "Preparing..." : "Download payments (CSV)"}
+      </button>
+      {csv.isError ? (
+        <p role="alert" className="text-sm font-semibold text-amber-text">
+          {(csv.error as Error).message}
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -249,6 +312,8 @@ export default function BillingPage() {
           Payments are not switched on yet. Nothing is being charged, and nothing you do here is limited.
         </p>
       ) : null}
+
+      <Payments />
 
       {!billing.needsSubscription && billing.status === "active" ? (
         <section className="grid gap-2">

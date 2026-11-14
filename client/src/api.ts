@@ -485,6 +485,11 @@ export const getBilling = () => request<BillingMe>("GET", "/billing/me");
 export const confirmSubscription = (subscriptionId: string) =>
   request<BillingMe>("POST", "/billing/confirm", { subscriptionId });
 export const cancelPlan = () => request<BillingMe>("POST", "/billing/cancel");
+export type BillingPayment = { id: string; time: string; amount: string; currency: string; status: string };
+/** What PayPal has actually charged. Every figure comes from PayPal, none is calculated here. */
+export const getPayments = () =>
+  request<{ reference: string | null; tier?: string; payments: BillingPayment[] }>("GET", "/billing/payments");
+export const downloadPaymentsCsv = () => downloadCsv("/billing/payments.csv");
 
 // ----- React Query keys -----
 // Per-client data is always keyed by clientId so caches never mix clients.
@@ -493,6 +498,7 @@ export const queryKeys = {
   clients: ["clients"] as const,
   joinCode: ["join-code"] as const,
   billing: ["billing"] as const,
+  billingPayments: ["billing", "payments"] as const,
   assignments: (clientId: string) => ["clients", clientId, "assignments"] as const,
   chat: (clientId: string) => ["clients", clientId, "chat"] as const,
   progress: (clientId: string) => ["clients", clientId, "progress"] as const,

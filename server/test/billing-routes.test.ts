@@ -15,14 +15,15 @@ const { prisma } = vi.hoisted(() => ({
 }));
 vi.mock("../src/db.js", () => ({ prisma }));
 
-const { getSubscription, cancelSubscription, verifyWebhook } = vi.hoisted(() => ({
+const { getSubscription, cancelSubscription, verifyWebhook, listTransactions } = vi.hoisted(() => ({
   getSubscription: vi.fn(),
   cancelSubscription: vi.fn(),
   verifyWebhook: vi.fn(),
+  listTransactions: vi.fn(),
 }));
 vi.mock("../src/billing/paypal.js", async (orig) => {
   const actual = await orig<typeof import("../src/billing/paypal.js")>();
-  return { ...actual, getSubscription, cancelSubscription, verifyWebhook };
+  return { ...actual, getSubscription, cancelSubscription, verifyWebhook, listTransactions };
 });
 
 const { app } = await import("../src/app.js");
@@ -219,5 +220,47 @@ describe("the paid-through date", () => {
     getSubscription.mockResolvedValue({ id: "I-REAL", status: "ACTIVE", planId: SOLO, nextBillingAt: next, customId: TEST_COACH_ID });
     await send({ event_type: "BILLING.SUBSCRIPTION.ACTIVATED", resource: { id: "I-REAL" } });
     expect(prisma.coach.update.mock.calls[0][0].data.periodEndsAt).toEqual(next);
+  });
+});
+
+describe("payments, as proof", () => {
+  const paid = [
+    { id: "TX-1", time: "2026-11-14T08:41:46Z", amount: "39.00", currency: "USD", status: "COMPLETED" },
+    { id: "TX-2", time: "2026-12-14T08:41:46Z", amount: "39.00", currency: "USD", status: "COMPLETED" },
+  ];
+
+  it("reports what PayPal charged, with the reference a coach can quote", async () => {
+    prisma.coach.findUnique.mockResolvedValue({ paypalSubscriptionId: "I-REAL", planTier: "Solo" });
+    listTransactions.mockResolvedValue(paid);
+    const res = await request(app).get("/api/billing/payments");
+    expect(res.status).toBe(200);
+    expect(res.body.reference).toBe("I-REAL");
+    expect(res.body.payments).toHaveLength(2);
+    expect(res.body.payments[0]).toMatchObject({ id: "TX-1", amount: "39.00", status: "COMPLETED" });
+  });
+
+  it("says nothing rather than inventing a payment when there is no subscription", async () => {
+    prisma.coach.findUnique.mockResolvedValue({ paypalSubscriptionId: null, planTier: "Solo" });
+    const res = await request(app).get("/api/billing/payments");
+    expect(res.body).toEqual({ reference: null, payments: [] });
+  });
+
+  it("downloads the same payments as a CSV an accountant can read", async () => {
+    prisma.coach.findUnique.mockResolvedValue({
+      paypalSubscriptionId: "I-REAL",
+      planTier: "Solo",
+      name: "Alex",
+      email: "alex@example.com",
+    });
+    listTransactions.mockResolvedValue(paid);
+    const res = await request(app).get("/api/billing/payments.csv");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-disposition"]).toContain("repsy-payments.csv");
+    const lines = res.text.trim().split("\r\n");
+    expect(lines[0]).toContain('"PayPal transaction"');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain('"2026-11-14"');
+    expect(lines[1]).toContain('"TX-1"');
+    expect(lines[1]).toContain('"alex@example.com"');
   });
 });

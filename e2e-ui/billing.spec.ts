@@ -31,6 +31,15 @@ async function mockApp(page: Page, state: Billing) {
   // and the specific billing route is registered after it.
   await page.route("**/api/**", (r) => r.fulfill({ json: [] }));
   await page.route("**/api/billing/me", (r) => r.fulfill({ json: state }));
+  await page.route("**/api/billing/payments", (r) =>
+    r.fulfill({
+      json: {
+        reference: "I-TESTREF123",
+        tier: "Solo",
+        payments: [{ id: "TX-ABC123", time: "2026-11-14T08:41:46Z", amount: "39.00", currency: "USD", status: "COMPLETED" }],
+      },
+    }),
+  );
   // The PayPal SDK must never be fetched for real in a test.
   await page.route("https://www.paypal.com/**", (r) => r.fulfill({ status: 200, body: "" }));
 }
@@ -146,4 +155,18 @@ test("paying says so properly, with what was charged and when it renews", async 
   await welcome.getByRole("button", { name: "Back to coaching" }).click();
   await expect(page.getByTestId("billing-welcome")).toHaveCount(0);
   await expect(page.getByTestId("billing-status")).toContainText("You are on Solo.");
+});
+
+test("the payments a coach can show someone, with the ids that prove them", async ({ page }) => {
+  await mockApp(page, billing({ status: "active", needsSubscription: false, message: null, daysLeft: null }));
+  await page.goto("/app/account");
+  const payments = page.getByTestId("billing-payments");
+  await expect(payments).toContainText("I-TESTREF123");
+  await expect(payments).toContainText("$39.00");
+  // The date follows the coach's locale ("14 November 2026" here, "November 14, 2026" in a US
+  // browser), so the test must not pin one of them.
+  await expect(payments).toContainText(/(14 November 2026|November 14, 2026)/);
+  await expect(payments).toContainText("Paid");
+  await expect(payments).toContainText("TX-ABC123");
+  await expect(payments.getByRole("button", { name: "Download payments (CSV)" })).toBeEnabled();
 });
