@@ -126,10 +126,20 @@ export async function listTransactions(subscriptionId: string): Promise<PaypalTr
   });
 }
 
-/** Ends a subscription at PayPal. The webhook then confirms it; this does not write to the db. */
+/**
+ * Ends a subscription at PayPal. The webhook then confirms it; this does not write to the db.
+ *
+ * Idempotent on purpose. A cancel can succeed at PayPal and still look like a failure here - a
+ * timeout, a dropped connection, a retry on an already-cancelled subscription. Reporting "could not
+ * cancel" for a subscription that IS cancelled is the worst answer we can give: the coach clicks
+ * again, or believes they are still being charged. So on any failure we ask PayPal what the state
+ * actually is, and treat an already-ended subscription as success.
+ */
 export async function cancelSubscription(id: string, reason: string): Promise<boolean> {
   const res = await call("POST", `/v1/billing/subscriptions/${encodeURIComponent(id)}/cancel`, { reason });
-  return res.ok || res.status === 204;
+  if (res.ok || res.status === 204) return true;
+  const now = await getSubscription(id);
+  return now !== null && (now.status === "CANCELLED" || now.status === "EXPIRED");
 }
 
 /**

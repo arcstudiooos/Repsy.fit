@@ -149,6 +149,16 @@ describe("POST /api/billing/cancel", () => {
     expect(res.body.message).toContain("ends in 12 days");
   });
 
+  it("treats an already-cancelled subscription as cancelled, not as a failure", async () => {
+    // The real case: the cancel reached PayPal, the reply did not reach us. Saying "could not
+    // cancel" about a subscription that IS cancelled is the worst answer we can give.
+    vi.doUnmock("../src/billing/paypal.js");
+    prisma.coach.findUnique.mockResolvedValue(row({ planTier: "Pro5", paypalSubscriptionId: "I-REAL", billingStatus: "active", periodEndsAt: new Date(Date.now() + 10 * DAY) }));
+    cancelSubscription.mockResolvedValue(true);
+    const res = await request(app).post("/api/billing/cancel").send({});
+    expect(res.status).toBe(200);
+  });
+
   it("says so when PayPal refuses, instead of pretending", async () => {
     prisma.coach.findUnique.mockResolvedValue(row({ paypalSubscriptionId: "I-REAL" }));
     cancelSubscription.mockResolvedValue(false);

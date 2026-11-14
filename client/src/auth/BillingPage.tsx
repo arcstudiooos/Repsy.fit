@@ -21,12 +21,16 @@ import {
   type PlanOption,
 } from "../api";
 import { LoadingState } from "../components/States";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 /** "14 December 2026" - the date a coach will recognise on their statement. */
 const longDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 
 const clientWord = (n: number) => `${n} ${n === 1 ? "client" : "clients"}`;
+
+/** Typed to confirm a cancellation. Short and obvious: this is a speed bump, not a puzzle. */
+const CONFIRM_WORD = "CANCEL";
 
 type PayPalButtons = {
   Buttons: (config: Record<string, unknown>) => { render: (el: HTMLElement) => Promise<void> };
@@ -214,6 +218,9 @@ export default function BillingPage() {
   const qc = useQueryClient();
   const [chosen, setChosen] = useState<string | null>(null);
   const [justSubscribed, setJustSubscribed] = useState(false);
+  // Cancelling is deliberate, not a stray click: a modal, and the word typed out.
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [typed, setTyped] = useState("");
   const billingQuery = useQuery({ queryKey: queryKeys.billing, queryFn: getBilling });
 
   const confirm = useMutation({
@@ -227,7 +234,11 @@ export default function BillingPage() {
   });
   const cancel = useMutation({
     mutationFn: cancelPlan,
-    onSuccess: (fresh) => qc.setQueryData(queryKeys.billing, fresh),
+    onSuccess: (fresh) => {
+      qc.setQueryData(queryKeys.billing, fresh);
+      setConfirmingCancel(false);
+      setTyped("");
+    },
   });
 
   if (billingQuery.isPending) return <LoadingState />;
@@ -343,10 +354,51 @@ export default function BillingPage() {
             type="button"
             className="btn btn-secondary min-h-10 justify-self-start"
             disabled={cancel.isPending}
-            onClick={() => cancel.mutate()}
+            onClick={() => setConfirmingCancel(true)}
           >
-            {cancel.isPending ? "Cancelling..." : "Cancel my plan"}
+            Cancel my plan
           </button>
+          {confirmingCancel ? (
+            <ConfirmDialog
+              title="Cancel your plan?"
+              confirmLabel="Cancel my plan"
+              pendingLabel="Cancelling..."
+              pending={cancel.isPending}
+              onCancel={() => {
+                if (cancel.isPending) return;
+                setConfirmingCancel(false);
+                setTyped("");
+              }}
+              onConfirm={() => typed.trim().toUpperCase() === CONFIRM_WORD && cancel.mutate()}
+            >
+              <div className="grid gap-3">
+                <p className="text-sm">
+                  You stay on the {clientWord(billing.clientLimit)} plan until{" "}
+                  {billing.renewsOn ? longDate(billing.renewsOn) : "the end of the period you have paid for"}, then go
+                  back to the free plan.
+                </p>
+                <p className="text-sm">
+                  Nothing is deleted. You keep every client, plan and message you have - the free plan just covers{" "}
+                  {billing.catalogue[0].clients} new clients after that, and your clients are never told.
+                </p>
+                <label className="grid gap-1 text-sm">
+                  <span>
+                    Type <span className="font-mono font-semibold text-text">{CONFIRM_WORD}</span> to confirm
+                  </span>
+                  <input
+                    className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+                    value={typed}
+                    onChange={(e) => setTyped(e.target.value)}
+                    autoComplete="off"
+                    aria-label={`Type ${CONFIRM_WORD} to confirm`}
+                  />
+                </label>
+                {typed.trim() !== "" && typed.trim().toUpperCase() !== CONFIRM_WORD ? (
+                  <p className="text-sm text-dim">That does not match {CONFIRM_WORD}.</p>
+                ) : null}
+              </div>
+            </ConfirmDialog>
+          ) : null}
           {cancel.isError ? (
             <p role="alert" className="text-sm font-semibold text-amber-text">
               {(cancel.error as Error).message}

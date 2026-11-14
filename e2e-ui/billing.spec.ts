@@ -112,11 +112,35 @@ test("a failed payment keeps the paid limit and asks for a fix", async ({ page }
   await expect(banner).toContainText("stay on 10 clients");
 });
 
-test("cancelling promises the clients are kept", async ({ page }) => {
+test("cancelling asks first, needs the word typed, and promises the clients are kept", async ({ page }) => {
   await mockApp(page, billing({ status: "active", tier: "Pro10", isFree: false, price: 25, clientLimit: 10, clientsUsed: 4 }));
+  let cancelCalls = 0;
+  await page.route("**/api/billing/cancel", (r) => {
+    cancelCalls += 1;
+    return r.fulfill({ json: billing({ status: "active", tier: "Pro10", isFree: false, price: 25, clientLimit: 10, clientsUsed: 4, message: "Your plan is cancelled and ends in 12 days." }) });
+  });
   await page.goto("/app/account");
-  await expect(page.getByText("You keep every client you have")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cancel my plan" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel my plan" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Cancel your plan?");
+  await expect(dialog).toContainText("Nothing is deleted");
+  await expect(dialog).toContainText("your clients are never told");
+
+  // The confirm button does nothing until the word matches: a stray click cannot cancel a plan.
+  await dialog.getByRole("button", { name: "Cancel my plan" }).click();
+  expect(cancelCalls).toBe(0);
+
+  await dialog.getByLabel("Type CANCEL to confirm").fill("cancell");
+  await expect(dialog).toContainText("That does not match CANCEL");
+  await dialog.getByRole("button", { name: "Cancel my plan" }).click();
+  expect(cancelCalls).toBe(0);
+
+  // Lower case is accepted: this is a speed bump, not a spelling test.
+  await dialog.getByLabel("Type CANCEL to confirm").fill("cancel");
+  await dialog.getByRole("button", { name: "Cancel my plan" }).click();
+  await expect.poll(() => cancelCalls).toBe(1);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("when payments are not configured, nothing threatens the coach", async ({ page }) => {
