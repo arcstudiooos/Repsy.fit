@@ -39,6 +39,8 @@ export type BillingState = {
   needsSubscription: boolean;
   /** Plain words for the banner, or null when nothing needs saying. */
   message: string | null;
+  /** The date the plan next renews (or ends, once cancelled), ISO. Null when neither applies. */
+  renewsOn: string | null;
 };
 
 const DAY_MS = 86_400_000;
@@ -54,7 +56,15 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
   // Paid up: the period they bought has not ended yet (a cancellation still runs to the end).
   const paidThrough = coach.periodEndsAt !== null && coach.periodEndsAt > now;
   if (coach.billingStatus === "active" && paidThrough) {
-    return { status: "active", tier, canWrite: true, daysLeft: null, needsSubscription: false, message: null };
+    return {
+      status: "active",
+      tier,
+      canWrite: true,
+      daysLeft: null,
+      needsSubscription: false,
+      message: null,
+      renewsOn: (coach.periodEndsAt as Date).toISOString(),
+    };
   }
 
   // A cancelled subscription keeps working until the paid period runs out.
@@ -67,6 +77,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
       daysLeft: left,
       needsSubscription: true,
       message: `Your plan is cancelled and ends in ${left} ${left === 1 ? "day" : "days"}. You keep everything until then.`,
+      renewsOn: (coach.periodEndsAt as Date).toISOString(),
     };
   }
 
@@ -82,6 +93,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
         needsSubscription: false,
         // The card already says the payment failed; repeating it here printed the sentence twice.
         message: `Please update it within ${left} ${left === 1 ? "day" : "days"} to keep adding plans.`,
+        renewsOn: null,
       };
     }
     return {
@@ -91,6 +103,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
       daysLeft: 0,
       needsSubscription: false,
       message: "Your last payment did not go through, so new plans are paused. Everything you already have stays here, and your clients are unaffected.",
+      renewsOn: null,
     };
   }
 
@@ -104,6 +117,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
       daysLeft: left,
       needsSubscription: true,
       message: `${left} ${left === 1 ? "day" : "days"} left of your free trial.`,
+      renewsOn: coach.trialEndsAt.toISOString(),
     };
   }
 
@@ -117,6 +131,7 @@ export function billingState(coach: BillingFields, now: Date = new Date()): Bill
     message: subscribed
       ? "Your plan has ended, so new plans are paused. Everything you already have stays here, and your clients are unaffected."
       : "Your free trial has ended, so new plans are paused. Everything you already have stays here, and your clients are unaffected.",
+    renewsOn: null,
   };
 }
 

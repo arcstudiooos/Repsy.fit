@@ -25,9 +25,12 @@ describe("billingState", () => {
     expect(billingState(coach({ trialEndsAt: days(1) }), NOW).message).toBe("1 day left of your free trial.");
   });
 
-  it("a paid subscription says nothing and can write", () => {
-    const s = billingState(coach({ billingStatus: "active", periodEndsAt: days(20), paypalSubscriptionId: "I-1", planTier: "Pro" }), NOW);
+  it("a paid subscription says nothing, can write, and reports when it renews", () => {
+    const renews = days(20);
+    const s = billingState(coach({ billingStatus: "active", periodEndsAt: renews, paypalSubscriptionId: "I-1", planTier: "Pro" }), NOW);
     expect(s).toMatchObject({ status: "active", tier: "Pro", canWrite: true, needsSubscription: false, message: null });
+    // The screen shown right after paying tells the coach when it happens again.
+    expect(s.renewsOn).toBe(renews.toISOString());
   });
 
   it("an expired trial is read-only, and says the clients are unaffected", () => {

@@ -95,3 +95,55 @@ test("when payments are not configured, nothing threatens the coach", async ({ p
   await expect(page.getByText("Payments are not switched on yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: /Choose (Solo|Pro|Studio)/ })).toHaveCount(0);
 });
+
+test("paying says so properly, with what was charged and when it renews", async ({ page }) => {
+  // A stand-in for PayPal's SDK: the real one is third-party and must never be fetched in a test.
+  // It renders a button that calls onApprove, which is exactly the contract our code depends on -
+  // so this breaks if we ever use the SDK wrongly.
+  await page.addInitScript(() => {
+    (window as unknown as { paypal: unknown }).paypal = {
+      Buttons: (config: { createSubscription: (d: unknown, a: unknown) => Promise<string>; onApprove: (d: { subscriptionID: string }) => void }) => ({
+        render: async (el: HTMLElement) => {
+          const b = document.createElement("button");
+          b.textContent = "Pay with PayPal (test)";
+          b.onclick = async () => {
+            await config.createSubscription({}, { subscription: { create: async () => "I-TEST" } });
+            config.onApprove({ subscriptionID: "I-TEST" });
+          };
+          el.appendChild(b);
+        },
+      }),
+    };
+  });
+  await mockApp(page, billing());
+  const renews = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  await page.route("**/api/billing/confirm", (r) =>
+    r.fulfill({
+      json: {
+        status: "active",
+        tier: "Solo",
+        canWrite: true,
+        daysLeft: null,
+        needsSubscription: false,
+        message: null,
+        renewsOn: renews,
+        paypal: null,
+      },
+    }),
+  );
+
+  await page.goto("/app/account");
+  await page.getByRole("button", { name: "Choose Solo" }).click();
+  await page.getByRole("button", { name: "Pay with PayPal (test)" }).click();
+
+  const welcome = page.getByTestId("billing-welcome");
+  await expect(welcome).toContainText("You're on Solo. Welcome aboard.");
+  await expect(welcome).toContainText("$39 went through");
+  await expect(welcome).toContainText("renews on");
+  await expect(welcome).toContainText("cancel any time without losing a thing");
+
+  // Dismissing it returns to the ordinary view, and it does not come back on its own.
+  await welcome.getByRole("button", { name: "Back to coaching" }).click();
+  await expect(page.getByTestId("billing-welcome")).toHaveCount(0);
+  await expect(page.getByTestId("billing-status")).toContainText("You are on Solo.");
+});

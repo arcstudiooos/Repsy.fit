@@ -9,6 +9,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelPlan, confirmSubscription, getBilling, queryKeys, type BillingMe } from "../api";
 import { LoadingState } from "../components/States";
 
+/** "14 December 2026" - the date a coach will actually recognise on their statement. */
+const longDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+
 const TIERS = [
   { tier: "Solo", price: 39, clients: "Up to 30 clients" },
   { tier: "Pro", price: 89, clients: "Up to 100 clients" },
@@ -118,9 +122,37 @@ function StatusCard({ billing }: { billing: BillingMe }) {
   );
 }
 
+/**
+ * The moment after paying. A coach has just handed over money and the old screen simply redrew
+ * itself - so it felt like nothing had happened. This says it plainly, with the three facts that
+ * make it feel real: what they are on, what was charged, and when it happens again.
+ */
+function JustSubscribed({ billing, onDone }: { billing: BillingMe; onDone: () => void }) {
+  const price = TIERS.find((t) => t.tier === billing.tier)?.price;
+  return (
+    <div className="rounded-xl border border-accent bg-surface2 p-5" data-testid="billing-welcome" role="status">
+      <h3 className="card-title">You're on {billing.tier}. Welcome aboard.</h3>
+      <p className="mt-2 text-sm text-dim">
+        {price ? `Your payment of $${price} went through` : "Your payment went through"}
+        {billing.renewsOn ? `, and your plan renews on ${longDate(billing.renewsOn)}.` : "."} PayPal emails you a
+        receipt.
+      </p>
+      <p className="mt-2 text-sm text-dim">
+        Every feature is yours now - AI plans, the Manual Planner, templates, check-ins and progress charts - and you
+        can cancel any time without losing a thing.
+      </p>
+      <button type="button" className="btn btn-primary mt-4 min-h-10" onClick={onDone}>
+        Back to coaching
+      </button>
+    </div>
+  );
+}
+
 export default function BillingPage() {
   const qc = useQueryClient();
   const [chosen, setChosen] = useState<string | null>(null);
+  // Shown once, right after paying - not on every later visit to this page.
+  const [justSubscribed, setJustSubscribed] = useState(false);
   const billingQuery = useQuery({ queryKey: queryKeys.billing, queryFn: getBilling });
 
   const confirm = useMutation({
@@ -128,6 +160,7 @@ export default function BillingPage() {
     onSuccess: (fresh) => {
       qc.setQueryData(queryKeys.billing, fresh);
       setChosen(null);
+      setJustSubscribed(true);
     },
   });
   const cancel = useMutation({
@@ -149,6 +182,10 @@ export default function BillingPage() {
       </div>
     );
   const billing = billingQuery.data;
+
+  if (justSubscribed && billing.status === "active") {
+    return <JustSubscribed billing={billing} onDone={() => setJustSubscribed(false)} />;
+  }
 
   return (
     <div className="grid gap-4">

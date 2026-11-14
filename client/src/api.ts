@@ -476,6 +476,8 @@ export type BillingMe = {
   daysLeft: number | null;
   needsSubscription: boolean;
   message: string | null;
+  /** When the plan next renews (or ends, once cancelled), ISO. Null when neither applies. */
+  renewsOn: string | null;
   paypal: { clientId: string; environment: "sandbox" | "live"; plans: Record<string, string | undefined> } | null;
 };
 export const getBilling = () => request<BillingMe>("GET", "/billing/me");
