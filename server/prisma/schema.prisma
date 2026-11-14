@@ -307,7 +307,10 @@ model Assignment {
   /// Prompt 80: meals from the coach's library attached to a Nutrition plan (the coach's own meals only).
   mealIds      String[]  @default([])
 
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Inspo W3: the structured form of this workout. EMPTY for every plan written before Nov 2026
+  /// and for AI/prose plans - `details` stays the source of truth there and is parsed on demand.
+  sections WorkoutSection[]
 
   @@index([clientId])
   @@index([coachId])
@@ -349,7 +352,10 @@ model ChatMessage {
   content   String
   createdAt DateTime @default(now())
 
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Inspo W3: the structured form of this workout. EMPTY for every plan written before Nov 2026
+  /// and for AI/prose plans - `details` stays the source of truth there and is parsed on demand.
+  sections WorkoutSection[]
 
   @@index([clientId])
   @@index([coachId])
@@ -373,7 +379,10 @@ model ProgressLog {
   enteredBy    String   @default("coach")
   createdAt    DateTime @default(now())
 
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Inspo W3: the structured form of this workout. EMPTY for every plan written before Nov 2026
+  /// and for AI/prose plans - `details` stays the source of truth there and is parsed on demand.
+  sections WorkoutSection[]
 
   @@index([clientId])
   @@index([coachId])
@@ -488,6 +497,77 @@ model WorkoutTemplate {
   @@map("workout_templates")
 }
 
+/// One block of a structured workout (Inspo W3/W5, Nov 2026).
+///
+/// A workout is an ordered list of sections; a section repeats `sets` times and holds ordered
+/// exercises. `protocol` is how the block is run (Regular, Superset, AMRAP, ...). Sections exist
+/// only for workouts authored in the structured builder: see Assignment.sections.
+model WorkoutSection {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  /// 0-based position in the workout.
+  order        Int
+  /// One of PROTOCOLS (src/workouts/structure.ts): Warm up, Regular, Superset, AMRAP, ...
+  protocol     String     @default("Regular")
+  /// How many times the whole section repeats ("3x Sets" in the UI).
+  sets         Int        @default(1)
+  /// Rest after the section, in seconds.
+  restSec      Int        @default(0)
+  /// A fixed window for time-boxed protocols (AMRAP/EMOM/TABATA). NULL for the rest.
+  durationSec  Int?
+  notes        String     @default("")
+
+  exercises     WorkoutExercise[]
+  chatMessage   ChatMessage?      @relation(fields: [chatMessageId], references: [id])
+  chatMessageId String?
+  progressLog   ProgressLog?      @relation(fields: [progressLogId], references: [id])
+  progressLogId String?
+
+  @@unique([assignmentId, order])
+  @@index([assignmentId])
+  @@map("workout_sections")
+}
+
+/// One exercise inside a section (Inspo W3/W6/W7/W8, Nov 2026).
+///
+/// Per-set numbers are ARRAYS, which is what makes "12, 12, 10 Reps" a first-class value instead of
+/// a string: repsPerSet [12, 12, 10] is three sets. A third table per set would buy nothing.
+/// `name` is denormalised on purpose - deleting a library exercise must never blank a workout the
+/// coach already wrote (`exerciseId` goes NULL, the name stays).
+model WorkoutExercise {
+  id           String         @id @default(cuid())
+  sectionId    String
+  section      WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  /// 0-based position in the section.
+  order        Int
+  /// The catalogue row this came from, if any. NULL once that row is deleted, or for a free-typed move.
+  exerciseId   String?
+  exercise     Exercise?      @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+  /// Always written, even when exerciseId is set: the workout must survive the library.
+  name         String
+  /// One entry per set, e.g. [12, 12, 10]. Empty for a purely timed or distance move.
+  repsPerSet   Int[]          @default([])
+  /// One entry per set, e.g. ["60 kg", "60 kg", "65 kg"]. Empty when no load is prescribed.
+  loadPerSet   String[]       @default([])
+  /// A timed move ("40 s" per set) instead of reps.
+  durationSec  Int?
+  /// A distance move, in metres.
+  distanceM    Int?
+  /// Target effort, 1-10, one decimal allowed.
+  rpe          Float?
+  /// Rest between sets of THIS exercise, in seconds.
+  restSec      Int            @default(0)
+  notes        String         @default("")
+  /// Inspo W8: which metrics the CLIENT must log back. Subset of RECORD_FIELDS; empty = just a tick.
+  recordFields String[]       @default([])
+
+  @@unique([sectionId, order])
+  @@index([sectionId])
+  @@index([exerciseId])
+  @@map("workout_exercises")
+}
+
 /// One movement in the exercise catalogue (Inspo W1, Nov 2026).
 ///
 /// `coachId` NULL means a Repsy stock exercise: seeded by migration, visible to every coach, and
@@ -508,6 +588,9 @@ model Exercise {
   /// How to perform it, in the coach's words. Shown in the exercise detail.
   instructions String   @default("")
   createdAt    DateTime @default(now())
+
+  /// Where this movement is used in structured workouts (the row goes NULL, never the name).
+  usedIn WorkoutExercise[]
 
   /// A coach cannot have two exercises with the same name; stock names are unique among stock.
   @@unique([coachId, name])

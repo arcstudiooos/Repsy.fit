@@ -4,6 +4,13 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
+import {
+  StructureSchema,
+  estimateSeconds,
+  parseDetails,
+  renderDetails,
+  type SectionInput,
+} from "../workouts/structure.js";
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 export const ASSIGNMENT_SOURCES = ["ai", "manual"] as const;
@@ -189,5 +196,145 @@ assignmentsRouter.delete(
     if (!assignment) return;
     await prisma.assignment.delete({ where: { id: assignment.id } });
     res.status(204).end();
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Structured workouts (Inspo W3, Nov 2026)
+// ---------------------------------------------------------------------------
+
+/** Rows -> the SectionInput shape the schema and renderer speak. */
+const toSectionInput = (s: {
+  protocol: string;
+  sets: number;
+  restSec: number;
+  durationSec: number | null;
+  notes: string;
+  exercises: {
+    exerciseId: string | null;
+    name: string;
+    repsPerSet: number[];
+    loadPerSet: string[];
+    durationSec: number | null;
+    distanceM: number | null;
+    rpe: number | null;
+    restSec: number;
+    notes: string;
+    recordFields: string[];
+  }[];
+}): SectionInput =>
+  ({
+    protocol: s.protocol,
+    sets: s.sets,
+    restSec: s.restSec,
+    durationSec: s.durationSec,
+    notes: s.notes,
+    exercises: s.exercises.map((e) => ({ ...e })),
+  }) as SectionInput;
+
+// GET /api/clients/:clientId/assignments/:assignmentId/structure
+//
+// Always answers with a structure. When the assignment has no stored sections - every plan written
+// before Nov 2026, and every AI/prose plan - `details` is parsed on demand instead, so the
+// structured view works for the whole back catalogue. `stored` says which happened.
+assignmentsRouter.get(
+  "/:assignmentId/structure",
+  asyncHandler(async (req, res) => {
+    const assignment = await findClientAssignment(req, res);
+    if (!assignment) return;
+    const rows = await prisma.workoutSection.findMany({
+      where: { assignmentId: assignment.id },
+      orderBy: { order: "asc" },
+      include: { exercises: { orderBy: { order: "asc" } } },
+    });
+    const stored = rows.length > 0;
+    const sections = stored ? rows.map(toSectionInput) : parseDetails(assignment.details);
+    res.json({ stored, sections, estimatedSeconds: estimateSeconds(sections) });
+  }),
+);
+
+// PUT /api/clients/:clientId/assignments/:assignmentId/structure
+//
+// Replaces the structure wholesale and REGENERATES `details` from it, so every older reader (the
+// client app checklist, exports, the AI) keeps seeing a plan it understands. Sending an empty
+// section list clears the structure and leaves `details` alone - `details` goes back to being the
+// source of truth for that assignment.
+assignmentsRouter.put(
+  "/:assignmentId/structure",
+  asyncHandler(async (req, res) => {
+    const assignment = await findClientAssignment(req, res);
+    if (!assignment) return;
+    const parsed = StructureSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      // Not validationMessage(): its "sections.0.exercises.0.name:" prefix is meaningless to a
+      // coach. Every message in StructureSchema is already a whole sentence, so send just that,
+      // naming the section when there is more than one to look at.
+      const issue = parsed.error.issues[0];
+      const sectionNo = typeof issue.path[1] === "number" ? issue.path[1] + 1 : null;
+      const where = sectionNo && (parsed.error.issues.length > 1 || sectionNo > 1) ? ` (section ${sectionNo})` : "";
+      res.status(400).json({ error: `${issue.message}${where}` });
+      return;
+    }
+    const { sections } = parsed.data;
+
+    // Any exerciseId must be one this coach can actually see: their own, or Repsy stock. An id that
+    // is not is kept as a plain name rather than rejected, so one stale id never fails the save.
+    const ids = [...new Set(sections.flatMap((s) => s.exercises.map((e) => e.exerciseId).filter((x): x is string => !!x)))];
+    const allowed = new Set(
+      ids.length
+        ? (
+            await prisma.exercise.findMany({
+              where: { id: { in: ids }, OR: [{ coachId: assignment.coachId }, { coachId: null }] },
+              select: { id: true },
+            })
+          ).map((e) => e.id)
+        : [],
+    );
+
+    const details = renderDetails(sections);
+    await prisma.$transaction(async (tx) => {
+      // Replace rather than diff: a workout is small, and this keeps `order` contiguous for free.
+      await tx.workoutSection.deleteMany({ where: { assignmentId: assignment.id } });
+      for (const [order, section] of sections.entries()) {
+        await tx.workoutSection.create({
+          data: {
+            assignmentId: assignment.id,
+            order,
+            protocol: section.protocol,
+            sets: section.sets,
+            restSec: section.restSec,
+            durationSec: section.durationSec ?? null,
+            notes: section.notes,
+            exercises: {
+              create: section.exercises.map((e, exOrder) => ({
+                order: exOrder,
+                exerciseId: e.exerciseId && allowed.has(e.exerciseId) ? e.exerciseId : null,
+                name: e.name,
+                repsPerSet: e.repsPerSet,
+                loadPerSet: e.loadPerSet,
+                durationSec: e.durationSec ?? null,
+                distanceM: e.distanceM ?? null,
+                rpe: e.rpe ?? null,
+                restSec: e.restSec,
+                notes: e.notes,
+                recordFields: e.recordFields,
+              })),
+            },
+          },
+        });
+      }
+      // Only overwrite `details` when there is something to render: clearing the structure must not
+      // wipe the words a coach typed.
+      if (sections.length) {
+        await tx.assignment.update({ where: { id: assignment.id }, data: { details } });
+      }
+    });
+
+    res.json({
+      stored: sections.length > 0,
+      sections,
+      estimatedSeconds: estimateSeconds(sections),
+      details: sections.length ? details : assignment.details,
+    });
   }),
 );

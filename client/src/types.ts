@@ -516,6 +516,52 @@ export const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
 /** A coach's reusable meal (Prompt 60). Coach-level. Every value is typed in by the coach. */
+/** How a section is run (Inspo W5). Mirrors PROTOCOLS in server src/workouts/structure.ts. */
+export const PROTOCOLS = ["Warm up", "Regular", "Superset", "Circuit", "AMRAP", "EMOM", "TABATA", "Cool-down"] as const;
+export type Protocol = (typeof PROTOCOLS)[number];
+/** Protocols that are a fixed time box rather than a number of sets. */
+export const TIMED_PROTOCOLS: readonly Protocol[] = ["AMRAP", "EMOM", "TABATA"];
+
+/** What the client can be asked to log back (Inspo W8). Mirrors RECORD_FIELDS on the server. */
+export const RECORD_FIELDS = ["reps", "weight", "duration", "distance", "calories"] as const;
+export type RecordField = (typeof RECORD_FIELDS)[number];
+
+/** One exercise inside a section. Per-set numbers are arrays: repsPerSet [12,12,10] is three sets. */
+export interface WorkoutExerciseInput {
+  exerciseId?: string | null;
+  name: string;
+  repsPerSet: number[];
+  loadPerSet: string[];
+  durationSec?: number | null;
+  distanceM?: number | null;
+  rpe?: number | null;
+  restSec: number;
+  notes: string;
+  recordFields: RecordField[];
+}
+
+/** One block of a structured workout. */
+export interface WorkoutSectionInput {
+  protocol: Protocol;
+  sets: number;
+  restSec: number;
+  durationSec?: number | null;
+  notes: string;
+  exercises: WorkoutExerciseInput[];
+}
+
+/**
+ * A workout's structure. `stored` false means these sections were parsed from the plan's text on
+ * demand (a plan written before structure existed) - saving them makes the structure real.
+ */
+export interface WorkoutStructure {
+  stored: boolean;
+  sections: WorkoutSectionInput[];
+  estimatedSeconds: number;
+  /** Only on a save: the regenerated plan text. */
+  details?: string;
+}
+
 /** Equipment tags for the exercise library (Inspo W1). Mirrors EQUIPMENT in server routes/exercises.ts. */
 export const EQUIPMENT = [
   "Bodyweight",

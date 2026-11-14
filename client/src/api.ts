@@ -45,6 +45,8 @@ import type {
   NewDailyCheckIn,
   NewLead,
   NewExercise,
+  WorkoutSectionInput,
+  WorkoutStructure,
   NewMeal,
   NewMeasurement,
   NewPayment,
@@ -233,6 +235,14 @@ export const createTemplate = (input: NewWorkoutTemplate) => request<WorkoutTemp
 export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
+
+// ----- Structured workouts (Inspo W3) -----
+/** The workout's structure. Always answers: a legacy plan is parsed from its text on demand. */
+export const getStructure = (clientId: string, assignmentId: string) =>
+  request<WorkoutStructure>("GET", `/clients/${clientId}/assignments/${assignmentId}/structure`);
+/** Replace the structure. The server regenerates the plan text from it; [] clears it. */
+export const saveStructure = (clientId: string, assignmentId: string, sections: WorkoutSectionInput[]) =>
+  request<WorkoutStructure>("PUT", `/clients/${clientId}/assignments/${assignmentId}/structure`, { sections });
 
 // ----- Library: exercises (Inspo W1) -----
 /** Filters for the exercise library. Everything is optional; omitted means "no filter". */
@@ -560,6 +570,8 @@ export const queryKeys = {
   joinInfo: (code: string) => ["join", code] as const,
   businessPlans: ["business", "plans"] as const,
   exercises: (query: ExerciseQuery = {}) => ["exercises", query] as const,
+  structure: (clientId: string, assignmentId: string) =>
+    ["clients", clientId, "assignments", assignmentId, "structure"] as const,
   appointments: (weekStart: string) => ["business", "appointments", weekStart] as const,
   mySessions: ["client-account", "my-sessions"] as const,
   myStreaks: (date: string) => ["client-account", "my-streaks", date] as const,
