@@ -92,3 +92,19 @@ test("the home page's meta description fits in a search result", () => {
   expect(desc.length).toBeGreaterThan(70);
   expect(desc.length).toBeLessThanOrEqual(160);
 });
+
+test("robots.txt welcomes AI crawlers but never the private areas", () => {
+  // Owner's decision: a marketing site wants to be quotable. What is private stays closed to
+  // every crawler, named or not.
+  const robots = dist("robots.txt");
+  for (const ua of ["GPTBot", "ClaudeBot", "PerplexityBot", "OAI-SearchBot", "Google-Extended"]) {
+    expect(robots).toContain(`User-agent: ${ua}`);
+  }
+  const groups = robots.split(/\n\s*\n/).filter((g) => g.includes("User-agent:"));
+  expect(groups.length).toBeGreaterThanOrEqual(2);
+  for (const g of groups) {
+    expect(g).toContain("Disallow: /app");
+    expect(g).toContain("Disallow: /client/");
+    expect(g).toContain("Disallow: /join/");
+  }
+});

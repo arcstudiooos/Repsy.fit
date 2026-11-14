@@ -159,15 +159,44 @@ ${urls.map(([u, p]) => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod>
 </urlset>
 `,
 );
+// The same private areas are closed to every crawler, named or not.
+const privateAreas = `Disallow: /app
+Disallow: /client/
+Disallow: /join/
+Allow: /client/login`;
+
+// AI crawlers are named on purpose (owner's decision, Nov 2026): all of them are welcome, including
+// the training ones. This is a marketing site whose job is to be found, and being quotable in an AI
+// answer is distribution we cannot buy. Nothing here is private - what is private is listed above
+// and stays closed to all of them. Revisit only if the public pages ever carry something we would
+// mind seeing repeated.
+const aiAgents = [
+  "GPTBot", // OpenAI, training
+  "OAI-SearchBot", // OpenAI, search index
+  "ChatGPT-User", // OpenAI, fetched because a person asked
+  "ClaudeBot", // Anthropic, training
+  "Claude-SearchBot", // Anthropic, search index
+  "Claude-User", // Anthropic, fetched because a person asked
+  "PerplexityBot", // Perplexity, search index
+  "Perplexity-User", // Perplexity, fetched because a person asked
+  "Google-Extended", // Google's AI products (separate from Googlebot)
+  "Applebot-Extended", // Apple Intelligence
+  "Bingbot", // Bing, which also feeds Copilot
+  "DuckAssistBot",
+  "cohere-ai",
+  "Meta-ExternalAgent",
+];
+
 fs.writeFileSync(
   path.join(dist, "robots.txt"),
   `User-agent: *
 Allow: /
 # Private areas: the coach dashboard, the client app and one-time invite links.
-Disallow: /app
-Disallow: /client/
-Disallow: /join/
-Allow: /client/login
+${privateAreas}
+
+${aiAgents.map((ua) => `User-agent: ${ua}`).join("\n")}
+Allow: /
+${privateAreas}
 
 Sitemap: ${SITE}/sitemap.xml
 `,
