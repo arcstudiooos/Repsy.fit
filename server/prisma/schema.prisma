@@ -82,6 +82,7 @@ model Coach {
   exercises        Exercise[]
   forms            Form[]
   programs         Program[]
+  foods            Food[]
 
   @@map("coaches")
 }
@@ -505,6 +506,34 @@ model WorkoutTemplate {
 
   @@index([coachId])
   @@map("workout_templates")
+}
+
+/// One food, with the macros of ONE serving (Inspo N1, Nov 2026).
+///
+/// The atom a meal is built from. Same two-row-kinds rule as Exercise: `coachId` NULL = a Repsy
+/// stock food, shared and read-only; otherwise the coach's own. Numbers are PER SERVING, with the
+/// serving spelled out in words ("1 roti", "1 cup") and its weight in grams alongside - a coach
+/// thinks in rotis, and a gram figure alone is unusable at the counter.
+model Food {
+  id           String   @id @default(cuid())
+  coachId      String?
+  coach        Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  name         String
+  category     String
+  /// How the serving reads to a human: "1 roti", "1/2 cup", "100 g".
+  servingLabel String
+  /// What that serving weighs, for scaling and for a coach who weighs food.
+  servingG     Float
+  calories     Int
+  proteinG     Float
+  carbsG       Float
+  fatG         Float
+  fiberG       Float    @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([coachId])
+  @@index([category])
+  @@map("foods")
 }
 
 /// What the AI has cost, per coach per day (Nov 2026).

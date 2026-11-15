@@ -1,6 +1,8 @@
 // Meal library (Prompt 60), a section of the Library tab. The coach's own meals: search by name, filter by
 // meal type, add / edit / delete (with a confirm) and "Assign to client", which saves a Nutrition assignment.
-// Every number is typed in by the coach: no food database, barcode scan or automatic calculation.
+// The coach stays in control of every number: nothing is ever changed behind their back.
+// Since Nov 2026 a food catalogue (Inspo N1) can FILL the macro boxes on request - one tap, still
+// editable afterwards - but nothing recalculates on its own, and no barcode or remote lookup exists.
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAssignment, createMeal, deleteMeal, listClients, listMeals, queryKeys, updateMeal } from "../api";
@@ -8,6 +10,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import { localToday } from "../tabs/AiCoachTab";
 import { DIET_TYPES, MEAL_TYPES, type DietType, type Meal, type MealType, type NewMeal } from "../types";
+import { FoodPicker } from "./FoodPicker";
 
 const inputClass =
   "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
@@ -155,7 +158,7 @@ export function MealLibrary() {
                   )}
                 </div>
                 <p className="mt-2 font-mono text-sm text-text">{macroLine(m)}</p>
-                <p className="text-xs text-dim">Coach-entered values</p>
+                <p className="text-xs text-dim">Numbers you set</p>
                 {m.ingredients !== "" && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-text">
                     <span className="font-semibold">Ingredients: </span>
@@ -328,6 +331,8 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
   const [dietType, setDietType] = useState<DietType>(meal?.dietType ?? "Any");
   const [swapIds, setSwapIds] = useState<string[]>(meal?.swapIds ?? []);
   const [formError, setFormError] = useState<string | null>(null);
+  // Inspo N1: the food catalogue fills these boxes on request. It never recalculates on its own.
+  const [pickingFoods, setPickingFoods] = useState(false);
 
   const save = useMutation({
     mutationFn: (input: NewMeal) => (meal ? updateMeal(meal.id, input) : createMeal(input)),
@@ -414,7 +419,7 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
           </div>
         </div>
         <fieldset>
-          <legend className="mb-1 text-sm font-semibold text-text">Coach-entered values</legend>
+          <legend className="mb-1 text-sm font-semibold text-text">Numbers you set</legend>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {numberField("meal-calories", "Calories (kcal)", calories, setCalories, "1")}
             {numberField("meal-protein", "Protein (g)", proteinG, setProteinG, "any")}
@@ -484,6 +489,26 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
               </option>
             ))}
           </select>
+        </div>
+        <div className="sm:col-span-2">
+          {pickingFoods ? (
+            <FoodPicker
+              onClose={() => setPickingFoods(false)}
+              onUse={(total) => {
+                // Fills the boxes and gets out of the way. The coach can still change any of them.
+                setCalories(String(total.calories));
+                setProteinG(String(total.proteinG));
+                setCarbsG(String(total.carbsG));
+                setFatG(String(total.fatG));
+                setFiberG(total.fiberG ? String(total.fiberG) : "");
+                setPickingFoods(false);
+              }}
+            />
+          ) : (
+            <button type="button" className="btn btn-secondary min-h-11" onClick={() => setPickingFoods(true)}>
+              Build from foods
+            </button>
+          )}
         </div>
         {others.length > 0 && (
           <div className="sm:col-span-2">

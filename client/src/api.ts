@@ -47,7 +47,9 @@ import type {
   NewExercise,
   ClientSnapshot,
   CoachForm,
+  Food,
   IntakeState,
+  NewFood,
   NewProgram,
   Program,
   ProgramPreview,
@@ -247,6 +249,15 @@ export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/
 
 /** Inspo C8: has this client's intake been done? */
 export const getIntake = (clientId: string) => request<IntakeState>("GET", `/clients/${enc(clientId)}/intake`);
+
+// ----- Foods (Inspo N1) -----
+export const listFoods = (search = "", category = "") =>
+  request<Food[]>("GET", `/foods?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`);
+export const createFood = (input: NewFood) => request<Food>("POST", "/foods", input);
+export const updateFood = (id: string, input: NewFood) => request<Food>("PUT", `/foods/${id}`, input);
+export const deleteFood = (id: string) => request<void>("DELETE", `/foods/${id}`);
+/** Copy a stock food (or one of your own) so it can be edited. */
+export const copyFood = (id: string) => request<Food>("POST", `/foods/${id}/copy`);
 
 // ----- Programs (Inspo W10) -----
 export const listPrograms = () => request<Program[]>("GET", "/programs");
@@ -623,6 +634,7 @@ export const queryKeys = {
   forms: ["forms"] as const,
   intake: (clientId: string) => ["clients", clientId, "intake"] as const,
   programs: ["programs"] as const,
+  foods: (search: string, category: string) => ["foods", search, category] as const,
   program: (id: string) => ["programs", id] as const,
   form: (formId: string) => ["forms", formId] as const,
   submissions: (formId: string) => ["forms", formId, "submissions"] as const,

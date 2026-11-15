@@ -1614,3 +1614,45 @@ sends `""`), and clearing needs no lookup.
 `IntakeNudge` shows: a card while outstanding, a quiet one-line "filled in on DATE" once done, and
 **nothing** when no form is chosen or the lookup failed. A permanent banner is wallpaper, and
 wallpaper is ignored - that is why the done state is not a card.
+
+## The food catalogue (Inspo N1/N7, Nov 2026)
+
+`foods` table, 80 seeded. The atom a meal is built from. Same two-row-kinds rule as Exercise:
+`coachId` NULL = Repsy stock (shared, read-only, copy it to change it), otherwise the coach's own.
+Literal deterministic ids (`fd_roti_whole_wheat`), so a replay is a no-op.
+
+**India-first on purpose.** Roti, dal, idli, poha, paneer, chaas, sambar, rajma. A catalogue that
+opens with "1% Fat Milk" is useless to the coaches Repsy is for. All 80 were checked so their macros
+reconcile with their stated calories (protein x4 + carbs x4 + fat x9, within 25%) - a catalogue whose
+numbers contradict themselves is worse than none. They are published food values, rounded: a
+starting point a coach can copy and edit, not a claim of laboratory accuracy.
+
+**A serving is stored in WORDS and in GRAMS** (`servingLabel` "1 roti", `servingG` 40). A coach
+thinks in rotis; a bare gram figure is unusable at the counter, and a bare label cannot be scaled.
+
+`scaled()` is the ONLY place a quantity is applied, so a portion means the same thing everywhere.
+Calories round to whole numbers, macros to one decimal (nobody wants to read 23.400000000000002),
+and a silly quantity (0, negative, NaN, Infinity) yields zero rather than poisoning a meal total.
+
+### THE PROMISE THAT CHANGED - read before touching the meal form
+
+`MealLibrary` used to state: "Every number is typed in by the coach: nothing is fetched from a food
+database or calculated from the ingredients." A food catalogue contradicts that as written, so the
+promise was rewritten to what it actually guarantees: **the coach sets every number and nothing is
+changed behind their back.** The on-screen label went from "Coach-entered values" to "Numbers you
+set", and the three tests pinning the old wording were UPDATED, not deleted.
+
+The feature only stays compatible with that promise because it is a ONE-SHOT FILL: picking foods
+shows a running total, and a single "Use these numbers" button fills the macro boxes, which remain
+editable. Same pattern as the calories helper. **Do not turn this into a mode that recalculates as
+the coach types** - that removes the control the library guarantees, and a UI test asserts the boxes
+stay empty until the button is pressed.
+
+Search and category filter are server-side and the list is capped at 200: the picker is a search box,
+not a scroll of everything. A failed food list says "you can still type the numbers in yourself" and
+leaves the form working - the catalogue is a helper, never a dependency.
+
+`FOOD_CATEGORIES` and `scalePortion` are duplicated in the client for an instant picker and guarded
+by `foods-drift.test.ts`, which pins the rounding rules AS TEXT (the client cannot be eval'd here)
+plus a "guards the guard" assertion that the server really behaves that way. It was broken
+deliberately and seen to fail.

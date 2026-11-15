@@ -596,6 +596,46 @@ export interface FormSubmission {
   createdAt: string;
 }
 
+/**
+ * Inspo N1: the food categories. Mirrors FOOD_CATEGORIES in server routes/foods.ts (drift-tested).
+ * India-first order: a coach here reaches for grains and pulses before anything else.
+ */
+export const FOOD_CATEGORIES = [
+  "Grains",
+  "Pulses",
+  "Dairy and eggs",
+  "Meat and fish",
+  "Vegetables",
+  "Fruit",
+  "Nuts and fats",
+  "Supplements and drinks",
+  "Snacks and sweets",
+] as const;
+export type FoodCategory = (typeof FOOD_CATEGORIES)[number];
+
+/** Inspo N1: one food, with the macros of ONE serving. `stock` true = Repsy's, read-only. */
+export interface Food {
+  id: string;
+  name: string;
+  category: FoodCategory;
+  /** How the serving reads: "1 roti", "1 cup", "100 g". */
+  servingLabel: string;
+  servingG: number;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  fiberG: number;
+  stock: boolean;
+}
+export type NewFood = Omit<Food, "id" | "stock" | "fiberG"> & Partial<Pick<Food, "fiberG">>;
+
+/** Inspo N1/N7: a food and how much of it, while building up a meal. */
+export interface FoodPortion {
+  food: Food;
+  servings: number;
+}
+
 /** Inspo C8: what a new client gets automatically, set once in the coach's account. */
 export interface OnboardingSettings {
   welcomeMessage: string;

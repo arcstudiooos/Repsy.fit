@@ -97,7 +97,7 @@ async function openMeals(page: Page, initial: M[] = []) {
   return { calls };
 }
 
-test("lists meals as cards with macros labelled 'Coach-entered values'; search by name and filter by type", async ({ page }) => {
+test("lists meals as cards with macros labelled 'Numbers you set'; search by name and filter by type", async ({ page }) => {
   await openMeals(page, [
     meal("m1", "Oats & eggs", { steps: "Cook the oats." }),
     meal("m2", "Chicken bowl", { mealType: "Lunch", calories: 620, proteinG: 48, carbsG: 60, fatG: 18 }),
@@ -107,7 +107,9 @@ test("lists meals as cards with macros labelled 'Coach-entered values'; search b
   await expect(list.getByRole("heading", { level: 4 })).toHaveText(["Chicken bowl", "Oats & eggs", "Protein shake"]);
   await expect(list).toContainText("620 kcal · Protein 48g · Carbs 60g · Fat 18g");
   await expect(list).toContainText("450 kcal · Protein 30g · Carbs 45.5g · Fat 15g");
-  await expect(list.getByText("Coach-entered values")).toHaveCount(3);
+  // Renamed Nov 2026: the food catalogue can now fill the boxes, so "coach-entered" was no longer
+  // true as written. The guarantee it stands for - the coach sets every number - is unchanged.
+  await expect(list.getByText("Numbers you set")).toHaveCount(3);
 
   await page.getByLabel("Search meals").fill("OATS");
   await expect(list.getByRole("heading", { level: 4 })).toHaveText(["Oats & eggs"]);
@@ -130,7 +132,7 @@ test("creates a meal: checks the numbers, then saves exactly what the coach type
   const { calls } = await openMeals(page);
   await page.getByRole("button", { name: "New meal" }).click();
   const form = page.getByRole("form", { name: "New meal" });
-  await expect(form.getByText("Coach-entered values")).toBeVisible();
+  await expect(form.getByText("Numbers you set")).toBeVisible();
 
   await form.getByRole("button", { name: "Save meal" }).click();
   await expect(form.getByRole("alert")).toContainText("Give the meal a name.");

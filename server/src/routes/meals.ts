@@ -1,6 +1,8 @@
 // Meal library (Prompt 60) - see "API contract" in CLAUDE.md.
-// A coach's own reusable meals. Every number is typed in by the coach: nothing is fetched from a food
-// database or calculated from the ingredients. Coach-level data: not tied to a client, never shared.
+// A coach's own reusable meals. The coach stays in control of every number: nothing is ever changed
+// behind their back. Since Nov 2026 the food catalogue (Inspo N1, src/routes/foods.ts) can FILL the
+// macro boxes on request, but nothing recalculates on its own and no remote lookup exists.
+// Coach-level data: not tied to a client, never shared.
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../db.js";
