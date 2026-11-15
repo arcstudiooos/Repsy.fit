@@ -1656,3 +1656,84 @@ leaves the form working - the catalogue is a helper, never a dependency.
 by `foods-drift.test.ts`, which pins the rounding rules AS TEXT (the client cannot be eval'd here)
 plus a "guards the guard" assertion that the server really behaves that way. It was broken
 deliberately and seen to fail.
+
+## Goal dates and the pipeline count (Inspo C5/C6, Nov 2026)
+
+### The day a client is working towards
+
+`Client.goalDate` ("YYYY-MM-DD" or null) + `Client.goalEvent` (text). A plain date STRING, not a
+timestamp: a goal date is a day in the client's life, and storing it as an instant would let a
+timezone move it. Null = no date, which is what every client meant before this existed.
+
+**The countdown is the feature.** A stored date nobody sees is just another field; a coach writing
+next week's plan for someone whose wedding is in five weeks makes different decisions. Wording lives
+in `client/src/lib/goalDate.ts` and is unit-tested from the server suite (the browser fixture cannot
+easily vary "today", and a countdown wrong by a day is worse than none): "today" / "tomorrow" rather
+than "0 days" / "1 day", exact days under a fortnight, then weeks, then months, and a passed date
+says "15 days ago" instead of counting negatives. Junk dates return null, never "NaN days to go".
+
+Set via `PATCH /api/clients/:id/goal` - its own endpoint mirroring `/targets`, because there is no
+general client-edit route. **Clearing the date KEEPS the words**: a coach who mistypes the day has
+not changed what the client is training for. `""` and `null` both clear it.
+
+In the UI it is one quiet line above the snapshot cards that becomes an editor when clicked, and an
+unset date reads "Add a goal date" - an invitation, not missing data. No card and no banner: most
+clients have no goal date, and a permanent empty prompt on every client is clutter.
+
+### The pipeline count, and what was deliberately NOT built
+
+Spur.fit shows a four-tab pipeline: Active / Pending / Archive / Leads. **Repsy deliberately does
+not copy it.** The waiting list already sits directly below the Clients heading and leads live in
+Business, so a parallel tabbed list would be two surfaces showing the same rows - two places to look,
+two to maintain, and a coach unsure which is authoritative.
+
+What was genuinely missing was the COUNT. `PipelineCounts` prints "2 clients · 1 waiting to be
+approved", and the nudge appears ONLY when something is waiting, because a permanent "0 waiting" is
+noise a coach learns to ignore. A declined request is not counted: that is finished business, and
+counting it sends the coach looking for a task that does not exist.
+
+`e2e-ui/pipeline-counts.spec.ts` asserts the four-tab strip does NOT exist, so this decision lives in
+code rather than only in a commit message.
+
+## Backups and restores (Nov 2026)
+
+### What the host actually gives us, and what the Privacy Policy promises
+
+Render continuously backs up PAID Postgres databases for point-in-time recovery (PITR). Repsy's
+database is `basic-256mb` (paid), so PITR applies. **The window is 3 days on a Hobby workspace and 7
+days on Professional**, logical backups are kept 7 days, and **a Render restore creates a NEW
+database instance** - it is never restored in place.
+
+The Privacy Policy says deleted data disappears from backups "within 30 days at most". A 3-7 day
+window is comfortably inside that, so the claim is accurate. **If the host's retention is ever
+raised above 30 days, that sentence becomes false and must be rewritten** - this is the one host
+setting with a legal consequence.
+
+### Why there is also our own backup script
+
+A 3-7 day window means corruption noticed on day 8 is unrecoverable from the host alone, and
+nothing outside Render means nothing if the Render account itself is lost.
+
+`server/scripts/backup.mjs` writes every row of every table to ONE JSON file through Prisma - no
+`pg_dump` binary needed, so it runs anywhere Node does, including a Render shell. `restore.mjs`
+reads it back. It is NOT a replacement for PITR: a logical dump is a snapshot, and restoring it
+loses everything written since. Use PITR for recent accidents; use this when the window has passed.
+
+`restore.mjs` is destructive by nature, so it refuses to run without `--yes`, and refuses a database
+that already contains coaches unless `--force` is also passed. The safe habit is Render's own:
+restore into an EMPTY database, look at it, and only then repoint `DATABASE_URL`.
+
+### The two tests, and why both exist
+
+- `server/test/backup-models.test.ts` (no database, runs on every push) asserts `MODELS` names every
+  model in `schema.prisma`. **Adding a model without adding it here means the next backup silently
+  skips that table**, and nobody finds out until a restore comes up short. Deliberately broken and
+  restored to prove it bites; the failure message names the missing table.
+- `server/test/backup-restore.db.test.ts` (CI only) performs a REAL round trip: seed, back up, empty
+  the tables, restore, then assert row counts AND content - the note with quotes and unicode, the
+  date string, and that a DateTime comes back as a Date rather than the string JSON made of it. It
+  also pins that rows written AFTER the backup are GONE after a restore, because anyone treating a
+  snapshot as continuous protection will lose exactly that difference.
+
+This is what makes "we have backups" into "we have tested a restore". It cannot be done with mocks:
+the point is that real foreign keys, cascades and column types survive the trip.

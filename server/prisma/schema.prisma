@@ -206,6 +206,11 @@ model Client {
   level                String    @default("Beginner")
   focus                String    @default("")
   notes                String    @default("")
+  /// Inspo C5: the date the client is working towards (a wedding, a race, a holiday), and what it
+  /// is. Null = no date, which is what every client meant before this existed. A plain date string
+  /// "YYYY-MM-DD", like every other date in Repsy, so no timezone can shift it.
+  goalDate             String?
+  goalEvent            String    @default("")
   createdAt            DateTime  @default(now())
   /// Sample data created by the demo buttons. Demo clients never count towards the plan's client
   /// limit: blocking the demo to protect a quota would be a strange way to welcome a new coach.

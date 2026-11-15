@@ -23,7 +23,29 @@ const NewClientSchema = z.object({
   heightCm: z.number().positive().max(300).nullable().optional(),
   focus: z.string().trim().max(500).optional(),
   notes: z.string().trim().max(2000).optional(), // notes for AI
+  // Inspo C5: the day they are working towards, and what it is.
+  goalDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "goalDate must be a real date in YYYY-MM-DD form.").nullable().optional(),
+  goalEvent: z.string().trim().max(80, "goalEvent must be 80 characters or fewer.").optional(),
 });
+
+/**
+ * Inspo C5: the date a client is working towards.
+ *
+ * Its own endpoint, mirroring /targets, because there is no general client-edit route. An empty
+ * string clears the date, so the UI can send either "" or null.
+ */
+const GoalSchema = strictWith(
+  z.object({
+    goalDate: z
+      .string()
+      .trim()
+      .regex(/^(\d{4}-\d{2}-\d{2})?$/, "Choose a real date, or clear it.")
+      .nullable()
+      .optional(),
+    goalEvent: z.string().trim().max(80, "What they are working towards must be 80 characters or fewer.").optional(),
+  }),
+  "Only the goal date and what it is can be changed here.",
+).refine((v) => v.goalDate !== undefined || v.goalEvent !== undefined, "Nothing to change.");
 
 /** First validation problem, in plain words: "level: Invalid enum value..." */
 export function validationMessage(error: z.ZodError): string {
@@ -205,6 +227,29 @@ z
   })
 , "Only calorieTarget and proteinTargetG can be changed here.")
   .refine((v) => v.calorieTarget !== undefined || v.proteinTargetG !== undefined, "Nothing to change.");
+
+// PATCH /api/clients/:clientId/goal { goalDate, goalEvent } (Inspo C5)
+clientsRouter.patch(
+  "/:clientId/goal",
+  asyncHandler(async (req, res) => {
+    const parsed = GoalSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0].message });
+      return;
+    }
+    const client = await findClient(String(req.params.clientId), coachIdOf(req));
+    if (!client) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+    const data: { goalDate?: string | null; goalEvent?: string } = {};
+    // "" and null both mean "no date". Clearing the date keeps the words: a coach who mistypes the
+    // day has not changed what the client is training for.
+    if (parsed.data.goalDate !== undefined) data.goalDate = parsed.data.goalDate?.trim() || null;
+    if (parsed.data.goalEvent !== undefined) data.goalEvent = parsed.data.goalEvent;
+    res.json(await prisma.client.update({ where: { id: client.id }, data }));
+  }),
+);
 
 clientsRouter.patch(
   "/:clientId/targets",

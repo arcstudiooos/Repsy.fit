@@ -44,6 +44,10 @@ export interface Client {
   focus: string;
   /** Notes for AI */
   notes: string;
+  /** Inspo C5: the day they are working towards, "YYYY-MM-DD", or null. */
+  goalDate?: string | null;
+  /** Inspo C5: what that day is - a wedding, a race, a holiday. */
+  goalEvent?: string;
   createdAt: string;
   /** Client sign-in email once invited (Prompt 65). The password hash is never sent. */
   loginEmail?: string | null;
@@ -513,6 +517,12 @@ export interface WorkoutTemplate {
 export type NewWorkoutTemplate = Pick<WorkoutTemplate, "name" | "exercises"> & Partial<Pick<WorkoutTemplate, "focus" | "notes">>;
 
 /** Inspo W10: a reusable multi-week program. A template - it has no dates until it is assigned. */
+/** Inspo C5: the day a client is working towards, and what it is. */
+export interface GoalPatch {
+  goalDate?: string | null;
+  goalEvent?: string;
+}
+
 export interface ProgramItem {
   id?: string;
   /** 1-based within its phase. */

@@ -6,6 +6,7 @@ import { AddClientForm } from "../components/AddClientForm";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MenuButton } from "../components/MenuButton";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
+import { PipelineCounts } from "../components/PipelineCounts";
 import { daysAgo, formatDay } from "../lib/dates";
 import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
@@ -116,7 +117,14 @@ export function ClientsTab({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
           <h2 className="page-title">Clients</h2>
-          <span className="text-sm text-dim">{clients.length === 1 ? "1 client" : `${clients.length} clients`}</span>
+          {/*
+            Inspo C6: the competitor shows a four-tab pipeline (Active / Pending / Archive / Leads).
+            Repsy deliberately does NOT copy that: the waiting list is already right below this, and
+            leads live in Business, so a second surface showing the same rows would be two places to
+            look and two to maintain. What was genuinely missing is the COUNT - knowing there is
+            something waiting without having to scroll - so that is all this adds.
+          */}
+          <PipelineCounts activeCount={clients.length} />
         </div>
         {/* The demo-data buttons show only while the client list is empty (owner, Nov 2026). */}
         <div className="flex flex-wrap items-center gap-2">

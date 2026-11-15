@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientHeader, initials } from "./ClientHeader";
 import { ClientSnapshotCards } from "./components/ClientSnapshotCards";
+import { GoalDate } from "./components/GoalDate";
 import { UnsavedChangesBanner } from "./components/UnsavedChangesBanner";
 import { MenuButton } from "./components/MenuButton";
 import { BillingBanner } from "./auth/BillingBanner";
@@ -366,6 +367,10 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
         {clientHeader}
         {/* Inspo C4/C5: the numbers a coach wants before reading anything. Workspace only - the AI
             Coach tab shares ClientHeader but does not want a stats row. */}
+        {/* Inspo C5: the day they are working towards, above the numbers it should influence. */}
+        <div className="mb-2">
+          <GoalDate client={selectedClient} />
+        </div>
         <ClientSnapshotCards clientId={selectedClient.id} units={coach?.units ?? "kg"} today={localToday()} />
         <SubTabBar active={subTab} onSelect={setSubTab} clientName={selectedClient.name} />
         <div role="tabpanel" id={`subpanel-${subTab}`} aria-labelledby={`subtab-${subTab}`}>

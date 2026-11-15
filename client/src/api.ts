@@ -48,6 +48,7 @@ import type {
   ClientSnapshot,
   CoachForm,
   Food,
+  GoalPatch,
   IntakeState,
   NewFood,
   NewProgram,
@@ -249,6 +250,10 @@ export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/
 
 /** Inspo C8: has this client's intake been done? */
 export const getIntake = (clientId: string) => request<IntakeState>("GET", `/clients/${enc(clientId)}/intake`);
+
+/** Inspo C5: the day a client is working towards. "" or null clears the date, keeping the words. */
+export const updateGoal = (clientId: string, patch: GoalPatch) =>
+  request<Client>("PATCH", `/clients/${enc(clientId)}/goal`, patch);
 
 // ----- Foods (Inspo N1) -----
 export const listFoods = (search = "", category = "") =>
