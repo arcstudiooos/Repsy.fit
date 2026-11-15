@@ -386,7 +386,7 @@ export default function BillingPage() {
                     Type <span className="font-mono font-semibold text-text">{CONFIRM_WORD}</span> to confirm
                   </span>
                   <input
-                    className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+                    className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text"
                     value={typed}
                     onChange={(e) => setTyped(e.target.value)}
                     autoComplete="off"

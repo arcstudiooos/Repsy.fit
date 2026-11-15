@@ -59,7 +59,7 @@ export function GoalDate({ client }: { client: Client }) {
           type="date"
           value={goalDate}
           onChange={(e) => setGoalDate(e.target.value)}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-sm text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-sm text-text"
         />
       </div>
       <div>
@@ -72,7 +72,7 @@ export function GoalDate({ client }: { client: Client }) {
           maxLength={80}
           placeholder="Wedding, half marathon, holiday..."
           onChange={(e) => setGoalEvent(e.target.value)}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-sm text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-sm text-text"
         />
       </div>
       <div className="flex items-end">

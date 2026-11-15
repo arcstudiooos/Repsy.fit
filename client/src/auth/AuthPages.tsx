@@ -14,7 +14,7 @@ import type { Coach } from "../types";
 // Field names across the auth, reset and account forms (the last three are Prompt 47).
 export type FieldErrors = Partial<Record<"name" | "email" | "password" | "currentPassword" | "newPassword", string>>;
 
-export const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text";
+export const inputClass = "min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text";
 
 /** First plain-words message per field; null when the values pass. */
 export function validate(schema: ZodTypeAny, values: Record<string, string>): FieldErrors | null {

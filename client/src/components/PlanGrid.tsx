@@ -98,7 +98,7 @@ export function PlanGrid({ assignments, today, onOpen, onAdd }: Props) {
           { label: "Workouts", value: String(workouts) },
           { label: "Finished", value: String(done) },
         ].map((s) => (
-          <li key={s.label} className="rounded-card border border-border bg-surface2 px-3 py-2">
+          <li key={s.label} className="rounded-card border border-border-strong bg-surface2 px-3 py-2">
             <p className="text-xs font-semibold text-dim">{s.label}</p>
             <p className="font-heading text-2xl text-text">{s.value}</p>
           </li>

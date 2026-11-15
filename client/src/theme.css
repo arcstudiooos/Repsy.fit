@@ -38,6 +38,46 @@
 
   /* Shape */
   --radius-card: 14px;
+
+  /* ---- Nov 2026 refinement: tiers, semantics, elevation ----------------------
+     Every pair below was contrast-checked. The three failures this fixes:
+       --accent as TEXT on white was 3.36 (AA needs 4.5) -> use --accent-text
+       --border vs surface was 1.31 (non-text needs 3)   -> use --border-strong on controls
+       --accent2 on dark surface was 3.27                -> dark gets #2dd4bf (8.96)
+     Rule: --accent, --amber and the type colours are FILLS. Their *-text twins are
+     the only legal way to colour text or an icon with the same meaning. */
+  --muted: #767068;          /* empty states: quieter than --dim. 4.58 on --bg */
+  --border-strong: #8f887e;  /* input and control edges. 3.51 on --surface */
+  --accent-text: #c2360f;    /* 5.49 on white */
+  --accent-hover: #e8431b;
+  --accent2-hover: #0b6659;
+  --success: #0f7a3d;        /* 5.42 */
+  --info: #1d5fb4;           /* 6.27 */
+  --danger: #b3261e;         /* 6.54 */
+  --danger-hover: #a81f17;
+  --on-danger: #ffffff;
+  --focus-ring: #1d5fb4;     /* NOT orange: orange on --bg is 3.14 and fails */
+
+  /* Type colours split into fill vs text (fills keep the original hues, so every
+     existing chip stays recognisable; only the label colour changes). */
+  --type-workout-text: #c2360f;
+  --type-nutrition-text: #0e7c6b;
+  --type-habit-text: #92400e;
+  --type-recovery-text: #5b3fd1;
+
+  /* Chip tints */
+  --tint-workout: #ffeae3;
+  --tint-nutrition: #dff0ec;
+  --tint-habit: #fdf0e2;
+  --tint-recovery: #efeaff;
+  --tint-success: #e6f4ec;
+  --tint-info: #e8f0fb;
+  --tint-danger: #fdeceb;
+
+  /* Elevation (dialogs) */
+  --surface-elevated: #fffdf9;
+  --overlay: rgba(26, 22, 18, 0.55);
+  --shadow-dialog: 0 18px 44px -12px rgba(20, 20, 20, 0.3), 0 2px 8px rgba(20, 20, 20, 0.1);
 }
 
 /* Dark theme: follows the device unless the person picked one with the header switch, which sets
@@ -56,6 +96,40 @@
     --header-border: #333333;
     /* #92400E is unreadable on dark backgrounds; #D97706 passes contrast there. */
     --amber-text: #d97706;
+
+    /* Nov 2026 refinement (see :root for the rules). Dark needs its own values:
+       teal #0e7c6b was 3.27 here, amber #d97706 was 5.23, and a #141414 button
+       shadow is invisible on a #141414 page. */
+    --muted: #969089;
+    --border-strong: #707070;
+    --accent-text: #ff8a66;
+    --accent-hover: #ff6a44;
+    --accent2: #2dd4bf;
+    --accent2-hover: #5ae0d0;
+    --amber: #f0a830;
+    --success: #3dd68c;
+    --info: #7ab3f5;
+    --danger: #ff6b5e;
+    --danger-hover: #ff8578;
+    --on-danger: #141414;
+    --focus-ring: #7ab3f5;
+    --type-workout-text: #ff8a66;
+    --type-nutrition: #2dd4bf;
+    --type-nutrition-text: #2dd4bf;
+    --type-habit: #f0a830;
+    --type-habit-text: #f0a830;
+    --type-recovery-text: #a991ff;
+    --tint-workout: #331a12;
+    --tint-nutrition: #0f2a26;
+    --tint-habit: #2e2010;
+    --tint-recovery: #241e3d;
+    --tint-success: #10291d;
+    --tint-info: #13233a;
+    --tint-danger: #2e1513;
+    --surface-elevated: #272727;
+    --overlay: rgba(0, 0, 0, 0.66);
+    /* A shadow alone is invisible on #141414, so the dialog carries a 1px ring. */
+    --shadow-dialog: 0 18px 44px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px #333333;
   }
 }
 :root[data-theme="dark"] {
@@ -71,6 +145,40 @@
   --header-border: #333333;
   /* #92400E is unreadable on dark backgrounds; #D97706 passes contrast there. */
   --amber-text: #d97706;
+
+  /* Nov 2026 refinement (see :root for the rules). Dark needs its own values:
+     teal #0e7c6b was 3.27 here, amber #d97706 was 5.23, and a #141414 button
+     shadow is invisible on a #141414 page. */
+  --muted: #969089;
+  --border-strong: #707070;
+  --accent-text: #ff8a66;
+  --accent-hover: #ff6a44;
+  --accent2: #2dd4bf;
+  --accent2-hover: #5ae0d0;
+  --amber: #f0a830;
+  --success: #3dd68c;
+  --info: #7ab3f5;
+  --danger: #ff6b5e;
+  --danger-hover: #ff8578;
+  --on-danger: #141414;
+  --focus-ring: #7ab3f5;
+  --type-workout-text: #ff8a66;
+  --type-nutrition: #2dd4bf;
+  --type-nutrition-text: #2dd4bf;
+  --type-habit: #f0a830;
+  --type-habit-text: #f0a830;
+  --type-recovery-text: #a991ff;
+  --tint-workout: #331a12;
+  --tint-nutrition: #0f2a26;
+  --tint-habit: #2e2010;
+  --tint-recovery: #241e3d;
+  --tint-success: #10291d;
+  --tint-info: #13233a;
+  --tint-danger: #2e1513;
+  --surface-elevated: #272727;
+  --overlay: rgba(0, 0, 0, 0.66);
+  /* A shadow alone is invisible on #141414, so the dialog carries a 1px ring. */
+  --shadow-dialog: 0 18px 44px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px #333333;
 }
 :root[data-theme="light"] {
   color-scheme: light;

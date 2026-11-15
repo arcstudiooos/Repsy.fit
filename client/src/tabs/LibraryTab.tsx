@@ -16,7 +16,7 @@ import { localToday } from "./AiCoachTab";
 import type { NewWorkoutTemplate, WorkoutTemplate } from "../types";
 
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 const smallButton = "btn btn-secondary";
 
 // UI batch 4: the three Library tools are separate views (same switch pattern as the Business views).
@@ -51,7 +51,7 @@ export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClient
             onClick={() => setView(v)}
             className={
               "min-h-10 rounded-full border px-4 text-sm font-semibold " +
-              (view === v ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+              (view === v ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
             }
           >
             {v}

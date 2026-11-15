@@ -27,8 +27,8 @@ import {
   type WorkoutSectionInput,
 } from "../types";
 
-const field = "w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text";
-const tiny = "rounded-lg border border-border bg-surface2 px-2 py-1 text-sm text-text";
+const field = "w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-sm text-text";
+const tiny = "rounded-lg border border-border-strong bg-surface2 px-2 py-1 text-sm text-text";
 
 /** "12, 12, 10" <-> [12, 12, 10]. Anything unparseable is simply dropped. */
 export const repsToText = (reps: number[]) => reps.join(", ");
@@ -293,7 +293,7 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
               const key = `${si}-${ei}`;
               const showAdvanced = open === key;
               return (
-                <li key={ei} className="rounded-lg border border-border bg-surface2 p-2">
+                <li key={ei} className="rounded-lg border border-border-strong bg-surface2 p-2">
                   <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_auto]">
                     <div>
                       <label htmlFor={`ex-${key}-name`} className="mb-1 block text-xs font-bold">

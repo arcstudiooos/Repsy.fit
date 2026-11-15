@@ -156,7 +156,7 @@ export function Schedule({ clients }: { clients: Client[] }) {
                     role="group"
                     aria-label={dayHeading(d)}
                     aria-current={isToday ? "date" : undefined}
-                    className={"h-full rounded-card border p-2 " + (isToday ? "border-accent bg-surface" : "border-border bg-surface2")}
+                    className={"h-full rounded-card border p-2 " + (isToday ? "border-accent bg-surface" : "border-border-strong bg-surface2")}
                   >
                     <p
                       className={
@@ -239,7 +239,7 @@ function Block({
         aria-label={`Status for ${a.title}`}
         value={a.status}
         onChange={(e) => onStatus(e.target.value as AppointmentStatus)}
-        className="mt-2 min-h-10 w-full rounded-lg border border-border bg-surface2 px-2 text-sm text-text lg:px-1 lg:text-xs"
+        className="mt-2 min-h-10 w-full rounded-lg border border-border-strong bg-surface2 px-2 text-sm text-text lg:px-1 lg:text-xs"
       >
         {APPOINTMENT_STATUSES.map((s) => (
           <option key={s}>{s}</option>

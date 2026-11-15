@@ -27,6 +27,27 @@
   --color-white: var(--white);
   --color-on-accent: var(--on-accent);
   --color-amber-text: var(--amber-text);
+  /* Nov 2026: quiet tiers, semantic colours, elevation. --accent/--amber/type
+     colours are FILLS; the *-text twins are the only legal text colour. */
+  --color-muted: var(--muted);
+  --color-border-strong: var(--border-strong);
+  --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-type-workout-text: var(--type-workout-text);
+  --color-type-nutrition-text: var(--type-nutrition-text);
+  --color-type-habit-text: var(--type-habit-text);
+  --color-type-recovery-text: var(--type-recovery-text);
+  --color-tint-workout: var(--tint-workout);
+  --color-tint-nutrition: var(--tint-nutrition);
+  --color-tint-habit: var(--tint-habit);
+  --color-tint-recovery: var(--tint-recovery);
+  --color-tint-success: var(--tint-success);
+  --color-tint-info: var(--tint-info);
+  --color-tint-danger: var(--tint-danger);
 
   --color-type-workout: var(--type-workout);
   --color-type-nutrition: var(--type-nutrition);
@@ -204,29 +225,65 @@
     transform: translateY(4px);
     box-shadow: 0 0 0 var(--btn-shadow);
   }
+  /* The new DEFAULT. --border (1.31 on surface) is invisible as a control edge,
+     so a secondary button uses --border-strong (3.51) and carries its shape with
+     the border instead of shouting with a fill. */
   .btn-secondary {
-    background-color: var(--surface2);
-    border-color: var(--border);
+    background-color: var(--surface);
+    border-color: var(--border-strong);
     color: var(--text);
   }
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--dim);
+    background-color: var(--surface2);
   }
+  /* Repeated in-row actions. Coloured so it reads as an action, using the TEXT
+     twin: raw --accent on white is 3.36 and fails AA. */
   .btn-ghost {
     background-color: transparent;
-    color: var(--text);
+    color: var(--accent-text);
+    font-weight: 700;
   }
   .btn-ghost:hover:not(:disabled) {
     background-color: var(--surface2);
   }
+  /* Destructive reads as destructive. It used to be a surface button with an
+     orange border, which looked like a second primary. Confirm steps only: the
+     trigger that OPENS a confirm should be .btn-danger-ghost. */
   .btn-danger {
-    background-color: var(--surface);
-    border: 2px solid var(--accent);
-    color: var(--text);
+    background-color: var(--danger);
+    border-color: var(--btn-shadow);
+    color: var(--on-danger);
     font-weight: 700;
+    box-shadow: 0 4px 0 var(--btn-shadow);
   }
   .btn-danger:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    background-color: var(--danger-hover);
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--btn-shadow);
+  }
+  .btn-danger:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 var(--btn-shadow);
+  }
+  .btn-danger-ghost {
+    background-color: transparent;
+    color: var(--danger);
+    font-weight: 700;
+  }
+  .btn-danger-ghost:hover:not(:disabled) {
+    background-color: var(--tint-danger);
+  }
+
+  /* A dense list is the one place the hard shadow stops helping: twenty lifted
+     buttons is noise. Add .dense to the container, not to each button. */
+  .dense .btn.btn-primary {
+    box-shadow: 0 2px 0 var(--btn-shadow);
+  }
+
+  /* Empty states are recessed from real content: --muted (4.58) not --dim (5.38).
+     Never on --surface2, where --muted drops to 4.20 and fails. */
+  .empty-state {
+    color: var(--muted);
   }
 }
 @media (prefers-color-scheme: dark) {

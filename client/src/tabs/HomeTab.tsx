@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiError, approveReviewItem, dismissReviewItem, generateWeeklySummary, getAlerts, getAtRiskClients, getRecentCheckIns, getReviewQueue, getTodayTasks, getWeeklySummary, queryKeys } from "../api";
+import { ApiError, approveReviewItem, dismissReviewItem, generateWeeklySummary, getAlerts, getAtRiskClients, getRecentCheckIns, getReviewQueue, getTodayTasks, getWeeklySummary, listClients, queryKeys } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
@@ -28,13 +28,22 @@ export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients 
   const date = localToday();
   const query = useQuery({ queryKey: queryKeys.todayTasks(date), queryFn: () => getTodayTasks(date) });
 
+  // The rail reuses the queries the cards below already run - react-query dedupes by key, so this
+  // costs no extra requests. A count stays null (shown as "-") until its query resolves, rather
+  // than flashing a 0 that reads as "nothing to do".
+  const clientsQ = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
+  const atRiskQ = useQuery({ queryKey: queryKeys.atRisk(date), queryFn: () => getAtRiskClients(date) });
+  const reviewQ = useQuery({ queryKey: queryKeys.reviewQueue("pending"), queryFn: () => getReviewQueue("pending") });
+  const checkInsQ = useQuery({ queryKey: queryKeys.recentCheckIns, queryFn: getRecentCheckIns });
+  const tasks = query.data?.tasks ?? null;
+
   let body;
   if (query.isPending || (query.isError && query.isFetching)) {
     body = <LoadingState />;
   } else if (query.isError) {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else if (query.data.tasks.length === 0) {
-    body = <p className="text-dim">Nothing due today. Pick a client to plan ahead.</p>;
+    body = <p className="empty-state">Nothing due today. Pick a client to plan ahead.</p>;
   } else {
     body = (
       <ul aria-label="Today's tasks" className="divide-y divide-border">
@@ -45,25 +54,99 @@ export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients 
     );
   }
 
-  // Actionable cards first (Nov 2026): who needs attention, what waits for a decision, what clients
-  // just did, today's list, then new check-ins and the weekly summary.
+  // Nov 2026 redesign. Home was a vertical stack of six full-width cards, so an empty block cost a
+  // whole row to say nothing - three of six were usually empty. Now:
+  //   - the counts live on one rail at the top,
+  //   - the cards sit in a 6-column grid, so two quiet blocks share a row instead of taking two,
+  //   - Today's Tasks is the hero (the only list with a verb attached - it is the morning job),
+  //   - the weekly summary is a full-width bar, because a card holding one button is a button.
+  // DOM order == visual order == tab order: no `order-*` utilities, so reflow never surprises.
   return (
     <>
       <h2 className="page-title">Home</h2>
-      <NeedsAttention date={date} onOpenClient={(clientId) => onOpenClient(clientId, "progress")} />
-      <ReviewQueueCard date={date} />
-      <ClientActivity
-        onOpenThread={onOpenThread}
-        onOpenPlans={(clientId) => onOpenTask(clientId, "planner")}
-        onOpenClients={onOpenClients}
+      <MetricRail
+        clients={clientsQ.data?.length ?? null}
+        attention={atRiskQ.data?.clients.length ?? null}
+        review={reviewQ.data?.pendingCount ?? null}
+        noPlan={tasks === null ? null : tasks.filter((t) => t.kind === "idle").length}
+        checkIns={checkInsQ.data?.items.length ?? null}
       />
-      <section aria-label="Today's Tasks" className="card mt-4 p-5">
-        <CardTitle title="Today's Tasks" count={query.data?.tasks.length} />
-        <div className="mt-3">{body}</div>
-      </section>
-      <NewCheckIns onOpenClient={onOpenClient} />
-      <WeeklySummaryCard date={date} />
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <section aria-label="Today's Tasks" className="card dense p-5 sm:col-span-2 lg:col-span-4">
+          <CardTitle title="Today's Tasks" count={query.data?.tasks.length} />
+          <div className="mt-3">{body}</div>
+        </section>
+        <NeedsAttention date={date} onOpenClient={(clientId) => onOpenClient(clientId, "progress")} />
+        <ReviewQueueCard date={date} />
+        <NewCheckIns onOpenClient={onOpenClient} />
+        <ClientActivity
+          onOpenThread={onOpenThread}
+          onOpenPlans={(clientId) => onOpenTask(clientId, "planner")}
+          onOpenClients={onOpenClients}
+        />
+        <WeeklySummaryCard date={date} />
+      </div>
     </>
+  );
+}
+
+
+/**
+ * The facts rail (Nov 2026 redesign).
+ *
+ * Home used to be a vertical list of full-width containers: every block got the same weight whether
+ * it held 0 items or 12, so the screen spent most of its height saying nothing is wrong. The counts
+ * belong on one line; the cards below are only for work the coach can act on.
+ *
+ * A zero reads quiet (--muted). A number that needs the coach reads in its own colour AND is a link,
+ * so meaning is never carried by colour alone.
+ */
+function MetricRail({
+  clients,
+  attention,
+  review,
+  noPlan,
+  checkIns,
+}: {
+  clients: number | null;
+  attention: number | null;
+  review: number | null;
+  noPlan: number | null;
+  checkIns: number | null;
+}) {
+  const items: { label: string; value: number | null; warn?: boolean }[] = [
+    { label: "Clients", value: clients },
+    { label: "Needs attention", value: attention, warn: true },
+    { label: "Waiting on you", value: review, warn: true },
+    { label: "Idle 7+ days", value: noPlan, warn: true },
+    { label: "Check-ins today", value: checkIns },
+  ];
+  return (
+    <dl
+      // A <dl> has no implicit ARIA role, so an aria-label on it is not exposed to a screen
+      // reader. role="group" makes the rail a single labelled thing rather than five loose numbers.
+      role="group"
+      aria-label="Today at a glance"
+      className="mt-4 grid grid-cols-2 overflow-hidden rounded-card border border-border bg-surface sm:grid-cols-3 lg:grid-cols-5"
+    >
+      {items.map((m, i) => (
+        <div
+          key={m.label}
+          className={`border-border px-4 py-3 ${i > 0 ? "border-t sm:border-t-0 sm:border-l" : ""} ${
+            i === 4 ? "max-sm:col-span-2" : ""
+          } ${i === 3 ? "max-sm:border-t sm:border-t lg:border-t-0" : ""} ${i === 2 ? "sm:border-t lg:border-t-0 sm:border-l-0 lg:border-l" : ""}`}
+        >
+          <dt className="text-xs font-semibold tracking-wide text-dim uppercase">{m.label}</dt>
+          <dd
+            className={`mt-0.5 font-mono text-2xl leading-none tabular-nums ${
+              m.value === null ? "text-muted" : m.warn && m.value > 0 ? "text-accent-text" : m.value === 0 ? "text-muted" : "text-text"
+            }`}
+          >
+            {m.value ?? "-"}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -136,7 +219,7 @@ function NewCheckIns({ onOpenClient }: { onOpenClient: Props["onOpenClient"] }) 
   } else if (query.isError) {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else if (groups.length === 0) {
-    body = <p className="text-dim">No new check-ins in the last 2 days</p>;
+    body = <p className="empty-state">No new check-ins in the last 2 days</p>;
   } else {
     const shown = showAll ? groups : groups.slice(0, CHECKIN_ROWS);
     body = (
@@ -180,7 +263,7 @@ function NewCheckIns({ onOpenClient }: { onOpenClient: Props["onOpenClient"] }) 
   }
 
   return (
-    <section aria-label="New check-ins" className="card mt-4 p-5">
+    <section aria-label="New check-ins" className="card dense p-5 sm:col-span-2 lg:col-span-2">
       <CardTitle title="New check-ins" count={groups.length} />
       <div className="mt-3">{body}</div>
     </section>
@@ -198,7 +281,7 @@ function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: (c
   } else if (query.isError) {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else if (query.data.clients.length === 0) {
-    body = <p className="text-dim">Everyone is on track right now.</p>;
+    body = <p className="empty-state">Everyone is on track right now.</p>;
   } else {
     body = (
       <ul aria-label="Needs attention" className="divide-y divide-border">
@@ -224,7 +307,7 @@ function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: (c
   }
 
   return (
-    <section aria-label="Needs attention" className="card mt-4 p-5">
+    <section aria-label="Needs attention" className="card dense p-5 lg:col-span-2">
       <CardTitle title="Needs attention" count={query.data?.clients.length} />
       <div className="mt-3">{body}</div>
     </section>
@@ -255,11 +338,13 @@ function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"
         <p className="font-semibold text-text">{task.clientName}</p>
         <p className="text-sm text-dim">{task.text}</p>
       </div>
+      {/* Ghost, not primary: this button repeats on every row, and ten identical orange buttons
+          mean none of them is important. The card is the unit that may hold one primary. */}
       <button
         type="button"
         aria-label={`${label}: ${task.clientName}`}
         onClick={() => onOpen(task.clientId, target)}
-        className="btn btn-primary shrink-0"
+        className="btn btn-ghost shrink-0"
       >
         {label}
       </button>
@@ -299,7 +384,7 @@ function WeeklySummaryCard({ date }: { date: string }) {
   } else if (query.isError) {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else if (!summary) {
-    body = <p className="text-dim">No summary yet for this week. Generate one from your own records.</p>;
+    body = <p className="empty-state">No summary yet for this week. Generate one from your own records.</p>;
   } else {
     body = (
       <>
@@ -317,7 +402,7 @@ function WeeklySummaryCard({ date }: { date: string }) {
   }
 
   return (
-    <section aria-label="AI weekly summary" className="card mt-4 p-5">
+    <section aria-label="AI weekly summary" className="card dense p-4 sm:col-span-2 lg:col-span-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="card-title">AI weekly summary</h3>
         <button
@@ -392,7 +477,7 @@ function ReviewQueueCard({ date }: { date: string }) {
   } else if (pending.isError) {
     body = <ErrorState error={pending.error} onRetry={() => void pending.refetch()} />;
   } else if (pending.data.items.length === 0) {
-    body = <p className="text-dim">Queue clear. Nothing waiting for you.</p>;
+    body = <p className="empty-state">Queue clear. Nothing waiting for you.</p>;
   } else {
     body = (
       <ul aria-label="Review queue" className="divide-y divide-border">
@@ -436,7 +521,7 @@ function ReviewQueueCard({ date }: { date: string }) {
   }
 
   return (
-    <section aria-label="Review queue" className="card mt-4 p-5">
+    <section aria-label="Review queue" className="card dense p-5 lg:col-span-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <CardTitle title="Review queue" count={pending.data?.pendingCount} />
         <button
@@ -501,7 +586,7 @@ function ClientActivity({
   if (query.isPending) return null;
   if (query.isError) {
     return (
-      <section aria-label="Client activity" className="card mt-4 p-5">
+      <section aria-label="Client activity" className="card dense p-5 sm:col-span-2 lg:col-span-2">
         <h3 className="card-title">Client activity</h3>
         <p role="alert" className="mt-2 text-sm font-semibold text-amber-text">
           Couldn't load client activity.{" "}
@@ -519,7 +604,7 @@ function ClientActivity({
   const rowButton = "w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-surface2 min-h-11";
   const count = (a.waiting > 0 ? 1 : 0) + a.unread.length + a.finished.length + a.joined.length;
   return (
-    <section aria-label="Client activity" className="card mt-4 p-5">
+    <section aria-label="Client activity" className="card dense p-5 sm:col-span-2 lg:col-span-2">
       <CardTitle title="Client activity" count={count} />
       <ul aria-label="Client alerts" className="mt-2 divide-y divide-border">
         {a.waiting > 0 && (

@@ -10,7 +10,7 @@ const OTHER_GOAL = "__other__";
 
 // Inputs: --surface2 background, 14px radius (design system).
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim " +
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim " +
   "focus:border-accent";
 const invalidClass = " border-accent";
 

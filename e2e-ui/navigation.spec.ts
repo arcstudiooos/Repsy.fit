@@ -177,17 +177,22 @@ test("Library is a Business view", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 2, name: "Library" })).toBeVisible();
 });
 
-test("Home: actionable cards first, with counts", async ({ page }) => {
+test("Home: the morning job first, with counts", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
   const panel = page.getByRole("tabpanel").first();
+  // Nov 2026 redesign. DOM order IS visual order and tab order (no `order-*` utilities), so this
+  // list pins the priority of the dashboard, not just its markup:
+  //   Today's Tasks leads because it is the only list with a verb attached - the morning job.
+  //   Client activity was demoted below the check-ins it provides context for: "joined 3 days ago"
+  //   is a nice-to-know, and it used to cost a full row above the actual work.
   await expect(panel.getByRole("heading", { level: 3 })).toHaveText([
+    "Today's Tasks",
     "Needs attention · 1",
     "Review queue",
-    "Client activity · 1",
-    "Today's Tasks",
     "New check-ins · 7",
+    "Client activity · 1",
     "AI weekly summary",
   ]);
 });

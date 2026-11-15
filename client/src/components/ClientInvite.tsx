@@ -121,7 +121,7 @@ export function ClientInvitePanel({ client, onClose }: { client: Client; onClose
         </p>
       )}
       {result && !result.sent && (
-        <div role="status" className="mt-3 rounded-lg border border-border bg-surface2 p-3">
+        <div role="status" className="mt-3 rounded-lg border border-border-strong bg-surface2 p-3">
           <p className="text-sm font-semibold text-amber-text">{result.note}</p>
           <label htmlFor="invite-link" className="mt-2 block text-xs font-bold text-dim">
             Invite link for {result.loginEmail} (works once, for 48 hours)

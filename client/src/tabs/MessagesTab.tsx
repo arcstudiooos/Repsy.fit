@@ -393,7 +393,7 @@ function Bubble({ message, clientName }: { message: ThreadMessage; clientName: s
       <div
         className={
           "max-w-[80%] rounded-2xl px-4 py-2 " +
-          (mine ? "rounded-br-sm bg-accent2 text-white" : "rounded-bl-sm border border-border bg-surface2 text-text")
+          (mine ? "rounded-br-sm bg-accent2 text-white" : "rounded-bl-sm border border-border-strong bg-surface2 text-text")
         }
       >
         <p className="sr-only">{mine ? "You" : clientName}:</p>

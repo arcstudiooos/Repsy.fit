@@ -54,7 +54,7 @@ export function OnboardingForm({ coach }: { coach: Coach }) {
             setDone(false);
           }}
           placeholder="Welcome aboard! Tell me what you want to work on and we'll start there."
-          className="w-full resize-y rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text"
+          className="w-full resize-y rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-sm text-text"
         />
         <p className="mt-1 text-xs text-dim">
           {welcomeMessage.length} of {WELCOME_MAX} characters.
@@ -77,7 +77,7 @@ export function OnboardingForm({ coach }: { coach: Coach }) {
             setIntakeFormId(e.target.value);
             setDone(false);
           }}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-sm text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-sm text-text"
         >
           <option value="">No intake form</option>
           {available.map((f) => (

@@ -144,7 +144,7 @@ export function Reports({ clients }: { clients: Client[] }) {
           <p className="text-sm font-bold">Download a CSV</p>
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {EXPORTS.map((e) => (
-              <li key={e.type} className="flex flex-col gap-2 rounded-card border border-border bg-surface2 p-3">
+              <li key={e.type} className="flex flex-col gap-2 rounded-card border border-border-strong bg-surface2 p-3">
                 <div>
                   <p className="font-semibold text-text">{e.label}</p>
                   <p className="mt-0.5 text-sm text-dim">{e.description}</p>

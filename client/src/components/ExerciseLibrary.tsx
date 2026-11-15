@@ -22,7 +22,7 @@ import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import { EQUIPMENT, MUSCLE_GROUPS, type Exercise, type NewExercise } from "../types";
 
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 
 const SCOPES = [
   { key: "all", label: "All" },
@@ -145,7 +145,7 @@ export function ExerciseLibrary() {
             onClick={() => setScope(s.key)}
             className={
               "min-h-10 rounded-full border px-4 text-sm font-semibold " +
-              (scope === s.key ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+              (scope === s.key ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
             }
           >
             {s.label}

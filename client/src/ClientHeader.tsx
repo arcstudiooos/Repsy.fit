@@ -24,7 +24,7 @@ export function ClientHeader({ clients, client, onSelect }: Props) {
     <section
       aria-label="Selected client"
       data-testid="client-header"
-      className="mb-5 flex items-center gap-3 rounded-card border border-border bg-surface2 p-3"
+      className="mb-5 flex items-center gap-3 rounded-card border border-border-strong bg-surface2 p-3"
     >
       <span
         aria-hidden="true"
@@ -145,7 +145,7 @@ function ClientSwitcher({ clients, selectedId, onSelect }: { clients: Client[]; 
               setActive(0);
             }}
             onKeyDown={onKeyDown}
-            className="min-h-10 w-full rounded-lg border border-border bg-surface2 px-3 text-sm text-text"
+            className="min-h-10 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-sm text-text"
           />
           <ul id={listId} role="listbox" aria-label="Clients" className="mt-2 max-h-72 overflow-y-auto">
             {matches.map((c, i) => (

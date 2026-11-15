@@ -16,7 +16,7 @@ import { CUSTOM_GROUP, searchExercises, type Exercise } from "../data/exercises"
 
 // Inputs: --surface2 background, 14px radius (design system).
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim " +
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim " +
   "focus:border-accent";
 
 const TITLE_PLACEHOLDER: Record<AssignmentType, string> = {
@@ -343,7 +343,7 @@ const smallButton = "rounded-lg border border-border px-2 py-1 text-xs font-bold
 // One selected exercise: name, sets, reps, rest (number + quick picks), up / down and remove.
 function DoseRowItem({ row, isFirst, isLast, onChange, onMove, onRemove }: DoseRowItemProps) {
   return (
-    <li className="rounded-card border border-border bg-surface2 px-3 py-2 text-sm">
+    <li className="rounded-card border border-border-strong bg-surface2 px-3 py-2 text-sm">
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold text-text">{row.name}</span>
         <div className="flex items-center gap-1">

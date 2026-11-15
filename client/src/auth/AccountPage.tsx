@@ -126,7 +126,7 @@ function ProfileForm({ coach }: { coach: Coach }) {
             setCountry(e.target.value);
             setSaved(false);
           }}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text"
         >
           <option value="">Not set</option>
           {COUNTRIES.map((c) => (
@@ -188,7 +188,7 @@ function CurrencyForm({ coach }: { coach: Coach }) {
           id="account-currency"
           value={currency}
           onChange={(e) => setCurrency(e.target.value as Currency)}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text"
         >
           {CURRENCIES.map((c) => (
             <option key={c} value={c}>
@@ -306,7 +306,7 @@ function DeleteAccountForm() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text"
         />
       </div>
       <div>
@@ -318,7 +318,7 @@ function DeleteAccountForm() {
           value={confirm}
           autoComplete="off"
           onChange={(e) => setConfirm(e.target.value)}
-          className="min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text"
+          className="min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text"
         />
       </div>
       {serverError && (

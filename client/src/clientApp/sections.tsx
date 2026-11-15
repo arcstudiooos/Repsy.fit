@@ -15,7 +15,7 @@ const dayText = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(
 export function MyPlanSection() {
   const plan = useQuery({ queryKey: queryKeys.myPlan, queryFn: getMyPlan, retry: false });
   return (
-    <section id="me-plan" aria-label="My plan" className="mt-6 scroll-mt-20 rounded-lg border border-border bg-surface2 p-4 text-left">
+    <section id="me-plan" aria-label="My plan" className="mt-6 scroll-mt-20 rounded-lg border border-border-strong bg-surface2 p-4 text-left">
       <h2 className="card-title">My plan</h2>
       {plan.isPending ? (
         <p className="mt-2 text-sm text-dim">Loading...</p>
@@ -71,7 +71,7 @@ export function MySessionsSection() {
   // Prompt 83: the client's timezone override, else the device's.
   const tz = sessions.data?.timezone ?? undefined;
   return (
-    <section aria-label="My sessions" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
+    <section aria-label="My sessions" className="mt-4 rounded-lg border border-border-strong bg-surface2 p-4 text-left">
       <h2 className="card-title">My sessions</h2>
       {sessions.isPending ? (
         <p className="mt-2 text-sm text-dim">Loading...</p>
@@ -110,7 +110,7 @@ export function MyStreaksSection() {
   const streaks = useQuery({ queryKey: queryKeys.myStreaks(date), queryFn: () => getMyStreaks(date), retry: false });
   const d = streaks.data;
   return (
-    <section aria-label="My streaks" className="mt-4 rounded-lg border border-border bg-surface2 p-4 text-left">
+    <section aria-label="My streaks" className="mt-4 rounded-lg border border-border-strong bg-surface2 p-4 text-left">
       <h2 className="card-title">My streaks</h2>
       {streaks.isPending ? (
         <p className="mt-2 text-sm text-dim">Loading...</p>

@@ -96,7 +96,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
           <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto">
             <Conversation messages={chatQuery.data ?? []} />
             {ask.isError && (
-              <div role="alert" className="rounded-card border border-border bg-surface2 px-4 py-2.5 text-text">
+              <div role="alert" className="rounded-card border border-border-strong bg-surface2 px-4 py-2.5 text-text">
                 {plainErrorMessage(ask.error)}
               </div>
             )}
@@ -145,7 +145,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={client ? `Ask about ${client.name.split(" ")[0]}...` : "Ask the AI coach..."}
-          className="min-w-0 flex-1 resize-y rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-w-0 flex-1 resize-y rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim disabled:cursor-not-allowed disabled:opacity-60"
         />
         <button
           type="button"
@@ -176,7 +176,7 @@ function ClientSummary({ client }: { client: Client }) {
     ["Notes", client.notes || "-"],
   ];
   return (
-    <section aria-label="Client summary" className="mt-3 rounded-card border border-border bg-surface2 px-3 py-1.5">
+    <section aria-label="Client summary" className="mt-3 rounded-card border border-border-strong bg-surface2 px-3 py-1.5">
       <div className="flex items-center gap-2">
         <p className="min-w-0 flex-1 truncate text-sm text-text" title={line}>
           {line || "No details yet"}
@@ -249,7 +249,7 @@ function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlan
             type="button"
             disabled={generate.isPending}
             onClick={() => run(type)}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
           >
             {/* Calm neutral buttons; the type colour is only the small dot. */}
             <span aria-hidden="true" data-testid="type-dot" className={`h-2.5 w-2.5 shrink-0 rounded-full ${TYPE_DOT[type]}`} />
@@ -258,7 +258,7 @@ function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlan
         ))}
       </div>
       {generate.isError && (
-        <p role="alert" className="mt-3 rounded-card border border-border bg-surface2 px-4 py-2.5 text-text">
+        <p role="alert" className="mt-3 rounded-card border border-border-strong bg-surface2 px-4 py-2.5 text-text">
           {generate.error instanceof ApiError && generate.error.status === 502
             ? generate.error.message
             : plainErrorMessage(generate.error)}

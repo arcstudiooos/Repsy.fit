@@ -120,7 +120,7 @@ export function PlannerTab({
               onClick={() => setView(v)}
               className={
                 "min-h-10 rounded-full border px-4 text-sm font-semibold " +
-                (view === v ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+                (view === v ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
               }
             >
               {v}
@@ -138,7 +138,7 @@ export function PlannerTab({
                 onClick={() => setFilter(f)}
                 className={
                   "rounded-full border px-3 py-1.5 text-sm font-semibold " +
-                  (isActive ? "border-accent bg-accent font-bold text-on-accent" : "border-border bg-surface2 text-text hover:border-dim")
+                  (isActive ? "border-accent bg-accent font-bold text-on-accent" : "border-border-strong bg-surface2 text-text hover:border-dim")
                 }
               >
                 {f}
@@ -422,7 +422,7 @@ function AssignmentCard({
       )}
       {/* Prompt 79: the client finished it themselves, from their app. */}
       {isDone && assignment.completedBy === "client" && (
-        <div className="mt-2 rounded-lg border border-border bg-surface2 px-3 py-2 text-sm">
+        <div className="mt-2 rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-sm">
           <p className="font-semibold text-accent2">
             Done by client
             {assignment.clientEffort != null && <span className="font-normal text-text"> · Effort {assignment.clientEffort}/10</span>}

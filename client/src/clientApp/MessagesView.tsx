@@ -200,7 +200,7 @@ export function MessagesView({ coachName }: { coachName: string | null }) {
             aria-describedby="client-message-hint"
             aria-invalid={tooLong || undefined}
             placeholder="Write a message"
-            className="min-h-11 flex-1 resize-none overflow-y-auto rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
+            className="min-h-11 flex-1 resize-none overflow-y-auto rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
           />
           <button type="submit" disabled={draft.trim() === "" || tooLong} className="btn btn-primary min-h-11">
             Send

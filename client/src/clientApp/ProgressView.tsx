@@ -20,7 +20,7 @@ const FIELDS: { key: TapeKey; label: string; unit: string; max: number }[] = [
   { key: "hipCm", label: "Hip (cm)", unit: "cm", max: 300 },
   { key: "bodyFatPercent", label: "Body fat (%)", unit: "%", max: 75 },
 ];
-const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text";
+const inputClass = "min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text";
 
 export default function ProgressView() {
   const profile = useQuery({ queryKey: queryKeys.myProfile, queryFn: getMyProfile });

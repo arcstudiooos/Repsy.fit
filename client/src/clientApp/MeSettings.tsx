@@ -13,8 +13,8 @@ import type { ClientProfile, MyAccount } from "../types";
 const LB_PER_KG = 2.20462262;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const LEVELS = ["Beginner", "Intermediate", "Advanced"] as const;
-const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text";
-const card = "mt-4 rounded-lg border border-border bg-surface2 p-4 text-left";
+const inputClass = "min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text";
+const card = "mt-4 rounded-lg border border-border-strong bg-surface2 p-4 text-left";
 const deviceZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 const allZones = (): string[] => {
   const intl = Intl as unknown as { supportedValuesOf?: (k: string) => string[] };

@@ -595,7 +595,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
                             if (next > done) startRest(l.restSec, l.name);
                           }}
                           className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${
-                            isDone ? "border-accent2 bg-accent2 text-white" : "border-border bg-surface2 text-dim hover:border-dim"
+                            isDone ? "border-accent2 bg-accent2 text-white" : "border-border-strong bg-surface2 text-dim hover:border-dim"
                           }`}
                         >
                           {isDone ? "✓" : k + 1}
@@ -629,7 +629,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
       )}
 
       {plan.reasoning.trim() !== "" && (
-        <section aria-label="Why this plan" className="mt-5 rounded-lg border border-border bg-surface2 p-4">
+        <section aria-label="Why this plan" className="mt-5 rounded-lg border border-border-strong bg-surface2 p-4">
           <h2 className="card-title">Why this plan</h2>
           <p className="mt-1 text-sm text-text">{inline(plan.reasoning)}</p>
         </section>
@@ -719,7 +719,7 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
             <label
               key={n}
               className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border font-mono text-sm font-semibold has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
-                effort === n ? "border-accent bg-accent text-on-accent" : "border-border bg-surface2 text-text hover:border-dim"
+                effort === n ? "border-accent bg-accent text-on-accent" : "border-border-strong bg-surface2 text-text hover:border-dim"
               }`}
             >
               <input type="radio" name="effort" value={n} checked={effort === n} onChange={() => setEffort(n)} className="sr-only" />
@@ -742,7 +742,7 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
         onChange={(e) => setNote(e.target.value)}
         maxLength={500}
         rows={3}
-        className="mt-1 w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
+        className="mt-1 w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
       />
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="submit" disabled={mark.isPending} className="btn btn-primary min-h-11">
@@ -782,7 +782,7 @@ function MeView({ account, onSignOut, signingOut }: { account: ClientAccount; on
               e.preventDefault();
               document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
-            className="flex min-h-9 items-center rounded-full border border-border bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim"
+            className="flex min-h-9 items-center rounded-full border border-border-strong bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim"
           >
             {label}
           </a>

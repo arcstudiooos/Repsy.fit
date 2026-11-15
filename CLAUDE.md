@@ -1832,3 +1832,60 @@ rather than wrong ones.
   client-side unit preference is a new feature, not part of this fix.
 - A units-blind weight formatter was DELETED rather than left behind (`formatWeightChange`): one
   sitting in the codebase is an invitation to reintroduce the bug.
+
+## The visual system and the Home dashboard (Nov 2026 redesign)
+
+### Colour: fills vs text
+
+**`--accent`, `--amber` and the four type colours are FILLS. They are not legal as text.**
+Each has a `*-text` twin that is. This is not a style preference - it was measured:
+
+| Pair | Ratio | Verdict |
+|---|---|---|
+| `--accent #ff4a1f` as text on white | **3.36** | fails AA (4.5) |
+| `--amber #d97706` as text on white | **3.19** | fails |
+| recovery `#7c5cfc` as text on white | **4.38** | fails |
+| `--accent2 #0e7c6b` on dark `#1e1e1e` | **3.27** | failed; dark now uses `#2dd4bf` (8.96) |
+| `--border #e6e0d6` inside an input (`--surface2`) | **1.12** | fails 3:1 - the field had no visible edge |
+
+So: `--accent-text #c2360f` (5.49) for text, `--border-strong #8f887e` (3.0 in an input) for control
+edges. **Every input in the app uses `border-border-strong`, not `border-border`** - 70 of them were
+changed at once, because a control the user cannot see the edge of is not a control.
+
+`--on-accent #141414` (dark text on orange, 5.48) was already right and stays. Never white on orange.
+
+### Button hierarchy: loudness is a rank, not a style
+
+- `.btn-primary` - orange fill, hard shadow. **At most one per card.**
+- `.btn-secondary` - the DEFAULT. Surface fill, `--border-strong` edge. The border carries the shape.
+- `.btn-ghost` - repeated in-row actions, `--accent-text`, no fill, no shadow.
+- `.btn-danger` - real destructive (red fill). It used to be a surface button with an orange border,
+  which read as a second primary. The trigger that OPENS a confirm is `.btn-danger-ghost`.
+- `.dense` on a container softens the primary shadow: twenty lifted buttons is noise.
+
+**The rule that fixed the "everything shouts" screenshot:** a button that repeats on every row of a
+list is `.btn-ghost`. Ten identical orange buttons mean none of them is important. A *decision*
+(Approve / Dismiss) may stay solid; *navigation* may not.
+
+`.empty-state` uses `--muted` (4.58), quieter than `--dim` (5.38), so an empty block visibly recedes
+from real content. Never put `--muted` on `--surface2` - it drops to 4.20 and fails.
+
+### Home is a dashboard, not a list of containers
+
+Home was six stacked full-width cards. Three were usually empty, so most of the screen said nothing
+was wrong. Now:
+
+1. **The counts live on one rail** (`role="group"`, "Today at a glance") - five numbers. A `<dl>` has
+   no implicit ARIA role, so the role is explicit or the label is never announced.
+2. **A count that has not loaded shows `-`, never `0`.** A zero that really means "not loaded" tells
+   the coach there is nothing to do, which is a lie.
+3. **The cards sit in a 6-column grid** with `items-start`, so two quiet blocks share a row instead
+   of taking one each, and an empty card is as tall as its content rather than its neighbour.
+4. **`Today's Tasks` leads** - the only list with a verb attached. `Client activity` was demoted
+   below the check-ins it gives context to.
+5. **DOM order == visual order == tab order.** No `order-*` utilities, ever: reflow must never
+   reorder the keyboard path.
+
+`e2e-ui/home-layout.spec.ts` pins the contract by measuring real bounding boxes - that cards sit
+SIDE BY SIDE at desktop width and stack on a phone - because that is the property that regressed
+into a wall of rows last time, and no string assertion can catch it.

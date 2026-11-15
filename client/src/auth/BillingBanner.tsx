@@ -27,7 +27,7 @@ export function BillingBanner() {
       data-testid="billing-banner"
       role={failing ? "alert" : undefined}
       className={`mt-4 flex flex-wrap items-center gap-3 rounded-card border px-4 py-3 text-sm ${
-        failing ? "border-amber bg-surface2 font-semibold text-amber-text" : "border-border bg-surface2 text-dim"
+        failing ? "border-amber bg-surface2 font-semibold text-amber-text" : "border-border-strong bg-surface2 text-dim"
       }`}
     >
       <span>{text}</span>

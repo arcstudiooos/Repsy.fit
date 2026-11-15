@@ -10,7 +10,7 @@ import type { ClientSnapshot } from "../types";
 
 function Card({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <li className="rounded-card border border-border bg-surface2 px-3 py-2">
+    <li className="rounded-card border border-border-strong bg-surface2 px-3 py-2">
       <p className="text-xs font-semibold text-dim">{label}</p>
       <p className="font-heading text-2xl text-text">{value}</p>
       {hint && <p className="text-xs text-dim">{hint}</p>}

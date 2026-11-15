@@ -34,7 +34,7 @@ export const WEEKDAYS = [
   "Saturday",
 ];
 const inputClass =
-  "min-h-11 w-full rounded-lg border border-border bg-surface2 px-3 text-base text-text";
+  "min-h-11 w-full rounded-lg border border-border-strong bg-surface2 px-3 text-base text-text";
 const linkTo = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
   e.preventDefault();
@@ -209,7 +209,7 @@ function Scale({
             className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border font-mono text-sm font-semibold has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
               value === n
                 ? "border-accent bg-accent text-on-accent"
-                : "border-border bg-surface2 text-text hover:border-dim"
+                : "border-border-strong bg-surface2 text-text hover:border-dim"
             }`}
           >
             <input
@@ -419,7 +419,7 @@ function CheckInForm({
           onChange={(e) => setFood(e.target.value)}
           maxLength={1000}
           rows={3}
-          className="w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
+          className="w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
         />
       </div>
       {(error || save.isError) && (
@@ -565,7 +565,7 @@ export function WeeklyPage() {
                     onClick={() => setAdherence(String(v))}
                     aria-pressed={adherence === String(v)}
                     className={`min-h-9 flex-1 rounded-lg border px-1 text-xs font-semibold ${
-                      adherence === String(v) ? "border-accent2 text-accent2" : "border-border bg-surface2 text-text hover:border-dim"
+                      adherence === String(v) ? "border-accent2 text-accent2" : "border-border-strong bg-surface2 text-text hover:border-dim"
                     }`}
                   >
                     {v}%
@@ -602,7 +602,7 @@ export function WeeklyPage() {
               onChange={(e) => setNote(e.target.value)}
               maxLength={500}
               rows={3}
-              className="w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
+              className="w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
             />
           </div>
           {(error || send.isError) && (
@@ -791,7 +791,7 @@ export function CheckInDaySetting() {
   return (
     <section
       aria-label="Weekly check-in day"
-      className="mt-4 rounded-lg border border-border bg-surface2 p-4"
+      className="mt-4 rounded-lg border border-border-strong bg-surface2 p-4"
     >
       <label
         htmlFor="checkin-day"

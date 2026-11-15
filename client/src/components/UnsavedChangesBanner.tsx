@@ -81,7 +81,7 @@ export function UnsavedChangesBanner() {
     <div
       role="status"
       aria-label="Unsaved changes"
-      className="mb-3 flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface2 px-3 py-2"
+      className="mb-3 flex flex-wrap items-center gap-2 rounded-card border border-border-strong bg-surface2 px-3 py-2"
     >
       <p className="min-w-0 flex-1 text-sm text-text">
         Unsaved changes in <span className="font-semibold">{d.label}</span>

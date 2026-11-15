@@ -127,7 +127,7 @@ function ClientCheckIns({ client }: { client: Client }) {
           aria-expanded={logOpen}
           aria-controls="log-checkin"
           onClick={() => setLogOpen((o) => !o)}
-          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-card border border-border bg-surface2 px-4 py-2 text-left text-sm font-semibold text-text hover:border-dim"
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-card border border-border-strong bg-surface2 px-4 py-2 text-left text-sm font-semibold text-text hover:border-dim"
         >
           <span>Log a check-in for {client.name}</span>
           <span aria-hidden="true" className="text-dim">{logOpen ? "−" : "+"}</span>
@@ -208,7 +208,7 @@ function Scale({ label, name, value, onChange }: { label: string; name: string; 
               onClick={() => onChange(selected ? "" : String(n))}
               className={
                 "h-10 w-10 rounded-lg border text-sm font-bold " +
-                (selected ? "btn-primary border-accent" : "border-border bg-surface2 text-text hover:border-dim")
+                (selected ? "btn-primary border-accent" : "border-border-strong bg-surface2 text-text hover:border-dim")
               }
             >
               {n}

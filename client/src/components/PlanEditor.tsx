@@ -11,7 +11,7 @@ type Props = {
   withDate?: boolean;
 };
 
-const field = "w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text";
+const field = "w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-sm text-text";
 
 /** Title and details are required; returns the first problem in plain words, or null. */
 export function planProblem(plan: PlanFields): string | null {

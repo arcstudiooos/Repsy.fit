@@ -13,7 +13,7 @@ import { DIET_TYPES, MEAL_TYPES, type DietType, type Meal, type MealType, type N
 import { FoodPicker } from "./FoodPicker";
 
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 const smallButton = "btn btn-secondary";
 
 /** Drops a trailing ".0" so 30 reads "30", not "30.0"; keeps one-decimal values like 45.5. */

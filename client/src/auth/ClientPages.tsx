@@ -542,7 +542,7 @@ function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; c
             onChange={(e) => setInjuries(e.target.value)}
             maxLength={1000}
             rows={3}
-            className="w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-base text-text"
+            className="w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
           />
         </div>
         {!initial.healthConsent && (

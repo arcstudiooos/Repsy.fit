@@ -15,7 +15,7 @@ function localToday() {
 }
 
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 
 /** Weekly check-in for the selected client. Saving refreshes logs, stat cards and charts together. */
 export function CheckInForm({ clientId }: Props) {

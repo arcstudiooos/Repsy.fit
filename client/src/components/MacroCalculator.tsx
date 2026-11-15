@@ -9,7 +9,7 @@ import { localToday } from "../tabs/AiCoachTab";
 import { ACTIVITY_LEVELS, GOALS, SEXES, type ActivityLevel, type Client, type MacroInput, type Sex } from "../types";
 
 const inputClass =
-  "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
+  "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 
 /** The exact disclaimer line; it is shown on the result and saved in the assignment's reasoning. */
 export const MACRO_DISCLAIMER = "Starting estimate for coaching only - not medical advice. Adjust from the client's real progress.";

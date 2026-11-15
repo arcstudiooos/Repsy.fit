@@ -90,7 +90,7 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked, lib
             onClick={() => setView(v)}
             className={
               "min-h-10 rounded-full border px-4 text-sm font-semibold " +
-              (view === v ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+              (view === v ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
             }
           >
             {v}
@@ -180,7 +180,7 @@ function PaymentsView({ clients }: { clients: Client[] }) {
                 onClick={() => setFilter(f)}
                 className={
                   "min-h-10 rounded-full border px-3 text-sm font-semibold " +
-                  (filter === f ? "border-text bg-text text-bg" : "border-border bg-surface2 text-text hover:border-dim")
+                  (filter === f ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
                 }
               >
                 {f} <span className="font-body font-normal tabular-nums">{counts[f]}</span>

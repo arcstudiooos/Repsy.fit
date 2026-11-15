@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listFoods, queryKeys } from "../api";
 import { FOOD_CATEGORIES, type Food, type FoodCategory, type FoodPortion } from "../types";
 
-const field = "w-full rounded-lg border border-border bg-surface2 px-3 py-2 text-sm text-text";
+const field = "w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-sm text-text";
 
 /**
  * One food's numbers at a quantity of servings. Mirrors `scaled` in server routes/foods.ts, which

@@ -296,7 +296,7 @@ function HabitRow({
                 (done
                   ? "border-accent2 bg-accent2 text-white"
                   : expected
-                    ? "border-border bg-surface2 text-dim hover:border-dim"
+                    ? "border-border-strong bg-surface2 text-dim hover:border-dim"
                     : "border-transparent bg-transparent text-dim opacity-40 hover:border-border")
               }
             >
