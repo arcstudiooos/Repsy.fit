@@ -41,6 +41,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Type-check the TESTS and scripts too. tsconfig.json only includes "src" (that is what gets
+      # compiled), so without this a test can call prisma.habit.create() without its required
+      # coachId and the mistake is only found by a CI run against a real database - the slowest and
+      # most expensive place to find it. This step catches that class of error in seconds.
+      - name: Typecheck tests and scripts
+        run: npx -w server tsc --noEmit -p tsconfig.test.json
+
       - name: Migration check (fresh DB + DB with v1 demo data)
         run: node server/scripts/check-migration.mjs
 

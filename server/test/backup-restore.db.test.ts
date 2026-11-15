@@ -16,6 +16,15 @@ process.env.SESSION_SECRET ??= "test-secret-test-secret-test-secret";
 import { prisma } from "../src/db.js";
 import { backup } from "../scripts/backup.mjs";
 import { restore } from "../scripts/restore.mjs";
+
+/** backup.mjs is plain JS, so give its return value a shape the type-checker can use. */
+type Dump = {
+  takenAt: string;
+  models: string[];
+  counts: Record<string, number>;
+  data: Record<string, Array<Record<string, unknown> & { id: string }>>;
+};
+const takeBackup = (models: string[]) => backup(prisma, models) as Promise<Dump>;
 import { hashPassword } from "../src/auth/password.js";
 
 const tag = `bk-${Date.now()}`;
@@ -43,7 +52,8 @@ beforeAll(async () => {
   await prisma.assignment.create({
     data: { coachId, clientId, type: "Workout", title: "Legs", details: "Squat 5x5", date: "2026-11-16" },
   });
-  const habit = await prisma.habit.create({ data: { clientId, name: "Walk 8k" } });
+  // A habit belongs to the coach as well as the client - both relations are required.
+  const habit = await prisma.habit.create({ data: { coachId, clientId, name: "Walk 8k" } });
   await prisma.habitLog.create({ data: { habitId: habit.id, date: "2026-11-16", done: true } });
 });
 
@@ -70,10 +80,10 @@ async function mine() {
 
 describe("a backup can actually be restored", () => {
   it("captures every row of every table it names", async () => {
-    const dump = await backup(prisma, ORDER);
+    const dump = await takeBackup(ORDER);
     // The counts are the whole database, so assert ours are present rather than exact totals.
     expect(dump.counts.coach).toBeGreaterThanOrEqual(1);
-    expect(dump.data.client.some((c: { id: string }) => c.id === clientId)).toBe(true);
+    expect(dump.data.client.some((c) => c.id === clientId)).toBe(true);
     expect(dump.takenAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
@@ -81,7 +91,7 @@ describe("a backup can actually be restored", () => {
     const before = await mine();
     expect(before).toEqual({ coach: 1, client: 1, assignment: 1, habit: 1, habitLog: 1 });
 
-    const dump = await backup(prisma, ORDER);
+    const dump = await takeBackup(ORDER);
 
     // The destructive half: empty the tables, children first.
     for (const model of SCOPE) await (prisma[model] as { deleteMany: () => Promise<unknown> }).deleteMany();
@@ -104,7 +114,7 @@ describe("a backup can actually be restored", () => {
   it("does NOT bring back rows written after the backup was taken", async () => {
     // A logical backup is a snapshot. Anyone treating it as continuous protection will lose the
     // difference, so this behaviour is pinned rather than left to be discovered during an incident.
-    const dump = await backup(prisma, ORDER);
+    const dump = await takeBackup(ORDER);
     const later = await prisma.assignment.create({
       data: { coachId, clientId, type: "Note", title: "Written after the backup", details: "", date: "2026-11-17" },
     });

@@ -1,0 +1,19 @@
+{
+  // Type-checks the TESTS and the scripts, which tsconfig.json deliberately does not: it only
+  // includes "src", because that is what gets compiled to dist.
+  //
+  // WHY THIS EXISTS: a test calling prisma.habit.create() without its required coachId is a
+  // compile error that Prisma's generated types catch instantly - but only if something type-checks
+  // the test. Without this, that class of mistake is found by a CI run against a real database,
+  // which is the slowest and most expensive place to find it.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // No rootDir: nothing is emitted here, and several server tests deliberately import pure
+    // formatting helpers from client/src/lib to unit-test them without a browser.
+    "rootDir": null,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["src", "test", "scripts"]
+}
