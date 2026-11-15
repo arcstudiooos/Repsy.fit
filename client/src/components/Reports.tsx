@@ -7,6 +7,8 @@ import { downloadClientCsv, downloadRosterCsv, getProgressReport } from "../api"
 import { ProgressCharts } from "./ProgressCharts";
 import { plainErrorMessage } from "./States";
 import type { Client, ClientExportType, ProgressReport, ReportRange } from "../types";
+import { useCoachUnits } from "../lib/useCoachUnits";
+import { showWeight } from "../lib/snapshotFormat";
 
 const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text";
 const labelClass = "mb-1 block text-sm font-bold";
@@ -191,6 +193,8 @@ export function Reports({ clients }: { clients: Client[] }) {
 
 function ReportView({ report }: { report: ProgressReport }) {
   const { client, logs, measurements, assignments, checkIns } = report;
+  // The printed report must read in the coach's unit too - it is the thing they hand to a client.
+  const units = useCoachUnits();
   const chartAssignments = assignments.byType.flatMap(({ type, count }) => Array.from({ length: count }, () => ({ type })));
   const measureRows = MEASURES.map((m) => {
     const values = measurements.map((x) => x[m.key]).filter((v): v is number => v !== null);
@@ -225,7 +229,7 @@ function ReportView({ report }: { report: ProgressReport }) {
           ["Goal", client.goal],
           ["Level", client.level],
           ["Age", client.age === null ? "-" : String(client.age)],
-          ["Starting weight", show(client.weightKg, "kg")],
+          ["Starting weight", showWeight(client.weightKg, units)],
           ["Height", show(client.heightCm, "cm")],
         ].map(([k, v]) => (
           <div key={k}>
@@ -264,7 +268,7 @@ function ReportView({ report }: { report: ProgressReport }) {
       )}
 
       <h4 className="mt-5 text-lg">Weight and adherence</h4>
-      <ProgressCharts logs={logs} assignments={chartAssignments} />
+      <ProgressCharts logs={logs} assignments={chartAssignments} units={units} />
 
       <h4 className="mt-5 text-lg">Assignments completed</h4>
       <p className="mt-1 text-sm">

@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import { GOALS, LEVELS, type Client, type Level, type NewClient } from "../types";
+import { useCoachUnits } from "../lib/useCoachUnits";
+import { weightToKg } from "../lib/snapshotFormat";
 
 const OTHER_GOAL = "__other__";
 
@@ -45,6 +47,8 @@ export function AddClientForm({ onCreated, onCancel, focusSignal = 0 }: Props) {
   const [goalChoice, setGoalChoice] = useState(""); // "" = not chosen (server default)
   const [goalOther, setGoalOther] = useState("");
   const [age, setAge] = useState("");
+  // The coach types in THEIR unit; `weightKg` holds what they typed, converted only on submit.
+  const units = useCoachUnits();
   const [weightKg, setWeightKg] = useState("");
   const [heightCm, setHeightCm] = useState("");
   const [level, setLevel] = useState<Level>("Beginner");
@@ -80,7 +84,7 @@ export function AddClientForm({ onCreated, onCancel, focusSignal = 0 }: Props) {
     const goal = goalChoice === OTHER_GOAL ? goalOther.trim() : goalChoice;
     if (goal) input.goal = goal;
     if (age.trim()) input.age = Number(age);
-    if (weightKg.trim()) input.weightKg = Number(weightKg);
+    if (weightKg.trim()) input.weightKg = weightToKg(Number(weightKg), units);
     if (heightCm.trim()) input.heightCm = Number(heightCm);
     if (focus.trim()) input.focus = focus.trim();
     if (notes.trim()) input.notes = notes.trim();
@@ -153,7 +157,7 @@ export function AddClientForm({ onCreated, onCancel, focusSignal = 0 }: Props) {
           {(
             [
               ["client-age", "Age", age, setAge, errors.age, "1"],
-              ["client-weight", "Weight kg", weightKg, setWeightKg, errors.weightKg, "any"],
+              ["client-weight", `Weight ${units}`, weightKg, setWeightKg, errors.weightKg, "any"],
               ["client-height", "Height cm", heightCm, setHeightCm, errors.heightCm, "any"],
             ] as const
           ).map(([id, label, value, set, error, step]) => (

@@ -10,6 +10,8 @@ import { PipelineCounts } from "../components/PipelineCounts";
 import { daysAgo, formatDay } from "../lib/dates";
 import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
+import { useCoachUnits } from "../lib/useCoachUnits";
+import { showWeight } from "../lib/snapshotFormat";
 
 // The invite panel (Prompt 65) loads on first open, so its form validation (zod) stays out of /app.
 // Prompt 76: the join-code panel (with the QR encoder) is its own lazy chunk too.
@@ -185,11 +187,11 @@ export function ClientsTab({
   );
 }
 
-/** "41 yrs · 68.5 kg · 170 cm" - only the values that are present. */
-function stats(client: Client): string {
+/** "41 yrs · 68.5 kg · 170 cm" - only the values that are present, in the coach's own unit. */
+function stats(client: Client, units: "kg" | "lb"): string {
   const parts: string[] = [];
   if (client.age != null) parts.push(`${client.age} yrs`);
-  if (client.weightKg != null) parts.push(`${client.weightKg} kg`);
+  if (client.weightKg != null) parts.push(showWeight(client.weightKg, units));
   if (client.heightCm != null) parts.push(`${client.heightCm} cm`);
   return parts.join(" · ");
 }
@@ -205,7 +207,7 @@ type CardProps = {
 };
 
 function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError }: CardProps) {
-  const statLine = stats(client);
+  const statLine = stats(client, useCoachUnits());
   const activity = activityLine(client);
 
   return (

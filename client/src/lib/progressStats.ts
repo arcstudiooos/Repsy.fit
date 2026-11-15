@@ -48,8 +48,6 @@ export function progressStats(logs: ProgressLog[], assignments: Assignment[], ha
   };
 }
 
-/** "-1.2 kg overall" / "+1.5 kg overall" - plain sign, no good/bad judgement. */
-export function formatWeightChange(change: number): string {
-  const sign = change > 0 ? "+" : change < 0 ? "-" : "";
-  return `${sign}${Math.abs(change).toFixed(1)} kg overall`;
-}
+// `formatWeightChange` lived here and hardcoded "kg". It was replaced by `showWeightChange` in
+// lib/snapshotFormat.ts, which converts to the coach's unit, and removed rather than left behind:
+// a units-blind weight formatter sitting in the codebase is an invitation to reintroduce the bug.

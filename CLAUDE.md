@@ -1791,3 +1791,44 @@ remaining row carrying its comma; Postgres rejected it with 42601 and `prisma mi
 Since Render's start command is `prisma migrate deploy && node dist/index.js`, **a migration that
 cannot apply stops the server entirely** - so this class of typo is worth a dedicated millisecond
 guard rather than a six-minute CI round trip. Deliberately broken and restored to prove it bites.
+
+## Weight units: the coach's unit, the stored unit (Nov 2026)
+
+**Weights are ALWAYS stored in kg.** `Coach.units` ("kg" | "lb") is a DISPLAY and INPUT preference,
+never a storage format. Nothing in the database changes when a coach switches units.
+
+### The bug this fixed
+
+The app displayed weight in the coach's unit (snapshot cards, progress charts) but **every weight
+INPUT was labelled "kg" and stored raw**. A coach working in pounds typed 150 meaning pounds and
+150 KILOGRAMS was stored. That is wrong data, not a wrong label - and it was invisible to tests
+because the e2e fixture pins one mock coach, who is on kg.
+
+### The helpers (all in `client/src/lib/snapshotFormat.ts`, a leaf, unit-tested from the server suite)
+
+- `weightIn(kg, units)` - stored kg as the NUMBER to show, one decimal. No unit word, so it suits an
+  input box as well as a sentence.
+- `weightToKg(typed, units)` - what the coach typed, back to stored kg. **This is the half that was
+  missing.** Kept to 3 decimals so a value round-trips to the same tenth of a pound.
+- `showWeight(kg, units)` - "149.9 lb". Always names its unit, so a number is never ambiguous.
+  `null` renders "-", never 0: a missing weight read as zero is a lie about the client.
+- `showWeightChange(changeKg, units)` - converts the CHANGE too. A 2 kg loss is a 4.4 lb loss;
+  showing "-2.0 lb" would understate it by half.
+
+`useCoachUnits()` (`client/src/lib/useCoachUnits.ts`) reads it in one place, because scattered reads
+are exactly what caused the bug. It falls back to **"kg"**: what every coach meant before the
+setting existed, and what the database stores, so an unreadable profile shows raw stored numbers
+rather than wrong ones.
+
+### Rules
+
+- **A validation ceiling is a KG ceiling and must be checked AFTER conversion.** The 500 limit on a
+  check-in weight otherwise cuts a pound coach off at 500 lb (227 kg).
+- The printed progress report uses the coach's unit too: it is the thing they hand to a client.
+  `ProgressCharts` must always be passed `units` - it was missing it in Reports.
+- **The CSV export keeps the column name `weightKg` and stays in kg.** The column states its own
+  unit, so it is unambiguous, and the header list is pinned by a test as an external contract.
+- **The CLIENT app stays in kg**, labelled "Weight (kg)" explicitly. It has no coach session, and a
+  client-side unit preference is a new feature, not part of this fix.
+- A units-blind weight formatter was DELETED rather than left behind (`formatWeightChange`): one
+  sitting in the codebase is an invitation to reintroduce the bug.

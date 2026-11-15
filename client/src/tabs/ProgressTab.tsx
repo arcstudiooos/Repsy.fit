@@ -6,7 +6,8 @@ import { ErrorState, LoadingState } from "../components/States";
 import { CheckInForm } from "../components/CheckInForm";
 import { CheckInList } from "../components/CheckInList";
 import { ProgressCharts } from "../components/ProgressCharts";
-import { formatWeightChange, progressStats } from "../lib/progressStats";
+import { progressStats } from "../lib/progressStats";
+import { showWeight, showWeightChange } from "../lib/snapshotFormat";
 import type { Client } from "../types";
 
 type Props = {
@@ -73,8 +74,8 @@ export function ProgressTab({ client }: Props) {
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
             label="Current weight"
-            value={stats.currentWeight === null ? null : `${stats.currentWeight} kg`}
-            detail={stats.weightChange === null ? null : formatWeightChange(stats.weightChange)}
+            value={stats.currentWeight === null ? null : showWeight(stats.currentWeight, coachUnits)}
+            detail={stats.weightChange === null ? null : showWeightChange(stats.weightChange, coachUnits)}
           />
           <StatCard
             label="Average adherence"

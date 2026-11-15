@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addProgressLog, queryKeys } from "../api";
 import { plainErrorMessage } from "./States";
 import type { NewProgressLog } from "../types";
+import { useCoachUnits } from "../lib/useCoachUnits";
+import { weightToKg } from "../lib/snapshotFormat";
 
 type Props = { clientId: string };
 
@@ -40,8 +42,13 @@ export function CheckInForm({ clientId }: Props) {
   const workoutsNumber = Number(workouts);
   const workoutsInvalid =
     workouts.trim() !== "" && (!Number.isInteger(workoutsNumber) || workoutsNumber < 0 || workoutsNumber > 14);
+  // The coach types in THEIR unit; the database stores kg. The 500 ceiling is a kg ceiling, so it
+  // is checked after conversion - otherwise a pound coach is blocked at 500 lb (227 kg).
+  const units = useCoachUnits();
   const weightNumber = Number(weight);
-  const weightInvalid = weight.trim() !== "" && (!Number.isFinite(weightNumber) || weightNumber <= 0 || weightNumber > 500);
+  const weightKgValue = Number.isFinite(weightNumber) ? weightToKg(weightNumber, units) : NaN;
+  const weightInvalid =
+    weight.trim() !== "" && (!Number.isFinite(weightKgValue) || weightKgValue <= 0 || weightKgValue > 500);
   const dateMissing = date === "";
   const futureDate = date > localToday();
   const canSubmit = !dateMissing && !adherenceInvalid && !workoutsInvalid && !weightInvalid && !save.isPending;
@@ -50,7 +57,7 @@ export function CheckInForm({ clientId }: Props) {
     ev.preventDefault();
     if (!canSubmit) return;
     const input: NewProgressLog = { date, note: note.trim() };
-    if (weight.trim() !== "") input.weightKg = weightNumber;
+    if (weight.trim() !== "") input.weightKg = weightKgValue;
     if (adherence.trim() !== "") input.adherence = adherenceNumber;
     if (workouts.trim() !== "") input.workoutsDone = workoutsNumber;
     save.mutate(input);
@@ -86,7 +93,7 @@ export function CheckInForm({ clientId }: Props) {
         </div>
         <div>
           <label htmlFor="checkin-weight" className="mb-1 block text-sm font-semibold text-text">
-            Weight kg
+            Weight {units}
           </label>
           <input
             id="checkin-weight"
@@ -102,7 +109,7 @@ export function CheckInForm({ clientId }: Props) {
           />
           {weightInvalid && (
             <p id="checkin-weight-error" className="mt-1 text-sm font-semibold text-accent">
-              Weight must be more than 0 kg
+              Weight must be more than 0 {units}
             </p>
           )}
         </div>

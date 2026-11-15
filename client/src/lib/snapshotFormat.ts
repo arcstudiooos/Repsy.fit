@@ -7,7 +7,31 @@ const KG_PER_LB = 0.45359237;
 
 /** Stored weights are always kg; a coach reads them in their own unit. */
 export const showWeight = (kg: number | null, units: "kg" | "lb") =>
-  kg === null ? "-" : `${Math.round((units === "lb" ? kg / KG_PER_LB : kg) * 10) / 10} ${units}`;
+  kg === null ? "-" : `${weightIn(kg, units)} ${units}`;
+
+/**
+ * A stored kg value as the NUMBER a coach should see, to one decimal. No unit word, so it can go in
+ * an input box as well as in a sentence.
+ */
+export const weightIn = (kg: number, units: "kg" | "lb") =>
+  Math.round((units === "lb" ? kg / KG_PER_LB : kg) * 10) / 10;
+
+/**
+ * What a coach TYPED, converted to the kg the database stores.
+ *
+ * The counterpart of `weightIn`, and the half that was missing: every weight INPUT was labelled
+ * "kg" while the rest of the app displayed the coach's own unit, so a coach working in pounds typed
+ * 150 meaning pounds and 150 KILOS was stored. Kept to 3 decimals of kg: enough that a value
+ * round-trips back to the same tenth of a pound, without inventing precision.
+ */
+export const weightToKg = (value: number, units: "kg" | "lb") =>
+  units === "lb" ? Math.round(value * KG_PER_LB * 1000) / 1000 : value;
+
+/** A signed change in the coach's unit: "-1.2 kg overall" / "+3.3 lb overall". */
+export function showWeightChange(changeKg: number, units: "kg" | "lb"): string {
+  const sign = changeKg > 0 ? "+" : changeKg < 0 ? "-" : "";
+  return `${sign}${weightIn(Math.abs(changeKg), units).toFixed(1)} ${units} overall`;
+}
 
 /** "15 Nov" - short, because these cards are a glance not a report. Empty string for no date. */
 export function shortDay(iso: string | null): string {

@@ -40,6 +40,11 @@ const plan = (id: string, date: string, over: Record<string, unknown> = {}) => (
 });
 
 async function openGrid(page: Page, assignments: unknown[], opts: { stay?: boolean } = {}) {
+  // The grid ALWAYS shows the current week (so there is somewhere to add today), which means these
+  // fixed-date fixtures grow an extra row the moment real time moves past them. Pin the clock to
+  // Thu 12 Nov 2026 - inside the 9-15 Nov week these tests are written around - so the assertions
+  // are true forever instead of only during the week they were written.
+  await page.clock.setFixedTime(new Date("2026-11-12T09:00:00"));
   const posted: Record<string, unknown>[] = [];
   await page.route("**/api/**", (route: Route) =>
     route.fulfill({ status: 200, json: emptyApi(new URL(route.request().url()).pathname) }),

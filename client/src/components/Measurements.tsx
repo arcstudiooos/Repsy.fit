@@ -9,6 +9,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import type { Measurement, NewMeasurement } from "../types";
 import { formatShortDay } from "../lib/dates";
+import { useCoachUnits } from "../lib/useCoachUnits";
+import { weightIn } from "../lib/snapshotFormat";
 
 const ACCENT = "#FF4A1F"; // design-system accent, same as the Progress charts
 const CHART_HEIGHT = 220;
@@ -22,7 +24,10 @@ const FIELDS: { key: TapeKey; label: string; word: string; unit: string; max: st
   { key: "hipCm", label: "Hip (cm)", word: "hip", unit: "cm", max: "300" },
   { key: "bodyFatPercent", label: "Body fat (%)", word: "body fat", unit: "%", max: "75" },
 ];
-const WEIGHT = { key: "weightKg", label: "Weight (kg)", word: "weight", unit: "kg" } as const;
+// Built per render, because the label and axis unit follow the coach's setting. Stored values are
+// always kg, so the chart series is converted at the point it is read.
+const weightChoice = (units: "kg" | "lb") =>
+  ({ key: "weightKg", label: `Weight (${units})`, word: "weight", unit: units }) as const;
 
 type FormState = Record<TapeKey, string> & { date: string; note: string };
 const emptyForm = (date: string): FormState => ({ date, waistCm: "", chestCm: "", armCm: "", hipCm: "", bodyFatPercent: "", note: "" });
@@ -74,16 +79,20 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
     add.mutate(body);
   }
 
+  const units = useCoachUnits();
   const items = query.data ?? [];
   const hasWeight = (progress.data ?? []).some((l) => l.weightKg !== null);
-  const choices = [...(hasWeight ? [WEIGHT] : []), ...FIELDS];
+  const choices = [...(hasWeight ? [weightChoice(units)] : []), ...FIELDS];
   const chosen = choices.find((c) => c.key === chartKey) ?? choices[0];
   const problem = formError ?? (add.isError ? plainErrorMessage(add.error) : null);
 
   // Oldest first so the line reads left to right; rows without that value are skipped.
   const points: { date: string; value: number }[] =
     chosen.key === "weightKg"
-      ? (progress.data ?? []).filter((l) => l.weightKg !== null).map((l) => ({ date: l.date, value: l.weightKg as number }))
+      ? // Stored kg, shown in the coach's unit - the axis label says which.
+        (progress.data ?? [])
+          .filter((l) => l.weightKg !== null)
+          .map((l) => ({ date: l.date, value: weightIn(l.weightKg as number, units) }))
       : [...items].reverse().flatMap((m) => {
           const value = m[chosen.key];
           return value === null ? [] : [{ date: m.date, value }];
