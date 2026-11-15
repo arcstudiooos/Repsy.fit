@@ -1523,3 +1523,68 @@ payload is what catches an accidental extra write.
 **Not built, and why:** progress photos (Inspo C5). They need object storage that is not configured,
 body photos are sensitive personal data under the DPDP Act, and the Privacy Policy would need
 rewriting. The value does not justify the liability yet. Revisit deliberately, not by accident.
+
+## The AI spend cap (Nov 2026) - the owner's budget is USD 20 a month
+
+`src/ai/budget.ts` plus the `ai_usage` ledger. THREE independent limits, because one is never enough:
+
+1. **`max_tokens` on every request** (`MAX_OUTPUT_TOKENS`, default 1200). The only limit that still
+   applies when the ledger is unreadable.
+2. **A per-coach daily call cap** (`AI_DAILY_CALLS_PER_COACH`, default 60). One confused coach in a
+   loop cannot drink the whole month. A test asserts a full day for one coach costs less than the
+   month's budget.
+3. **A global monthly budget** (`AI_MONTHLY_BUDGET_USD`, default 20). At the limit the AI stops.
+
+**Spend is ESTIMATED, never billed.** The provider dashboard is the source of truth for money; this
+is a guard rail. **The owner must ALSO set a hard cap in the provider dashboard** - this code cannot
+stop spending it does not know about, and a budget enforced in one place is not a budget.
+
+An **unknown model is charged at the dearest rate in the table**, so switching to a pricier model
+cannot silently blow the budget. A provider that reports no `usage` is charged an over-estimate from
+the text length - an unmeasured call must never count as free. Cost is rounded UP per call, because a
+long tail of "free" calls is how a budget leaks.
+
+`checkBudget` **fails OPEN on a database error** (refusing every coach because a counter is
+unreadable is the worse failure; `max_tokens` still bounds it) and **fails CLOSED on an exhausted
+budget**, which is the case that costs money. `recordUsage` never throws: a ledger write must not
+lose the reply a coach is reading. Usage is charged even when the reply fails validation - an
+unusable answer still cost money.
+
+A coach over the limit is told in plain words, as the chat ANSWER rather than an error, and is never
+shown the owner's spend or blamed for other coaches. Auto-assign returns **429** with that wording,
+never the 502 "please try again" - trying again cannot help. `isBudgetStop()` is the single place
+that knows those messages so the wording and the test cannot drift.
+
+`ai_usage.coachId` is deliberately NOT a foreign key: usage history must outlive a deleted coach, or
+the month's spend would drop the moment somebody cancels.
+
+`GET /api/ai-usage` with header `x-ops-token` returns the month's summary. **An unset `OPS_TOKEN`
+means OFF (404), never open.**
+
+## Error alerting (Nov 2026)
+
+`src/ops/alerts.ts` emails `ALERT_EMAIL` through the SMTP provider the app already uses - no new
+vendor, no new dependency. Hooked to: the 500 handler, `unhandledRejection`, `uncaughtException`,
+and the AI budget crossing 80% / 100%.
+
+**The real risk is sending two thousand emails, not missing one.** A crash loop that alerts per
+request makes the inbox unreadable exactly when it matters. So: one email per problem SIGNATURE per
+hour, 20 a day maximum.
+
+`signatureOf()` collapses ids, numbers and dates so the same fault recognises itself. **The long
+mixed-letter-digit rule must run BEFORE the digit rule**: a cuid like `ckl9x8m2a0001` otherwise
+becomes `ckl<n>x<n>m<n>a<n>`, which differs per id - and a signature that differs per id defeats the
+throttle completely. That bug existed and a test caught it; keep that test.
+
+Throttle state is in memory ON PURPOSE: a restart re-alerts, because a restart is itself news.
+
+`alertOwner` never throws and never blocks a request - an alerting failure must not turn one bug
+into two. The log line is the audit trail; the email is a nudge to go and read it.
+
+**WHAT THIS CANNOT DO: notice the server is DEAD.** Code inside a process cannot email about its own
+death. That needs something outside: an uptime monitor pinging `/api/health`, and the host's own
+deploy/crash notifications. Both are owner tasks and neither is code.
+
+`unhandledRejection` alerts but does NOT exit (every Express handler is wrapped in `asyncHandler`, so
+a stray rejection is usually a background job, and killing a server still serving coaches is worse).
+`uncaughtException` alerts and exits after 2s, because the process state is no longer trustworthy.

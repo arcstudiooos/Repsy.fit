@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ASSIGNMENT_TYPES, PlanGenerationError, generatePlan, loadClientContext } from "./ai.js";
 import { isDateString, today } from "./assignments.js";
 import { coachIdOf } from "../auth/requireCoach.js";
+import { isBudgetStop } from "../ai/budget.js";
 import { asyncHandler, findClient, validationMessage } from "./clients.js";
 
 const AutoAssignSchema = z.object({
@@ -38,10 +39,20 @@ autoAssignRouter.post(
       return;
     }
     const { type, date } = parsed.data;
-    const plan = await generatePlan(await loadClientContext(client), type).catch((err: unknown) => {
-      if (err instanceof PlanGenerationError) return null;
+    // A budget stop is not a provider failure: it is a limit with a plain explanation, and it must
+    // not read as "try again" when trying again cannot help.
+    let limited: string | null = null;
+    const plan = await generatePlan(await loadClientContext(client), type, coachId).catch((err: unknown) => {
+      if (err instanceof PlanGenerationError) {
+        if (isBudgetStop(err.message)) limited = err.message;
+        return null;
+      }
       throw err;
     });
+    if (limited) {
+      res.status(429).json({ error: limited });
+      return;
+    }
     if (!plan) {
       res
         .status(502)

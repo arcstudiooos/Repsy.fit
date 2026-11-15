@@ -35,6 +35,8 @@ import { mealsRouter } from "./routes/meals.js";
 import { exercisesRouter } from "./routes/exercises.js";
 import { formsRouter } from "./routes/forms.js";
 import { programsRouter } from "./routes/programs.js";
+import { alertOwner } from "./ops/alerts.js";
+import { usageSummary } from "./ai/budget.js";
 import { macrosRouter } from "./routes/macros.js";
 import { leadsRouter } from "./routes/leads.js";
 import { authRouter } from "./routes/auth.js";
@@ -94,6 +96,29 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ ok: false, db: false });
   } finally {
     clearTimeout(timer);
+  }
+});
+
+/**
+ * GET /api/ai-usage - this month's AI spend against the budget (Nov 2026).
+ *
+ * Behind a shared secret rather than a coach session: it is the OWNER's number, not a coach's, and
+ * the owner may want it from a script or a phone without signing in. No secret set = switched off,
+ * which is the right default for a fork.
+ */
+app.get("/api/ai-usage", async (req, res) => {
+  const expected = process.env.OPS_TOKEN?.trim();
+  const given = req.header("x-ops-token")?.trim();
+  // Unset means OFF, not open: a missing secret must never become a public endpoint.
+  if (!expected || given !== expected) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  try {
+    res.json(await usageSummary());
+  } catch (err) {
+    console.error("AI usage summary failed:", err instanceof Error ? err.message : err);
+    res.status(503).json({ error: "Could not read the usage ledger." });
   }
 });
 
@@ -190,6 +215,12 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     return;
   }
   console.error(err);
+  // Nov 2026: tell the owner. Deduped and capped inside alertOwner, and never throws, so an
+  // alerting problem can never turn one bug into two.
+  alertOwner(
+    "a server error",
+    [`${_req.method} ${_req.originalUrl} answered 500.`, "", err instanceof Error ? `${err.name}: ${err.message}` : String(err)].join("\n"),
+  );
   res.status(500).json({ error: "Something went wrong on the server." });
 });
 

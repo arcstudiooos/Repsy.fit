@@ -10,6 +10,7 @@ import { z } from "zod";
 import { prisma } from "../db.js";
 import { sleepWeek } from "../sleep.js";
 import { today } from "./assignments.js";
+import { MAX_OUTPUT_TOKENS, checkBudget, recordUsage } from "../ai/budget.js";
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 
@@ -158,6 +159,11 @@ function buildUserMessage(
 
 const ProviderResponseSchema = z.object({
   choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
+  // Optional: not every provider returns it. Missing usage is estimated from the text instead, so a
+  // provider that stays quiet about tokens can never make a call look free.
+  usage: z
+    .object({ prompt_tokens: z.number().int().min(0).optional(), completion_tokens: z.number().int().min(0).optional() })
+    .optional(),
 });
 
 const AiReplySchema = z
@@ -180,8 +186,25 @@ const AiReplySchema = z
 /** A provider failure with a fixed, safe reason (never secrets, prompts or model output). */
 export class AiProviderError extends Error {}
 
+/** What a call actually used, for the spend ledger. */
+export interface ModelCall {
+  json: unknown;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 /** Sends one system + user message and returns the model's reply parsed as JSON. */
 export async function requestModelJson(systemPrompt: string, userMessage: string, history: ChatTurn[] = []): Promise<unknown> {
+  return (await requestModelCall(systemPrompt, userMessage, history)).json;
+}
+
+/** As `requestModelJson`, but also reports what the call used so it can be charged to the budget. */
+export async function requestModelCall(
+  systemPrompt: string,
+  userMessage: string,
+  history: ChatTurn[] = [],
+): Promise<ModelCall> {
   const baseUrl = process.env.AI_BASE_URL;
   const apiKey = process.env.AI_API_KEY;
   const model = process.env.AI_MODEL;
@@ -201,6 +224,9 @@ export async function requestModelJson(systemPrompt: string, userMessage: string
           { role: "user", content: userMessage },
         ],
         response_format: { type: "json_object" },
+        // The hard per-reply ceiling. See src/ai/budget.ts: this is the one limit that applies even
+        // when the ledger is unreadable.
+        max_tokens: MAX_OUTPUT_TOKENS,
       }),
       signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     });
@@ -215,15 +241,31 @@ export async function requestModelJson(systemPrompt: string, userMessage: string
   const provider = ProviderResponseSchema.safeParse(body);
   if (!provider.success) throw new AiProviderError("provider response had an unexpected shape");
 
+  const content = provider.data.choices[0].message.content;
+  let json: unknown;
   try {
-    return JSON.parse(provider.data.choices[0].message.content) as unknown;
+    json = JSON.parse(content) as unknown;
   } catch {
     throw new AiProviderError("model reply was not valid JSON");
   }
+
+  // Roughly 4 characters per token: only a fallback for a provider that reports no usage, and it
+  // deliberately over-estimates rather than letting an unmeasured call count as free.
+  const guess = (text: string) => Math.ceil(text.length / 4);
+  return {
+    json,
+    model,
+    inputTokens: provider.data.usage?.prompt_tokens ?? guess(systemPrompt + userMessage),
+    outputTokens: provider.data.usage?.completion_tokens ?? guess(content),
+  };
 }
 
-async function callProvider(userMessage: string, history: ChatTurn[] = []): Promise<AiAnswer> {
-  const reply = AiReplySchema.safeParse(await requestModelJson(SYSTEM_PROMPT, userMessage, history));
+async function callProvider(userMessage: string, history: ChatTurn[] = [], coachId?: string): Promise<AiAnswer> {
+  const call = await requestModelCall(SYSTEM_PROMPT, userMessage, history);
+  // Charge the budget for what was spent, whether or not the reply turns out to be usable: a reply
+  // that fails validation still cost money.
+  if (coachId) await recordUsage(coachId, call.model, call.inputTokens, call.outputTokens);
+  const reply = AiReplySchema.safeParse(call.json);
   if (!reply.success) throw new AiProviderError("model reply did not match the expected format");
 
   const { answer, suggestionType, suggestionTitle, suggestionDetails, suggestionReasoning } = reply.data;
@@ -254,9 +296,20 @@ function fallbackAnswer({ client, progressLogs }: ClientContext): string {
 }
 
 /** The AI's answer for this client, or a client-specific fallback if the provider fails. */
-export async function answerQuestion(context: ClientContext, question: string, history: ChatTurn[] = []): Promise<AiAnswer> {
+export async function answerQuestion(
+  context: ClientContext,
+  question: string,
+  history: ChatTurn[] = [],
+  coachId?: string,
+): Promise<AiAnswer> {
+  // The spend cap. A coach over the limit gets a plain explanation as the ANSWER, not an error:
+  // nothing in Repsy breaks, and they are told when it comes back.
+  if (coachId) {
+    const verdict = await checkBudget(coachId);
+    if (!verdict.allowed) return { answer: verdict.reason!, suggestion: null };
+  }
   try {
-    return await callProvider(buildUserMessage(context, question), history);
+    return await callProvider(buildUserMessage(context, question), history, coachId);
   } catch (err) {
     if (!(err instanceof AiProviderError)) throw err;
     console.error(`AI reply failed for client ${context.client.id}: ${err.message}. Saved a fallback reply.`);
@@ -300,13 +353,20 @@ const GeneratedPlanSchema = z.object({
 export class PlanGenerationError extends Error {}
 
 /** One personalised plan of this type from the AI. Never falls back to a generic plan. */
-export async function generatePlan(context: ClientContext, type: AssignmentType): Promise<GeneratedPlan> {
+export async function generatePlan(context: ClientContext, type: AssignmentType, coachId?: string): Promise<GeneratedPlan> {
+  if (coachId) {
+    const verdict = await checkBudget(coachId);
+    // The route turns this into a 429 with this exact wording.
+    if (!verdict.allowed) throw new PlanGenerationError(verdict.reason!);
+  }
   try {
-    const content = await requestModelJson(
+    const call = await requestModelCall(
       planSystemPrompt(type),
       buildUserMessage(context, `Create one ${type} assignment for this client.`, "Coach's request:"),
     );
-    const plan = GeneratedPlanSchema.safeParse(content);
+    // Charged whether or not the plan validates: an unusable reply still cost money.
+    if (coachId) await recordUsage(coachId, call.model, call.inputTokens, call.outputTokens);
+    const plan = GeneratedPlanSchema.safeParse(call.json);
     if (!plan.success) throw new AiProviderError("model reply did not match the expected format");
     return plan.data;
   } catch (err) {

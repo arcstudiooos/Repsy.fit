@@ -501,6 +501,30 @@ model WorkoutTemplate {
   @@map("workout_templates")
 }
 
+/// What the AI has cost, per coach per day (Nov 2026).
+///
+/// ESTIMATED from the provider's token counts, not billed - the provider dashboard is the source of
+/// truth for money. One row per coach per day keeps the monthly aggregate cheap and makes a runaway
+/// coach visible. `coachId` is a plain string, not a relation: usage history must outlive a deleted
+/// coach, or the month's spend would silently drop when someone cancels.
+model AiUsage {
+  id           String @id @default(cuid())
+  coachId      String
+  /// "YYYY-MM-DD", UTC.
+  day          String
+  /// "YYYY-MM", UTC. Denormalised so the monthly total is one indexed aggregate.
+  month        String
+  calls        Int    @default(0)
+  inputTokens  Int    @default(0)
+  outputTokens Int    @default(0)
+  /// US cents, rounded up per call.
+  costCents    Int    @default(0)
+
+  @@unique([coachId, day])
+  @@index([month])
+  @@map("ai_usage")
+}
+
 /// A reusable multi-week plan (Inspo W10, Nov 2026).
 ///
 /// A Program is a TEMPLATE. Assigning it MATERIALISES ordinary Assignment rows on real dates, and

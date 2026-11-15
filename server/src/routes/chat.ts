@@ -84,7 +84,7 @@ chatRouter.post(
       .reverse()
       .filter((m): m is ChatTurn => m.role === "coach" || m.role === "ai");
     const question = await saveMessage(client.id, "coach", parsed.data.question, coachId);
-    const { answer, suggestion } = await answerQuestion(context, parsed.data.question, history);
+    const { answer, suggestion } = await answerQuestion(context, parsed.data.question, history, coachId);
     const reply = await saveMessage(client.id, "ai", answer, coachId);
     res.status(201).json({ question, reply, suggestion });
   }),

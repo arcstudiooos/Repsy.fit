@@ -115,3 +115,15 @@ export async function deliverWelcomeEmail(to: string, coachName: string, signInL
 export async function deliverClientResetEmail(to: string, link: string): Promise<void> {
   return deliverResetEmail(to, link);
 }
+
+/**
+ * Emails the OWNER an operational alert (Nov 2026).
+ *
+ * Separate from the coach-facing emails because the content is different in kind: it may quote an
+ * internal error message, so it goes only to `ALERT_EMAIL`, never to a user-supplied address.
+ */
+export async function deliverOwnerAlert(to: string, subject: string, text: string): Promise<void> {
+  const cfg = smtpConfig();
+  if (!cfg) throw new Error("No email provider is configured");
+  await withTimeout(smtpSend(cfg, to, subject, text), 20_000);
+}
