@@ -65,10 +65,14 @@ describe("alternative meals (Inspo N8)", () => {
     expect(prisma.meal.findMany).not.toHaveBeenCalled();
   });
 
-  it("keeps the coach's own meals as alternatives, in the order given", async () => {
+  it("keeps the coach's own meals AND stock meals as alternatives, in the order given", async () => {
     prisma.meal.findMany.mockResolvedValue([{ id: "m-chicken" }, { id: "m-tofu" }]);
     await request(app).post("/api/meals").send({ ...BODY, swapIds: ["m-tofu", "m-chicken"] });
-    expect(prisma.meal.findMany.mock.calls[0][0].where).toMatchObject({ coachId: TEST_COACH_ID });
+    // Stock meals are visible to every coach, so refusing them as swaps would quietly drop the
+    // most useful alternatives in the library.
+    expect(prisma.meal.findMany.mock.calls[0][0].where).toMatchObject({
+      OR: [{ coachId: TEST_COACH_ID }, { coachId: null }],
+    });
     // The coach's order, not the database's.
     expect(prisma.meal.create.mock.calls[0][0].data.swapIds).toEqual(["m-tofu", "m-chicken"]);
   });

@@ -1737,3 +1737,57 @@ restore into an EMPTY database, look at it, and only then repoint `DATABASE_URL`
 
 This is what makes "we have backups" into "we have tested a restore". It cannot be done with mocks:
 the point is that real foreign keys, cascades and column types survive the trip.
+
+## Stock meals, and bigger shared catalogues (Nov 2026)
+
+### The catalogues
+
+117 stock exercises (was 65), 101 stock foods (was 80), and 46 stock MEALS - a new row kind.
+Seeded by migration with literal deterministic ids (`stk_`, `fd_`, `stkm_`), India-first throughout.
+
+Every food and meal was checked arithmetically before committing: `protein*4 + carbs*4 + fat*9` is
+within 20% of the stated calories on every row. Macros that do not reconcile make a nutrition
+library worse than no library, because a coach cannot tell which number to trust.
+
+**Generated content must be verified against the EXISTING rows, not just against the rules.** Four
+exercises and eleven foods in the first draft duplicated rows already seeded (Pull-Up, Chin-Up,
+Hanging Leg Raise, Russian Twist; Ghee, Samosa, Guava, Almonds, ...). `exercises` has
+`@@unique([coachId, name])`, so those would have been rejected on deploy.
+
+### Meals became shareable
+
+`Meal.coachId` is now NULLABLE, the same two-row-kinds rule as `Exercise` and `Food`: NULL = Repsy
+stock, shared by every coach and read-only to them; a coach "edits" a stock meal by copying it into
+their own library (`POST /api/meals/:mealId/copy`). Before this, a new coach opened an EMPTY meal
+library and had to type every recipe and macro before the diet side of Repsy was usable - and meals
+being the one library without shared stock was incoherent next to exercises and foods.
+
+Rules worth keeping:
+- `GET /api/meals?scope=all|stock|mine`, defaulting to **all**, because an empty library on day one
+  is the problem being solved.
+- The response carries `stock: coachId === null`, so **no caller has to know what a NULL coachId
+  means** - same contract the exercise library uses.
+- PUT and DELETE stay scoped by `coachId`, so a stock row is simply **not found** (404). Read-only
+  falls out of the existing query rather than needing a new branch.
+- **`ownedSwapIds` accepts stock ids too.** Stock meals are visible to every coach, so refusing them
+  as swaps would quietly drop the most useful alternatives in the library.
+- **A copy does NOT carry swaps over**: they point at the stock library's own ids, and a copy
+  silently carrying another library's suggestions is more confusing than one that starts clean.
+- A second copy becomes "Name (2)" rather than an error.
+- The UI shows a "Repsy" badge only on shared rows, and swaps Edit/Delete for "Copy to my library" -
+  showing Edit on a stock meal would just produce a 404. The per-row note reads "Repsy numbers -
+  copy it to change them" instead of "Numbers you set", which is false for a shared row.
+
+The file header comment claiming meals are "never shared" was rewritten, not left to rot.
+
+### `server/test/migration-sql.test.ts`
+
+Checks every migration's SQL for trailing commas before `ON CONFLICT`/`;`, unbalanced quotes,
+unbalanced parentheses, and a missing final semicolon - with quoted strings stripped first so
+punctuation inside a recipe is never mistaken for syntax.
+
+**This exists because of a real failure.** Removing duplicate rows from a seed batch left the last
+remaining row carrying its comma; Postgres rejected it with 42601 and `prisma migrate deploy` died.
+Since Render's start command is `prisma migrate deploy && node dist/index.js`, **a migration that
+cannot apply stops the server entirely** - so this class of typo is worth a dedicated millisecond
+guard rather than a six-minute CI round trip. Deliberately broken and restored to prove it bites.

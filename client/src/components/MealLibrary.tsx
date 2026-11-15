@@ -5,7 +5,7 @@
 // editable afterwards - but nothing recalculates on its own, and no barcode or remote lookup exists.
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createAssignment, createMeal, deleteMeal, listClients, listMeals, queryKeys, updateMeal } from "../api";
+import { copyMeal, createAssignment, createMeal, deleteMeal, listClients, listMeals, queryKeys, updateMeal } from "../api";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import { localToday } from "../tabs/AiCoachTab";
@@ -42,7 +42,18 @@ export function MealLibrary() {
   const [editing, setEditing] = useState<Meal | "new" | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Meal | null>(null);
+  // Nov 2026: the library now holds Repsy stock meals as well as the coach's own.
+  const [ownerFilter, setOwnerFilter] = useState<"All" | "Mine" | "Repsy">("All");
   const queryClient = useQueryClient();
+
+  const copy = useMutation({
+    mutationFn: (id: string) => copyMeal(id),
+    onSuccess: async () => {
+      // Land on the copy: it is in "Mine" now, and that is what the coach wants to edit.
+      setOwnerFilter("Mine");
+      await queryClient.invalidateQueries({ queryKey: queryKeys.meals });
+    },
+  });
 
   const remove = useMutation({
     mutationFn: (id: string) => deleteMeal(id),
@@ -56,6 +67,7 @@ export function MealLibrary() {
   const needle = search.trim().toLowerCase();
   const shown = all.filter(
     (m) =>
+      (ownerFilter === "All" || (ownerFilter === "Mine" ? !m.stock : m.stock)) &&
       (typeFilter === "All" || m.mealType === typeFilter) &&
       // "Any" is not a diet, so filtering by one must still show the meals that suit everyone.
       (dietFilter === "All" || m.dietType === dietFilter || m.dietType === "Any") &&
@@ -128,6 +140,23 @@ export function MealLibrary() {
               ))}
             </select>
           </div>
+          <div>
+            {/* Not "Library": this page already has a Library button, a Library view group and a
+                Library region, so that label is ambiguous for a screen reader too. */}
+            <label htmlFor="meal-owner-filter" className="mb-1 block text-sm font-semibold text-text">
+              Whose meals
+            </label>
+            <select
+              id="meal-owner-filter"
+              className={inputClass + " sm:w-auto"}
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value as "All" | "Mine" | "Repsy")}
+            >
+              <option value="All">All meals</option>
+              <option value="Mine">My meals</option>
+              <option value="Repsy">Repsy meals</option>
+            </select>
+          </div>
           <button type="button" onClick={() => setEditing("new")} className="btn btn-primary">
             New meal
           </button>
@@ -152,13 +181,17 @@ export function MealLibrary() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-lg font-semibold">{m.name}</h4>
                   <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{m.mealType}</span>
+                  {/* Shown only on shared meals: a badge on every row the coach made would be noise. */}
+                  {m.stock && (
+                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">Repsy</span>
+                  )}
                   {/* Inspo N3: shown only when it narrows things - "Any" is the normal case. */}
                   {m.dietType && m.dietType !== "Any" && (
                     <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{m.dietType}</span>
                   )}
                 </div>
                 <p className="mt-2 font-mono text-sm text-text">{macroLine(m)}</p>
-                <p className="text-xs text-dim">Numbers you set</p>
+                <p className="text-xs text-dim">{m.stock ? "Repsy numbers - copy it to change them" : "Numbers you set"}</p>
                 {m.ingredients !== "" && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-text">
                     <span className="font-semibold">Ingredients: </span>
@@ -181,12 +214,29 @@ export function MealLibrary() {
                   >
                     Assign to client
                   </button>
-                  <button type="button" aria-label={`Edit ${m.name}`} onClick={() => setEditing(m)} className={smallButton}>
-                    Edit
-                  </button>
-                  <button type="button" aria-label={`Delete ${m.name}`} onClick={() => setToDelete(m)} className={smallButton}>
-                    Delete
-                  </button>
+                  {/* A stock meal is shared by every coach, so it is read-only: the way to change
+                      one is to copy it into your own library first. Showing Edit here would just
+                      produce a 404. */}
+                  {m.stock ? (
+                    <button
+                      type="button"
+                      aria-label={`Copy ${m.name} to my library`}
+                      disabled={copy.isPending}
+                      onClick={() => copy.mutate(m.id)}
+                      className={smallButton}
+                    >
+                      {copy.isPending ? "Copying..." : "Copy to my library"}
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" aria-label={`Edit ${m.name}`} onClick={() => setEditing(m)} className={smallButton}>
+                        Edit
+                      </button>
+                      <button type="button" aria-label={`Delete ${m.name}`} onClick={() => setToDelete(m)} className={smallButton}>
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
                 {assigning === m.id && <AssignPanel meal={m} />}
               </li>

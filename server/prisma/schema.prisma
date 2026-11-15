@@ -773,8 +773,10 @@ model Exercise {
 /// Every macro value is coach-entered: nothing is fetched or calculated. Coach-level, never shared.
 model Meal {
   id          String   @id @default(cuid())
-  coachId     String
-  coach       Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  /// NULL = Repsy stock meal, shared by every coach and read-only to them. Same two-row-kinds rule
+  /// as Exercise and Food: a coach "edits" a stock meal by copying it into their own library.
+  coachId     String?
+  coach       Coach?   @relation(fields: [coachId], references: [id], onDelete: Cascade)
   name        String
   mealType    String
   calories    Int

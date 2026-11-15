@@ -318,6 +318,9 @@ export const createExercise = (input: NewExercise) => request<Exercise>("POST", 
 export const updateExercise = (exerciseId: string, input: NewExercise) =>
   request<Exercise>("PUT", `/exercises/${exerciseId}`, input);
 export const deleteExercise = (exerciseId: string) => request<void>("DELETE", `/exercises/${exerciseId}`);
+/** Copy a stock meal into the coach's own library so they can change it. */
+export const copyMeal = (mealId: string) => request<Meal>("POST", `/meals/${enc(mealId)}/copy`);
+
 /** Copy a stock movement into the coach's own library so they can change it. */
 export const copyExercise = (exerciseId: string) => request<Exercise>("POST", `/exercises/${exerciseId}/copy`);
 

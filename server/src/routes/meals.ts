@@ -2,8 +2,12 @@
 // A coach's own reusable meals. The coach stays in control of every number: nothing is ever changed
 // behind their back. Since Nov 2026 the food catalogue (Inspo N1, src/routes/foods.ts) can FILL the
 // macro boxes on request, but nothing recalculates on its own and no remote lookup exists.
-// Coach-level data: not tied to a client, never shared.
+// Coach-level data: not tied to a client. Since Nov 2026 the library has TWO row kinds, the same
+// rule as exercises and foods: coachId NULL is a Repsy stock meal shared by every coach and
+// read-only to them, and a coach "edits" one by copying it into their own library. A coach's own
+// meals are still private to them and are never shown to another coach.
 import { Router } from "express";
+import type { Meal } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db.js";
 import { coachIdOf } from "../auth/requireCoach.js";
@@ -84,7 +88,12 @@ const MealSchema = z.object({
 async function ownedSwapIds(ids: string[], coachId: string, selfId: string | null): Promise<string[]> {
   const wanted = ids.filter((id) => id !== selfId);
   if (wanted.length === 0) return [];
-  const owned = await prisma.meal.findMany({ where: { id: { in: wanted }, coachId }, select: { id: true } });
+  // Stock meals (coachId NULL) count as swappable: they are visible to every coach, so refusing
+  // them would quietly drop the most useful swaps in the library.
+  const owned = await prisma.meal.findMany({
+    where: { id: { in: wanted }, OR: [{ coachId }, { coachId: null }] },
+    select: { id: true },
+  });
   const keep = new Set(owned.map((m) => m.id));
   // Keep the coach's order, not the database's.
   return wanted.filter((id) => keep.has(id));
@@ -93,15 +102,28 @@ async function ownedSwapIds(ids: string[], coachId: string, selfId: string | nul
 // Mounted at /api/meals (behind requireCoach)
 export const mealsRouter = Router();
 
-// GET /api/meals - this coach's meals, A-Z by name.
+/**
+ * What every endpoint returns. `stock` tells the UI whether the edit controls apply, so no caller
+ * has to know that a NULL coachId means "shared" - the same contract the exercise library uses.
+ */
+type MealOut = Omit<Meal, "coachId"> & { coachId: string | null; stock: boolean };
+const shape = (m: Meal): MealOut => ({ ...m, stock: m.coachId === null });
+
+// GET /api/meals?scope=all|stock|mine - A-Z by name. Defaults to "all": a coach opening the library
+// should see something useful on day one, not an empty page.
 mealsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
+    const coachId = coachIdOf(req);
+    const scope = String(req.query.scope ?? "all");
+    // "mine" = this coach's rows; "stock" = the shared library; "all" = both, never another coach's.
+    const where =
+      scope === "mine" ? { coachId } : scope === "stock" ? { coachId: null } : { OR: [{ coachId }, { coachId: null }] };
     const items = await prisma.meal.findMany({
-      where: { coachId: coachIdOf(req) },
+      where,
       orderBy: [{ name: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
-    res.json(items);
+    res.json(items.map(shape));
   }),
 );
 
@@ -117,7 +139,7 @@ mealsRouter.post(
     const coachId = coachIdOf(req);
     const swapIds = await ownedSwapIds(parsed.data.swapIds, coachId, null);
     const item = await prisma.meal.create({ data: { ...parsed.data, swapIds, coachId } });
-    res.status(201).json(item);
+    res.status(201).json(shape(item));
   }),
 );
 
@@ -139,7 +161,7 @@ mealsRouter.put(
       res.status(404).json({ error: "Meal not found" });
       return;
     }
-    res.json(item);
+    res.json(shape(item));
   }),
 );
 
@@ -154,5 +176,45 @@ mealsRouter.delete(
       return;
     }
     res.status(204).end();
+  }),
+);
+
+// POST /api/meals/:mealId/copy - copy a stock meal into the coach's own library so they can change
+// it. The usual way a coach "edits" a stock meal without the shared library ever changing.
+mealsRouter.post(
+  "/:mealId/copy",
+  asyncHandler(async (req, res) => {
+    const coachId = coachIdOf(req);
+    const source = await prisma.meal.findFirst({
+      where: { id: req.params.mealId, OR: [{ coachId }, { coachId: null }] },
+    });
+    if (!source) {
+      res.status(404).json({ error: "Meal not found" });
+      return;
+    }
+    // "Dal Chawal", then "Dal Chawal (2)" - a coach copying twice gets two rows, not an error.
+    let name = source.name;
+    for (let n = 2; await prisma.meal.findFirst({ where: { coachId, name } }); n++) {
+      name = `${source.name} (${n})`;
+    }
+    const item = await prisma.meal.create({
+      data: {
+        coachId,
+        name,
+        mealType: source.mealType,
+        calories: source.calories,
+        proteinG: source.proteinG,
+        carbsG: source.carbsG,
+        fatG: source.fatG,
+        fiberG: source.fiberG,
+        ingredients: source.ingredients,
+        steps: source.steps,
+        dietType: source.dietType,
+        // Swaps are NOT copied: they point at the stock library's own ids, and a copy that silently
+        // carries another library's suggestions is more confusing than one that starts clean.
+        swapIds: [],
+      },
+    });
+    res.status(201).json(shape(item));
   }),
 );

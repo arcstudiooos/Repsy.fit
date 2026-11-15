@@ -29,12 +29,14 @@ beforeEach(() => {
 });
 
 describe("GET /api/meals", () => {
-  it("lists only the signed-in coach's meals; every method needs a session", async () => {
+  // Since Nov 2026 the library has two row kinds, so the default list is the coach's own meals PLUS
+  // the shared stock library - but never another coach's. The name of this test changed with it.
+  it("lists the coach's own meals and the stock library, never another coach's; every method needs a session", async () => {
     const res = await request(app).get("/api/meals");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(prismaMock.meal.findMany).toHaveBeenCalledWith({
-      where: { coachId: "coach-1" },
+      where: { OR: [{ coachId: "coach-1" }, { coachId: null }] },
       orderBy: [{ name: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     });
     const anon = supertest(app);
@@ -55,7 +57,9 @@ describe("POST /api/meals", () => {
     });
     expect(Object.keys(res.body).sort()).toEqual(
       // Sorted: dietType and swapIds (Inspo N3/N8) now ride along on every meal.
-      ["calories", "carbsG", "coachId", "createdAt", "dietType", "fatG", "fiberG", "id", "ingredients", "mealType", "name", "proteinG", "steps", "swapIds"],
+      // `stock` joined the shape when meals gained a shared library: the UI must not have to know
+      // that a NULL coachId means "shared".
+      ["calories", "carbsG", "coachId", "createdAt", "dietType", "fatG", "fiberG", "id", "ingredients", "mealType", "name", "proteinG", "steps", "stock", "swapIds"],
     );
   });
 

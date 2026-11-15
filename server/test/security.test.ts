@@ -70,6 +70,8 @@ const COACH_ROUTES: [string, string][] = [
   ["post", "/api/programs/p1/assign"],
   ["get", "/api/templates"],
   ["get", "/api/meals"],
+  // The stock meal library (Nov 2026): copying is a write, so it must be behind requireCoach too.
+  ["post", "/api/meals/stkm_dal_chawal_ghee/copy"],
   ["post", "/api/macros"],
   ["get", "/api/tasks/today"],
   ["get", "/api/at-risk"],

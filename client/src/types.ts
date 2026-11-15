@@ -798,7 +798,10 @@ export type NewExercise = Pick<Exercise, "name"> &
 
 export interface Meal {
   id: string;
-  coachId: string;
+  /** NULL for a Repsy stock meal shared by every coach. Prefer `stock` over testing this. */
+  coachId: string | null;
+  /** True for a shared Repsy stock meal: read-only, copy it to change it. */
+  stock: boolean;
   name: string;
   mealType: MealType;
   calories: number;

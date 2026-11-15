@@ -90,5 +90,5 @@ INSERT INTO "foods" ("id", "coachId", "name", "category", "servingLabel", "servi
   ('fd_pomegranate_seeds', NULL, 'Pomegranate seeds', 'Fruit', '1 bowl', 150, 125, 2.5, 29.0, 1.8, 6.0),
   ('fd_whey_protein_scoop', NULL, 'Whey protein (1 scoop)', 'Supplements and drinks', '1 scoop', 30, 120, 24.0, 3.0, 1.5, 0.0),
   ('fd_peanut_chikki', NULL, 'Peanut chikki', 'Snacks and sweets', '1 piece', 25, 120, 3.5, 13.0, 6.0, 1.2),
-  ('fd_jaggery', NULL, 'Jaggery', 'Snacks and sweets', '1 tbsp', 15, 57, 0.1, 14.0, 0.1, 0.0),
+  ('fd_jaggery', NULL, 'Jaggery', 'Snacks and sweets', '1 tbsp', 15, 57, 0.1, 14.0, 0.1, 0.0)
 ON CONFLICT DO NOTHING;
