@@ -3,6 +3,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { z } from "zod";
 import { coachIdOf } from "../auth/requireCoach.js";
 import { prisma } from "../db.js";
+import { intakeState, sendWelcome } from "../clients/onboarding.js";
 import { clientToday, currentStreak, longestStreak } from "../clients/snapshot.js";
 import { addDays } from "../habits.js";
 import { refuseIfFull } from "../billing/limit.js";
@@ -142,7 +143,11 @@ clientsRouter.post(
     // The plan's client limit. Refused BEFORE anything is written, so a full roster never leaves a
     // half-created client behind.
     if (await refuseIfFull(coachIdOf(req), res)) return;
-    const client = await prisma.client.create({ data: { ...parsed.data, coachId: coachIdOf(req) } });
+    const coachId = coachIdOf(req);
+    const client = await prisma.client.create({ data: { ...parsed.data, coachId } });
+    // Inspo C8: greet them automatically if the coach wrote a welcome message. Best effort: adding
+    // a client must never fail because of a greeting.
+    await sendWelcome(coachId, client.id);
     res.status(201).json(client);
   }),
 );
@@ -215,6 +220,22 @@ clientsRouter.patch(
       return;
     }
     res.json(await prisma.client.update({ where: { id: client.id }, data: parsed.data }));
+  }),
+);
+
+// GET /api/clients/:clientId/intake - has this client's intake been done? (Inspo C8)
+//
+// Answers { form: null } when the coach has chosen no intake form, or deleted the one they chose.
+clientsRouter.get(
+  "/:clientId/intake",
+  asyncHandler(async (req, res) => {
+    const coachId = coachIdOf(req);
+    const client = await findClient(req.params.clientId, coachId);
+    if (!client) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+    res.json(await intakeState(coachId, client.id));
   }),
 );
 

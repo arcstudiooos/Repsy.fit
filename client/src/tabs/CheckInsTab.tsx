@@ -9,6 +9,7 @@ import { sleepSeries, sleepSummary } from "../lib/sleepStats";
 import { listDailyCheckIns, queryKeys, saveDailyCheckIn } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { HabitTracker } from "../components/HabitTracker";
+import { IntakeNudge } from "../components/IntakeNudge";
 import { Measurements } from "../components/Measurements";
 import type { Client, DailyCheckIn, NewDailyCheckIn } from "../types";
 import { formatDay } from "../lib/dates";
@@ -180,6 +181,9 @@ function ClientCheckIns({ client }: { client: Client }) {
           </div>
         )}
       </section>
+
+      {/* Inspo C8: reminds the coach to do the intake, per client, until it is done. */}
+      <IntakeNudge clientId={client.id} />
 
       <HabitTracker clientId={client.id} today={today} />
       <Measurements clientId={client.id} today={today} />

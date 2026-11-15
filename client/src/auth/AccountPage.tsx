@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { changePassword, deleteAccount, queryKeys, updateCurrency, updateName, updateProfile } from "../api";
+import { OnboardingForm } from "./OnboardingForm";
 import { ChangePasswordSchema, UpdateNameSchema } from "../authSchemas";
 import { plainErrorMessage } from "../components/States";
 import { CURRENCIES, type Coach, type Currency } from "../types";
@@ -433,6 +434,10 @@ export default function AccountPage({ coach }: { coach: Coach }) {
       <section className="grid gap-3">
         <h3 className="card-title">Units and country</h3>
         <ProfileForm coach={coach} />
+      </section>
+      <section className="grid gap-3">
+        <h3 className="card-title">What a new client gets</h3>
+        <OnboardingForm coach={coach} />
       </section>
       <section className="grid gap-3">
         <h3 className="card-title">Currency</h3>

@@ -36,6 +36,12 @@ model Coach {
   joinCodeActive    Boolean  @default(true)
   /// Prompt 76: when true, clients who join with the code wait for the coach's approval (Prompt 77/84).
   approveNewClients Boolean  @default(false)
+  /// Inspo C8: sent to a new client as their first message. Empty = send nothing, which is what
+  /// every coach meant before this existed.
+  welcomeMessage    String   @default("")
+  /// Inspo C8: the form a new client should be taken through. Null = none. A plain id, not a
+  /// relation: deleting the form must not block anything, and a stale id simply reads as "none".
+  intakeFormId      String?
   createdAt         DateTime @default(now())
 
   // ---- The coach's own subscription to Repsy (Nov 2026). One per coach; PayPal holds the money,

@@ -48,12 +48,27 @@ export const RegisterSchema = z.object({
 });
 
 /** Account settings: the coach's weight unit and country, edited together. */
+/** Inspo C8: what a new client gets automatically. */
+const welcomeMessage = z
+  .string()
+  .trim()
+  .max(1000, "A welcome message must be 1000 characters or fewer.");
+/** An empty string clears it; null also clears it, so the UI can send either. */
+const intakeFormId = z.string().trim().max(40).nullable();
+
 export const UpdateProfileSchema = strictWith(
-  z.object({ units: units.optional(), country: country.optional() }),
-  "Only your units and country can be changed here.",
-).refine((v) => v.units !== undefined || v.country !== undefined, {
-  error: "Nothing to change.",
-});
+  z.object({
+    units: units.optional(),
+    country: country.optional(),
+    welcomeMessage: welcomeMessage.optional(),
+    intakeFormId: intakeFormId.optional(),
+  }),
+  "Only your units, country, welcome message and intake form can be changed here.",
+).refine(
+  (v) =>
+    v.units !== undefined || v.country !== undefined || v.welcomeMessage !== undefined || v.intakeFormId !== undefined,
+  { error: "Nothing to change." },
+);
 
 /** The currency that fits a country, from the two Repsy supports. */
 export const currencyForCountry = (iso: string | null | undefined): (typeof COACH_CURRENCIES)[number] =>

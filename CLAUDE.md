@@ -1588,3 +1588,29 @@ deploy/crash notifications. Both are owner tasks and neither is code.
 `unhandledRejection` alerts but does NOT exit (every Express handler is wrapped in `asyncHandler`, so
 a stray rejection is usually a background job, and killing a server still serving coaches is worse).
 `uncaughtException` alerts and exits after 2s, because the process state is no longer trustworthy.
+
+## Onboarding automation (Inspo C8, Nov 2026)
+
+Coach columns `welcomeMessage` (default `''`) and `intakeFormId` (nullable), set in Account ->
+"What a new client gets". Logic in the LEAF module `src/clients/onboarding.ts`.
+
+**HONEST SCOPE: the client app cannot fill in forms yet, so the intake form is one the COACH is
+prompted to go through WITH the client.** Every string in the UI says so ("You fill it in with them -
+they are not sent anything"), and two UI tests assert that wording. Do not soften it until clients
+can actually submit a form: a setting that implies a client was sent something is a lie the coach
+only discovers when they ask why nothing came back. When client-side forms land, `sendWelcome` is the
+hook that changes.
+
+`sendWelcome` creates a `ThreadMessage` from the coach with `readAt: null`, so it behaves exactly
+like a message the coach typed. It is **best effort and never throws**: a greeting must not be why
+adding a client fails. An empty message sends nothing, which is what every coach meant before this.
+
+`intakeFormId` is a plain id, NOT a foreign key: deleting a form must never be blocked by a coach
+having once chosen it, and a stale id reads as "no intake form" rather than erroring. On save, an
+unknown id **clears** the setting instead of 400ing - the coach's intent cannot be honoured, and
+losing their whole save is worse. `""`, `"   "` and `null` all mean "none" (the UI's None option
+sends `""`), and clearing needs no lookup.
+
+`IntakeNudge` shows: a card while outstanding, a quiet one-line "filled in on DATE" once done, and
+**nothing** when no form is chosen or the lookup failed. A permanent banner is wallpaper, and
+wallpaper is ignored - that is why the done state is not a card.

@@ -37,8 +37,29 @@ const AUTH_DOWN = "Sign-in is not available right now. Please try again later.";
 // A real bcrypt hash of a random string, so an unknown email costs the same time as a wrong password.
 export const DUMMY_HASH = "$2b$12$CwTycUXWue0Thq9StjUM0uJ8.gIEG9mP2LzvQe4gGSx0Q1l5hQ8se";
 
-type PublicCoach = { id: string; name: string; email: string; createdAt: Date; currency: string; units: string; country: string | null };
-const publicCoach = (c: PublicCoach): PublicCoach => ({ id: c.id, name: c.name, email: c.email, createdAt: c.createdAt, currency: c.currency, units: c.units, country: c.country });
+type PublicCoach = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+  currency: string;
+  units: string;
+  country: string | null;
+  welcomeMessage: string;
+  intakeFormId: string | null;
+};
+const publicCoach = (c: PublicCoach): PublicCoach => ({
+  id: c.id,
+  name: c.name,
+  email: c.email,
+  createdAt: c.createdAt,
+  currency: c.currency,
+  units: c.units,
+  country: c.country,
+  // Inspo C8: what a new client gets automatically.
+  welcomeMessage: c.welcomeMessage,
+  intakeFormId: c.intakeFormId,
+});
 
 /** In production without SESSION_SECRET: log once per request and refuse with a plain message. */
 export function secretMissing(res: Response): boolean {
@@ -210,9 +231,31 @@ authRouter.patch(
       res.status(400).json({ error: parsed.error.issues[0].message });
       return;
     }
-    const { units, country } = parsed.data;
-    const data: { units?: string; country?: string; currency?: string } = {};
+    const { units, country, welcomeMessage, intakeFormId } = parsed.data;
+    const data: {
+      units?: string;
+      country?: string;
+      currency?: string;
+      welcomeMessage?: string;
+      intakeFormId?: string | null;
+    } = {};
     if (units) data.units = units;
+    if (welcomeMessage !== undefined) data.welcomeMessage = welcomeMessage;
+    if (intakeFormId !== undefined) {
+      // An empty string means "no intake form", the same as null: the UI's "None" option sends "".
+      const wanted = intakeFormId?.trim() || null;
+      if (wanted === null) {
+        data.intakeFormId = null;
+      } else {
+        // Only a form this coach can actually see. An unknown id clears it rather than 400ing: the
+        // coach's intent ("use that one") cannot be honoured, and failing their whole save is worse.
+        const form = await prisma.form.findFirst({
+          where: { id: wanted, OR: [{ coachId: coachIdOf(req) }, { coachId: null }] },
+          select: { id: true },
+        });
+        data.intakeFormId = form?.id ?? null;
+      }
+    }
     if (country) {
       data.country = country;
       // Changing country suggests the matching currency. It is only a suggestion: a coach who has

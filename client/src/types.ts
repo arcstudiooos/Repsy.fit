@@ -596,6 +596,18 @@ export interface FormSubmission {
   createdAt: string;
 }
 
+/** Inspo C8: what a new client gets automatically, set once in the coach's account. */
+export interface OnboardingSettings {
+  welcomeMessage: string;
+  intakeFormId: string | null;
+}
+
+/** Inspo C8: has this client's intake been done? `form` null = the coach chose none. */
+export interface IntakeState {
+  form: { id: string; name: string; questionCount: number } | null;
+  doneAt: string | null;
+}
+
 /**
  * Inspo N3: which diet a meal suits. Mirrors DIET_TYPES in server routes/meals.ts (drift-tested).
  * Jain and Halal are here because "vegetarian" alone does not answer what an Indian client asks.
@@ -939,6 +951,10 @@ export interface Coach {
   units?: "kg" | "lb";
   /** ISO-3166 alpha-2, or null. Sets the currency default and later the payment method. */
   country?: string | null;
+  /** Inspo C8: sent to a new client as their first message. Empty = send nothing. */
+  welcomeMessage?: string;
+  /** Inspo C8: the form a new client should be taken through, or null. */
+  intakeFormId?: string | null;
 }
 export interface RegisterInput {
   name: string;

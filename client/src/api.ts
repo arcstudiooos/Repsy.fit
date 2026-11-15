@@ -47,6 +47,7 @@ import type {
   NewExercise,
   ClientSnapshot,
   CoachForm,
+  IntakeState,
   NewProgram,
   Program,
   ProgramPreview,
@@ -244,6 +245,9 @@ export const updateTemplate = (templateId: string, input: NewWorkoutTemplate) =>
   request<WorkoutTemplate>("PUT", `/templates/${enc(templateId)}`, input);
 export const deleteTemplate = (templateId: string) => request<void>("DELETE", `/templates/${enc(templateId)}`);
 
+/** Inspo C8: has this client's intake been done? */
+export const getIntake = (clientId: string) => request<IntakeState>("GET", `/clients/${enc(clientId)}/intake`);
+
 // ----- Programs (Inspo W10) -----
 export const listPrograms = () => request<Program[]>("GET", "/programs");
 export const getProgram = (id: string) => request<Program>("GET", `/programs/${id}`);
@@ -326,7 +330,13 @@ export const listPayments = (clientId: string) => request<Payment[]>("GET", `/cl
 export const deleteAccount = (password: string) => request<void>("DELETE", "/auth/account", { password, confirm: "DELETE" });
 export const updateCurrency = (currency: Currency) => request<Coach>("PATCH", "/auth/currency", { currency });
 /** The coach's weight unit and country. Country suggests a currency only when none was set. */
-export const updateProfile = (patch: { units?: "kg" | "lb"; country?: string }) =>
+export const updateProfile = (patch: {
+  units?: "kg" | "lb";
+  country?: string;
+  /** Inspo C8: what a new client gets automatically. */
+  welcomeMessage?: string;
+  intakeFormId?: string | null;
+}) =>
   request<Coach>("PATCH", "/auth/profile", patch);
 /** The signed-in CLIENT's own plan (name, status, next due) and last payment date. */
 export const getMyPlan = () => request<MyPlan>("GET", "/client-auth/my-plan");
@@ -611,6 +621,7 @@ export const queryKeys = {
   exercises: (query: ExerciseQuery = {}) => ["exercises", query] as const,
   clientSnapshot: (clientId: string) => ["clients", clientId, "snapshot"] as const,
   forms: ["forms"] as const,
+  intake: (clientId: string) => ["clients", clientId, "intake"] as const,
   programs: ["programs"] as const,
   program: (id: string) => ["programs", id] as const,
   form: (formId: string) => ["forms", formId] as const,
