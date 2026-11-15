@@ -200,12 +200,15 @@ test("delete asks first; Cancel keeps it, Delete removes it", async ({ page }) =
 test("Assign to client saves a Nutrition assignment with the meal name, macros, steps and 'From meal library' reasoning", async ({ page }) => {
   const { calls } = await openMeals(page, [meal("m1", "Oats & eggs", { steps: "Cook the oats." })]);
   await page.getByRole("button", { name: "Assign Oats & eggs to client" }).click();
-  const panel = page.getByRole("group", { name: "Assign Oats & eggs" });
+  // Nov 2026: this was an inline panel that pushed the library down the page; it is now a dialog
+  // that completes the job in place. The saved payload below is deliberately unchanged.
+  const panel = page.getByRole("dialog", { name: "Assign Oats & eggs" });
   await panel.getByLabel("Client").selectOption({ label: "Arjun Mehta" });
   await panel.getByLabel("Date").fill("2026-12-01");
   await panel.getByRole("button", { name: "Assign meal" }).click();
 
-  await expect(panel.getByRole("status")).toContainText("Assigned to Arjun Mehta as a Nutrition plan.");
+  // The Modal carries its own sr-only live region, so target the message itself, not the role.
+  await expect(panel.getByText("Assigned to Arjun Mehta as a Nutrition plan.")).toBeVisible();
   expect(calls).toEqual([
     `ASSIGN c-arjun ${JSON.stringify({
       type: "Nutrition",

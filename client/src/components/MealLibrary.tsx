@@ -3,10 +3,11 @@
 // The coach stays in control of every number: nothing is ever changed behind their back.
 // Since Nov 2026 a food catalogue (Inspo N1) can FILL the macro boxes on request - one tap, still
 // editable afterwards - but nothing recalculates on its own, and no barcode or remote lookup exists.
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { copyMeal, createAssignment, createMeal, deleteMeal, listClients, listMeals, queryKeys, updateMeal } from "../api";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Modal } from "./Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import { localToday } from "../tabs/AiCoachTab";
 import { DIET_TYPES, MEAL_TYPES, type DietType, type Meal, type MealType, type NewMeal } from "../types";
@@ -238,12 +239,18 @@ export function MealLibrary() {
                     </>
                   )}
                 </div>
-                {assigning === m.id && <AssignPanel meal={m} />}
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {assigning && (
+        <AssignDialog
+          meal={all.find((m) => m.id === assigning) ?? shown[0]}
+          onClose={() => setAssigning(null)}
+        />
+      )}
 
       {toDelete && (
         <ConfirmDialog
@@ -269,15 +276,24 @@ export function MealLibrary() {
   );
 }
 
-// Pick a client and a date; saves a Nutrition assignment right away (source "manual", reasoning pre-filled).
-function AssignPanel({ meal }: { meal: Meal }) {
+/**
+ * Assign a meal: a dialog that finishes the job (Nov 2026 UI batch).
+ *
+ * It used to be an inline panel that pushed the rest of the library down the page, and the coach
+ * then had to go and look somewhere else to confirm anything had happened. Now everything the
+ * decision needs is in one box - which meal, its macros, who, which day - and after saving it stays
+ * open so the next client can be assigned without re-finding the meal.
+ */
+function AssignDialog({ meal, onClose }: { meal: Meal; onClose: () => void }) {
   const queryClient = useQueryClient();
   const clients = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
   const [clientId, setClientId] = useState("");
   const [date, setDate] = useState(localToday);
+  const [done, setDone] = useState<string[]>([]);
   const list = clients.data ?? [];
   const chosen = clientId || list[0]?.id || "";
   const chosenName = list.find((c) => c.id === chosen)?.name ?? "";
+  const clientRef = useRef<HTMLSelectElement>(null);
 
   const assign = useMutation({
     mutationFn: () =>
@@ -290,27 +306,53 @@ function AssignPanel({ meal }: { meal: Meal }) {
         date: date || localToday(),
       }),
     onSuccess: async () => {
+      // Stays open: assigning the same meal to several clients is the normal case, and
+      // re-finding the meal in the library each time was the thing that made it tedious.
+      setDone((d) => (d.includes(chosenName) ? d : [...d, chosenName]));
       await queryClient.invalidateQueries({ queryKey: queryKeys.assignments(chosen) });
     },
   });
 
   return (
-    <div role="group" aria-label={`Assign ${meal.name}`} className="mt-3 rounded-card bg-surface2 p-3">
+    <Modal
+      title={`Assign ${meal.name}`}
+      description={macroLine(meal)}
+      size="md"
+      initialFocus={clientRef}
+      busy={assign.isPending}
+      onRequestClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-secondary">
+            {done.length > 0 ? "Done" : "Cancel"}
+          </button>
+          <button
+            type="button"
+            disabled={assign.isPending || list.length === 0}
+            onClick={() => assign.mutate()}
+            className="btn btn-primary"
+          >
+            {assign.isPending ? "Assigning..." : "Assign meal"}
+          </button>
+        </>
+      }
+    >
       {clients.isPending ? (
         <LoadingState />
       ) : clients.isError ? (
         <ErrorState error={clients.error} onRetry={() => void clients.refetch()} />
       ) : list.length === 0 ? (
-        <p className="text-sm text-dim">Add a client first, then you can assign this meal.</p>
+        <p className="empty-state">Add a client first, then you can assign this meal.</p>
       ) : (
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor={`meal-client-${meal.id}`} className="mb-1 block text-xs font-semibold text-dim">
               Client
             </label>
             <select
               id={`meal-client-${meal.id}`}
-              className={inputClass + " sm:w-auto"}
+              ref={clientRef}
+              className={inputClass}
               value={chosen}
               onChange={(e) => {
                 setClientId(e.target.value);
@@ -331,7 +373,7 @@ function AssignPanel({ meal }: { meal: Meal }) {
             <input
               id={`meal-date-${meal.id}`}
               type="date"
-              className={inputClass + " sm:w-auto"}
+              className={inputClass}
               value={date}
               onChange={(e) => {
                 setDate(e.target.value);
@@ -339,27 +381,19 @@ function AssignPanel({ meal }: { meal: Meal }) {
               }}
             />
           </div>
-          <button
-            type="button"
-            disabled={assign.isPending}
-            onClick={() => assign.mutate()}
-            className="btn btn-primary"
-          >
-            {assign.isPending ? "Assigning..." : "Assign meal"}
-          </button>
         </div>
       )}
-      {assign.isSuccess && (
-        <p role="status" className="mt-2 text-sm font-semibold text-accent2">
-          Assigned to {chosenName} as a Nutrition plan.
+      {done.length > 0 && (
+        <p role="status" className="mt-3 text-sm font-semibold text-accent2">
+          Assigned to {done.join(", ")} as a Nutrition plan.
         </p>
       )}
       {assign.isError && (
-        <p role="alert" className="mt-2 text-sm font-semibold text-accent">
+        <p role="alert" className="mt-3 text-sm font-semibold text-danger">
           {plainErrorMessage(assign.error)}
         </p>
       )}
-    </div>
+    </Modal>
   );
 }
 
