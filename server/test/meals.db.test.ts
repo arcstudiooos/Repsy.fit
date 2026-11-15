@@ -33,16 +33,37 @@ describe.skipIf(!process.env.DATABASE_URL)("meal library (database)", () => {
     const created = await api.post("/api/meals").send(BODY);
     expect(created.status).toBe(201);
     mealId = created.body.id;
-    const list = await api.get("/api/meals");
+    // scope=mine, because the default list also carries the shared Repsy stock meals (Nov 2026).
+    // The thing being tested is the coach's OWN library, so the scope is pinned, not the count.
+    const list = await api.get("/api/meals?scope=mine");
     expect(list.body).toHaveLength(1);
     expect(list.body[0]).toMatchObject(BODY);
+    expect(list.body[0].stock).toBe(false);
+  });
+
+  it("the default list also shows the shared Repsy meals, read-only", async () => {
+    // Proves the seeded stock library actually landed in a real database, and that a coach cannot
+    // edit or delete one. This is the half that mocks cannot check.
+    const all = await api.get("/api/meals");
+    const stock = all.body.filter((m: { stock: boolean }) => m.stock);
+    expect(stock.length).toBeGreaterThanOrEqual(40);
+    expect(stock.every((m: { coachId: string | null }) => m.coachId === null)).toBe(true);
+    const one = stock[0] as { id: string; name: string };
+    expect((await api.put(`/api/meals/${one.id}`).send(BODY)).status).toBe(404);
+    expect((await api.delete(`/api/meals/${one.id}`)).status).toBe(404);
+    // ...but it can be copied into the coach's own library, which is how a coach "edits" one.
+    const copy = await api.post(`/api/meals/${one.id}/copy`);
+    expect(copy.status).toBe(201);
+    expect(copy.body).toMatchObject({ name: one.name, stock: false });
+    expect(copy.body.coachId).not.toBeNull();
+    expect((await api.delete(`/api/meals/${copy.body.id}`)).status).toBe(204);
   });
 
   it("another coach sees none and cannot edit or delete it", async () => {
-    expect((await otherApi.get("/api/meals")).body).toEqual([]);
+    expect((await otherApi.get("/api/meals?scope=mine")).body).toEqual([]);
     expect((await otherApi.put(`/api/meals/${mealId}`).send(BODY)).status).toBe(404);
     expect((await otherApi.delete(`/api/meals/${mealId}`)).status).toBe(404);
-    expect((await api.get("/api/meals")).body).toHaveLength(1);
+    expect((await api.get("/api/meals?scope=mine")).body).toHaveLength(1);
   });
 
   it("edits a meal", async () => {
