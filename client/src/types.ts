@@ -596,6 +596,13 @@ export interface FormSubmission {
   createdAt: string;
 }
 
+/**
+ * Inspo N3: which diet a meal suits. Mirrors DIET_TYPES in server routes/meals.ts (drift-tested).
+ * Jain and Halal are here because "vegetarian" alone does not answer what an Indian client asks.
+ */
+export const DIET_TYPES = ["Any", "Vegetarian", "Eggetarian", "Vegan", "Jain", "Halal", "Non-vegetarian"] as const;
+export type DietType = (typeof DIET_TYPES)[number];
+
 /** Inspo N4: when the meal is eaten. Mirrors MEAL_TYPES in server routes/meals.ts (drift-tested). */
 export const MEAL_TYPES = [
   "On waking up",
@@ -740,10 +747,14 @@ export interface Meal {
   fiberG: number;
   ingredients: string;
   steps: string;
+  /** Inspo N3: which diet it suits. "Any" when the coach has not said. */
+  dietType: DietType;
+  /** Inspo N8: ids of meals this one can be swapped for. A suggestion, not a constraint. */
+  swapIds: string[];
   createdAt: string;
 }
 export type NewMeal = Pick<Meal, "name" | "mealType" | "calories" | "proteinG" | "carbsG" | "fatG"> &
-  Partial<Pick<Meal, "fiberG" | "ingredients" | "steps">>;
+  Partial<Pick<Meal, "fiberG" | "ingredients" | "steps" | "dietType" | "swapIds">>;
 
 export const SEXES = ["Female", "Male"] as const;
 export type Sex = (typeof SEXES)[number];

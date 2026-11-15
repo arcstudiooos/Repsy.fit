@@ -50,9 +50,12 @@ describe("POST /api/meals", () => {
     const res = await request(app).post("/api/meals").send({ ...BODY, name: "  Oats & eggs ", coachId: "evil" });
     expect(res.status).toBe(201);
     // fiberG is always written since Nov 2026 (Inspo N2): zod defaults it to 0 when not sent.
-    expect(prismaMock.meal.create).toHaveBeenCalledWith({ data: { ...BODY, fiberG: 0, coachId: "coach-1" } });
+    expect(prismaMock.meal.create).toHaveBeenCalledWith({
+      data: { ...BODY, fiberG: 0, dietType: "Any", swapIds: [], coachId: "coach-1" },
+    });
     expect(Object.keys(res.body).sort()).toEqual(
-      ["calories", "carbsG", "coachId", "createdAt", "fatG", "fiberG", "id", "ingredients", "mealType", "name", "proteinG", "steps"],
+      // Sorted: dietType and swapIds (Inspo N3/N8) now ride along on every meal.
+      ["calories", "carbsG", "coachId", "createdAt", "dietType", "fatG", "fiberG", "id", "ingredients", "mealType", "name", "proteinG", "steps", "swapIds"],
     );
   });
 
@@ -61,7 +64,9 @@ describe("POST /api/meals", () => {
     void ingredients;
     void steps;
     await request(app).post("/api/meals").send(min);
-    expect(prismaMock.meal.create).toHaveBeenCalledWith({ data: { ...min, ingredients: "", steps: "", fiberG: 0, coachId: "coach-1" } });
+    expect(prismaMock.meal.create).toHaveBeenCalledWith({
+      data: { ...min, ingredients: "", steps: "", fiberG: 0, dietType: "Any", swapIds: [], coachId: "coach-1" },
+    });
   });
 
   it("rejects a missing name, a bad meal type and bad macro values", async () => {
@@ -95,7 +100,7 @@ describe("PUT /api/meals/:mealId", () => {
     expect(res.status).toBe(200);
     expect(prismaMock.meal.updateMany).toHaveBeenCalledWith({
       where: { id: "m1", coachId: "coach-1" },
-      data: { ...BODY, name: "Bowl", mealType: "Lunch", fiberG: 0 },
+      data: { ...BODY, name: "Bowl", mealType: "Lunch", fiberG: 0, dietType: "Any", swapIds: [] },
     });
   });
 

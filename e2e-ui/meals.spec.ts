@@ -159,6 +159,9 @@ test("creates a meal: checks the numbers, then saves exactly what the coach type
       fatG: 8,
       ingredients: "Yoghurt, berries",
       steps: "Mix.",
+      // Inspo N3/N8: every meal now carries a diet and its alternatives, defaulted.
+      dietType: "Any",
+      swapIds: [],
     })}`,
   ]);
 });
@@ -173,7 +176,7 @@ test("edits a meal: the form starts from it and saves with PUT", async ({ page }
   await form.getByRole("button", { name: "Save meal" }).click();
   await expect(page.getByRole("list", { name: "Meals" })).toContainText("500 kcal");
   expect(calls).toEqual([
-    `PUT m1 ${JSON.stringify({ name: "Oats & eggs", mealType: "Breakfast", calories: 500, proteinG: 30, carbsG: 45.5, fatG: 15, ingredients: "", steps: "" })}`,
+    `PUT m1 ${JSON.stringify({ name: "Oats & eggs", mealType: "Breakfast", calories: 500, proteinG: 30, carbsG: 45.5, fatG: 15, ingredients: "", steps: "", dietType: "Any", swapIds: [] })}`,
   ]);
 });
 

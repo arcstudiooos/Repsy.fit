@@ -721,6 +721,12 @@ model Meal {
   fiberG      Float    @default(0)
   ingredients String   @default("")
   steps       String   @default("")
+  /// Inspo N3: what diet this meal suits. "Any" is the default, which is what every meal saved
+  /// before Nov 2026 means - nothing is reclassified retroactively.
+  dietType    String   @default("Any")
+  /// Inspo N8: meals this one can be swapped for ("paneer OR chicken"). A plain id list, not a
+  /// relation: a swap is a suggestion, not a constraint, and must never block deleting a meal.
+  swapIds     String[] @default([])
   createdAt   DateTime @default(now())
 
   @@index([coachId])

@@ -1492,3 +1492,34 @@ and reps (Inspo A1/A2 composes with this).
 
 Phases and items are written whole on update (delete + recreate in a transaction), which keeps
 `order` contiguous for free - the same pattern as a workout's sections.
+
+## Diet types and alternative meals (Inspo N3/N8, Nov 2026)
+
+`Meal.dietType` TEXT default `'Any'`, `Meal.swapIds` TEXT[] default empty. Both defaults are exactly
+what every meal saved before them already meant, so nothing is reclassified retroactively.
+
+**"Any" is NOT a diet.** Filtering the library by Vegetarian still shows `Any` meals - a vegetarian
+can eat rice and dal, and hiding those would empty half a coach's library at the moment they need
+it. The diet filter offers the real diets only; `Any` is a default on a meal, not something to
+filter by. On a card the chip appears only when it is NOT `Any`, the same rule as habit recurrence.
+
+`DIET_TYPES` is India-first on purpose: Any, Vegetarian, **Eggetarian**, Vegan, **Jain**, **Halal**,
+Non-vegetarian. "Vegetarian" alone does not answer the question an Indian client is asking. The list
+is duplicated in `client/src/types.ts` and drift-tested in `meal-categories.test.ts`.
+
+**`swapIds` is a plain id list, deliberately NOT a relation.** A swap is a SUGGESTION
+("paneer OR chicken"), so:
+
+* `ownedSwapIds()` keeps only ids that are this coach's own meals and DROPS the rest rather than
+  rejecting - one stale id from an older copy must not cost the coach their whole save;
+* a meal can never be its own alternative, and the list is deduped, keeping the coach's order;
+* deleting a meal is never blocked and leaves dangling ids behind ON PURPOSE - cheaper than a
+  relation, and harmless because reads resolve what they can.
+
+Adding these two defaulted columns broke three exact-payload assertions in `server/test/meals.test.ts`
+and two in `e2e-ui/meals.spec.ts`. They were updated to the new truth, NOT loosened: pinning the whole
+payload is what catches an accidental extra write.
+
+**Not built, and why:** progress photos (Inspo C5). They need object storage that is not configured,
+body photos are sensitive personal data under the DPDP Act, and the Privacy Policy would need
+rewriting. The value does not justify the liability yet. Revisit deliberately, not by accident.

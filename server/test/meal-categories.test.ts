@@ -7,7 +7,7 @@
 import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
 import { readFile } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MEAL_TYPES } from "../src/routes/meals.js";
+import { DIET_TYPES, MEAL_TYPES } from "../src/routes/meals.js";
 
 const { prisma } = vi.hoisted(() => ({
   prisma: { meal: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() } },
@@ -89,5 +89,21 @@ describe("fibre", () => {
       const res = await request(app).post("/api/meals").send({ ...base, fiberG });
       expect(res.status, `fiberG ${fiberG} was accepted`).toBe(400);
     }
+  });
+});
+
+describe("diet types: client and server agree (Inspo N3)", () => {
+  it("holds the same diets, in the same order", async () => {
+    // The client duplicates the list for an instant picker, so drift would offer a diet the server
+    // refuses - the save would fail on a field the coach cannot see is wrong.
+    const types = await readFile(new URL("../../client/src/types.ts", import.meta.url), "utf8");
+    const block = types.match(/export const DIET_TYPES = \[([^\]]+)\]/);
+    expect(block, "DIET_TYPES is missing from the client's types.ts").not.toBeNull();
+    const clientList = [...block![1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(clientList).toEqual([...DIET_TYPES]);
+  });
+
+  it("keeps Any first, because it is the default", () => {
+    expect(DIET_TYPES[0]).toBe("Any");
   });
 });

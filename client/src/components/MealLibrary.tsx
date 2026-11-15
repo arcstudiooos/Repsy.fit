@@ -7,7 +7,7 @@ import { createAssignment, createMeal, deleteMeal, listClients, listMeals, query
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import { localToday } from "../tabs/AiCoachTab";
-import { MEAL_TYPES, type Meal, type MealType, type NewMeal } from "../types";
+import { DIET_TYPES, MEAL_TYPES, type DietType, type Meal, type MealType, type NewMeal } from "../types";
 
 const inputClass =
   "w-full rounded-card border border-border bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
@@ -33,6 +33,8 @@ export function MealLibrary() {
   const query = useQuery({ queryKey: queryKeys.meals, queryFn: listMeals });
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<MealType | "All">("All");
+  // Inspo N3: a coach writing for a vegetarian client wants only their vegetarian meals.
+  const [dietFilter, setDietFilter] = useState<DietType | "All">("All");
   // null = no form; "new" = creating; a meal = editing it.
   const [editing, setEditing] = useState<Meal | "new" | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -50,7 +52,11 @@ export function MealLibrary() {
   const all = query.data ?? [];
   const needle = search.trim().toLowerCase();
   const shown = all.filter(
-    (m) => (typeFilter === "All" || m.mealType === typeFilter) && (needle === "" || m.name.toLowerCase().includes(needle)),
+    (m) =>
+      (typeFilter === "All" || m.mealType === typeFilter) &&
+      // "Any" is not a diet, so filtering by one must still show the meals that suit everyone.
+      (dietFilter === "All" || m.dietType === dietFilter || m.dietType === "Any") &&
+      (needle === "" || m.name.toLowerCase().includes(needle)),
   );
 
   return (
@@ -61,7 +67,12 @@ export function MealLibrary() {
       <p className="mt-1 text-sm text-dim">Your own meals, with the calories and macros you enter. Assign one to any client as a Nutrition plan.</p>
 
       {editing ? (
-        <MealForm key={editing === "new" ? "new" : editing.id} meal={editing === "new" ? null : editing} onDone={() => setEditing(null)} />
+        <MealForm
+          key={editing === "new" ? "new" : editing.id}
+          meal={editing === "new" ? null : editing}
+          others={all.filter((m) => editing === "new" || m.id !== editing.id)}
+          onDone={() => setEditing(null)}
+        />
       ) : (
         <div className="mt-4 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1 basis-60">
@@ -96,6 +107,24 @@ export function MealLibrary() {
               ))}
             </select>
           </div>
+          <div>
+            <label htmlFor="meal-diet-filter" className="mb-1 block text-sm font-semibold text-text">
+              Diet
+            </label>
+            <select
+              id="meal-diet-filter"
+              className={inputClass + " sm:w-auto"}
+              value={dietFilter}
+              onChange={(e) => setDietFilter(e.target.value as DietType | "All")}
+            >
+              <option value="All">Any diet</option>
+              {DIET_TYPES.filter((d) => d !== "Any").map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
           <button type="button" onClick={() => setEditing("new")} className="btn btn-primary">
             New meal
           </button>
@@ -120,6 +149,10 @@ export function MealLibrary() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-lg font-semibold">{m.name}</h4>
                   <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{m.mealType}</span>
+                  {/* Inspo N3: shown only when it narrows things - "Any" is the normal case. */}
+                  {m.dietType && m.dietType !== "Any" && (
+                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{m.dietType}</span>
+                  )}
                 </div>
                 <p className="mt-2 font-mono text-sm text-text">{macroLine(m)}</p>
                 <p className="text-xs text-dim">Coach-entered values</p>
@@ -280,7 +313,7 @@ function AssignPanel({ meal }: { meal: Meal }) {
 const toNumber = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
 // Create / edit form. All four numbers are required and typed in by the coach.
-function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
+function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[]; onDone: () => void }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(meal?.name ?? "");
   const [mealType, setMealType] = useState<MealType>(meal?.mealType ?? "Breakfast");
@@ -291,6 +324,9 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
   const [fiberG, setFiberG] = useState(meal?.fiberG ? String(meal.fiberG) : "");
   const [ingredients, setIngredients] = useState(meal?.ingredients ?? "");
   const [steps, setSteps] = useState(meal?.steps ?? "");
+  // Inspo N3/N8: which diet this suits, and what it can be swapped for.
+  const [dietType, setDietType] = useState<DietType>(meal?.dietType ?? "Any");
+  const [swapIds, setSwapIds] = useState<string[]>(meal?.swapIds ?? []);
   const [formError, setFormError] = useState<string | null>(null);
 
   const save = useMutation({
@@ -325,6 +361,8 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
       ...(fibre === null ? {} : { fiberG: fibre }),
       ingredients: ingredients.trim(),
       steps: steps.trim(),
+      dietType,
+      swapIds,
     });
   }
 
@@ -430,6 +468,51 @@ function MealForm({ meal, onDone }: { meal: Meal | null; onDone: () => void }) {
             placeholder="How to make it."
           />
         </div>
+        <div>
+          <label htmlFor="meal-diet" className="mb-1 block text-sm font-semibold text-text">
+            Suits which diet
+          </label>
+          <select
+            id="meal-diet"
+            className={inputClass + " min-h-11"}
+            value={dietType}
+            onChange={(e) => setDietType(e.target.value as DietType)}
+          >
+            {DIET_TYPES.map((d) => (
+              <option key={d} value={d}>
+                {d === "Any" ? "Any - suits everyone" : d}
+              </option>
+            ))}
+          </select>
+        </div>
+        {others.length > 0 && (
+          <div className="sm:col-span-2">
+            <p className="mb-1 text-sm font-semibold text-text">Can be swapped for (optional)</p>
+            {/* Inspo N8: "paneer OR chicken". A suggestion, so the client can be given a choice. */}
+            <p className="mb-2 text-xs text-dim">
+              Pick meals a client could eat instead. Nothing is forced: it just gives them a choice.
+            </p>
+            <div role="group" aria-label="Can be swapped for" className="flex flex-wrap gap-1.5">
+              {others.map((m) => {
+                const on = swapIds.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setSwapIds(on ? swapIds.filter((x) => x !== m.id) : [...swapIds, m.id])}
+                    className={
+                      "min-h-10 rounded-full border px-3 text-sm font-semibold " +
+                      (on ? "border-text bg-text text-bg" : "border-border text-text hover:border-dim")
+                    }
+                  >
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       {problem && (
         <p role="alert" className="mt-4 text-sm font-semibold text-accent">
