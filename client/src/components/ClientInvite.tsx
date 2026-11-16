@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getClientAccess, inviteClient, queryKeys } from "../api";
 import { InviteSchema } from "../authSchemas";
+import { Modal } from "./Modal";
 import { plainErrorMessage } from "./States";
 import type { Client, ClientAccess, InviteResult } from "../types";
 
@@ -63,22 +64,28 @@ export function ClientInvitePanel({ client, onClose }: { client: Client; onClose
 
   const status = access.data?.status;
   return (
-    <section aria-label={`Client sign-in for ${client.name}`} className="card mb-4 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="card-title">Client sign-in for {client.name}</h3>
-          <p className="mt-1 text-sm text-dim">
-            {access.isPending ? "Checking..." : status ? STATUS_TEXT[status] : "Couldn't check the sign-in status."}
-            {status === "active" && access.data?.loginEmail && ` Signs in as ${access.data.loginEmail}.`}
-            {access.data?.pendingEmail && access.data.inviteExpiresAt &&
-              ` Invite sent to ${access.data.pendingEmail}; the link works until ${when(access.data.inviteExpiresAt)}.`}
-          </p>
-        </div>
-        <button type="button" onClick={onClose} className="min-h-10 rounded px-2 text-sm text-dim underline-offset-2 hover:text-text hover:underline">
-          Close
-        </button>
-      </div>
-
+    // Nov 2026: this was a panel at the top of the Clients tab, and the Invite button had to call
+    // window.scrollTo to carry the coach up to it - the page moved to show them the thing they had
+    // just asked for, and the client they clicked was then off screen. As a dialog it opens over
+    // the roster instead. The title, the status line and Close map onto what the Modal already has.
+    <Modal
+      title={`Client sign-in for ${client.name}`}
+      description={
+        access.isPending
+          ? "Checking..."
+          : [
+              status ? STATUS_TEXT[status] : "Couldn't check the sign-in status.",
+              status === "active" && access.data?.loginEmail ? `Signs in as ${access.data.loginEmail}.` : "",
+              access.data?.pendingEmail && access.data.inviteExpiresAt
+                ? `Invite sent to ${access.data.pendingEmail}; the link works until ${when(access.data.inviteExpiresAt)}.`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+      }
+      size="md"
+      onRequestClose={onClose}
+    >
       <form onSubmit={submit} noValidate aria-label="Invite client" className="mt-4 flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 basis-60">
           <label htmlFor="invite-email" className="mb-1 block text-sm font-bold">
@@ -144,6 +151,6 @@ export function ClientInvitePanel({ client, onClose }: { client: Client; onClose
           </div>
         </div>
       )}
-    </section>
+    </Modal>
   );
 }

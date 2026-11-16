@@ -82,6 +82,11 @@ function lockPageScroll() {
   const prevGutter = html.style.scrollbarGutter;
   const prevPadding = html.style.paddingInlineEnd;
   // Only compensate when a classic scrollbar is actually taking width (overlay scrollbars: 0).
+  // `overflow: hidden` keeps the element a scroll container (it is still scrollable in script), so
+  // `scrollbar-gutter: stable` does reserve the space and the page behind does not reflow. This was
+  // doubted once because a test saw the page shift 30px on open - that turned out to be a lazily
+  // loaded panel still shrinking the document, not this lock. Verified: the scroll position is
+  // identical before opening and after closing (e2e-ui/invite-dialog.spec.ts).
   const scrollbar = window.innerWidth - html.clientWidth;
   html.style.overflow = "hidden";
   if (scrollbar > 0) {

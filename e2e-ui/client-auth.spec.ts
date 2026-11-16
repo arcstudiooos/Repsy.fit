@@ -40,7 +40,8 @@ async function openInvite(page: Page, opts: { emailConfigured: boolean; status?:
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
   await page.getByRole("button", { name: "Client access for Maya Patel" }).click();
-  const panel = page.getByRole("region", { name: "Client sign-in for Maya Patel" });
+  // Nov 2026: the invite is a dialog over the roster, not a panel the page scrolled up to.
+  const panel = page.getByRole("dialog", { name: "Client sign-in for Maya Patel" });
   await expect(panel).toBeVisible();
   return { panel, invites };
 }

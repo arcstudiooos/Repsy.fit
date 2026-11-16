@@ -159,10 +159,9 @@ export function ClientsTab({
             client={client}
             selected={client.id === selectedClientId}
             onOpen={() => onOpenClient(client.id)}
-            onInvite={() => {
-              setInviteFor(client);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
+            // No scrollTo any more: the invite opens as a dialog over the roster, so the page
+            // does not move and the client card the coach clicked is still behind it.
+            onInvite={() => setInviteFor(client)}
             onDelete={() => {
               setDeleteErrors(({ [client.id]: _, ...rest }) => rest);
               setConfirmClient(client);
