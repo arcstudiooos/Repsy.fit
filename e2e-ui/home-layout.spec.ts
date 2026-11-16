@@ -85,8 +85,10 @@ test("a repeated row action is quiet; the loud button is not repeated", async ({
     },
   });
   const tasks = page.getByRole("region", { name: "Today's Tasks" });
-  const rowButtons = tasks.getByRole("button", { name: /Plan with AI Coach/ });
-  await expect(rowButtons).toHaveCount(3);
+  // Every row offers the same two actions, so BOTH have to be quiet: "New plan" finishes the job
+  // in a dialog, "AI Coach" is the route into the conversation.
+  const rowButtons = tasks.getByRole("button", { name: /New plan|AI Coach/ });
+  await expect(rowButtons).toHaveCount(6);
   // Three identical solid buttons would mean none of them is important: these are ghost.
   for (const cls of await rowButtons.evaluateAll((els) => els.map((e) => e.className))) {
     expect(cls).toContain("btn-ghost");

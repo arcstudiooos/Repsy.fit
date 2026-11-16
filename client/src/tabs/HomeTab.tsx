@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, approveReviewItem, dismissReviewItem, generateWeeklySummary, getAlerts, getAtRiskClients, getRecentCheckIns, getReviewQueue, getTodayTasks, getWeeklySummary, listClients, queryKeys } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ManualAssignmentForm } from "../components/ManualAssignmentForm";
+import { Modal } from "../components/Modal";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
 import { timeRangeText } from "../lib/schedule";
@@ -25,6 +27,9 @@ type Props = {
 // (GET /api/tasks/today): today's appointments first (Prompt 69), then plans due today, then clients
 // with no plan in 7+ days.
 export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients }: Props) {
+  // Which client a new plan is being written for, straight from a task row. null = no dialog.
+  const [planFor, setPlanFor] = useState<{ id: string; name: string } | null>(null);
+  const onNewPlan = (id: string, name: string) => setPlanFor({ id, name });
   const date = localToday();
   const query = useQuery({ queryKey: queryKeys.todayTasks(date), queryFn: () => getTodayTasks(date) });
 
@@ -48,7 +53,7 @@ export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients 
     body = (
       <ul aria-label="Today's tasks" className="divide-y divide-border">
         {query.data.tasks.map((task) => (
-          <TaskRow key={taskKey(task)} task={task} onOpen={onOpenTask} />
+          <TaskRow key={taskKey(task)} task={task} onOpen={onOpenTask} onNewPlan={onNewPlan} />
         ))}
       </ul>
     );
@@ -64,6 +69,9 @@ export function HomeTab({ onOpenTask, onOpenClient, onOpenThread, onOpenClients 
   return (
     <>
       <h2 className="page-title">Home</h2>
+      {planFor && (
+        <NewPlanDialog client={planFor} onClose={() => setPlanFor(null)} />
+      )}
       <MetricRail
         clients={clientsQ.data?.length ?? null}
         attention={atRiskQ.data?.clients.length ?? null}
@@ -147,6 +155,42 @@ function MetricRail({
         </div>
       ))}
     </dl>
+  );
+}
+
+
+/**
+ * Write a plan for one client without leaving Home (Nov 2026 UI batch).
+ *
+ * A task row saying "no plan for 9 days" used to offer only a jump into another tab, which is the
+ * same defect the library had: the coach lost the list of everything else still waiting. The plan
+ * is written here and the row disappears from the list behind.
+ *
+ * It is the SAME ManualAssignmentForm the planner uses, so nothing about what gets saved can drift.
+ */
+function NewPlanDialog({ client, onClose }: { client: { id: string; name: string }; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <Modal title={`New plan for ${client.name}`} size="lg" onRequestClose={onClose}>
+      {saved ? (
+        <p role="status" className="text-sm font-semibold text-accent2">
+          Plan saved for {client.name}.
+        </p>
+      ) : (
+        <ManualAssignmentForm
+          clientId={client.id}
+          onCreated={async () => {
+            setSaved(true);
+            // Home's task list is what the coach is looking at, so it has to agree with what they
+            // just did - otherwise the row they cleared is still sitting there.
+            await queryClient.invalidateQueries({ queryKey: queryKeys.todayTasks(localToday()) });
+          }}
+          onCancel={onClose}
+        />
+      )}
+    </Modal>
   );
 }
 
@@ -317,7 +361,15 @@ function NeedsAttention({ date, onOpenClient }: { date: string; onOpenClient: (c
 const taskKey = (task: TodayTask) =>
   task.kind === "appointment" ? `appointment:${task.appointmentId}` : task.kind === "due" ? `due:${task.assignmentId}` : `idle:${task.clientId}`;
 
-function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"] }) {
+function TaskRow({
+  task,
+  onOpen,
+  onNewPlan,
+}: {
+  task: TodayTask;
+  onOpen: Props["onOpenTask"];
+  onNewPlan: (clientId: string, clientName: string) => void;
+}) {
   if (task.kind === "appointment") {
     // Prompt 69: times arrive as UTC instants and are shown in this browser's timezone.
     return (
@@ -338,16 +390,32 @@ function TaskRow({ task, onOpen }: { task: TodayTask; onOpen: Props["onOpenTask"
         <p className="font-semibold text-text">{task.clientName}</p>
         <p className="text-sm text-dim">{task.text}</p>
       </div>
-      {/* Ghost, not primary: this button repeats on every row, and ten identical orange buttons
-          mean none of them is important. The card is the unit that may hold one primary. */}
-      <button
-        type="button"
-        aria-label={`${label}: ${task.clientName}`}
-        onClick={() => onOpen(task.clientId, target)}
-        className="btn btn-ghost shrink-0"
-      >
-        {label}
-      </button>
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
+        {/* An "idle" task means this client has had no plan for a while, and the job it is really
+            asking for is a plan. That can finish here, so it does. A "due" task is about a plan
+            that already exists, and reviewing it belongs in the week around it - that one still
+            opens the planner, deliberately. */}
+        {task.kind === "idle" && (
+          <button
+            type="button"
+            aria-label={`New plan: ${task.clientName}`}
+            onClick={() => onNewPlan(task.clientId, task.clientName)}
+            className="btn btn-ghost"
+          >
+            New plan
+          </button>
+        )}
+        {/* Ghost, not primary: this button repeats on every row, and ten identical orange buttons
+            mean none of them is important. The card is the unit that may hold one primary. */}
+        <button
+          type="button"
+          aria-label={`${label}: ${task.clientName}`}
+          onClick={() => onOpen(task.clientId, target)}
+          className="btn btn-ghost"
+        >
+          {task.kind === "idle" ? "AI Coach" : label}
+        </button>
+      </div>
     </li>
   );
 }
