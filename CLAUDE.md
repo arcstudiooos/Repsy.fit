@@ -1940,3 +1940,48 @@ saved twice also needs to reopen the dialog, because it now closes on success.
 
 And to assert "the page behind did not move", measure `top + window.scrollY` — `boundingBox()` is
 viewport-relative, and the scroll lock will otherwise read as a several-hundred-pixel layout shift.
+
+## Sweeping leftover test accounts from production (Nov 2026)
+
+`server/scripts/sweep-test-accounts.mjs` deletes coaches whose email matches
+`^delivered\+[a-z][a-z0-9]*@resend\.dev$` — the sandbox inbox every script in `prompts/` signs up
+with. It exists because a live-check script that dies before its `finally` leaves a production coach
+whose password only ever existed in memory: nobody can sign in, so nobody can use
+`DELETE /api/auth/account` either. Three of those accumulated.
+
+Run it from a Render shell: it prints what it would delete and exits; `--yes` performs the deletion;
+`--max` (default 25) refuses a suspiciously large batch.
+
+**The pattern is the only thing that can select a target** — the script takes no id and no email, so
+it cannot be aimed at a real account. `server/test/sweep-test-accounts.test.ts` reads the regex out
+of the script itself (so the two cannot drift) and asserts it never matches a real address,
+including attempts to smuggle a second address past it
+(`delivered+cat@resend.dev,ranesh@repsy.fit`, `delivered+cat@resend.dev.attacker.com`). Removing the
+anchors was tried: three of the five tests fail immediately.
+
+**Not** a discriminator: "owns no clients". The live checks create clients, habits and assignments
+on purpose, so a leftover test coach usually does own data; skipping those would leave exactly the
+accounts this removes. Deletion is one `coach.delete`, the same call the account-deletion endpoint
+makes, so the 42 `onDelete: Cascade` rules in `schema.prisma` do the work.
+
+## The Prisma advisory: assessed, deliberately not "fixed" (Nov 2026)
+
+`npm audit` reports 3 high findings in `server`, all one chain:
+`prisma` (CLI) → `@prisma/config` → `deepmerge-ts` — *stack exhaustion when merging recursive object
+graphs*.
+
+Why this is **not** being chased:
+
+- **`@prisma/client` is not in the chain.** The package that serves every request is unaffected; the
+  vulnerable loader belongs to the CLI, which runs at build time and on `migrate deploy` at boot.
+- **Nothing user-controlled reaches it.** The object being merged is our own Prisma config. A
+  stack-exhaustion DoS needs a deeply recursive graph supplied to the merge; a coach cannot supply
+  one.
+- **There is no stable patch.** No 6.x release fixes it (only pre-release `6.20.0-integration-*`
+  builds), so `npm audit fix --force` means a major jump — a migration with real regression risk
+  across every query in the app, in exchange for no reduction in actual exposure.
+
+**Tripwire — revisit immediately if either becomes true:** `@prisma/client` appears in the advisory
+chain, or a stable 6.x patch ships. Then it is a patch bump, not a gamble. Until then a green
+`npm audit` is not worth a risky migration on a live app, and this paragraph is the reason the
+output is not green.
