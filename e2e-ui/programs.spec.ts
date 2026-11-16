@@ -59,7 +59,9 @@ async function openPrograms(page: Page, programs: unknown[] = [PROGRAM]) {
 
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Programs" }).click();
+  // Nov 2026: Programs is a Library view - reusable programming, not business.
+  await page.getByRole("tab", { name: "Library" }).click();
+  await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Programs" }).click();
   await expect(page.getByRole("region", { name: "Programs" })).toBeVisible();
   return { posted };
 }

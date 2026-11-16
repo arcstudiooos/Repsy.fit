@@ -1,9 +1,11 @@
 // Navigation helpers for the real-server specs (same as e2e-ui/fixtures.ts). Since Nov 2026 the coach
 // app has 5 top tabs (Home, Clients, AI Coach, Messages, Business); Plans / Progress / Check-ins are
-// sub-tabs of a client's workspace inside Clients, and Library is a Business view.
+// sub-tabs of a client's workspace inside Clients, and Library is its own tab (Nov 2026).
 import type { Page } from "@playwright/test";
 
-export const TOP_TABS = ["Home", "Clients", "AI Coach", "Messages", "Business"];
+// Nov 2026: Calendar and Library came out of "Business", which had become a junk drawer holding a
+// calendar, a questionnaire builder and an exercise library alongside the coach's money.
+export const TOP_TABS = ["Home", "Clients", "Calendar", "Library", "AI Coach", "Messages", "Business"];
 export type ClientSubTab = "Plans" | "Progress" | "Check-ins";
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -60,10 +62,17 @@ export async function selectClient(page: Page, name: string) {
   await page.getByRole("option", { name: new RegExp(escapeRe(name)) }).first().click();
 }
 
-/** Opens Business -> Library. */
-export async function openLibrary(page: Page, view?: "Templates" | "Meals" | "Macro calculator") {
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Library" }).click();
-  // UI batch 4: Library has its own views (Templates / Meals / Macro calculator); the last one is remembered.
+/**
+ * Opens the Library tab.
+ *
+ * Nov 2026: the Library is its own destination. It used to be a view inside "Business" alongside
+ * Schedule, Programs and Forms; a calendar and a questionnaire builder are not business, and that
+ * tab had become a junk drawer.
+ */
+export async function openLibrary(
+  page: Page,
+  view?: "Templates" | "Exercises" | "Meals" | "Programs" | "Forms" | "Macro calculator",
+) {
+  await page.getByRole("tab", { name: "Library" }).click();
   if (view) await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: view, exact: true }).click();
 }

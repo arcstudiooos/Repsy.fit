@@ -50,7 +50,7 @@ async function mockApi(page: Page) {
 
 test("Business has a Reports view; generating a report shows the printable progress report", async ({ page }) => {
   await mockApi(page);
-  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5); // still 5 tabs: views live inside Business
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(7); // still 5 tabs: views live inside Business
   await page.getByLabel("Client", { exact: true }).selectOption("c-arjun");
   await page.getByLabel("From (optional)").fill("2026-10-01");
   await page.getByLabel("To (optional)").fill("2026-10-31");

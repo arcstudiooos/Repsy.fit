@@ -35,8 +35,8 @@ async function openLibrary(page: Page) {
     return route.fulfill({ status: 201, json: { ...stock, id: "copy-1", coachId: "c1", stock: false } });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("button", { name: "Library" }).click();
+  // Nov 2026: the Library is its own tab, not a view inside Business.
+  await page.getByRole("tab", { name: "Library" }).click();
   // The Library view has its own sub-tabs and opens on Templates, not Meals.
   await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Meals" }).click();
   return { copied };

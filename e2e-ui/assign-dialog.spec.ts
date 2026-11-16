@@ -41,8 +41,8 @@ async function openAssign(page: Page) {
     return route.fulfill({ status: 201, json: { id: `a${calls.length}` } });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("button", { name: "Library" }).click();
+  // Nov 2026: the Library is its own tab, not a view inside Business.
+  await page.getByRole("tab", { name: "Library" }).click();
   await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Meals" }).click();
   await page.getByRole("button", { name: "Assign Oats and eggs to client" }).click();
   return { calls, dialog: page.getByRole("dialog", { name: "Assign Oats and eggs" }) };

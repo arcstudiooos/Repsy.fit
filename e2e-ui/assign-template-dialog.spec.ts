@@ -37,8 +37,8 @@ async function openAssign(page: Page) {
     return route.fulfill({ status: 201, json: { id: `a${calls.length}` } });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("button", { name: "Library" }).click();
+  // Nov 2026: the Library is its own tab, not a view inside Business.
+  await page.getByRole("tab", { name: "Library" }).click();
   await page.getByRole("button", { name: "Assign Leg day to client" }).click();
   return { calls, dialog: page.getByRole("dialog", { name: "Assign Leg day" }) };
 }
@@ -51,7 +51,8 @@ test("the plan is saved from the dialog, and the library is never navigated away
   await expect(dialog.getByText(/Assigned to Arjun Mehta/)).toBeVisible();
   await expect.poll(() => calls).toEqual(["c-arjun Leg day"]);
   // The tab never changed: this is the defect that dialogs were introduced to fix.
-  await expect(page.getByRole("tab", { name: "Business" })).toHaveAttribute("aria-selected", "true");
+  // (The tab is "Library" since Nov 2026; the behaviour asserted here is the same.)
+  await expect(page.getByRole("tab", { name: "Library" })).toHaveAttribute("aria-selected", "true");
 });
 
 test("the form inside is the real one, prefilled from the template", async ({ page }) => {

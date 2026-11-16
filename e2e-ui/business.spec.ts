@@ -65,9 +65,19 @@ async function mockBusiness(page: Page, rows: Row[], currency = "INR") {
 const plans = (page: Page) => page.getByRole("list", { name: "Client plans" }).getByRole("listitem");
 const rowFor = (page: Page, name: string) => plans(page).filter({ hasText: name });
 
-test("Business is the 5th and final tab, and says it is record-keeping only", async ({ page }) => {
+test("Business is the last tab, and says it is record-keeping only", async ({ page }) => {
   await mockBusiness(page, []);
-  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
+  // Nov 2026: seven tabs. Business stays last, but it is only money and the numbers about it now -
+  // Calendar and Library came out of it.
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText([
+    "Home",
+    "Clients",
+    "Calendar",
+    "Library",
+    "AI Coach",
+    "Messages",
+    "Business",
+  ]);
   const panel = page.getByRole("tabpanel").first();
   // One short line now (owner, Nov 2026): Repsy takes no payments; these are the coach's own records.
   await expect(panel).toContainText("Record-keeping only: Repsy doesn't take payments. These are your own records.");

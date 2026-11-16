@@ -33,7 +33,7 @@ test.beforeEach(async ({ request }) => {
   await setClients(request, SAMPLE_CLIENTS);
 });
 
-test("the production build serves the app shell: 5 tabs in order and a real logo file", async ({ page }) => {
+test("the production build serves the app shell: 7 tabs in order and a real logo file", async ({ page }) => {
   await page.goto("/app");
   await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(TABS);
   const logo = page.locator("header").getByRole("img", { name: "Repsy" });
@@ -58,7 +58,9 @@ test("the client header lists the real clients, and switching one carries into t
     await expect(clientHeader(page)).toContainText("Casey Jordan");
   }
   // The roster manages clients, so it has no client header.
-  await page.getByRole("button", { name: "Back to all clients" }).click();
+  // Nov 2026: at desktop width the roster stays on screen as a rail, so "Back to all clients" is a
+  // phone-only control; the rail's own "All clients" goes to the roster GRID.
+  await page.getByRole("navigation", { name: "Clients" }).getByRole("button", { name: "All clients" }).click();
   await expect(clientHeader(page)).toHaveCount(0);
 });
 
@@ -101,7 +103,7 @@ test.describe("production server", () => {
   test("refreshing on a deep /app path still opens the full app", async ({ page }) => {
     const res = await page.goto("/app/some/deep/link");
     expect(res?.status()).toBe(200);
-    await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5);
+    await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(7);
     // /app opens on Home; the client header is on AI Coach.
     await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("tab", { name: "AI Coach" }).click();

@@ -31,8 +31,8 @@ async function openMealLibrary(page: Page) {
     return route.fulfill({ status: 200, json: emptyApi(path) });
   });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("button", { name: "Library" }).click();
+  // Nov 2026: the Library is its own tab, not a view inside Business.
+  await page.getByRole("tab", { name: "Library" }).click();
   await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Meals" }).click();
 }
 

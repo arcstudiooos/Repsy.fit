@@ -69,7 +69,7 @@ test("2. signed out, /app redirects to login; a new coach registers and lands in
   await form.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL(/\/app/, { timeout: 30_000 });
-  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(5);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveCount(7);
   // A brand-new coach starts with nothing: proof the account is really new and really scoped.
   await expect(panel(page)).toContainText(/Add your first client|No clients yet/);
 });

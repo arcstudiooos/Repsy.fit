@@ -89,12 +89,14 @@ async function openLibrary(page: Page, initial: T[] = []) {
   return { templates, calls };
 }
 
-test("Library is a Business view and lists templates, with search by name", async ({ page }) => {
+test("the Library is its own tab and lists templates, with search by name", async ({ page }) => {
   await openLibrary(page, [
     tpl("t1", "Push day", { focus: "Upper body", notes: "Warm up first" }),
     tpl("t2", "Leg day", { exercises: [{ name: "Back Squat", sets: 4, reps: "6", rest: 120 }, { name: "Leg Press", sets: 3, reps: "12", rest: 90 }] }),
   ]);
-  await expect(page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Library" })).toHaveAttribute("aria-pressed", "true");
+  // Nov 2026: the Library is a destination, not a view inside Business, and it opens on Templates.
+  await expect(page.getByRole("tab", { name: "Library" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Templates" })).toHaveAttribute("aria-pressed", "true");
   const list = page.getByRole("list", { name: "Templates" });
   await expect(list.getByRole("heading", { level: 3 })).toHaveText(["Leg day", "Push day"]);
   await expect(list).toContainText("Back Squat");

@@ -121,12 +121,26 @@ export async function selectClient(page: Page, name: string) {
   await page.getByRole("option", { name: new RegExp(escapeRe(name)) }).first().click();
 }
 
-/** Opens Business -> Library (templates, meals, macro calculator). */
-export async function openLibrary(page: Page, view?: "Templates" | "Exercises" | "Meals" | "Macro calculator") {
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Library" }).click();
-  // UI batch 4: Library has its own views (Templates / Exercises / Meals / Macro calculator); the last is remembered.
+/**
+ * Opens the Library tab.
+ *
+ * Nov 2026: the Library is a top-level destination. It used to be a view inside "Business", along
+ * with Schedule, Programs and Forms - a calendar and a questionnaire are not business, and burying
+ * the tools a coach builds with two clicks inside a money tab is what made it a junk drawer.
+ * Programs and Forms are Library views now, because they are the same kind of thing: something you
+ * build once and reuse.
+ */
+export async function openLibrary(
+  page: Page,
+  view?: "Templates" | "Exercises" | "Meals" | "Programs" | "Forms" | "Macro calculator",
+) {
+  await page.getByRole("tab", { name: "Library" }).click();
   if (view) await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: view, exact: true }).click();
+}
+
+/** Opens the Calendar tab (appointments). Was "Business -> Schedule" until Nov 2026. */
+export async function openCalendar(page: Page) {
+  await page.getByRole("tab", { name: "Calendar" }).click();
 }
 
 /** Opens any section by name: a top tab, a client workspace sub-tab (selected client) or Business -> Library. */

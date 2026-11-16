@@ -11,17 +11,23 @@ import { Modal } from "../components/Modal";
 import { MealLibrary } from "../components/MealLibrary";
 import { ExerciseLibrary } from "../components/ExerciseLibrary";
 import { MacroCalculator } from "../components/MacroCalculator";
+import { ProgramsView } from "../components/ProgramsView";
+import { FormsView } from "../components/FormsView";
 import { ExercisePicker, ManualAssignmentForm, rowsFromTemplate, templateFromRows, type DoseRow, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
-import type { NewWorkoutTemplate, WorkoutTemplate } from "../types";
+import type { Client, NewWorkoutTemplate, WorkoutTemplate } from "../types";
 
 const inputClass =
   "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 const smallButton = "btn btn-secondary";
 
 // UI batch 4: the three Library tools are separate views (same switch pattern as the Business views).
-export const LIBRARY_VIEWS = ["Templates", "Exercises", "Meals", "Macro calculator"] as const;
+// Nov 2026: Library is a top-level destination, and Programs and Forms moved into it from
+// "Business". They are reusable PROGRAMMING - a programme of workouts, a questionnaire a client
+// fills in - which has nothing to do with money or admin; filing them under Business was what made
+// that tab a junk drawer. Everything a coach builds once and reuses now lives in one place.
+export const LIBRARY_VIEWS = ["Templates", "Exercises", "Meals", "Programs", "Forms", "Macro calculator"] as const;
 export type LibraryView = (typeof LIBRARY_VIEWS)[number];
 
 type Props = {
@@ -33,9 +39,11 @@ type Props = {
   /** Prompt 61: a client whose details should pre-fill the macro calculator (used once). */
   macroClientId?: string | null;
   onMacroPrefillUsed?: () => void;
+  /** Programs and Forms both assign to a client, so they need the roster. */
+  clients: Client[];
 };
 
-export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClientId = null, onMacroPrefillUsed }: Props) {
+export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClientId = null, onMacroPrefillUsed, clients }: Props) {
   const [ownView, setOwnView] = useState<LibraryView>("Templates");
   const view = viewProp ?? ownView;
   const setView = onViewChange ?? setOwnView;
@@ -63,6 +71,10 @@ export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClient
         <MealLibrary />
       ) : view === "Exercises" ? (
         <ExerciseLibrary />
+      ) : view === "Programs" ? (
+        <ProgramsView clients={clients} />
+      ) : view === "Forms" ? (
+        <FormsView clients={clients} />
       ) : view === "Macro calculator" ? (
         <MacroCalculator initialClientId={macroClientId} onPrefillUsed={onMacroPrefillUsed} />
       ) : (

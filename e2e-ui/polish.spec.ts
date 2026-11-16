@@ -161,11 +161,11 @@ for (const width of [375, 1280]) {
 test.describe("375px layout", () => {
   test.use({ viewport: { width: 375, height: 900 } });
 
-  test("the 5 tabs sit in a fixed bottom bar that fits the width, and content clears it", async ({ page }) => {
+  test("the 7 tabs sit in a fixed bottom bar that fits the width, and content clears it", async ({ page }) => {
     await mockApi(page);
     await openAiCoach(page);
     const bar = page.getByRole("tablist", { name: "Sections" });
-    await expect(bar.getByRole("tab")).toHaveCount(5);
+    await expect(bar.getByRole("tab")).toHaveCount(7);
     expect(await bar.evaluate((el) => getComputedStyle(el).position)).toBe("fixed");
     const box = (await bar.boundingBox())!;
     expect(Math.round(box.y + box.height)).toBe(900);

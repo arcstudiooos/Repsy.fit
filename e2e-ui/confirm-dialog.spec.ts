@@ -27,8 +27,8 @@ async function openTemplates(page: Page) {
   await page.route("**/api/templates**", (route: Route) => route.fulfill({ status: 200, json: templates }));
   await page.setViewportSize({ width: 1280, height: 700 });
   await page.goto("/app");
-  await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("button", { name: "Library" }).click();
+  // Nov 2026: the Library is its own tab, not a view inside Business.
+  await page.getByRole("tab", { name: "Library" }).click();
   await expect(page.getByRole("heading", { level: 3, name: "Template 11" })).toBeVisible();
   await page.waitForLoadState("networkidle");
 }

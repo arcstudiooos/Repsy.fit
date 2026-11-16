@@ -80,11 +80,11 @@ async function mockApi(page: Page) {
 
 const header = (page: Page) => page.getByRole("region", { name: "Selected client" });
 
-test("5 top tabs; arrow keys move between them (roving focus)", async ({ page }) => {
+test("7 top tabs; arrow keys move between them (roving focus)", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
   const tabs = page.getByRole("tablist", { name: "Sections" }).getByRole("tab");
-  await expect(tabs).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
+  await expect(tabs).toHaveText(["Home", "Clients", "Calendar", "Library", "AI Coach", "Messages", "Business"]);
   // /app opens on Home (owner, Nov 2026).
   await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("tabindex", "0");
@@ -93,6 +93,8 @@ test("5 top tabs; arrow keys move between them (roving focus)", async ({ page })
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: "Clients" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("tab", { name: "Messages" })).toHaveAttribute("aria-selected", "true");
@@ -171,14 +173,32 @@ test("the selected client carries from AI Coach into the workspace", async ({ pa
   await expect(page.getByRole("tab", { name: "Check-ins", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
-test("Library is a Business view", async ({ page }) => {
+test("the Library is its own destination, and holds everything a coach builds once and reuses", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/app");
+  await page.getByRole("tab", { name: "Library" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Library" })).toBeVisible();
+  // Programs and Forms came out of "Business" with it: a workout programme and a client
+  // questionnaire are reusable programming, not money or admin.
+  await expect(page.getByRole("group", { name: "Library view" }).getByRole("button")).toHaveText([
+    "Templates",
+    "Exercises",
+    "Meals",
+    "Programs",
+    "Forms",
+    "Macro calculator",
+  ]);
+});
+
+test("Business is money and the numbers about it, nothing else", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();
-  const views = page.getByRole("group", { name: "Business view" }).getByRole("button");
-  await expect(views).toHaveText(["Payments", "Schedule", "Engagement", "Programs", "Forms", "Reports", "Library"]);
-  await views.filter({ hasText: "Library" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Library" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Business view" }).getByRole("button")).toHaveText([
+    "Payments",
+    "Engagement",
+    "Reports",
+  ]);
 });
 
 test("Home: the morning job first, with counts", async ({ page }) => {
@@ -238,8 +258,16 @@ test.describe("phone (375px)", () => {
     const bar = page.getByRole("tablist", { name: "Sections" });
     const box = (await bar.boundingBox())!;
     expect(Math.round(box.y + box.height)).toBe(800);
-    await expect(bar.locator("svg")).toHaveCount(5);
-    for (const tab of await bar.getByRole("tab").all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(bar.locator("svg")).toHaveCount(7);
+    // Seven tabs on a 375px bar: each must still be a real tap target, and none of the labels may
+    // be cut off. At the old `text-xs` "Messages" rendered as "Messag..." - a truncated label is
+    // worse than a small one, because the word is the thing that says where you are.
+    for (const tab of await bar.getByRole("tab").all()) {
+      const b = (await tab.boundingBox())!;
+      expect(b.height).toBeGreaterThanOrEqual(44);
+      expect(b.width).toBeGreaterThanOrEqual(40);
+    }
+    expect(await bar.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
     await openClientTab(page, "Plans", "Client 05");
     await expect(header(page)).toContainText("Client 05");
     await page.getByRole("button", { name: "Switch client" }).click();

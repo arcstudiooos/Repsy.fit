@@ -5,9 +5,6 @@ import { lazy, Suspense, useMemo, useRef, useState, type FormEvent, type ReactNo
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Engagement } from "../components/Engagement";
-import { Schedule } from "../components/Schedule";
-import { FormsView } from "../components/FormsView";
-import { ProgramsView } from "../components/ProgramsView";
 import { Modal } from "../components/Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
@@ -57,7 +54,11 @@ export function money(amount: number, currency: string): string {
 const dayText = (iso: string) => formatDay(iso);
 
 // Library (templates, meals, macro calculator) moved here from its own top-level tab (Nov 2026).
-const VIEWS = ["Payments", "Schedule", "Engagement", "Programs", "Forms", "Reports", "Library"] as const;
+// Nov 2026: this was seven views - Payments, Schedule, Engagement, Programs, Forms, Reports,
+// Library - which made "Business" a junk drawer. Schedule is a calendar, and Programs, Forms and
+// Library are reusable programming; they are top-level destinations now. What is left is the
+// coach's money and the numbers about it, which is what "Business" should have meant.
+const VIEWS = ["Payments", "Engagement", "Reports"] as const;
 export type BusinessView = (typeof VIEWS)[number];
 type View = BusinessView;
 
@@ -72,12 +73,11 @@ type BusinessTabProps = {
   /** Shown instead of the client-based views while clients load, fail or don't exist yet. Library still works. */
   blocked?: ReactNode;
   /** The Library view (App owns its template / macro hand-offs). */
-  library: ReactNode;
 };
 
 // Prompt 69: the Business tab has a view switch (Payments / Schedule / Engagement / Reports / Library).
 // It stays one tab: the switch is inside the tab.
-export function BusinessTab({ clients, view, onViewChange: setView, blocked, library }: BusinessTabProps) {
+export function BusinessTab({ clients, view, onViewChange: setView, blocked }: BusinessTabProps) {
   return (
     <>
       {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
@@ -98,20 +98,10 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked, lib
           </button>
         ))}
       </div>
-      {view === "Programs" ? (
-        <ProgramsView clients={clients} />
-      ) : view === "Forms" ? (
-        <FormsView clients={clients} />
-      ) : view === "Library" ? (
-        <div className="mt-4">
-          <Suspense fallback={<LoadingState />}>{library}</Suspense>
-        </div>
-      ) : blocked ? (
+      {blocked ? (
         <div className="mt-4">{blocked}</div>
       ) : view === "Payments" ? (
         <PaymentsView clients={clients} />
-      ) : view === "Schedule" ? (
-        <Schedule clients={clients} />
       ) : view === "Engagement" ? (
         <Engagement />
       ) : (

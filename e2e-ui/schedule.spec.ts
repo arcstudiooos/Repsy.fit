@@ -76,7 +76,8 @@ async function mockSchedule(page: Page, initial: Appt[]) {
   });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Schedule" }).click();
+  // Nov 2026: the calendar is its own destination, not a view inside Business.
+  await page.getByRole("tab", { name: "Calendar" }).click();
   await expect(page.getByRole("region", { name: "Schedule" })).toBeVisible();
   return state;
 }
@@ -84,14 +85,28 @@ async function mockSchedule(page: Page, initial: Appt[]) {
 const day = (page: Page, name: string) => page.getByRole("group", { name });
 const week = (page: Page) => page.getByRole("region", { name: "Schedule" });
 
-test("Schedule lives inside the Business tab (no 10th tab); Payments stays the default view", async ({ page }) => {
+test("the calendar is its own destination, and Business is only money and its numbers", async ({ page }) => {
   await mockSchedule(page, []);
-  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
-  const view = page.getByRole("group", { name: "Business view" });
-  await expect(view.getByRole("button", { name: "Payments" })).toHaveAttribute("aria-pressed", "false");
-  await expect(view.getByRole("button", { name: "Schedule" })).toHaveAttribute("aria-pressed", "true");
-  await view.getByRole("button", { name: "Payments" }).click();
-  await expect(page.getByText("No plans yet.")).toBeVisible();
+  // Nov 2026 reverses the earlier "no extra tab" call. That reasoning assumed a phone bar could not
+  // carry more than five; measured at 390px, seven tabs sit at 56x56 each with no truncation and no
+  // sideways scroll - comfortably past the 44px tap minimum. The cost of being wrong the other way
+  // was a "Business" tab holding a calendar, a questionnaire builder and an exercise library.
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText([
+    "Home",
+    "Clients",
+    "Calendar",
+    "Library",
+    "AI Coach",
+    "Messages",
+    "Business",
+  ]);
+  // What is left under Business is the coach's money and the numbers about it.
+  await page.getByRole("tab", { name: "Business" }).click();
+  await expect(page.getByRole("group", { name: "Business view" }).getByRole("button")).toHaveText([
+    "Payments",
+    "Engagement",
+    "Reports",
+  ]);
   await expect(week(page)).toHaveCount(0);
 });
 

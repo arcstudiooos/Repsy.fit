@@ -50,10 +50,10 @@ async function mockApi(page: Page, tasks: Tasks | "missing") {
 
 const panel = (page: Page) => page.getByRole("tabpanel").first();
 
-test("Home is the first of 5 tabs", async ({ page }) => {
+test("Home is the first of 7 tabs", async ({ page }) => {
   await mockApi(page, TASKS);
   await page.goto("/app");
-  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "Calendar", "Library", "AI Coach", "Messages", "Business"]);
   await page.getByRole("tab", { name: "Home" }).click();
   await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
   await expect(panel(page).getByRole("heading", { level: 2 })).toHaveText("Home");

@@ -32,20 +32,35 @@ const CheckInsTab = lazy(() => import("./tabs/CheckInsTab").then((m) => ({ defau
 const MessagesTab = lazy(() => import("./tabs/MessagesTab").then((m) => ({ default: m.MessagesTab })));
 // Business (Prompt 68): plans and recorded payments, coach-level like Library (which is now a Business view).
 const BusinessTab = lazy(() => import("./tabs/BusinessTab").then((m) => ({ default: m.BusinessTab })));
+// The calendar is its own destination now, so it loads with the tab rather than inside Business.
+const Schedule = lazy(() => import("./components/Schedule").then((m) => ({ default: m.Schedule })));
 import type { BusinessView } from "./tabs/BusinessTab";
 // Type-only: erased at build time, so the Messages code stays in its own lazy chunk.
 import type { ChatState } from "./tabs/MessagesTab";
 import { WaitingBanner } from "./components/WaitingBanner";
 
-type TabId = "home" | "clients" | "ai" | "messages" | "business";
+type TabId = "home" | "clients" | "calendar" | "library" | "ai" | "messages" | "business";
 /** Sub-tabs of the client workspace (inside Clients). */
 type SubTabId = "plans" | "progress" | "checkins";
 
-// Five top-level sections (Nov 2026). Plans, Progress and Check-ins live in the client workspace
-// inside Clients; Library lives in Business. Icons show on the phone bottom bar only.
+/*
+ * Seven top-level sections (Nov 2026 IA pass).
+ *
+ * It was five, with Schedule, Programs, Forms and Library all filed under "Business" behind a row
+ * of pills. A calendar is not business, and neither is a questionnaire or a workout template; that
+ * tab had become a junk drawer, and the things a coach uses most were two clicks deep inside it.
+ * Calendar and Library are destinations now, and Business is what the word means: money and the
+ * numbers about it.
+ *
+ * Seven fits the desktop canvas comfortably. The phone bar scrolls sideways rather than hiding
+ * anything behind a "More" sheet, which would put two of the seven on a different interaction
+ * model from the rest.
+ */
 const TABS: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "home", label: "Home", icon: <path d="M4 11 12 4l8 7v9h-5v-6H9v6H4v-9z" /> },
   { id: "clients", label: "Clients", icon: <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M18 14.5a7 7 0 0 1 4 6.5" /> },
+  { id: "calendar", label: "Calendar", icon: <path d="M4 6h16v14H4V6zm0 5h16M9 3v4m6-4v4" /> },
+  { id: "library", label: "Library", icon: <path d="M4 5h5v15H4V5zm6 0h5v15h-5V5zm6.5 0 3 15-2 .4-3-15 2-.4z" /> },
   { id: "ai", label: "AI Coach", icon: <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" /> },
   { id: "messages", label: "Messages", icon: <path d="M4 5h16v11H8l-4 4V5z" /> },
   { id: "business", label: "Business", icon: <path d="M3 8h18v12H3V8zm6 0V5h6v3M3 13h18" /> },
@@ -132,7 +147,10 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
             tabIndex={isActive ? 0 : -1}
             onClick={() => onSelect(tab.id)}
             className={
-              "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-semibold " +
+              // Nov 2026: seven tabs share a 390px phone bar, so the phone label drops to 10px and
+              // loses its side padding. At `text-xs` "Messages" rendered as "Messag…" - a truncated
+              // label is worse than a small one, because the word is what tells you where you are.
+              "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[10px] font-semibold leading-tight " +
               "sm:min-h-0 sm:flex-none sm:shrink-0 sm:flex-row sm:gap-0 sm:whitespace-nowrap sm:rounded-t-[10px] sm:border sm:border-b-0 sm:px-5 sm:py-2.5 sm:text-sm " +
               (isActive
                 ? // Active: surface colour, covers the line below so it joins the panel.
@@ -144,7 +162,7 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (id: TabId) => 
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sm:hidden">
               {tab.icon}
             </svg>
-            <span className="max-w-full truncate">{tab.label}</span>
+            <span className="max-w-full truncate sm:text-sm">{tab.label}</span>
             {tab.id === "home" && reviewCount > 0 && (
               <span
                 aria-label={`${reviewCount} waiting in the review queue`}
@@ -286,9 +304,10 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   const clearMacroClientId = useCallback(() => setMacroClientId(null), []);
   const openMacroCalculator = useCallback((clientId: string) => {
     setMacroClientId(clientId);
-    setBusinessView("Library");
     setLibraryView("Macro calculator");
-    setActiveTab("business");
+    // Nov 2026: the calculator is in the Library, which is its own tab now rather than a view
+    // inside Business.
+    setActiveTab("library");
   }, []);
 
   // Shared "selected client" for the whole app.
@@ -438,29 +457,34 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
         seedSixMonth={seedSixMonth}
       />
     );
-  } else if (activeTab === "business") {
-    // Library (templates, meals, macro calculator) belongs to the coach, so it works with zero
-    // clients; the other Business views need clients and show the usual states instead.
+  } else if (activeTab === "library") {
+    // The Library belongs to the COACH, not to a client, so it works with zero clients - which is
+    // also why it was wrong to keep it behind a tab that shows a "no clients yet" gate.
     panelContent = (
       <Suspense fallback={<LoadingState />}>
-        <BusinessTab
+        <LibraryTab
           clients={clients}
-          view={businessView}
-          onViewChange={setBusinessView}
-          blocked={clientsGate}
-          library={
-            <LibraryTab
-              view={libraryView}
-              onViewChange={setLibraryView}
-              onAssign={(clientId, prefill) => {
-                setPlannerPrefill(prefill);
-                openWorkspace(clientId, "plans");
-              }}
-              macroClientId={macroClientId}
-              onMacroPrefillUsed={clearMacroClientId}
-            />
-          }
+          view={libraryView}
+          onViewChange={setLibraryView}
+          onAssign={(clientId, prefill) => {
+            setPlannerPrefill(prefill);
+            openWorkspace(clientId, "plans");
+          }}
+          macroClientId={macroClientId}
+          onMacroPrefillUsed={clearMacroClientId}
         />
+      </Suspense>
+    );
+  } else if (activeTab === "calendar") {
+    panelContent = clientsGate ?? (
+      <Suspense fallback={<LoadingState />}>
+        <Schedule clients={clients} />
+      </Suspense>
+    );
+  } else if (activeTab === "business") {
+    panelContent = (
+      <Suspense fallback={<LoadingState />}>
+        <BusinessTab clients={clients} view={businessView} onViewChange={setBusinessView} blocked={clientsGate} />
       </Suspense>
     );
   } else if (clientsGate) {

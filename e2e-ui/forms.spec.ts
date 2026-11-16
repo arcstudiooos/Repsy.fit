@@ -63,7 +63,10 @@ async function openForms(page: Page, forms: unknown[] = [SAMPLE], submissions: u
 
   await page.goto("/app");
   await page.getByRole("tab", { name: "Business" }).click();
-  await page.getByRole("group", { name: "Business view" }).getByRole("button", { name: "Forms" }).click();
+  // Nov 2026: Forms is a Library view - it is something a coach builds once and reuses, which is
+  // what the Library is for. It used to sit under "Business".
+  await page.getByRole("tab", { name: "Library" }).click();
+  await page.getByRole("group", { name: "Library view" }).getByRole("button", { name: "Forms" }).click();
   await expect(page.getByRole("region", { name: "Forms" })).toBeVisible();
   return { posted };
 }

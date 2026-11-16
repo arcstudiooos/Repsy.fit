@@ -64,7 +64,7 @@ async function openTab(page: Page, existing: Record<string, unknown>[] = []) {
 
 test("Check-ins is a client workspace sub-tab, after Progress", async ({ page }) => {
   await openTab(page);
-  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "AI Coach", "Messages", "Business"]);
+  await expect(page.getByRole("tablist", { name: "Sections" }).getByRole("tab")).toHaveText(["Home", "Clients", "Calendar", "Library", "AI Coach", "Messages", "Business"]);
   await expect(page.getByRole("tab", { name: "Check-ins", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
