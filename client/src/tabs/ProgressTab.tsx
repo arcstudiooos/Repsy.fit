@@ -68,7 +68,7 @@ export function ProgressTab({ client }: Props) {
       <>
         {logs.length === 0 && (
           <div className="card mt-4 p-6 text-center text-dim">
-            No progress logged yet. Add the first weekly check-in below.
+            No progress logged yet. Use "Log check-in" to add the first one.
           </div>
         )}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

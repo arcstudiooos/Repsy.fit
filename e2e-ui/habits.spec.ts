@@ -101,9 +101,12 @@ test("tapping a day toggles it done and back, and the streak follows", async ({ 
 
 test("adds, renames and archives a habit", async ({ page }) => {
   const { section, calls } = await openTab(page, [{ name: "Stretch" }]);
-  await expect(section.getByRole("button", { name: "Add habit" })).toBeVisible();
-  await section.getByLabel("New habit").fill("Sleep by 11");
+  // Nov 2026: the add block is a dialog (it used to shove the week grid down the page). The Modal
+  // renders through a portal, so the fields are not inside the section.
   await section.getByRole("button", { name: "Add habit" }).click();
+  const add = page.getByRole("dialog", { name: "Add a habit" });
+  await add.getByLabel("New habit").fill("Sleep by 11");
+  await add.getByRole("button", { name: "Save habit" }).click();
   await expect(section.getByRole("row", { name: /Sleep by 11/ })).toBeVisible();
 
   await section.getByRole("button", { name: "Rename Stretch" }).click();
@@ -118,9 +121,13 @@ test("adds, renames and archives a habit", async ({ page }) => {
 
 test("at 8 habits the add box is disabled with a plain-words note", async ({ page }) => {
   const { section } = await openTab(page, Array.from({ length: 8 }, (_, i) => ({ name: `Habit ${i + 1}` })));
-  await expect(section.getByLabel("New habit")).toBeDisabled();
-  await expect(section.getByRole("button", { name: "Add habit" })).toBeDisabled();
+  // The cap now stops the coach at the door rather than inside the dialog, and the trigger points
+  // at the reason so a screen reader reads it with the button.
+  const trigger = section.getByRole("button", { name: "Add habit" });
+  await expect(trigger).toBeDisabled();
   await expect(section).toContainText("Archive one to add another.");
+  const describedBy = await trigger.getAttribute("aria-describedby");
+  expect(describedBy).toBe("habit-cap");
 });
 
 test("an empty client shows plain words", async ({ page }) => {

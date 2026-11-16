@@ -124,14 +124,18 @@ test("6. add two progress check-ins; the cards and all 3 charts update", async (
   await page.goto("/app");
   await openClientTab(page, "Progress", A);
   await expect(clientHeader(page)).toContainText(A);
-  const form = panel(page).getByRole("form", { name: "Weekly check-in" });
-  await form.getByLabel("Date", { exact: true }).fill("2026-11-02");
-  await form.getByLabel("Weight kg", { exact: true }).fill("68.4");
-  await form.getByRole("button", { name: "Add check-in" }).click();
+  // Nov 2026: the check-in form is a dialog that closes on success, so each log opens it again.
+  const logCheckIn = async (date: string, weight: string) => {
+    await panel(page).getByRole("button", { name: "Log check-in" }).click();
+    const box = page.getByRole("dialog", { name: "Weekly check-in" });
+    await box.getByLabel("Date", { exact: true }).fill(date);
+    await box.getByLabel("Weight kg", { exact: true }).fill(weight);
+    await box.getByRole("button", { name: "Add check-in" }).click();
+    await expect(box).toHaveCount(0, { timeout: 30_000 });
+  };
+  await logCheckIn("2026-11-02", "68.4");
   await expect(panel(page).getByRole("list", { name: "Check-ins" }).getByRole("listitem")).toHaveCount(1, { timeout: 30_000 });
-  await form.getByLabel("Date", { exact: true }).fill("2026-11-09");
-  await form.getByLabel("Weight kg", { exact: true }).fill("67.6");
-  await form.getByRole("button", { name: "Add check-in" }).click();
+  await logCheckIn("2026-11-09", "67.6");
   await expect(panel(page).getByRole("list", { name: "Check-ins" }).getByRole("listitem")).toHaveCount(2, { timeout: 30_000 });
   expect((await counts(request, idA)).progress).toBe(2);
 

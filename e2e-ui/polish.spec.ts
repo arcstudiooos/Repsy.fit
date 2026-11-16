@@ -230,7 +230,10 @@ test.describe("375px layout", () => {
     await mockApi(page);
     await page.goto("/app");
     await openTab(page, "Progress");
-    const form = panel(page).getByRole("form", { name: "Weekly check-in" });
+    // Nov 2026: the check-in form is a dialog. A dialog at 375px is exactly where single-column
+    // matters most, so the check is kept and pointed at it rather than dropped.
+    await panel(page).getByRole("button", { name: "Log check-in" }).click();
+    const form = page.getByRole("dialog", { name: "Weekly check-in" }).getByRole("form", { name: "Weekly check-in" });
     const lefts = await form.locator("input").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
     expect(new Set(lefts).size).toBe(1);
   });
@@ -253,7 +256,9 @@ test("focused inputs and buttons show the teal focus ring", async ({ page }) => 
   await mockApi(page);
   await page.goto("/app");
   await openClientTab(page, "Progress");
-  const weight = page.getByRole("tabpanel").first().getByLabel("Weight kg", { exact: true });
+  // The weight box lives in the check-in dialog now; the focus ring has to survive the move.
+  await page.getByRole("tabpanel").first().getByRole("button", { name: "Log check-in" }).click();
+  const weight = page.getByRole("dialog", { name: "Weekly check-in" }).getByLabel("Weight kg", { exact: true });
   await weight.focus();
   await expect(weight).toHaveCSS("outline-style", "solid");
   await expect(weight).toHaveCSS("outline-color", "rgb(14, 124, 107)");

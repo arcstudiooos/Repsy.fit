@@ -1,9 +1,10 @@
 // Habit tracker (Prompt 54), a section of the Check-ins tab: the selected client's habits as rows,
 // the last 7 days as columns, tap a cell to toggle done. Streaks come from the server. Coach-side in v2.
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addHabit, getHabitWeek, queryKeys, setHabitDone, updateHabit } from "../api";
 import { EVERY_DAY, HABIT_CATEGORIES, HABIT_PRESETS, WEEKDAY_LABELS, WEEKDAY_ORDER } from "../types";
+import { Modal } from "./Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import type { Habit } from "../types";
 
@@ -19,6 +20,9 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
   const [name, setName] = useState("");
   // Inspo C3: the preset library and the recurrence for the habit being added.
   const [picking, setPicking] = useState(false);
+  // Nov 2026: the whole add block is a dialog, so the week grid stays put while choosing.
+  const [adding, setAdding] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
   const [days, setDays] = useState<number[]>(EVERY_DAY);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
@@ -29,6 +33,8 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
       setName("");
       setDays(EVERY_DAY);
       setPicking(false);
+      // Closes on success only: an error leaves the typed name and chosen days on screen.
+      setAdding(false);
       return refresh();
     },
   });
@@ -111,13 +117,55 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
             </div>
           )}
 
-          <form onSubmit={submitNew} noValidate aria-label="Add a habit" className="mt-4 flex flex-wrap items-end gap-3">
-            <div className="min-w-[12rem] flex-1">
+          {/* Nov 2026: the add UI was a form, a weekday chip row and an expandable preset grid all
+              stacked under the 7-day table - opening the examples shoved the grid the coach was
+              reading off the screen. Same controls, one dialog, one trigger. */}
+          <div className="mt-4">
+            <button
+              type="button"
+              disabled={full}
+              onClick={() => setAdding(true)}
+              className="btn btn-primary"
+              // The cap is announced, not just enforced: a disabled button with no reason is a dead end.
+              aria-describedby={full ? "habit-cap" : undefined}
+            >
+              Add habit
+            </button>
+            {full && (
+              <p id="habit-cap" className="mt-2 text-sm text-dim">
+                That's {MAX_HABITS} habits. Archive one to add another.
+              </p>
+            )}
+          </div>
+
+          {adding && (
+            <Modal
+              title="Add a habit"
+              description="A preset fills the box and its usual days in; it never saves on its own."
+              size="md"
+              initialFocus={nameRef}
+              busy={add.isPending}
+              onRequestClose={() => setAdding(false)}
+              footer={
+                <>
+                  <button type="button" onClick={() => setAdding(false)} className="btn btn-secondary">
+                    Cancel
+                  </button>
+                  {/* "Save habit", not "Add habit": the trigger that opened this is the Add one. */}
+                  <button type="submit" form="add-habit" disabled={full || add.isPending} className="btn btn-primary">
+                    {add.isPending ? "Saving..." : "Save habit"}
+                  </button>
+                </>
+              }
+            >
+          <form id="add-habit" onSubmit={submitNew} noValidate aria-label="Add a habit">
+            <div>
               <label htmlFor="newHabit" className="mb-1 block text-sm font-bold">
                 New habit
               </label>
               <input
                 id="newHabit"
+                ref={nameRef}
                 value={name}
                 maxLength={60}
                 disabled={full}
@@ -126,13 +174,12 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
                 className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text disabled:opacity-60"
               />
             </div>
-            <button type="submit" disabled={full || add.isPending} className="btn btn-primary">
-              {add.isPending ? "Adding..." : "Add habit"}
-            </button>
+          </form>
+          <div className="mt-3">
             <button type="button" disabled={full} className="btn btn-secondary" onClick={() => setPicking(!picking)}>
               {picking ? "Hide examples" : "Pick from examples"}
             </button>
-          </form>
+          </div>
 
           {/* Which days it is expected on. Every day is the default, and what every older habit means. */}
           <div role="group" aria-label="Which days" className="mt-3">
@@ -204,7 +251,8 @@ export function HabitTracker({ clientId, today }: { clientId: string; today: str
               ))}
             </div>
           )}
-          {full && <p className="mt-2 text-sm text-dim">That's {MAX_HABITS} habits. Archive one to add another.</p>}
+            </Modal>
+          )}
         </>
       )}
 

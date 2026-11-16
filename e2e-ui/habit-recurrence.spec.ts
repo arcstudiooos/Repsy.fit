@@ -50,8 +50,22 @@ async function openHabits(page: Page, habits: unknown[]) {
   return { posted };
 }
 
+/**
+ * Nov 2026: the name box, the weekday chips and the preset grid live in a dialog - they used to
+ * stack under the 7-day table, and opening the examples pushed the grid off the screen. Only the
+ * tests that USE those controls open it: while it is open it covers the habit grid, which is the
+ * whole point of a modal and would block the tests that tick days.
+ */
+const openAddHabit = async (page: Page) => {
+  await page.getByRole("region", { name: "Habit tracker" }).getByRole("button", { name: "Add habit" }).click();
+  const box = page.getByRole("dialog", { name: "Add a habit" });
+  await expect(box).toBeVisible();
+  return box;
+};
+
 test("the examples are grouped, and picking one fills the box instead of saving", async ({ page }) => {
   const { posted } = await openHabits(page, []);
+  await openAddHabit(page);
   await page.getByRole("button", { name: "Pick from examples" }).click();
   // Grouped so a long list stays scannable.
   for (const category of ["Nutrition", "Movement", "Sleep and recovery", "Mind", "Lifestyle"]) {
@@ -69,33 +83,36 @@ test("the examples are grouped, and picking one fills the box instead of saving"
 
 test("every day is the default, and is never sent as a recurrence", async ({ page }) => {
   const { posted } = await openHabits(page, []);
+  await openAddHabit(page);
   const which = page.getByRole("group", { name: "Which days" });
   await expect(which.getByRole("button", { name: "Every day" })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("New habit").fill("Ten minutes of stretching");
-  await page.getByRole("button", { name: "Add habit" }).click();
+  await page.getByRole("button", { name: "Save habit" }).click();
   // Omitting `days` is what every pre-recurrence habit means, so the default stays identical.
   expect(posted[0].body).toEqual({ name: "Ten minutes of stretching" });
 });
 
 test("choosing days sends exactly those", async ({ page }) => {
   const { posted } = await openHabits(page, []);
+  await openAddHabit(page);
   const which = page.getByRole("group", { name: "Which days" });
   // The first tap out of "every day" means "only this day", not "all but this one".
   await which.getByRole("button", { name: "Mon" }).click();
   await which.getByRole("button", { name: "Thu" }).click();
   await page.getByLabel("New habit").fill("Weigh in");
-  await page.getByRole("button", { name: "Add habit" }).click();
+  await page.getByRole("button", { name: "Save habit" }).click();
   expect(posted[0].body).toEqual({ name: "Weigh in", days: [1, 4] });
 });
 
 test("turning the last day off falls back to every day, never nothing", async ({ page }) => {
   const { posted } = await openHabits(page, []);
+  await openAddHabit(page);
   const which = page.getByRole("group", { name: "Which days" });
   await which.getByRole("button", { name: "Mon" }).click();
   await which.getByRole("button", { name: "Mon" }).click();
   await expect(which.getByRole("button", { name: "Every day" })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("New habit").fill("Log every meal");
-  await page.getByRole("button", { name: "Add habit" }).click();
+  await page.getByRole("button", { name: "Save habit" }).click();
   // A habit nobody is ever expected to do would be meaningless.
   expect(posted[0].body).toEqual({ name: "Log every meal" });
 });
@@ -107,6 +124,7 @@ test("a habit that is not every-day says so", async ({ page }) => {
 
 test("an every-day habit is not labelled, because that is the normal case", async ({ page }) => {
   await openHabits(page, [habit()]);
+  await openAddHabit(page);
   await expect(page.getByText("Every day")).toHaveCount(1); // only the picker's own button
 });
 

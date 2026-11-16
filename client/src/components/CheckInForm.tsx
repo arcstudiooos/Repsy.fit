@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addProgressLog, queryKeys } from "../api";
+import { Modal } from "./Modal";
 import { plainErrorMessage } from "./States";
 import type { NewProgressLog } from "../types";
 import { useCoachUnits } from "../lib/useCoachUnits";
@@ -18,7 +19,68 @@ const inputClass =
   "w-full rounded-card border border-border-strong bg-surface2 px-3 py-2 text-text placeholder:text-dim focus:border-accent";
 
 /** Weekly check-in for the selected client. Saving refreshes logs, stat cards and charts together. */
+
+/**
+ * Log a weekly check-in (Nov 2026 UI batch).
+ *
+ * The form used to sit between the progress charts and the check-in history: a card for WRITING
+ * wedged into the middle of the cards for READING, pushing the history below the fold on every
+ * visit. The fields are unchanged; they open in a dialog from one button.
+ *
+ * `canSubmit` lives with the fields, so the footer's Save button submits the form by id rather than
+ * the wrapper trying to duplicate the validation.
+ */
 export function CheckInForm({ clientId }: Props) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-6">
+      <button type="button" onClick={() => setOpen(true)} className="btn btn-primary">
+        Log check-in
+      </button>
+      {open && <CheckInDialog clientId={clientId} onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+function CheckInDialog({ clientId, onClose }: Props & { onClose: () => void }) {
+  const dateRef = useRef<HTMLInputElement>(null);
+  // The footer button belongs to the dialog but the validation belongs to the fields, so the fields
+  // report it up rather than the dialog growing a second copy of the same rules.
+  const [state, setState] = useState({ canSubmit: false, pending: false });
+  const onState = useCallback((next: { canSubmit: boolean; pending: boolean }) => setState(next), []);
+  return (
+    <Modal
+      title="Weekly check-in"
+      description="Weight, adherence, workouts and a note. Blank fields are left out."
+      size="md"
+      initialFocus={dateRef}
+      onRequestClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" form="weekly-checkin" disabled={!state.canSubmit} className="btn btn-primary">
+            {state.pending ? "Saving..." : "Add check-in"}
+          </button>
+        </>
+      }
+    >
+      <CheckInFields clientId={clientId} onSaved={onClose} dateRef={dateRef} onState={onState} />
+    </Modal>
+  );
+}
+
+function CheckInFields({
+  clientId,
+  onSaved,
+  dateRef,
+  onState,
+}: Props & {
+  onSaved: () => void;
+  dateRef: RefObject<HTMLInputElement | null>;
+  onState: (s: { canSubmit: boolean; pending: boolean }) => void;
+}) {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(localToday);
   const [weight, setWeight] = useState("");
@@ -33,6 +95,7 @@ export function CheckInForm({ clientId }: Props) {
       await queryClient.invalidateQueries({ queryKey: queryKeys.progress(clientId) });
       setWeight("");
       setNote("");
+      onSaved();
     },
   });
 
@@ -53,6 +116,13 @@ export function CheckInForm({ clientId }: Props) {
   const futureDate = date > localToday();
   const canSubmit = !dateMissing && !adherenceInvalid && !workoutsInvalid && !weightInvalid && !save.isPending;
 
+  // Report validity up for the dialog's footer button. Primitives in the dependency list, so this
+  // runs only when the answer actually changes.
+  const pending = save.isPending;
+  useEffect(() => {
+    onState({ canSubmit, pending });
+  }, [canSubmit, pending, onState]);
+
   function submit(ev: FormEvent) {
     ev.preventDefault();
     if (!canSubmit) return;
@@ -64,8 +134,7 @@ export function CheckInForm({ clientId }: Props) {
   }
 
   return (
-    <form onSubmit={submit} noValidate aria-label="Weekly check-in" className="card mt-6 p-5">
-      <h3 className="mb-4 card-title">Weekly check-in</h3>
+    <form id="weekly-checkin" onSubmit={submit} noValidate aria-label="Weekly check-in">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="checkin-date" className="mb-1 block text-sm font-semibold text-text">
@@ -73,6 +142,7 @@ export function CheckInForm({ clientId }: Props) {
           </label>
           <input
             id="checkin-date"
+            ref={dateRef}
             type="date"
             className={inputClass}
             value={date}
@@ -177,13 +247,6 @@ export function CheckInForm({ clientId }: Props) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="btn btn-primary mt-4"
-      >
-        {save.isPending ? "Saving..." : "Add check-in"}
-      </button>
     </form>
   );
 }

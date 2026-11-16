@@ -206,7 +206,9 @@ test("9. the coach marks the workout Done and files a weekly check-in", async ()
   await expect(status.getByRole("button", { name: "Done" })).toHaveAttribute("aria-pressed", "true", { timeout: 30_000 });
 
   await openClientTab(page, "Progress");
-  const checkIn = panel(page).getByRole("form", { name: "Weekly check-in" });
+  // Nov 2026: the check-in form opens as a dialog from "Log check-in".
+  await panel(page).getByRole("button", { name: "Log check-in" }).click();
+  const checkIn = page.getByRole("dialog", { name: "Weekly check-in" });
   await checkIn.getByLabel("Date", { exact: true }).fill(today);
   await checkIn.getByLabel("Weight kg", { exact: true }).fill("70");
   await checkIn.getByLabel("Adherence %", { exact: true }).fill("85");

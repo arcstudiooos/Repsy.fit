@@ -75,27 +75,38 @@ async function mockApi(page: Page, logs: Log[] = START): Promise<Mock> {
 }
 
 const panel = (page: Page) => page.getByRole("tabpanel").first();
-const form = (page: Page) => panel(page).getByRole("form", { name: "Weekly check-in" });
+// Nov 2026: the check-in form is a dialog opened from "Log check-in". It used to be a card for
+// WRITING wedged between the charts and the history, pushing the history below the fold every
+// visit. The Modal renders through a portal, so the form is not inside the tabpanel.
+const dialog = (page: Page) => page.getByRole("dialog", { name: "Weekly check-in" });
+const form = (page: Page) => dialog(page).getByRole("form", { name: "Weekly check-in" });
 const field = (page: Page, label: string) => form(page).getByLabel(label, { exact: true });
-const submit = (page: Page) => form(page).getByRole("button", { name: "Add check-in" });
+// The commit button lives in the dialog's sticky footer, outside the <form> element itself.
+const submit = (page: Page) => dialog(page).getByRole("button", { name: /Add check-in|Saving/ });
 const checkIns = (page: Page) => panel(page).getByRole("list", { name: "Check-ins" }).getByRole("listitem");
 const weightCard = (page: Page) => panel(page).getByRole("group", { name: "Current weight" });
 const weightDots = (page: Page) => panel(page).getByRole("figure", { name: "Weight" }).locator(".recharts-line-dots circle");
 const openProgress = async (page: Page) => {
   await page.goto("/app");
   await openClientTab(page, "Progress");
+  await panel(page).getByRole("button", { name: "Log check-in" }).click();
+  await expect(dialog(page)).toBeVisible();
 };
 
-test("the form sits under the charts with today's date and the default values", async ({ page }) => {
+test("the trigger sits under the charts, and the dialog opens with today's date and the defaults", async ({ page }) => {
   await mockApi(page);
-  await openProgress(page);
+  await page.goto("/app");
+  await openClientTab(page, "Progress");
+  // The button for writing comes after the charts for reading, and costs one line instead of a card.
+  const charts = (await panel(page).getByRole("figure", { name: "Assignments by type" }).boundingBox())!;
+  const trigger = panel(page).getByRole("button", { name: "Log check-in" });
+  expect((await trigger.boundingBox())!.y).toBeGreaterThan(charts.y);
+  await trigger.click();
   await expect(field(page, "Date")).toHaveValue(localDate());
   await expect(field(page, "Weight kg")).toHaveValue("");
   await expect(field(page, "Adherence %")).toHaveValue("85");
   await expect(field(page, "Workouts done")).toHaveValue("4");
   await expect(field(page, "Note")).toHaveAttribute("placeholder", "e.g. Solid week, sleep better");
-  const charts = (await panel(page).getByRole("figure", { name: "Assignments by type" }).boundingBox())!;
-  expect((await form(page).boundingBox())!.y).toBeGreaterThan(charts.y);
 });
 
 test("a new weight updates the card, chart and list without a refresh; deleting it reverts them", async ({ page }) => {
@@ -159,17 +170,21 @@ test("the button is disabled while saving", async ({ page }) => {
   mock.holdPost = true;
   await openProgress(page);
   await submit(page).click();
-  await expect(form(page).getByRole("button", { name: "Saving..." })).toBeDisabled();
+  // The commit button lives in the dialog footer now, not inside the <form> element; the Modal also
+  // marks itself busy so Escape and the backdrop cannot close it mid-save.
+  await expect(dialog(page).getByRole("button", { name: "Saving..." })).toBeDisabled();
   await expect.poll(() => mock.posts.length).toBe(1);
   mock.release!();
-  await expect(submit(page)).toBeEnabled();
+  // On success the dialog closes itself - the coach is done, and leaving an empty form open would
+  // invite logging the same week twice. It stays open only when the save FAILED.
+  await expect(dialog(page)).toHaveCount(0);
   expect(mock.posts).toHaveLength(1);
 });
 
 test("with no logs yet, the first check-in replaces the empty card", async ({ page }) => {
   await mockApi(page, []);
   await openProgress(page);
-  await expect(panel(page)).toContainText("No progress logged yet. Add the first weekly check-in below.");
+  await expect(panel(page)).toContainText('No progress logged yet. Use "Log check-in" to add the first one.');
   await field(page, "Weight kg").fill("70");
   await submit(page).click();
   await expect(weightCard(page)).toContainText("70 kg");

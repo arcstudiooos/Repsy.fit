@@ -111,11 +111,15 @@ test("lists measurements newest first in a table", async ({ page }) => {
 test("adds a measurement with the exact API field names", async ({ page }) => {
   const { section, calls } = await openTab(page);
   await expect(section.getByText("No measurements yet")).toBeVisible();
-  await section.getByLabel("Measurement date").fill("2026-11-10");
-  await section.getByLabel("Waist (cm)").fill("81.5");
-  await section.getByLabel("Body fat (%)").fill("19");
-  await section.getByLabel("Measurement note").fill("morning");
+  // Nov 2026: the form is a dialog, so the table and chart below stay still while typing. The
+  // Modal renders through a portal, so it is NOT inside the section - query the dialog itself.
   await section.getByRole("button", { name: "Add measurement" }).click();
+  const add = page.getByRole("dialog", { name: "Add measurement" });
+  await add.getByLabel("Measurement date").fill("2026-11-10");
+  await add.getByLabel("Waist (cm)").fill("81.5");
+  await add.getByLabel("Body fat (%)").fill("19");
+  await add.getByLabel("Measurement note").fill("morning");
+  await add.getByRole("button", { name: "Save measurement" }).click();
   await expect(section.getByRole("table", { name: "Measurements" }).getByRole("row")).toHaveCount(2);
   expect(calls).toEqual([`POST ${JSON.stringify({ date: "2026-11-10", waistCm: 81.5, bodyFatPercent: 19, note: "morning" })}`]);
 });
@@ -123,11 +127,14 @@ test("adds a measurement with the exact API field names", async ({ page }) => {
 test("asks for at least one value, and shows the server's plain-words error", async ({ page }) => {
   const { section, calls } = await openTab(page);
   await section.getByRole("button", { name: "Add measurement" }).click();
-  await expect(section.getByRole("alert")).toContainText("Enter at least one measurement");
+  const add = page.getByRole("dialog", { name: "Add measurement" });
+  await add.getByRole("button", { name: "Save measurement" }).click();
+  await expect(add.getByRole("alert")).toContainText("Enter at least one measurement");
   expect(calls).toEqual([]);
-  await section.getByLabel("Body fat (%)").fill("120");
-  await section.getByRole("button", { name: "Add measurement" }).click();
-  await expect(section.getByRole("alert")).toContainText("bodyFatPercent must be more than 0 and at most 75.");
+  // The dialog stays open on an error, with the typed value still there.
+  await add.getByLabel("Body fat (%)").fill("120");
+  await add.getByRole("button", { name: "Save measurement" }).click();
+  await expect(add.getByRole("alert")).toContainText("bodyFatPercent must be more than 0 and at most 75.");
 });
 
 test("delete asks first; Cancel keeps it, Delete removes it", async ({ page }) => {

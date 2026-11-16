@@ -1,11 +1,12 @@
 // Body measurements (Prompt 56), a section of the Check-ins tab: add a set of measurements for the
 // selected client, read them as a table (newest first), delete with a confirm, and chart one of them
 // over time. Weight is a chart choice but is read from the progress logs, never stored here.
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { addMeasurement, deleteMeasurement, listMeasurements, listProgress, queryKeys } from "../api";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Modal } from "./Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import type { Measurement, NewMeasurement } from "../types";
 import { formatShortDay } from "../lib/dates";
@@ -43,6 +44,9 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
   const [form, setForm] = useState<FormState>(() => emptyForm(today));
   const [formError, setFormError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Measurement | null>(null);
+  // Nov 2026: the add form is a dialog, so the table and chart below stay still while typing.
+  const [adding, setAdding] = useState(false);
+  const dateRef = useRef<HTMLInputElement>(null);
   const [chartKey, setChartKey] = useState<string | null>(null);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.measurements(clientId) });
@@ -50,6 +54,8 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
     mutationFn: (input: NewMeasurement) => addMeasurement(clientId, input),
     onSuccess: () => {
       setForm((f) => emptyForm(f.date));
+      // Closes on success only: on an error every typed value stays where the coach can see it.
+      setAdding(false);
       return refresh();
     },
   });
@@ -103,7 +109,41 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
       <h3 className="card-title">Body measurements</h3>
       <p className="mt-1 text-sm text-dim">Log tape measurements and body fat for this client. Every value is typed in by hand.</p>
 
-      <form onSubmit={submit} noValidate aria-label="Add measurements" className="mt-4">
+      {/* Nov 2026: this form used to sit between the heading and the table, six fields deep, so
+          every visit to READ the numbers meant scrolling past the form for writing them - and
+          typing in it reflowed the table and the chart underneath. It is the same form, lifted into
+          a dialog behind one button. */}
+      <div className="mt-4">
+        <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">
+          Add measurement
+        </button>
+      </div>
+
+      {adding && (
+        <Modal
+          title="Add measurement"
+          description="Every value is typed in by hand; blank fields are left out."
+          size="md"
+          initialFocus={dateRef}
+          busy={add.isPending}
+          onRequestClose={() => {
+            add.reset();
+            setAdding(false);
+          }}
+          footer={
+            <>
+              <button type="button" onClick={() => setAdding(false)} className="btn btn-secondary">
+                Cancel
+              </button>
+              {/* "Save measurement", not "Add measurement": the trigger that OPENED this dialog is
+                  the one called Add, and two buttons with one name is ambiguous out loud. */}
+              <button type="submit" form="add-measurement" disabled={add.isPending} className="btn btn-primary">
+                {add.isPending ? "Saving..." : "Save measurement"}
+              </button>
+            </>
+          }
+        >
+        <form id="add-measurement" onSubmit={submit} noValidate aria-label="Add measurements">
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <label htmlFor="measurementDate" className="mb-1 block text-sm font-bold">
@@ -111,6 +151,7 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
             </label>
             <input
               id="measurementDate"
+              ref={dateRef}
               type="date"
               value={form.date}
               onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
@@ -153,12 +194,9 @@ export function Measurements({ clientId, today }: { clientId: string; today: str
             {problem}
           </p>
         )}
-        <div className="mt-4">
-          <button type="submit" disabled={add.isPending} className="btn btn-primary">
-            {add.isPending ? "Adding..." : "Add measurement"}
-          </button>
-        </div>
-      </form>
+        </form>
+        </Modal>
+      )}
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">

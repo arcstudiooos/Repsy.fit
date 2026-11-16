@@ -131,7 +131,7 @@ test("a weight gain shows with a plus sign", async ({ page }) => {
 test("no logs and no assignments: the empty card and '-' everywhere, never 0 or NaN", async ({ page }) => {
   await mockApi(page, { logs: {}, statuses: {} });
   await openProgress(page);
-  await expect(panel(page)).toContainText("No progress logged yet. Add the first weekly check-in below.");
+  await expect(panel(page)).toContainText('No progress logged yet. Use "Log check-in" to add the first one.');
   for (const label of ["Current weight", "Average adherence", "Total workouts", "Plan completion"]) {
     await expect(stat(page, label)).toContainText("-");
     await expect(stat(page, label)).not.toContainText("NaN");
