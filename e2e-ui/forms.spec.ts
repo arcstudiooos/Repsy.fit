@@ -195,13 +195,18 @@ test("the answers are read against the questions as they were asked", async ({ p
   ]);
   await page.getByRole("button", { name: "See answers" }).click();
   const answers = page.getByRole("region", { name: "Answers to My check-in" });
+  // Nov 2026: the list is one row per submission; the answers open in a dialog. Every submission
+  // used to render every question inline, which made a 12-question form unscannable.
   await expect(answers).toContainText("Maya Patel");
+  await expect(answers).toContainText("2 of 2 answered");
+  await answers.getByRole("button", { name: "View answers from Maya Patel" }).click();
+  const one = page.getByRole("dialog", { name: "Maya Patel" });
   // The ORIGINAL wording, not the form's current question.
-  await expect(answers).toContainText("How do you feel?");
-  await expect(answers).toContainText("Great");
-  await expect(answers).not.toContainText("A completely different question now?");
+  await expect(one).toContainText("How do you feel?");
+  await expect(one).toContainText("Great");
+  await expect(one).not.toContainText("A completely different question now?");
   // And a question since deleted still shows its answer.
-  await expect(answers).toContainText("A question since removed");
+  await expect(one).toContainText("A question since removed");
 });
 
 test("deleting a form warns how many answers go with it", async ({ page }) => {
@@ -217,4 +222,89 @@ test("an empty answers list says so plainly", async ({ page }) => {
   await openForms(page, [MINE], []);
   await page.getByRole("button", { name: "See answers" }).click();
   await expect(page.getByText("Nobody has filled this in yet.")).toBeVisible();
+});
+
+/**
+ * Nov 2026: submissions are a scannable list, and the answers open in a dialog that walks the
+ * batch. Every submission used to render every question inline, so a 12-question form filled in by
+ * 10 clients was an unscannable wall - and reading the next reply meant losing your place.
+ */
+const sub = (id: string, clientName: string, day: string, answers: Record<string, string>) => ({
+  id,
+  clientId: `c-${id}`,
+  clientName,
+  answers,
+  asked: [q("mood", "single", "How do you feel?", ["Great", "Fine", "Rough"]), q("why", "text", "Why?", [], false)],
+  createdAt: `2026-11-${day}T00:00:00.000Z`,
+});
+
+const THREE = [
+  sub("s1", "Maya Patel", "10", { mood: "Rough", why: "Left knee" }),
+  sub("s2", "Arjun Rao", "11", { mood: "Fine", why: "" }),
+  sub("s3", "Leo Brooks", "12", { mood: "Great", why: "Good week" }),
+];
+
+test("the submissions list is one row each, with how much was filled in", async ({ page }) => {
+  await openForms(page, [MINE], THREE);
+  await page.getByRole("button", { name: "See answers" }).click();
+  const region = page.getByRole("region", { name: "Answers to My check-in" });
+  await expect(region.getByRole("list", { name: "Submissions" }).getByRole("listitem")).toHaveCount(3);
+  // The answers are NOT in the list; how much was answered IS, because that decides what to open.
+  await expect(region).not.toContainText("Left knee");
+  await expect(region).toContainText("2 of 2 answered");
+  await expect(region).toContainText("1 of 2 answered");
+});
+
+test("Next and Previous walk the batch without closing, and stop at both ends", async ({ page }) => {
+  await openForms(page, [MINE], THREE);
+  await page.getByRole("button", { name: "See answers" }).click();
+  await page.getByRole("button", { name: "View answers from Maya Patel" }).click();
+
+  const maya = page.getByRole("dialog", { name: "Maya Patel" });
+  await expect(maya).toContainText("1 of 3");
+  await expect(maya).toContainText("Left knee");
+  await expect(maya.getByRole("button", { name: "Previous" })).toBeDisabled();
+
+  await maya.getByRole("button", { name: "Next" }).click();
+  const arjun = page.getByRole("dialog", { name: "Arjun Rao" });
+  await expect(arjun).toContainText("2 of 3");
+  // An unanswered question says so rather than leaving an empty row.
+  await expect(arjun).toContainText("not answered");
+
+  await arjun.getByRole("button", { name: "Next" }).click();
+  const leo = page.getByRole("dialog", { name: "Leo Brooks" });
+  await expect(leo).toContainText("3 of 3");
+  // The end of the batch is visible, instead of silently wrapping round to the first again.
+  await expect(leo.getByRole("button", { name: "Next" })).toBeDisabled();
+
+  await leo.getByRole("button", { name: "Previous" }).click();
+  await expect(page.getByRole("dialog", { name: "Arjun Rao" })).toBeVisible();
+});
+
+test("a submission can be read and left with the keyboard alone", async ({ page }) => {
+  await openForms(page, [MINE], THREE);
+  await page.getByRole("button", { name: "See answers" }).click();
+  const trigger = page.getByRole("button", { name: "View answers from Maya Patel" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const maya = page.getByRole("dialog", { name: "Maya Patel" });
+  await expect(maya).toBeVisible();
+
+  await maya.getByRole("button", { name: "Next" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Arjun Rao" })).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Arjun Rao" })).toHaveCount(0);
+  // Back on the row they opened, so the next one is a Tab away - not thrown to the top.
+  await expect(trigger).toBeFocused();
+});
+
+test("closing a submission leaves the list where it was, not back on the forms list", async ({ page }) => {
+  await openForms(page, [MINE], THREE);
+  await page.getByRole("button", { name: "See answers" }).click();
+  await page.getByRole("button", { name: "View answers from Leo Brooks" }).click();
+  await page.getByRole("dialog", { name: "Leo Brooks" }).getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Submissions" }).getByRole("listitem")).toHaveCount(3);
 });

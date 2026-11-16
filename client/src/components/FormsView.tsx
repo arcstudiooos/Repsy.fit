@@ -24,6 +24,7 @@ import {
   updateForm,
 } from "../api";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Modal } from "./Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import {
   CHOICE_TYPES,
@@ -33,6 +34,7 @@ import {
   type CoachForm,
   type FormQuestion,
   type QuestionType,
+  type FormSubmission,
 } from "../types";
 
 const field = "w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-sm text-text";
@@ -553,6 +555,9 @@ function AnswerForm({ form, clients, onDone }: { form: CoachForm; clients: Clien
 /** The answers given, each read against the questions AS ASKED at the time. */
 function Submissions({ form, onBack }: { form: CoachForm; onBack: () => void }) {
   const query = useQuery({ queryKey: queryKeys.submissions(form.id), queryFn: () => listSubmissions(form.id) });
+  // Which submission is open, by position, so Next and Previous are just arithmetic.
+  const [openAt, setOpenAt] = useState<number | null>(null);
+  const items = query.data ?? [];
 
   return (
     <section aria-label={`Answers to ${form.name}`} className="mt-4 grid gap-4">
@@ -566,33 +571,120 @@ function Submissions({ form, onBack }: { form: CoachForm; onBack: () => void }) 
         <LoadingState />
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-      ) : (query.data ?? []).length === 0 ? (
+      ) : items.length === 0 ? (
         <p className="card text-sm text-dim">Nobody has filled this in yet.</p>
       ) : (
-        <ul className="grid gap-3">
-          {(query.data ?? []).map((s) => (
-            <li key={s.id} className="card grid gap-2">
-              <p className="font-bold">
-                {s.clientName}
-                <span className="ml-2 font-normal text-sm text-dim">{new Date(s.createdAt).toLocaleDateString("en-GB")}</span>
-              </p>
-              <dl className="grid gap-1.5">
-                {/* Read against the snapshot, so this stays correct after the form was edited. */}
-                {s.asked.map((q) => {
-                  const a = s.answers[q.id];
-                  const text = Array.isArray(a) ? a.join(", ") : (a ?? "");
-                  return (
-                    <div key={q.id} className="grid gap-0.5 border-b border-border pb-1.5 last:border-b-0 sm:grid-cols-[1fr_1fr]">
-                      <dt className="text-sm text-dim">{q.label}</dt>
-                      <dd className="text-sm text-text">{text.trim() === "" ? <span className="text-dim">not answered</span> : text}</dd>
-                    </div>
-                  );
-                })}
-              </dl>
+        /* Nov 2026: every submission used to render every question and answer in this list, so a
+           12-question form filled in by 10 clients was a wall of text with no way to scan it. The
+           list is now one row each; the answers open in a dialog that can walk through the batch. */
+        <ul aria-label="Submissions" className="grid gap-2">
+          {items.map((s, index) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                aria-label={`View answers from ${s.clientName}`}
+                onClick={() => setOpenAt(index)}
+                className="card flex w-full flex-wrap items-center justify-between gap-2 p-4 text-left hover:border-border-strong"
+              >
+                <span className="font-bold text-text">{s.clientName}</span>
+                <span className="text-sm text-dim">
+                  {new Date(s.createdAt).toLocaleDateString("en-GB")} · {answeredCount(s)} of {s.asked.length} answered
+                </span>
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      {openAt !== null && items[openAt] && (
+        <SubmissionDialog
+          submission={items[openAt]}
+          position={openAt}
+          total={items.length}
+          onMove={(next) => setOpenAt(next)}
+          onClose={() => setOpenAt(null)}
+        />
+      )}
     </section>
+  );
+}
+
+/** How many of the asked questions actually got an answer; blank and empty lists do not count. */
+function answeredCount(s: FormSubmission): number {
+  return s.asked.filter((q) => {
+    const a = s.answers[q.id];
+    return Array.isArray(a) ? a.length > 0 : (a ?? "").trim() !== "";
+  }).length;
+}
+
+/**
+ * Read one submission, and walk the batch without closing (Nov 2026 UI batch, flow 7).
+ *
+ * Reviewing answers is a batch job: before this, reading the next client's reply meant going back
+ * to the list and finding your place again. Read-mostly, so focus lands on the dialog itself rather
+ * than grabbing a control the coach did not ask for.
+ */
+function SubmissionDialog({
+  submission,
+  position,
+  total,
+  onMove,
+  onClose,
+}: {
+  submission: FormSubmission;
+  position: number;
+  total: number;
+  onMove: (next: number) => void;
+  onClose: () => void;
+}) {
+  const when = new Date(submission.createdAt).toLocaleDateString("en-GB");
+  return (
+    <Modal
+      title={submission.clientName}
+      description={`Answered ${when} · ${position + 1} of ${total}`}
+      size="md"
+      onRequestClose={onClose}
+      footer={
+        <>
+          {/* Disabled at the ends rather than wrapping: a reviewer needs to know when the batch is
+              finished, and a silent wrap round to the first one hides that. */}
+          <button
+            type="button"
+            disabled={position === 0}
+            onClick={() => onMove(position - 1)}
+            className="btn btn-secondary"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            disabled={position >= total - 1}
+            onClick={() => onMove(position + 1)}
+            className="btn btn-secondary"
+          >
+            Next
+          </button>
+          {/* "Done", not "Close": the Modal already provides a ✕ labelled Close, and two controls
+              with the same name is ambiguous to a screen reader reading the footer. */}
+          <button type="button" onClick={onClose} className="btn btn-primary">
+            Done
+          </button>
+        </>
+      }
+    >
+      <dl className="grid gap-1.5">
+        {/* Read against the snapshot, so this stays correct after the form was edited. */}
+        {submission.asked.map((q) => {
+          const a = submission.answers[q.id];
+          const text = Array.isArray(a) ? a.join(", ") : (a ?? "");
+          return (
+            <div key={q.id} className="grid gap-0.5 border-b border-border pb-1.5 last:border-b-0 sm:grid-cols-[1fr_1fr]">
+              <dt className="text-sm text-dim">{q.label}</dt>
+              <dd className="text-sm text-text">{text.trim() === "" ? <span className="text-dim">not answered</span> : text}</dd>
+            </div>
+          );
+        })}
+      </dl>
+    </Modal>
   );
 }
