@@ -1889,3 +1889,54 @@ was wrong. Now:
 `e2e-ui/home-layout.spec.ts` pins the contract by measuring real bounding boxes - that cards sit
 SIDE BY SIDE at desktop width and stack on a phone - because that is the property that regressed
 into a wall of rows last time, and no string assertion can catch it.
+
+## Dialogs: what finishes in place, and what does not (Nov 2026)
+
+Every short, bounded task finishes in a dialog built on `components/Modal.tsx`. The rule that
+decides whether something becomes one:
+
+> A dialog is for a task with an END. A *place* stays full-screen.
+
+**Converted** (nine entry points): assign a meal, assign a template, client invite, every confirm,
+new plan from a Home task row, new plan from a client's card, add measurement, add habit, log
+check-in, record payment, edit/create a meal, read a form submission.
+
+**Deliberately NOT converted, and this is the point:**
+
+| Stays full-screen | Why |
+|---|---|
+| Workout builder, program authoring, form builder | Long authoring needs room; a dialog makes it a tunnel |
+| PlanGrid, Reports | Need a wide canvas. A grid CELL may open a dialog; the grid never becomes one |
+| AI Coach, Messages | A conversation is a place, not a task |
+| A **`due`** task on Home | The plan already exists; it is reviewed in the week around it. `e2e-ui/home-new-plan.spec.ts` asserts a due row has NO dialog |
+| Client snapshot "peek" | The roster card already shows goal, level, weight, focus, last check-in and adherence. A peek would duplicate it and become a second, competing client workspace |
+
+### Rules for a new dialog
+
+- **Bring the missing context in.** Assigning a meal shows its macros, so the coach does not leave
+  to check them. Recording a payment states what saving does to the due date, ABOVE the button.
+- **Stay open after a save when repeating is normal** (one template to five clients). Swap `Cancel`
+  to `Done` once something has been saved. Otherwise close on success - and on success ONLY, because
+  closing on an error is how a coach loses six typed numbers.
+- **Name the trigger and the commit differently**: "Add measurement" opens, "Save measurement"
+  commits. Two buttons with one name are ambiguous out loud.
+- **A read-only viewer's footer says "Done"**, because the Modal already provides a ✕ named Close.
+- **A cap disables the TRIGGER** and points at the reason with `aria-describedby` (see the 8-habit
+  limit). A dialog that opens only to refuse wastes the trip.
+- **Validation has one home.** If the fields own the rules and the footer owns the button, the
+  fields report validity up. Never recompute the rules in the dialog.
+- **Reuse the real form component.** The library's assign dialog and Home's new-plan dialog both
+  mount `ManualAssignmentForm`; `NewPlanDialog` is a shared module for exactly this reason. Two
+  copies of a form are two payloads that will drift.
+- **Never nest a second `<dialog>` for a picker.** The food picker renders inside the meal dialog's
+  body: two stacked sheets on a 360px phone leave no room for the thing being filled in.
+
+### When you convert a panel, the tests you cannot run are the risk
+
+Changing a container from a panel to a dialog changes its ARIA role, so `getByRole("region" | "group")`
+selectors break. `e2e-ui/` is mocked and runs locally; **`e2e/` needs a live server and database and
+runs only in CI.** Grep both for the label you changed, plus any button you renamed. A journey that
+saved twice also needs to reopen the dialog, because it now closes on success.
+
+And to assert "the page behind did not move", measure `top + window.scrollY` — `boundingBox()` is
+viewport-relative, and the scroll lock will otherwise read as a several-hundred-pixel layout shift.
