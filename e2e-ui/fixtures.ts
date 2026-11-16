@@ -99,8 +99,23 @@ export async function openLogCheckIn(page: Page) {
   return page.getByRole("form", { name: "Today's check-in" });
 }
 
-/** Picks a client with the client header's "Switch client" control (AI Coach / client workspace). */
+/**
+ * Picks a client the way a coach would on the screen they are on.
+ *
+ * Nov 2026: the client workspace shows a rail of every client at `lg` and up, and hides the
+ * header's "Switch client" there - two switchers side by side is one more thing to choose between.
+ * The AI Coach tab has no rail, so it keeps the switcher. This helper follows whichever exists,
+ * instead of every caller knowing which screen it is on.
+ */
 export async function selectClient(page: Page, name: string) {
+  const rail = page.getByRole("navigation", { name: "Clients" });
+  if (await rail.isVisible().catch(() => false)) {
+    const search = rail.getByRole("searchbox", { name: "Search clients" });
+    if (await search.isVisible().catch(() => false)) await search.fill(name);
+    // Callers pass partial names ("Leo"), as the old switcher accepted.
+    await rail.getByRole("button", { name: new RegExp(escapeRe(name)) }).first().click();
+    return;
+  }
   await page.getByRole("button", { name: "Switch client" }).click();
   await page.getByRole("combobox", { name: "Search clients" }).fill(name);
   await page.getByRole("option", { name: new RegExp(escapeRe(name)) }).first().click();

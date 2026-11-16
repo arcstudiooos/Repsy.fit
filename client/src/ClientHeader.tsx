@@ -14,12 +14,14 @@ type Props = {
   clients: Client[];
   client: Client;
   onSelect: (clientId: string) => void;
+  /** True only where a client rail is shown beside this header (the client workspace, `lg` and up). */
+  railBeside?: boolean;
 };
 
 // One header for every client-scoped view (AI Coach and the client workspace): initials, name, goal
 // and a "Switch client" control. Replaced the horizontal chip strip (Nov 2026), which hid most
 // clients off-screen once a coach had more than a handful.
-export function ClientHeader({ clients, client, onSelect }: Props) {
+export function ClientHeader({ clients, client, onSelect, railBeside = false }: Props) {
   return (
     <section
       aria-label="Selected client"
@@ -36,7 +38,15 @@ export function ClientHeader({ clients, client, onSelect }: Props) {
         <p className="truncate font-semibold text-text">{client.name}</p>
         <p className="truncate text-sm text-dim">{client.goal}</p>
       </div>
-      {clients.length > 1 && <ClientSwitcher clients={clients} selectedId={client.id} onSelect={onSelect} />}
+      {/* Nov 2026: `railBeside` hides this from `lg` up, because the client rail next to the header
+          already lists every client and two switchers side by side is one more thing to choose
+          between. It is OPT-IN per caller, not global: this header is shared with the AI Coach tab,
+          which has no rail, and hiding it there would leave no way to change client at all. */}
+      {clients.length > 1 && (
+        <div className={railBeside ? "lg:hidden" : undefined}>
+          <ClientSwitcher clients={clients} selectedId={client.id} onSelect={onSelect} />
+        </div>
+      )}
     </section>
   );
 }

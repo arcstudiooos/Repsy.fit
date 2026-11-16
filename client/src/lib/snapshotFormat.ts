@@ -5,9 +5,15 @@
 // /api/auth/me to one mock coach, so unit conversion cannot be driven from a browser test.
 const KG_PER_LB = 0.45359237;
 
-/** Stored weights are always kg; a coach reads them in their own unit. */
-export const showWeight = (kg: number | null, units: "kg" | "lb") =>
-  kg === null ? "-" : `${weightIn(kg, units)} ${units}`;
+/**
+ * Stored weights are always kg; a coach reads them in their own unit.
+ *
+ * Anything that is not a finite number reads as "-". `kg === null` alone let `undefined` and a NaN
+ * through, and the result was a card saying "NaN kg" - which looks like a measurement rather than
+ * missing data, and is exactly the sort of thing a coach would try to act on.
+ */
+export const showWeight = (kg: number | null | undefined, units: "kg" | "lb") =>
+  typeof kg === "number" && Number.isFinite(kg) ? `${weightIn(kg, units)} ${units}` : "-";
 
 /**
  * A stored kg value as the NUMBER a coach should see, to one decimal. No unit word, so it can go in

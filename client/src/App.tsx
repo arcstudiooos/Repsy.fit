@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getMe, listClients, logout, queryKeys, seedDemo as seedQuickDemo, seedSixMonthDemo } from "./api";
 import { ClientHeader, initials } from "./ClientHeader";
 import { ClientSnapshotCards } from "./components/ClientSnapshotCards";
+import { ClientRail } from "./components/ClientRail";
 import { GoalDate } from "./components/GoalDate";
 import { UnsavedChangesBanner } from "./components/UnsavedChangesBanner";
 import { MenuButton } from "./components/MenuButton";
@@ -73,7 +74,7 @@ function onTabKeys<T extends string>(e: KeyboardEvent<HTMLElement>, ids: T[], ac
 function Header({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: () => void; loggingOut: boolean }) {
   return (
     <header className="header-strip bg-header">
-      <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-4 py-3">
+      <div className="mx-auto flex w-full max-w-[1600px] items-center gap-3 px-4 py-3 sm:px-6">
         {/* The Repsy logo: gradient R mark + white wordmark, made for the dark header strip. */}
         <img src="/repsy-logo.png" alt="Repsy" width={130} height={36} className="h-9 w-auto shrink-0" />
         {/* Right side: the light / dark switch, then ONE account menu (Account settings, Log out). */}
@@ -345,8 +346,13 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     );
   }
 
+  // The workspace renders its own header with `railBeside`; the AI Coach tab uses this one, where
+  // the switcher is the only way to change client.
   const clientHeader = selectedClient && (
     <ClientHeader clients={clients} client={selectedClient} onSelect={setSelectedClientId} />
+  );
+  const workspaceHeader = selectedClient && (
+    <ClientHeader clients={clients} client={selectedClient} onSelect={setSelectedClientId} railBeside />
   );
 
   let panelContent: ReactNode;
@@ -354,8 +360,23 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     // The client workspace. key forces a clean remount when the selected client changes, so no
     // view can keep showing the previous client's data.
     panelContent = (
-      <>
-        <p className="mb-3 text-sm">
+      // Two panes from `lg` up: the roster stays beside the client instead of being replaced by
+      // them. `minmax(0,1fr)` on the second column matters - without it a wide table inside the
+      // workspace refuses to shrink and pushes the whole grid out of the viewport.
+      <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-6">
+        <aside className="hidden lg:block lg:max-h-[78vh] lg:border-r lg:border-border lg:pr-4">
+          <ClientRail
+            clients={clients}
+            selectedId={selectedClient.id}
+            onSelect={setSelectedClientId}
+            onShowAll={() => setInWorkspace(false)}
+          />
+        </aside>
+
+        <div className="min-w-0">
+        {/* Phones keep the back link: with one pane, leaving IS the way back to the roster. On
+            desktop the roster never went anywhere, so the link would undo nothing. */}
+        <p className="mb-3 text-sm lg:hidden">
           <button
             type="button"
             onClick={() => setInWorkspace(false)}
@@ -364,7 +385,7 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             ← Back to all clients
           </button>
         </p>
-        {clientHeader}
+        {workspaceHeader}
         {/* Inspo C4/C5: the numbers a coach wants before reading anything. Workspace only - the AI
             Coach tab shares ClientHeader but does not want a stats row. */}
         {/* Inspo C5: the day they are working towards, above the numbers it should influence. */}
@@ -399,7 +420,8 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             </Suspense>
           )}
         </div>
-      </>
+        </div>
+      </div>
     );
   } else if (activeTab === "clients") {
     // The roster handles its own loading / error / empty states.
@@ -491,7 +513,17 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
     // Phones: room at the bottom for the fixed tab bar (and the safe area).
     <div className="min-h-screen pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <Header coach={coach} onLogout={onLogout} loggingOut={loggingOut} />
-      <main className="mx-auto max-w-[1100px] px-4 pb-10">
+      {/*
+        The app canvas (Nov 2026). This was `max-w-[1100px]`, a READING width inherited from the
+        marketing page, and it cost 266px on a 1366 screen and 820px - 43% - on a 1920 one.
+        The real damage was not the empty margin: at 1100px there is no room to show two things at
+        once, so every relationship in the product became a REPLACEMENT (roster replaced by client,
+        list replaced by form), which is what produced "Back to all clients", "Switch client" and
+        the general back-and-forth. A wider canvas is what lets those become two columns instead.
+        `2xl` keeps an ultra-wide monitor from stretching a table to 2500px, which is its own kind
+        of unreadable.
+      */}
+      <main className="mx-auto w-full max-w-[1600px] px-4 pb-10 sm:px-6">
         {/* Silent on a healthy plan; speaks up near the end of a trial or after a failed payment. */}
         {onAccount ? null : <BillingBanner />}
         {onAccount ? (
@@ -519,7 +551,7 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
               role="tabpanel"
               id={`panel-${activeTab}`}
               aria-labelledby={`tab-${activeTab}`}
-              className="card mt-4 p-4 sm:mt-0 sm:rounded-t-none sm:border-t-0 sm:p-6"
+              className="card mt-4 flex min-h-[70vh] flex-col p-4 sm:mt-0 sm:rounded-t-none sm:border-t-0 sm:p-6"
             >
               {/* Inspo W13: unsaved work says so wherever the coach navigates, without trapping them. */}
               <UnsavedChangesBanner />
@@ -534,7 +566,7 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
           </>
         )}
       </main>
-      <footer className="mx-auto max-w-[1100px] px-4 pb-6 text-center text-xs text-dim">Repsy Coach - v1</footer>
+      <footer className="mx-auto w-full max-w-[1600px] px-4 pb-6 text-center text-xs text-dim sm:px-6">Repsy Coach - v1</footer>
     </div>
   );
 }

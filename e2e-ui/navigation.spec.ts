@@ -121,7 +121,11 @@ test("Clients shows the roster; a client card opens the workspace with sub-tabs 
   await expect(page.getByRole("heading", { level: 2, name: "Progress" })).toBeVisible();
   // No old "Selected: <name>" lines.
   await expect(page.getByText(/Selected:/)).toHaveCount(0);
-  await page.getByRole("button", { name: "Back to all clients" }).click();
+  // Nov 2026: at desktop width the roster stays on screen as a rail, so "Back to all clients" is a
+  // phone-only control; the rail's own "All clients" is the way back to the roster GRID, which
+  // holds what the rail cannot do (add, invite, delete).
+  await expect(page.getByRole("button", { name: "Back to all clients" })).toBeHidden();
+  await page.getByRole("navigation", { name: "Clients" }).getByRole("button", { name: "All clients" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Clients" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Leo Brooks" })).toHaveAttribute("aria-pressed", "true");
 });

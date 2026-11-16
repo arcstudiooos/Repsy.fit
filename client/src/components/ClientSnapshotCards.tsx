@@ -10,10 +10,13 @@ import type { ClientSnapshot } from "../types";
 
 function Card({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <li className="rounded-card border border-border-strong bg-surface2 px-3 py-2">
-      <p className="text-xs font-semibold text-dim">{label}</p>
-      <p className="font-heading text-2xl text-text">{value}</p>
-      {hint && <p className="text-xs text-dim">{hint}</p>}
+    // Compact (Nov 2026): these were five boxes with 2xl serif numbers, ~280px of a phone screen
+    // mostly to say "-". A snapshot is a glance, so it reads as one dense strip; the hint only
+    // appears when there is something to say, instead of reserving a line for "none yet".
+    <li className="rounded-lg border border-border-strong bg-surface2 px-3 py-1.5">
+      <p className="truncate text-[11px] font-semibold tracking-wide text-dim uppercase">{label}</p>
+      <p className="font-mono text-base leading-tight tabular-nums text-text">{value}</p>
+      {hint && <p className="truncate text-[11px] text-muted">{hint}</p>}
     </li>
   );
 }
@@ -37,6 +40,17 @@ export function ClientSnapshotCards({ clientId, units = "kg", today }: Props) {
   const s: ClientSnapshot | undefined = query.data;
   if (!s) return null;
 
+  // Nov 2026: `=== null` let `undefined` through, and `${undefined}%` renders to a coach as
+  // "undefined%" - a number they would reasonably try to act on. The API always sends every field,
+  // so this only bites when a field is RENAMED or a response shape drifts, which is exactly when a
+  // silent "undefined%" is most misleading. `== null` catches both; `num()` catches a NaN that
+  // survived JSON.
+  const num = (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const adherence = num(s.adherencePercent);
+  const streak = num(s.currentStreak);
+  const longest = num(s.longestStreak);
+  const done = num(s.totalWorkoutsDone);
+
   return (
     <ul aria-label="Client snapshot" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
       <Card
@@ -46,19 +60,19 @@ export function ClientSnapshotCards({ clientId, units = "kg", today }: Props) {
       />
       <Card
         label="Adherence"
-        value={s.adherencePercent === null ? "-" : `${s.adherencePercent}%`}
-        hint={s.adherencePercent === null ? "no logs yet" : `last ${s.adherenceDays} days`}
+        value={adherence === null ? "-" : `${adherence}%`}
+        hint={adherence === null ? "no logs yet" : `last ${s.adherenceDays} days`}
       />
       <Card label="Last workout" value={s.lastWorkoutOn ? shortDay(s.lastWorkoutOn) : "-"} hint={agoLabel(s.lastWorkoutOn, today)} />
       <Card
         label="Streak"
-        value={s.currentStreak === 0 ? "-" : `${s.currentStreak} ${s.currentStreak === 1 ? "day" : "days"}`}
-        hint={s.longestStreak > 0 ? `best ${s.longestStreak}` : "no streak yet"}
+        value={streak === null || streak === 0 ? "-" : `${streak} ${streak === 1 ? "day" : "days"}`}
+        hint={longest !== null && longest > 0 ? `best ${longest}` : "no streak yet"}
       />
       <Card
         label="Workouts done"
-        value={String(s.totalWorkoutsDone)}
-        hint={s.totalWorkoutsDone === 0 ? "none finished yet" : "all time"}
+        value={done === null ? "-" : String(done)}
+        hint={done === 0 ? "none finished yet" : "all time"}
       />
     </ul>
   );

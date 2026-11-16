@@ -41,8 +41,20 @@ export async function openNewPlanForm(page: Page) {
   return page.getByRole("form", { name: "New assignment" });
 }
 
-/** Picks a client with the client header's "Switch client" control. */
+/**
+ * Picks a client the way a coach would on the screen they are on.
+ *
+ * Nov 2026: the client workspace shows a rail of every client at `lg` and up and hides the header's
+ * "Switch client" there; the AI Coach tab has no rail and keeps it. This follows whichever exists.
+ */
 export async function selectClient(page: Page, name: string) {
+  const rail = page.getByRole("navigation", { name: "Clients" });
+  if (await rail.isVisible().catch(() => false)) {
+    const search = rail.getByRole("searchbox", { name: "Search clients" });
+    if (await search.isVisible().catch(() => false)) await search.fill(name);
+    await rail.getByRole("button", { name: new RegExp(escapeRe(name)) }).first().click();
+    return;
+  }
   await page.getByRole("button", { name: "Switch client" }).click();
   await page.getByRole("combobox", { name: "Search clients" }).fill(name);
   await page.getByRole("option", { name: new RegExp(escapeRe(name)) }).first().click();
