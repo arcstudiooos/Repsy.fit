@@ -134,10 +134,12 @@ test("6. the coach records a plan and a payment in Business", async () => {
 
   const row = page.getByRole("list", { name: "Client plans" }).getByRole("listitem").filter({ hasText: CLIENT_NAME });
   await row.getByRole("button", { name: "Record payment" }).click();
-  const payForm = page.getByRole("form", { name: `Record payment for ${CLIENT_NAME}` });
-  await expect(payForm.getByLabel(/^Amount/)).toHaveValue("4999");
-  await payForm.getByRole("button", { name: "Save payment" }).click();
-  await expect(payForm).toHaveCount(0, { timeout: 30_000 });
+  // Nov 2026: recording a payment is a dialog titled with the client, so money cannot be entered
+  // against the wrong row of a filtered table. The commit button is in the dialog's footer.
+  const payDialog = page.getByRole("dialog", { name: `Record payment · ${CLIENT_NAME}` });
+  await expect(payDialog.getByLabel(/^Amount/)).toHaveValue("4999");
+  await payDialog.getByRole("button", { name: "Save payment" }).click();
+  await expect(payDialog).toHaveCount(0, { timeout: 30_000 });
   await expect(row).toContainText("Last payment");
 });
 

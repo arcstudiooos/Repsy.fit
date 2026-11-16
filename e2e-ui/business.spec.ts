@@ -131,13 +131,16 @@ test("record payment: amount pre-filled from the plan, date today, and it advanc
   const server = await mockBusiness(page, [row(CLIENTS[0], { nextDueDate: iso(-3) })]);
   const maya = rowFor(page, "Maya Patel");
   await maya.getByRole("button", { name: "Record payment" }).click();
-  const form = page.getByRole("form", { name: "Record payment for Maya Patel" });
-  await expect(form.getByLabel("Amount (INR)")).toHaveValue("4999");
-  await expect(form.getByLabel("Paid on")).toHaveValue(iso(0));
-  await expect(form).toContainText("Saving moves the next due date on by one monthly cycle.");
-  await form.getByLabel("Method").selectOption("Cash");
-  await form.getByRole("button", { name: "Save payment" }).click();
-  await expect(form).toHaveCount(0);
+  // Nov 2026: a dialog titled with the client, so money cannot be recorded against the wrong row
+  // of a filtered table. The consequence line is the dialog's description, and the commit button
+  // lives in its footer - outside the <form> element.
+  const pay = page.getByRole("dialog", { name: "Record payment · Maya Patel" });
+  await expect(pay.getByLabel("Amount (INR)")).toHaveValue("4999");
+  await expect(pay.getByLabel("Paid on")).toHaveValue(iso(0));
+  await expect(pay).toContainText("Saving moves the next due date on by one monthly cycle.");
+  await pay.getByLabel("Method").selectOption("Cash");
+  await pay.getByRole("button", { name: "Save payment" }).click();
+  await expect(pay).toHaveCount(0);
   expect(server.payments).toEqual([{ clientId: "c-maya", amount: 4999, paidOn: iso(0), method: "Cash", note: "" }]);
   await expect(maya).not.toContainText("overdue");
   await expect(maya).toContainText("Last payment ₹4,999");
@@ -146,7 +149,7 @@ test("record payment: amount pre-filled from the plan, date today, and it advanc
 test("a One-time plan says its due date will not move", async ({ page }) => {
   await mockBusiness(page, [row(CLIENTS[0], { nextDueDate: iso(5), billingCycle: "One-time", planName: "Starter pack" })]);
   await rowFor(page, "Maya Patel").getByRole("button", { name: "Record payment" }).click();
-  await expect(page.getByRole("form", { name: "Record payment for Maya Patel" })).toContainText("One-time plan: the due date stays the same.");
+  await expect(page.getByRole("dialog", { name: "Record payment · Maya Patel" })).toContainText("One-time plan: the due date stays the same.");
 });
 
 test("add a plan for a client without one, and edit an existing plan's status", async ({ page }) => {
@@ -214,7 +217,7 @@ test("an Ended plan has no Record payment button; a Paused plan says the due dat
   ]);
   await expect(rowFor(page, "Maya Patel").getByRole("button", { name: "Record payment" })).toHaveCount(0);
   await rowFor(page, "Arjun Rao").getByRole("button", { name: "Record payment" }).click();
-  await expect(page.getByRole("form", { name: "Record payment for Arjun Rao" })).toContainText(
+  await expect(page.getByRole("dialog", { name: "Record payment · Arjun Rao" })).toContainText(
     "This plan is paused: the payment is recorded and the due date stays the same.",
   );
 });
@@ -239,3 +242,44 @@ test("editing a plan without touching the due date does not send it (no lost upd
   expect(server.puts[0]).not.toHaveProperty("nextDueDate");
 });
 
+
+/**
+ * Nov 2026: recording a payment is a dialog. It used to be an inline panel inside a FILTERED table
+ * of plans, which is exactly how money gets recorded against the wrong client.
+ */
+test("the payment dialog names the client, so the wrong row cannot be paid by accident", async ({ page }) => {
+  // Two clients, two different amounts: the title AND the prefill both have to be Arjun's.
+  const server = await mockBusiness(page, [
+    row(CLIENTS[0], { nextDueDate: iso(5) }),
+    row(CLIENTS[1], { nextDueDate: iso(5), priceAmount: 2500 }),
+  ]);
+  await rowFor(page, "Arjun Rao").getByRole("button", { name: "Record payment" }).click();
+  const pay = page.getByRole("dialog", { name: "Record payment · Arjun Rao" });
+  await expect(pay.getByLabel("Amount (INR)")).toHaveValue("2500");
+  await pay.getByRole("button", { name: "Save payment" }).click();
+  await expect(pay).toHaveCount(0);
+  expect(server.payments).toEqual([{ clientId: CLIENTS[1].id, amount: 2500, paidOn: iso(0), method: "UPI", note: "" }]);
+});
+
+test("the due-date consequence is stated above the button that causes it", async ({ page }) => {
+  await mockBusiness(page, [row(CLIENTS[0], { nextDueDate: iso(5) })]);
+  await rowFor(page, "Maya Patel").getByRole("button", { name: "Record payment" }).click();
+  const pay = page.getByRole("dialog", { name: "Record payment · Maya Patel" });
+  const note = pay.getByText("Saving moves the next due date on by one monthly cycle.");
+  // A consequence read AFTER the click is not a warning.
+  expect((await note.boundingBox())!.y).toBeLessThan((await pay.getByRole("button", { name: "Save payment" }).boundingBox())!.y);
+});
+
+test("backing out of the payment dialog records nothing, and does not keep the abandoned amount", async ({ page }) => {
+  const server = await mockBusiness(page, [row(CLIENTS[0], { nextDueDate: iso(5) })]);
+  const trigger = rowFor(page, "Maya Patel").getByRole("button", { name: "Record payment" });
+  await trigger.click();
+  await page.getByRole("dialog", { name: "Record payment · Maya Patel" }).getByLabel("Amount (INR)").fill("1");
+  await page.getByRole("dialog", { name: "Record payment · Maya Patel" }).getByRole("button", { name: "Cancel" }).click();
+  expect(server.payments).toEqual([]);
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  // Not 1: an amount typed into a dialog the coach abandoned must not become the next default.
+  await expect(page.getByRole("dialog", { name: "Record payment · Maya Patel" }).getByLabel("Amount (INR)")).toHaveValue("4999");
+});

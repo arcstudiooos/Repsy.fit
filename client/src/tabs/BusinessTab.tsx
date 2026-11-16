@@ -1,13 +1,14 @@
 // Business tab (Prompt 68): client plans and payments the coach records by hand.
 // RECORD-KEEPING ONLY: nothing here charges a card, sends a payment link or a reminder, or makes an
 // invoice. The help line under the heading says so.
-import { lazy, Suspense, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Engagement } from "../components/Engagement";
 import { Schedule } from "../components/Schedule";
 import { FormsView } from "../components/FormsView";
 import { ProgramsView } from "../components/ProgramsView";
+import { Modal } from "../components/Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
 import { formatDay } from "../lib/dates";
@@ -285,6 +286,7 @@ function PaymentForm({ row, currency, today, onDone }: { row: BusinessPlanRow; c
   const [paidOn, setPaidOn] = useState(today);
   const [method, setMethod] = useState<PaymentMethod>("UPI");
   const [note, setNote] = useState("");
+  const amountRef = useRef<HTMLInputElement>(null);
   const save = useMutation({
     // A blank box is sent as missing (not 0), so the server says "Please enter the amount."
     mutationFn: () =>
@@ -301,20 +303,42 @@ function PaymentForm({ row, currency, today, onDone }: { row: BusinessPlanRow; c
         ? "This plan is paused: the payment is recorded and the due date stays the same."
         : `Saving moves the next due date on by one ${row.plan.billingCycle.toLowerCase()} cycle.`;
   return (
+    // Nov 2026: this was an inline panel inside a FILTERED table of plans, which is how a coach
+    // records money against the wrong row. The dialog names the client in its title, and the
+    // "what saving does to the due date" line sits right above the button that does it.
+    <Modal
+      title={`Record payment · ${row.client.name}`}
+      description={nextAfter}
+      size="md"
+      initialFocus={amountRef}
+      busy={save.isPending}
+      onRequestClose={onDone}
+      footer={
+        <>
+          <button type="button" onClick={onDone} className="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" form={`pay-${row.plan.id}`} disabled={save.isPending} className="btn btn-primary">
+            {save.isPending ? "Saving..." : "Save payment"}
+          </button>
+        </>
+      }
+    >
     <form
+      id={`pay-${row.plan.id}`}
       aria-label={`Record payment for ${row.client.name}`}
       noValidate
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
         save.mutate();
       }}
-      className="mt-3 grid gap-3 rounded-lg bg-surface2 p-3 sm:grid-cols-2"
+      className="grid gap-3 sm:grid-cols-2"
     >
       <div>
         <label htmlFor={`pay-amount-${row.plan.id}`} className={labelClass}>
           Amount ({currency})
         </label>
-        <input id={`pay-amount-${row.plan.id}`} type="number" inputMode="decimal" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} />
+        <input id={`pay-amount-${row.plan.id}`} ref={amountRef} type="number" inputMode="decimal" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} />
       </div>
       <div>
         <label htmlFor={`pay-date-${row.plan.id}`} className={labelClass}>
@@ -338,21 +362,13 @@ function PaymentForm({ row, currency, today, onDone }: { row: BusinessPlanRow; c
         </label>
         <input id={`pay-note-${row.plan.id}`} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} className={inputClass} />
       </div>
-      <p className="text-xs text-dim sm:col-span-2">{nextAfter}</p>
       {save.isError && (
         <p role="alert" className="text-sm font-semibold text-amber-text sm:col-span-2">
           {plainErrorMessage(save.error)}
         </p>
       )}
-      <div className="flex gap-2 sm:col-span-2">
-        <button type="submit" disabled={save.isPending} className="btn btn-primary min-h-11">
-          {save.isPending ? "Saving..." : "Save payment"}
-        </button>
-        <button type="button" onClick={onDone} className="min-h-11 rounded-lg px-4 text-sm text-dim hover:text-text">
-          Cancel
-        </button>
-      </div>
     </form>
+    </Modal>
   );
 }
 

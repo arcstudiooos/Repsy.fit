@@ -131,7 +131,9 @@ test("empty state says the coach enters the values (no lookup)", async ({ page }
 test("creates a meal: checks the numbers, then saves exactly what the coach typed", async ({ page }) => {
   const { calls } = await openMeals(page);
   await page.getByRole("button", { name: "New meal" }).click();
-  const form = page.getByRole("form", { name: "New meal" });
+  // Nov 2026: the meal form is a dialog, so the library's search and filters survive an edit. The
+  // commit button sits in the dialog footer, outside the <form>, so the dialog is the handle.
+  const form = page.getByRole("dialog", { name: "New meal" });
   await expect(form.getByText("Numbers you set")).toBeVisible();
 
   await form.getByRole("button", { name: "Save meal" }).click();
@@ -171,7 +173,7 @@ test("creates a meal: checks the numbers, then saves exactly what the coach type
 test("edits a meal: the form starts from it and saves with PUT", async ({ page }) => {
   const { calls } = await openMeals(page, [meal("m1", "Oats & eggs")]);
   await page.getByRole("button", { name: "Edit Oats & eggs" }).click();
-  const form = page.getByRole("form", { name: "Edit meal" });
+  const form = page.getByRole("dialog", { name: "Edit meal" });
   await expect(form.getByLabel("Meal name")).toHaveValue("Oats & eggs");
   await expect(form.getByLabel("Carbs (g)")).toHaveValue("45.5");
   await form.getByLabel("Calories (kcal)").fill("500");
@@ -224,7 +226,7 @@ test("Assign to client saves a Nutrition assignment with the meal name, macros, 
 test("fibre is optional: a blank box never blocks the save (Inspo N2)", async ({ page }) => {
   const { calls } = await openMeals(page);
   await page.getByRole("button", { name: "New meal" }).click();
-  const form = page.getByRole("form", { name: "New meal" });
+  const form = page.getByRole("dialog", { name: "New meal" });
   await form.getByLabel("Meal name").fill("Plain rice");
   await form.getByLabel("Calories (kcal)").fill("200");
   await form.getByLabel("Protein (g)").fill("4");
@@ -240,7 +242,7 @@ test("fibre is optional: a blank box never blocks the save (Inspo N2)", async ({
 test("fibre is saved and shown when the coach records it", async ({ page }) => {
   const { calls } = await openMeals(page);
   await page.getByRole("button", { name: "New meal" }).click();
-  const form = page.getByRole("form", { name: "New meal" });
+  const form = page.getByRole("dialog", { name: "New meal" });
   await form.getByLabel("Meal name").fill("Lentil salad");
   await form.getByLabel("Calories (kcal)").fill("300");
   await form.getByLabel("Protein (g)").fill("18");
@@ -256,7 +258,7 @@ test("fibre is saved and shown when the coach records it", async ({ page }) => {
 test("the calories helper fills the box from the macros, and the coach stays in control", async ({ page }) => {
   await openMeals(page);
   await page.getByRole("button", { name: "New meal" }).click();
-  const form = page.getByRole("form", { name: "New meal" });
+  const form = page.getByRole("dialog", { name: "New meal" });
   await form.getByLabel("Protein (g)").fill("25");
   await form.getByLabel("Carbs (g)").fill("30");
   await form.getByLabel("Fat (g)").fill("8");
@@ -274,7 +276,7 @@ test("the calories helper fills the box from the macros, and the coach stays in 
 test("the meal categories cover the whole day, with the original four still there (Inspo N4)", async ({ page }) => {
   await openMeals(page);
   await page.getByRole("button", { name: "New meal" }).click();
-  const type = page.getByRole("form", { name: "New meal" }).getByLabel("Type");
+  const type = page.getByRole("dialog", { name: "New meal" }).getByLabel("Type");
   const options = await type.locator("option").allTextContents();
   // The four names every pre-existing meal holds must still be offered.
   for (const old of ["Breakfast", "Lunch", "Dinner", "Snack"]) expect(options).toContain(old);

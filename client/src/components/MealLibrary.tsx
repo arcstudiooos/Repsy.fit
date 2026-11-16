@@ -82,87 +82,90 @@ export function MealLibrary() {
       </h3>
       <p className="mt-1 text-sm text-dim">Your own meals, with the calories and macros you enter. Assign one to any client as a Nutrition plan.</p>
 
-      {editing ? (
+      {editing && (
         <MealForm
           key={editing === "new" ? "new" : editing.id}
           meal={editing === "new" ? null : editing}
           others={all.filter((m) => editing === "new" || m.id !== editing.id)}
           onDone={() => setEditing(null)}
         />
-      ) : (
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <div className="min-w-0 flex-1 basis-60">
-            <label htmlFor="meal-search" className="mb-1 block text-sm font-semibold text-text">
-              Search meals
-            </label>
-            <input
-              id="meal-search"
-              type="search"
-              className={inputClass}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name"
-              autoComplete="off"
-            />
-          </div>
-          <div>
-            <label htmlFor="meal-type-filter" className="mb-1 block text-sm font-semibold text-text">
-              Meal type
-            </label>
-            <select
-              id="meal-type-filter"
-              className={inputClass + " sm:w-auto"}
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as MealType | "All")}
-            >
-              <option value="All">All meal types</option>
-              {MEAL_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="meal-diet-filter" className="mb-1 block text-sm font-semibold text-text">
-              Diet
-            </label>
-            <select
-              id="meal-diet-filter"
-              className={inputClass + " sm:w-auto"}
-              value={dietFilter}
-              onChange={(e) => setDietFilter(e.target.value as DietType | "All")}
-            >
-              <option value="All">Any diet</option>
-              {DIET_TYPES.filter((d) => d !== "Any").map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            {/* Not "Library": this page already has a Library button, a Library view group and a
-                Library region, so that label is ambiguous for a screen reader too. */}
-            <label htmlFor="meal-owner-filter" className="mb-1 block text-sm font-semibold text-text">
-              Whose meals
-            </label>
-            <select
-              id="meal-owner-filter"
-              className={inputClass + " sm:w-auto"}
-              value={ownerFilter}
-              onChange={(e) => setOwnerFilter(e.target.value as "All" | "Mine" | "Repsy")}
-            >
-              <option value="All">All meals</option>
-              <option value="Mine">My meals</option>
-              <option value="Repsy">Repsy meals</option>
-            </select>
-          </div>
-          <button type="button" onClick={() => setEditing("new")} className="btn btn-primary">
-            New meal
-          </button>
-        </div>
       )}
+
+      {/* Always rendered, even while the form is open. Opening the form used to hide this whole
+          bar, so the coach's search text and their type/diet filters were gone when they came
+          back - and the list below had quietly re-shown everything. */}
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-1 basis-60">
+          <label htmlFor="meal-search" className="mb-1 block text-sm font-semibold text-text">
+            Search meals
+          </label>
+          <input
+            id="meal-search"
+            type="search"
+            className={inputClass}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label htmlFor="meal-type-filter" className="mb-1 block text-sm font-semibold text-text">
+            Meal type
+          </label>
+          <select
+            id="meal-type-filter"
+            className={inputClass + " sm:w-auto"}
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as MealType | "All")}
+          >
+            <option value="All">All meal types</option>
+            {MEAL_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="meal-diet-filter" className="mb-1 block text-sm font-semibold text-text">
+            Diet
+          </label>
+          <select
+            id="meal-diet-filter"
+            className={inputClass + " sm:w-auto"}
+            value={dietFilter}
+            onChange={(e) => setDietFilter(e.target.value as DietType | "All")}
+          >
+            <option value="All">Any diet</option>
+            {DIET_TYPES.filter((d) => d !== "Any").map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          {/* Not "Library": this page already has a Library button, a Library view group and a
+              Library region, so that label is ambiguous for a screen reader too. */}
+          <label htmlFor="meal-owner-filter" className="mb-1 block text-sm font-semibold text-text">
+            Whose meals
+          </label>
+          <select
+            id="meal-owner-filter"
+            className={inputClass + " sm:w-auto"}
+            value={ownerFilter}
+            onChange={(e) => setOwnerFilter(e.target.value as "All" | "Mine" | "Repsy")}
+          >
+            <option value="All">All meals</option>
+            <option value="Mine">My meals</option>
+            <option value="Repsy">Repsy meals</option>
+          </select>
+        </div>
+        <button type="button" onClick={() => setEditing("new")} className="btn btn-primary">
+          New meal
+        </button>
+        </div>
 
       <div className="mt-4">
         {query.isPending || (query.isError && query.isFetching) ? (
@@ -417,6 +420,7 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
   const [formError, setFormError] = useState<string | null>(null);
   // Inspo N1: the food catalogue fills these boxes on request. It never recalculates on its own.
   const [pickingFoods, setPickingFoods] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const save = useMutation({
     mutationFn: (input: NewMeal) => (meal ? updateMeal(meal.id, input) : createMeal(input)),
@@ -470,8 +474,30 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
   );
 
   return (
-    <form onSubmit={submit} noValidate aria-label={meal ? "Edit meal" : "New meal"} className="card mt-4 p-5">
-      <h4 className="mb-4 text-xl font-semibold">{meal ? "Edit meal" : "New meal"}</h4>
+    // Nov 2026: this form used to REPLACE the library, so cancelling lost the search, the type and
+    // diet filters and the scroll position - the coach had to find their place again after every
+    // edit. As a dialog the list underneath is never unmounted, so going back is free.
+    //
+    // The food picker stays INSIDE this dialog body. A nested <dialog> for it would be a trap on a
+    // phone: two stacked sheets on a 360px screen leaves no room for the thing being filled in.
+    <Modal
+      title={meal ? "Edit meal" : "New meal"}
+      size="lg"
+      initialFocus={nameRef}
+      busy={save.isPending}
+      onRequestClose={onDone}
+      footer={
+        <>
+          <button type="button" onClick={onDone} disabled={save.isPending} className="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" form="meal-form" disabled={save.isPending} className="btn btn-primary">
+            {save.isPending ? "Saving..." : "Save meal"}
+          </button>
+        </>
+      }
+    >
+    <form id="meal-form" onSubmit={submit} noValidate aria-label={meal ? "Edit meal" : "New meal"}>
       <div className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
           <div>
@@ -480,6 +506,7 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
             </label>
             <input
               id="meal-name"
+              ref={nameRef}
               className={inputClass}
               value={name}
               maxLength={100}
@@ -628,14 +655,7 @@ function MealForm({ meal, others, onDone }: { meal: Meal | null; others: Meal[];
           {problem}
         </p>
       )}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button type="submit" disabled={save.isPending} className="btn btn-primary">
-          {save.isPending ? "Saving..." : "Save meal"}
-        </button>
-        <button type="button" onClick={onDone} disabled={save.isPending} className={smallButton}>
-          Cancel
-        </button>
-      </div>
     </form>
+    </Modal>
   );
 }
