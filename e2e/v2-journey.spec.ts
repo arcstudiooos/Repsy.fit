@@ -145,7 +145,8 @@ test("7. the coach invites the client and gets a working invite link", async () 
   await page.goto("/app");
   await tab(page, "Clients").click();
   await panel(page).getByRole("button", { name: `Client access for ${CLIENT_NAME}` }).click();
-  const invite = page.getByRole("region", { name: `Client sign-in for ${CLIENT_NAME}` });
+  // Nov 2026: the invite is a dialog over the roster, not a panel the page scrolled up to.
+  const invite = page.getByRole("dialog", { name: `Client sign-in for ${CLIENT_NAME}` });
   await invite.getByLabel("Client's email").fill(CLIENT_EMAIL);
   await invite.getByRole("button", { name: "Send invite" }).click();
   // No SMTP in CI, so the link is shown to the coach instead of emailed.

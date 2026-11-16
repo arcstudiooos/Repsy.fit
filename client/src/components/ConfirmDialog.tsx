@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { Modal } from "./Modal";
 
 type Props = {
   title: string;
@@ -11,56 +12,41 @@ type Props = {
 };
 
 /**
- * Modal confirm box (native <dialog>): focus starts on Cancel, Escape cancels,
- * the page behind is dimmed and not clickable.
+ * Confirm box: focus starts on Cancel, Escape cancels, the page behind is dimmed and not clickable.
+ *
+ * Nov 2026: this is now a thin wrapper over Modal. It predated the Modal primitive and carried its
+ * own copy of the native-<dialog> mechanics, which meant it quietly missed two things Modal does:
+ * it never returned focus to whatever opened it (a keyboard user lost their place in the list after
+ * every delete), and it did not lock the page scroll. It also labelled itself with a HARDCODED
+ * element id, so two confirms on one page would have produced duplicate ids.
+ *
+ * The props are deliberately unchanged, so all fifteen call sites were left alone.
  */
 export function ConfirmDialog({ title, children, confirmLabel, pendingLabel, pending = false, onConfirm, onCancel }: Props) {
-  const ref = useRef<HTMLDialogElement>(null);
+  // Destructive confirms start on Cancel: the safe button is the one under the user's finger.
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (!dialog.open) dialog.showModal();
-    cancelRef.current?.focus();
-    return () => {
-      if (dialog.open) dialog.close();
-    };
-  }, []);
-
   return (
-    <dialog
-      ref={ref}
-      aria-labelledby="confirm-title"
-      onCancel={(e) => {
-        e.preventDefault(); // Escape: let the parent close it
+    <Modal
+      title={title}
+      size="sm"
+      initialFocus={cancelRef}
+      busy={pending}
+      onRequestClose={() => {
         if (!pending) onCancel();
       }}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-card border border-border bg-surface p-6 text-text backdrop:bg-header/60"
+      footer={
+        <>
+          <button ref={cancelRef} type="button" onClick={onCancel} disabled={pending} className="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="button" onClick={onConfirm} disabled={pending} className="btn btn-danger">
+            {pending ? (pendingLabel ?? confirmLabel) : confirmLabel}
+          </button>
+        </>
+      }
     >
-      <h2 id="confirm-title" className="text-xl">
-        {title}
-      </h2>
-      <div className="mt-2 text-dim">{children}</div>
-      <div className="mt-6 flex flex-wrap justify-end gap-3">
-        <button
-          ref={cancelRef}
-          type="button"
-          onClick={onCancel}
-          disabled={pending}
-          className="btn btn-secondary"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={pending}
-          className="btn btn-danger"
-        >
-          {pending ? (pendingLabel ?? confirmLabel) : confirmLabel}
-        </button>
-      </div>
-    </dialog>
+      <div className="text-dim">{children}</div>
+    </Modal>
   );
 }
