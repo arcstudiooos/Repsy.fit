@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, approveReviewItem, dismissReviewItem, generateWeeklySummary, getAlerts, getAtRiskClients, getRecentCheckIns, getReviewQueue, getTodayTasks, getWeeklySummary, listClients, queryKeys } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { ManualAssignmentForm } from "../components/ManualAssignmentForm";
-import { Modal } from "../components/Modal";
+import { NewPlanDialog } from "../components/NewPlanDialog";
 import { ErrorState, LoadingState } from "../components/States";
 import type { RecentCheckIn, ReviewItem, TodayTask } from "../types";
 import { timeRangeText } from "../lib/schedule";
@@ -159,40 +158,6 @@ function MetricRail({
 }
 
 
-/**
- * Write a plan for one client without leaving Home (Nov 2026 UI batch).
- *
- * A task row saying "no plan for 9 days" used to offer only a jump into another tab, which is the
- * same defect the library had: the coach lost the list of everything else still waiting. The plan
- * is written here and the row disappears from the list behind.
- *
- * It is the SAME ManualAssignmentForm the planner uses, so nothing about what gets saved can drift.
- */
-function NewPlanDialog({ client, onClose }: { client: { id: string; name: string }; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [saved, setSaved] = useState(false);
-
-  return (
-    <Modal title={`New plan for ${client.name}`} size="lg" onRequestClose={onClose}>
-      {saved ? (
-        <p role="status" className="text-sm font-semibold text-accent2">
-          Plan saved for {client.name}.
-        </p>
-      ) : (
-        <ManualAssignmentForm
-          clientId={client.id}
-          onCreated={async () => {
-            setSaved(true);
-            // Home's task list is what the coach is looking at, so it has to agree with what they
-            // just did - otherwise the row they cleared is still sitting there.
-            await queryClient.invalidateQueries({ queryKey: queryKeys.todayTasks(localToday()) });
-          }}
-          onCancel={onClose}
-        />
-      )}
-    </Modal>
-  );
-}
 
 /** Card heading with a count when there is one, e.g. "Review queue · 2". */
 function CardTitle({ title, count }: { title: string; count?: number }) {

@@ -335,7 +335,11 @@ test("client cards show the last check-in and adherence from GET /api/clients (n
   await expect(more).toHaveAttribute("aria-haspopup", "menu");
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("menuitem", { name: "Delete" })).toBeFocused();
+  // The menu opens with its FIRST item focused. Nov 2026 added "New plan" above Delete, so the
+  // destructive item is no longer the one sitting under the keyboard when the menu opens - which is
+  // the better order anyway.
+  await expect(page.getByRole("menuitem")).toHaveText(["New plan", "Delete"]);
+  await expect(page.getByRole("menuitem", { name: "New plan" })).toBeFocused();
   await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(page.getByRole("dialog")).toContainText("Delete Maya Patel?");
 });

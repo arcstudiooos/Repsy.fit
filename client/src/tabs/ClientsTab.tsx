@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteClient, listClients, queryKeys } from "../api";
 import { initials } from "../ClientHeader";
 import { AddClientForm } from "../components/AddClientForm";
+import { NewPlanDialog } from "../components/NewPlanDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MenuButton } from "../components/MenuButton";
 import { EmptyState, ErrorState, LoadingState, plainErrorMessage } from "../components/States";
@@ -42,6 +43,8 @@ export function ClientsTab({
   const queryClient = useQueryClient();
   const clientsQuery = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
   const [inviteFor, setInviteFor] = useState<Client | null>(null);
+  // Which client a plan is being written for, straight from their card. null = no dialog.
+  const [planFor, setPlanFor] = useState<Client | null>(null);
   const [confirmClient, setConfirmClient] = useState<Client | null>(null); // delete confirm box
   const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
 
@@ -147,6 +150,10 @@ export function ClientsTab({
       <Suspense fallback={<LoadingState />}>
         <JoinCodePanel />
       </Suspense>
+      {planFor && (
+        <NewPlanDialog client={{ id: planFor.id, name: planFor.name }} onClose={() => setPlanFor(null)} />
+      )}
+
       {inviteFor && (
         <Suspense fallback={<LoadingState />}>
           <ClientInvitePanel key={inviteFor.id} client={inviteFor} onClose={() => setInviteFor(null)} />
@@ -166,6 +173,7 @@ export function ClientsTab({
               setDeleteErrors(({ [client.id]: _, ...rest }) => rest);
               setConfirmClient(client);
             }}
+            onNewPlan={() => setPlanFor(client)}
             deleteError={deleteErrors[client.id]}
           />
         ))}
@@ -202,10 +210,11 @@ type CardProps = {
   /** Opens the client sign-in invite panel (Prompt 65). */
   onInvite: () => void;
   onDelete: () => void;
+  onNewPlan: () => void;
   deleteError?: string;
 };
 
-function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError }: CardProps) {
+function ClientCard({ client, selected, onOpen, onInvite, onDelete, onNewPlan, deleteError }: CardProps) {
   const statLine = stats(client, useCoachUnits());
   const activity = activityLine(client);
 
@@ -277,7 +286,15 @@ function ClientCard({ client, selected, onOpen, onInvite, onDelete, deleteError 
         >
           Client access
         </button>
-        <MenuButton label={`More actions for ${client.name}`} items={[{ label: "Delete", onSelect: onDelete }]} />
+        <MenuButton
+          label={`More actions for ${client.name}`}
+          items={[
+            // Nov 2026: a coach looking at the roster often already knows who needs a plan. Making
+            // them open the workspace, find the Plans tab and come back was the long way round.
+            { label: "New plan", onSelect: onNewPlan },
+            { label: "Delete", onSelect: onDelete },
+          ]}
+        />
       </div>
     </div>
   );
