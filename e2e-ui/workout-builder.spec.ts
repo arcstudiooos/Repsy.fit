@@ -85,8 +85,8 @@ async function openBuilder(
   await page.goto("/app");
   await openClientTab(page, "Plans");
   if (opts.skipOpen) return saved;
-  await page.getByRole("button", { name: /^More actions for/ }).first().click();
-  await page.getByRole("menuitem", { name: "Build sets and reps" }).click();
+  // Nov 2026: a visible card button, not a line in the "..." menu.
+  await page.getByRole("button", { name: "Build sets and reps" }).first().click();
   await expect(page.getByRole("region", { name: "Workout builder" })).toBeVisible();
   return saved;
 }
@@ -208,7 +208,8 @@ test("only a workout offers the builder", async ({ page }) => {
     skipOpen: true,
     assignments: [assignment({ id: "a1", type: "Nutrition", title: "Meal plan" })],
   });
+  // The builder button is a workout-only affordance, so a meal plan does not show it at all.
+  await expect(page.getByRole("button", { name: "Build sets and reps" })).toHaveCount(0);
   await page.getByRole("button", { name: /^More actions for/ }).first().click();
   await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Build sets and reps" })).toHaveCount(0);
 });

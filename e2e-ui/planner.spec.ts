@@ -251,10 +251,12 @@ test("Edit (in the ⋯ menu) changes title, details, why and date with PATCH; Ca
   });
   await page.goto("/app");
   await openTab(page, "Plans");
+  // Nov 2026: "Squat day" is a Workout, so the structured builder is a visible button on the card,
+  // not a line hidden in the "..." menu. The menu is just Edit and Delete now.
+  await expect(panel(page).getByRole("button", { name: "Build sets and reps" })).toBeVisible();
   const more = panel(page).getByRole("button", { name: "More actions for Squat day" });
   await more.click();
-  // "Squat day" is a Workout, so the structured builder is offered too (Inspo W3).
-  await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Build sets and reps", "Delete"]);
+  await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Delete"]);
   await page.getByRole("menuitem", { name: "Edit" }).click();
   const editor = panel(page).getByRole("form", { name: "Edit Squat day" });
   await expect(editor.getByLabel("Title")).toBeFocused();

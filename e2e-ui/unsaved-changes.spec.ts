@@ -81,8 +81,7 @@ async function openBuilder(page: Page) {
 
   await page.goto("/app");
   await openClientTab(page, "Plans");
-  await page.getByRole("button", { name: /^More actions for/ }).first().click();
-  await page.getByRole("menuitem", { name: "Build sets and reps" }).click();
+  await page.getByRole("button", { name: "Build sets and reps" }).first().click();
   await expect(page.getByRole("region", { name: "Workout builder" })).toBeVisible();
   return { wasSaved: () => saved };
 }

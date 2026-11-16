@@ -89,6 +89,11 @@ export function PlannerTab({
     if (filter !== "All" && filter !== saved.type) setFilter("All");
     setFormOpen(false);
     setScrollToId(saved.id);
+    // Nov 2026: the new card scrolls into view with its "Build sets and reps" button already
+    // visible, so the structured builder is one obvious click away. We deliberately do NOT force it
+    // open: a coach who just set sets and reps in the inline exercise picker has already done that
+    // depth, and dropping them into a second builder every time would hide the plan they just made
+    // and fight the common case. Depth is offered, not imposed.
   };
 
   let body: ReactNode;
@@ -395,15 +400,19 @@ function AssignmentCard({
             );
           })}
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          {/* Nov 2026: the structured builder is the depth of a workout, so it is a visible button on
+              the card - not a line hidden in the "..." menu where a coach had to go looking for it.
+              Only a workout has sections and sets; Nutrition / Habit / Recovery stay plain text. */}
+          {assignment.type === "Workout" && (
+            <button type="button" disabled={busy} onClick={() => setBuilding(true)} className="btn btn-secondary">
+              Build sets and reps
+            </button>
+          )}
           <MenuButton
             label={`More actions for ${assignment.title}`}
             items={[
               { label: "Edit", disabled: busy, onSelect: startEdit },
-              // Only a workout has sections and sets; a Nutrition or Habit plan stays plain text.
-              ...(assignment.type === "Workout"
-                ? [{ label: "Build sets and reps", disabled: busy, onSelect: () => setBuilding(true) }]
-                : []),
               {
                 label: deleteMutation.isPending ? "Deleting..." : "Delete",
                 disabled: busy,
