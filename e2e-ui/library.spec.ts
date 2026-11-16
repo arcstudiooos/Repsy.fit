@@ -208,22 +208,25 @@ test("delete asks first; Cancel keeps it, Delete removes it", async ({ page }) =
   expect(calls).toEqual(["DELETE t1"]);
 });
 
-test("Assign to client: any client and a date open that client's Plans pre-filled and editable, then save a real Workout", async ({ page }) => {
+test("'Open in Plans instead': the old cross-tab route still works for a coach who wants the week's context", async ({ page }) => {
   const { calls } = await openLibrary(page, [
     tpl("t1", "Leg day", { notes: "Warm up first", exercises: [{ name: "Back Squat", sets: 4, reps: "6", rest: 120 }, { name: "Leg Press", sets: 3, reps: "12", rest: 90 }] }),
   ]);
   await page.getByRole("button", { name: "Assign Leg day to client" }).click();
-  const panel = page.getByRole("group", { name: "Assign Leg day" });
+  // Nov 2026: this is now a dialog, and jumping to Plans is the OPTIONAL route out of it - the
+  // default is to finish in the dialog (see assign-template-dialog.spec.ts). This test keeps the
+  // escape hatch honest: it must still land on the right client, date and prefilled form.
+  const panel = page.getByRole("dialog", { name: "Assign Leg day" });
   await panel.getByLabel("Client").selectOption({ label: "Arjun Mehta" });
-  await panel.getByLabel("Date").fill("2026-12-01");
-  await panel.getByRole("button", { name: "Open in Plans" }).click();
+  await panel.getByRole("button", { name: "Open in Plans instead" }).click();
 
   await expect(page.getByRole("tab", { name: "Plans", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Arjun Mehta");
   const form = page.getByRole("form", { name: "New assignment" });
   await expect(form.getByLabel("Title")).toHaveValue("Leg day");
   await expect(form.getByLabel("Reasoning / why this plan (optional)")).toHaveValue("From template: Leg day");
-  await expect(form.getByLabel("Date")).toHaveValue("2026-12-01");
+  // The date is the form's to own, and it is still editable after the jump.
+  await form.getByLabel("Date").fill("2026-12-01");
   await expect(form.getByLabel("Extra notes (optional)")).toHaveValue("Warm up first");
   await expect(form.getByLabel("Reps for Leg Press")).toHaveValue("12");
   // Nothing is saved until the coach saves, and the form is still editable.

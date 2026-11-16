@@ -68,6 +68,18 @@ test("/pricing is its own page and opens at the prices", async ({ page }) => {
   await page.goto("/pricing");
   // The dev/preview server serves index.html for it; what matters is that the app shows the landing.
   await expect(page.getByTestId("studio-landing")).toBeVisible();
+  // The landing scrolls to the anchor itself, and under a loaded machine (6 workers) a smooth
+  // scroll can still be in flight when the assertion runs - this flaked once in a full-suite run
+  // while passing every time in isolation. Waiting for the scroll to SETTLE, rather than giving the
+  // viewport check a longer timeout, is what actually removes the race.
+  await page.waitForFunction(() => {
+    const el = document.querySelector("#pricing");
+    if (!el) return false;
+    const top = el.getBoundingClientRect().top;
+    const settled = (window as unknown as { __lastTop?: number }).__lastTop === top;
+    (window as unknown as { __lastTop?: number }).__lastTop = top;
+    return settled && top < window.innerHeight;
+  }, null, { timeout: 15_000 });
   await expect(page.locator("#pricing")).toBeInViewport({ timeout: 10_000 });
 });
 

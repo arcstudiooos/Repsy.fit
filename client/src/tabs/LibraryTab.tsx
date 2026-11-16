@@ -3,14 +3,15 @@
 // Manual Planner's exercise search and sets / reps / rest controls, delete with a confirm, and
 // "Assign to client", which opens that client's Plans with the form pre-filled.
 // Templates belong to the signed-in coach only: no sharing, no marketplace.
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createTemplate, deleteTemplate, listClients, listTemplates, queryKeys, updateTemplate } from "../api";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { Modal } from "../components/Modal";
 import { MealLibrary } from "../components/MealLibrary";
 import { ExerciseLibrary } from "../components/ExerciseLibrary";
 import { MacroCalculator } from "../components/MacroCalculator";
-import { ExercisePicker, rowsFromTemplate, templateFromRows, type DoseRow, type TemplatePrefill } from "../components/ManualAssignmentForm";
+import { ExercisePicker, ManualAssignmentForm, rowsFromTemplate, templateFromRows, type DoseRow, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { localToday } from "./AiCoachTab";
 import type { NewWorkoutTemplate, WorkoutTemplate } from "../types";
@@ -177,12 +178,19 @@ function TemplatesView({ onAssign }: { onAssign: Props["onAssign"] }) {
                     Delete
                   </button>
                 </div>
-                {assigning === t.id && <AssignPanel template={t} onAssign={onAssign} />}
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {assigning && (
+        <AssignDialog
+          template={all.find((t) => t.id === assigning) ?? shown[0]}
+          onAssign={onAssign}
+          onClose={() => setAssigning(null)}
+        />
+      )}
 
       {toDelete && (
         <ConfirmDialog
@@ -210,30 +218,65 @@ function TemplatesView({ onAssign }: { onAssign: Props["onAssign"] }) {
 }
 
 // Pick any of the coach's clients and a date, then continue in Plans (nothing is saved yet).
-function AssignPanel({ template, onAssign }: { template: WorkoutTemplate; onAssign: Props["onAssign"] }) {
+/**
+ * Assign a template: a dialog that finishes the job (Nov 2026 UI batch).
+ *
+ * This used to be the worst journey in the app. The button said "Open in Plans", and it meant it:
+ * one click changed the top tab, the sub-view AND the selected client, dropping the coach into the
+ * planner with no way back to the library they were browsing. Assigning three templates meant
+ * walking back three times.
+ *
+ * Now the same ManualAssignmentForm opens in a dialog over the library. It is deliberately the SAME
+ * component, not a copy of it, so the payload, the validation and the "a blank Reps box blocks
+ * saving" rule cannot drift from the planner's version.
+ *
+ * "Open in Plans instead" is kept as a quiet way out, because a coach who wants the week's context
+ * around the plan should still be able to get it - as a choice now, rather than as the only outcome.
+ */
+function AssignDialog({
+  template,
+  onAssign,
+  onClose,
+}: {
+  template: WorkoutTemplate;
+  onAssign: Props["onAssign"];
+  onClose: () => void;
+}) {
   const clients = useQuery({ queryKey: queryKeys.clients, queryFn: listClients });
   const [clientId, setClientId] = useState("");
-  const [date, setDate] = useState(localToday);
+  const [done, setDone] = useState<string[]>([]);
   const list = clients.data ?? [];
   const chosen = clientId || list[0]?.id || "";
+  const chosenName = list.find((c) => c.id === chosen)?.name ?? "";
+  const clientRef = useRef<HTMLSelectElement>(null);
 
   return (
-    <div role="group" aria-label={`Assign ${template.name}`} className="mt-3 rounded-card bg-surface2 p-3">
+    <Modal
+      title={`Assign ${template.name}`}
+      description={template.focus || undefined}
+      size="lg"
+      initialFocus={clientRef}
+      onRequestClose={onClose}
+    >
       {clients.isPending ? (
         <LoadingState />
       ) : clients.isError ? (
         <ErrorState error={clients.error} onRetry={() => void clients.refetch()} />
       ) : list.length === 0 ? (
-        <p className="text-sm text-dim">Add a client first, then you can assign this template.</p>
+        <p className="empty-state">Add a client first, then you can assign this template.</p>
       ) : (
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
+        <>
+          {/* Client only. The date deliberately lives in the form below and nowhere else: an
+              earlier version had a date picker here AND in the form, which is two controls for one
+              fact - the kind of thing that makes a coach wonder which one won. */}
+          <div className="sm:max-w-xs">
             <label htmlFor={`assign-client-${template.id}`} className="mb-1 block text-xs font-semibold text-dim">
               Client
             </label>
             <select
               id={`assign-client-${template.id}`}
-              className={inputClass + " sm:w-auto"}
+              ref={clientRef}
+              className={inputClass}
               value={chosen}
               onChange={(e) => setClientId(e.target.value)}
             >
@@ -244,28 +287,38 @@ function AssignPanel({ template, onAssign }: { template: WorkoutTemplate; onAssi
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor={`assign-date-${template.id}`} className="mb-1 block text-xs font-semibold text-dim">
-              Date
-            </label>
-            <input
-              id={`assign-date-${template.id}`}
-              type="date"
-              className={inputClass + " sm:w-auto"}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+
+          {done.length > 0 && (
+            <p className="mt-3 text-sm font-semibold text-accent2">
+              Assigned to {done.join(", ")}. Pick another client to assign it again.
+            </p>
+          )}
+
+          <div className="mt-4 border-t border-border pt-4">
+            {/* Keyed on the client so switching client restarts the form from the template,
+                instead of carrying the previous client's edits over to the next one. */}
+            <ManualAssignmentForm
+              key={chosen}
+              clientId={chosen}
+              prefill={{ template, date: localToday() }}
+              onCreated={() => {
+                // Stays open: assigning one template to several clients is the normal case.
+                setDone((d) => (d.includes(chosenName) ? d : [...d, chosenName]));
+              }}
+              onCancel={onClose}
             />
           </div>
+
           <button
             type="button"
-            onClick={() => onAssign(chosen, { template, date: date || localToday() })}
-            className="btn btn-primary"
+            onClick={() => onAssign(chosen, { template, date: localToday() })}
+            className="btn btn-ghost mt-3"
           >
-            Open in Plans
+            Open in Plans instead
           </button>
-        </div>
+        </>
       )}
-    </div>
+    </Modal>
   );
 }
 
