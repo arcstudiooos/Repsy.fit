@@ -162,8 +162,10 @@
 @utility page-title {
   font-family: var(--font-heading);
   font-weight: 400;
-  font-size: clamp(2rem, 1.6rem + 1.4vw, 2.5rem);
-  line-height: 1.1;
+  /* Nov 2026: trimmed from 2-2.5rem. The title repeats the highlighted tab name, so at the old size
+     it shouted a word the user already knew and pushed real content down on every screen. */
+  font-size: clamp(1.625rem, 1.4rem + 0.9vw, 2rem);
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
 @utility card-title {

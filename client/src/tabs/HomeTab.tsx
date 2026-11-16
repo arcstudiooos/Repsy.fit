@@ -145,7 +145,7 @@ function MetricRail({
         >
           <dt className="text-xs font-semibold tracking-wide text-dim uppercase">{m.label}</dt>
           <dd
-            className={`mt-0.5 font-mono text-2xl leading-none tabular-nums ${
+            className={`mt-0.5 text-2xl leading-none tabular-nums ${
               m.value === null ? "text-muted" : m.warn && m.value > 0 ? "text-accent-text" : m.value === 0 ? "text-muted" : "text-text"
             }`}
           >

@@ -15,7 +15,7 @@ function Card({ label, value, hint }: { label: string; value: string; hint?: str
     // appears when there is something to say, instead of reserving a line for "none yet".
     <li className="rounded-lg border border-border-strong bg-surface2 px-3 py-1.5">
       <p className="truncate text-[11px] font-semibold tracking-wide text-dim uppercase">{label}</p>
-      <p className="font-mono text-base leading-tight tabular-nums text-text">{value}</p>
+      <p className="text-base leading-tight tabular-nums text-text">{value}</p>
       {hint && <p className="truncate text-[11px] text-muted">{hint}</p>}
     </li>
   );

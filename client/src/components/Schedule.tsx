@@ -156,7 +156,7 @@ export function Schedule({ clients }: { clients: Client[] }) {
                     role="group"
                     aria-label={dayHeading(d)}
                     aria-current={isToday ? "date" : undefined}
-                    className={"h-full rounded-card border p-2 " + (isToday ? "border-accent bg-surface" : "border-border-strong bg-surface2")}
+                    className={"flex h-full flex-col rounded-card border p-2 lg:min-h-[15rem] " + (isToday ? "border-accent bg-surface" : "border-border-strong bg-surface2")}
                   >
                     <p
                       className={

@@ -35,7 +35,7 @@ export function GoalDate({ client }: { client: Client }) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="min-h-10 text-left text-sm text-dim underline decoration-border hover:text-text"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border-strong bg-surface2 px-3 text-left text-sm text-dim hover:border-dim hover:text-text"
       >
         {/* Nothing set yet reads as an invitation, not as missing data. */}
         {line ?? "Add a goal date"}
