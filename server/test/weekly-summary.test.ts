@@ -71,6 +71,23 @@ describe("buildWeeklyFacts", () => {
     });
     expect(facts.atRiskClients).toBe(1);
   });
+
+  it("judges at-risk as of the generation date, never the (future) week end", () => {
+    // Trust bug: a client created 8 days before the generation date, with no logs. The inactive rule
+    // needs 10 days, so as of the generation date they are NOT at risk - which is what the live
+    // dashboard shows. Evaluated at weekEnd (3 days later = 11 days old) they WOULD be flagged, so
+    // the report used to disagree with the dashboard. `asOf` fixes it.
+    const created = new Date("2026-11-04T00:00:00.000Z"); // 8 days before 2026-11-12
+    const input = {
+      weekStart, // 2026-11-09 .. 2026-11-15
+      clients: [{ ...client("new", { createdAt: created }) }],
+      logs: [],
+      assignmentsDone: [],
+      activeClientIds: [],
+    };
+    expect(buildWeeklyFacts({ ...input, asOf: "2026-11-12" }).atRiskClients).toBe(0); // matches dashboard
+    expect(buildWeeklyFacts(input).atRiskClients).toBe(1); // old behaviour (as of weekEnd) would flag them
+  });
 });
 
 describe("numbersAreGrounded", () => {

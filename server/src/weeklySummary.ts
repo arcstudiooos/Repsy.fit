@@ -26,6 +26,14 @@ export type WeeklyFactsInput = {
   assignmentsDone: { date: string }[];
   /** Clients with at least one Active assignment dated in the week. */
   activeClientIds: string[];
+  /**
+   * The date to evaluate the at-risk rules as of (the day the summary is generated for). Defaults to
+   * the end of the week. It is ALWAYS within the week, so the current week is never judged against a
+   * future date - which was the bug: `weekEnd` of the current week is in the future, so a client with
+   * no logs read as "inactive 10+ days" in the report while the live dashboard (which uses today)
+   * still showed them on track. The two numbers disagreed, which is a trust problem, not a visual one.
+   */
+  asOf?: string;
 };
 
 export type WeeklyFacts = {
@@ -54,9 +62,11 @@ export function buildWeeklyFacts(input: WeeklyFactsInput): WeeklyFacts {
   const avgNow = mean(thisWeek.filter((l) => l.adherence !== null).map((l) => l.adherence as number));
   const avgBefore = mean(lastWeek.filter((l) => l.adherence !== null).map((l) => l.adherence as number));
 
+  // Never evaluate at-risk past the end of the week; for the current week, `asOf` is today.
+  const atRiskAsOf = input.asOf && input.asOf <= weekEnd ? input.asOf : weekEnd;
   const atRisk = findAtRiskClients(
     input.clients.map((c) => ({ client: { id: c.id, name: c.name, goal: c.goal, createdAt: c.createdAt }, logs: c.logs })),
-    weekEnd,
+    atRiskAsOf,
   );
 
   return {

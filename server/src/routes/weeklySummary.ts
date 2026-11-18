@@ -52,7 +52,7 @@ async function aiSummaryText(facts: WeeklyFacts): Promise<string | null> {
   }
 }
 
-/** Counts this coach's facts for the week that `date` falls in. */
+/** Counts this coach's facts for the week that `date` falls in, with at-risk judged as of `date`. */
 async function loadFacts(coachId: string, date: string): Promise<WeeklyFacts> {
   const weekStart = weekStartOf(date);
   const [clients, logs, assignments] = await Promise.all([
@@ -62,6 +62,9 @@ async function loadFacts(coachId: string, date: string): Promise<WeeklyFacts> {
   ]);
   const facts = buildWeeklyFacts({
     weekStart,
+    // At-risk is judged as of the generation date (today for the current week), so the report's
+    // "clients needing attention" count matches the live dashboard instead of looking into the future.
+    asOf: date,
     clients: clients.map((c) => ({ ...c, logs: logs.filter((l) => l.clientId === c.id) })),
     logs,
     assignmentsDone: assignments.filter((a) => a.status === "Done"),
@@ -120,7 +123,7 @@ weeklySummaryRouter.post(
       return;
     }
 
-    const facts = await loadFacts(coachId, weekStart);
+    const facts = await loadFacts(coachId, parsed.data.date ?? today());
     const text = (await aiSummaryText(facts)) ?? factsFallbackText(facts);
     const row = await prisma.weeklySummary.upsert({
       where: { coachId_weekStart: { coachId, weekStart } },
