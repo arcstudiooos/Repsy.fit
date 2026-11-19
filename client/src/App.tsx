@@ -482,7 +482,7 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   } else if (activeTab === "calendar") {
     panelContent = clientsGate ?? (
       <Suspense fallback={<LoadingState />}>
-        <Schedule clients={clients} />
+        <Schedule clients={clients} onOpenClient={(clientId) => openWorkspace(clientId, "plans")} />
       </Suspense>
     );
   } else if (activeTab === "business") {

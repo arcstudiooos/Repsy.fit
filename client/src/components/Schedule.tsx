@@ -1,11 +1,17 @@
-// Business > Schedule (Prompt 69): the coach's week view of appointments.
+// Calendar / Schedule (Prompt 69, redesigned Nov 2026): the coach's week at a glance.
 // Times are stored and sent as UTC; this view shows and edits them in the viewer's local timezone
 // (src/lib/schedule.ts holds every conversion). Booking only: no reminders, no video-call
 // integration, no calendar sync, and clients cannot book themselves.
+//
+// The redesign killed the "seven beige boxes" the coach complained about: a compact 7-day rail with
+// per-day counts keeps the shape of the week, and a flat, day-grouped agenda shows only days that
+// actually have appointments. Every row has one anchor (the title), a tabular-nums time gutter, a
+// labelled type chip, a one-tap link to the client, a status pill and properly-sized actions.
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createAppointment, deleteAppointment, listAppointments, queryKeys, updateAppointment } from "../api";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Modal } from "./Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "./States";
 import {
   addDays,
@@ -28,12 +34,25 @@ import {
   type Client,
 } from "../types";
 
-/** Block colour by type, from the assignment type colours (no new colours). Full class names so Tailwind keeps them. */
-const TYPE_BORDER: Record<AppointmentType, string> = {
-  Session: "border-l-type-workout",
-  Call: "border-l-type-nutrition",
-  "Check-in review": "border-l-type-recovery",
-  Other: "border-l-type-habit",
+// Appointment types reuse the assignment-type tokens. A label ALWAYS accompanies the colour, so
+// colour is never the sole carrier of meaning. No raw hex, no -soft tints.
+const TYPE_TEXT: Record<AppointmentType, string> = {
+  Session: "text-type-workout-text",
+  Call: "text-type-nutrition-text",
+  "Check-in review": "text-type-recovery-text",
+  Other: "text-type-habit-text",
+};
+const TYPE_RAIL: Record<AppointmentType, string> = {
+  Session: "bg-type-workout",
+  Call: "bg-type-nutrition",
+  "Check-in review": "bg-type-recovery",
+  Other: "bg-type-habit",
+};
+const STATUS_TEXT: Record<AppointmentStatus, string> = {
+  Booked: "text-accent2",
+  Done: "text-dim",
+  Cancelled: "text-amber-text",
+  "No-show": "text-amber-text",
 };
 
 const inputClass = "min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text";
@@ -45,11 +64,16 @@ const rangeText = (start: Date) => {
   return `${short(start, false)} - ${short(end, true)}`;
 };
 
-export function Schedule({ clients }: { clients: Client[] }) {
+export function Schedule({ clients, onOpenClient }: { clients: Client[]; onOpenClient: (clientId: string) => void }) {
   const queryClient = useQueryClient();
   const [start, setStart] = useState(() => weekStartOf(new Date()));
   const [editing, setEditing] = useState<Appointment | "new" | null>(null);
   const [deleting, setDeleting] = useState<Appointment | null>(null);
+  const [statusFor, setStatusFor] = useState<Appointment | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // A status change is reversible for a few seconds - a mis-tap must never change a booking silently.
+  const [undo, setUndo] = useState<{ appointment: Appointment; previous: AppointmentStatus } | null>(null);
+
   const startKey = localDateKey(start);
   const query = useQuery({
     queryKey: queryKeys.appointments(startKey),
@@ -87,23 +111,33 @@ export function Schedule({ clients }: { clients: Client[] }) {
     return map;
   }, [query.data]);
   const isThisWeek = startKey === localDateKey(weekStartOf(new Date()));
+  const selected = selectedDay ? days.find((d) => localDateKey(d) === selectedDay) : undefined;
+  const visibleDays = selectedDay ? days.filter((d) => localDateKey(d) === selectedDay) : days;
+  const agendaDays = visibleDays.filter((d) => (byDay.get(localDateKey(d))?.length ?? 0) > 0);
 
-  const navButton = "btn btn-secondary";
+  function chooseStatus(a: Appointment, status: AppointmentStatus) {
+    if (status === a.status) {
+      setStatusFor(null);
+      return;
+    }
+    setUndo({ appointment: a, previous: a.status });
+    setStatusFor(null);
+    setStatus.mutate({ id: a.id, status });
+  }
+  function undoStatus() {
+    if (!undo) return;
+    setStatus.mutate({ id: undo.appointment.id, status: undo.previous });
+    setUndo(null);
+  }
+
+  const navButton = "btn btn-secondary min-h-11";
 
   return (
-    <section aria-label="Schedule" className="mt-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setStart(addDays(start, -7))} className={navButton}>
-            Previous week
-          </button>
-          <button type="button" onClick={() => setStart(addDays(start, 7))} className={navButton}>
-            Next week
-          </button>
-          <button type="button" onClick={() => setStart(weekStartOf(new Date()))} disabled={isThisWeek} className={navButton + " disabled:opacity-50"}>
-            This week
-          </button>
-          <h3 className="ml-1 font-mono text-base">{rangeText(start)}</h3>
+    <section aria-label="Schedule" className="mt-4 pb-20 sm:pb-0">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="page-title">Calendar</h2>
+          <p className="text-sm text-dim">Week of {rangeText(start)}</p>
         </div>
         <button
           type="button"
@@ -114,18 +148,68 @@ export function Schedule({ clients }: { clients: Client[] }) {
           Add appointment
         </button>
       </div>
-      <p className="mt-2 text-xs text-dim">
-        Times are shown in your timezone ({viewerTimeZone()}) and stored in UTC.
+
+      {/* One quiet control row: week navigation, a jump back to today, and the timezone invariant. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button type="button" aria-label="Previous week" onClick={() => { setStart(addDays(start, -7)); setSelectedDay(null); }} className={navButton}>
+          <span aria-hidden="true">‹</span>
+        </button>
+        <button type="button" aria-label="Next week" onClick={() => { setStart(addDays(start, 7)); setSelectedDay(null); }} className={navButton}>
+          <span aria-hidden="true">›</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStart(weekStartOf(new Date())); setSelectedDay(null); }}
+          disabled={isThisWeek && !selectedDay}
+          className={navButton + " disabled:opacity-50"}
+        >
+          This week
+        </button>
+        <span className="ml-auto rounded-full bg-surface2 px-3 py-1.5 text-xs text-dim" title="Times are stored in UTC and shown in your local timezone.">
+          {viewerTimeZone()}
+        </span>
+      </div>
+      <p className="mt-2 break-words text-sm text-dim">
+        All times in your timezone ({viewerTimeZone()}); stored in UTC.
         {clients.length === 0 && " Add a client first to book an appointment."}
       </p>
 
+      {/* The week rail: seven tappable chips carry the week's shape and each day's count. Empty days
+          are a tappable "0" that opens Add prefilled for that day - no dead beige boxes. */}
+      <div role="group" aria-label="Week" className="mt-4 flex flex-nowrap gap-1 overflow-x-auto pb-1 sm:gap-1.5">
+        {days.map((d) => {
+          const key = localDateKey(d);
+          const isToday = key === todayKey;
+          const count = byDay.get(key)?.length ?? 0;
+          const isSelected = selectedDay === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-label={`${dayHeading(d)}: ${count} appointment${count === 1 ? "" : "s"}`}
+              aria-pressed={isSelected}
+              aria-current={isToday ? "date" : undefined}
+              onClick={() => setSelectedDay((cur) => (cur === key ? null : key))}
+              className={`flex min-h-14 min-w-[2.25rem] flex-1 flex-col items-center justify-center rounded-card border px-0.5 py-1.5 transition-colors sm:min-w-[3.75rem] sm:px-2 ${
+                isSelected ? "border-accent2" : isToday ? "border-border-strong" : "border-border hover:border-strong"
+              }`}
+            >
+              <span className={`text-[11px] uppercase tracking-wide ${isToday ? "text-accent2" : "text-dim"}`}>
+                {d.toLocaleDateString([], { weekday: "short" })}
+              </span>
+              <span className={`text-lg font-semibold tabular-nums ${isToday ? "text-accent2" : "text-text"}`}>{d.getDate()}</span>
+              <span className="text-[11px] tabular-nums text-dim">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {editing && (
         <AppointmentForm
-          // A new key per record, so switching from one edit to another starts from that record's values.
-          key={editing === "new" ? "new" : editing.id}
+          key={editing === "new" ? (selected ? localDateKey(selected) : "new") : editing.id}
           clients={clients}
           existing={editing === "new" ? undefined : editing}
-          defaultDay={days.find((d) => localDateKey(d) === todayKey) ?? days[0]}
+          defaultDay={selected ?? days.find((d) => localDateKey(d) === todayKey) ?? days[0]}
           onDone={() => {
             setEditing(null);
             refresh();
@@ -144,51 +228,92 @@ export function Schedule({ clients }: { clients: Client[] }) {
         </div>
       ) : (
         <>
-          {query.data.length === 0 && <p className="mt-4 text-sm text-dim">No appointments this week.</p>}
-          <ul aria-label="Week" className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-7">
-            {days.map((d) => {
-              const key = localDateKey(d);
-              const isToday = key === todayKey;
-              const items = byDay.get(key) ?? [];
-              return (
-                <li key={key} className="min-w-0">
-                  <div
-                    role="group"
-                    aria-label={dayHeading(d)}
-                    aria-current={isToday ? "date" : undefined}
-                    className={"flex h-full flex-col rounded-card border p-2 lg:min-h-[15rem] " + (isToday ? "border-accent bg-surface" : "border-border-strong bg-surface2")}
-                  >
-                    <p
-                      className={
-                        "mb-2 inline-block rounded-full px-2 py-0.5 text-xs font-bold " + (isToday ? "bg-accent text-on-accent" : "text-dim")
-                      }
-                    >
-                      {dayHeading(d)}
-                    </p>
-                    {items.length > 0 && (
-                      <ul className="space-y-2">
-                        {items.map((a) => (
-                          <Block
-                            key={a.id}
-                            appointment={a}
-                            onEdit={() => setEditing(a)}
-                            onDelete={() => setDeleting(a)}
-                            onStatus={(status) => setStatus.mutate({ id: a.id, status })}
-                          />
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          {undo && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-card border border-border bg-surface2 px-4 py-2 text-sm">
+              <span className="text-dim">
+                Status changed to <span className="font-semibold text-text">{undo.appointment.status === "Done" ? "Done" : "updated"}</span>.
+              </span>
+              <button type="button" onClick={undoStatus} className="font-bold text-accent-text underline underline-offset-4">
+                Undo
+              </button>
+            </div>
+          )}
+
+          {query.data.length === 0 ? (
+            <div className="mt-6 flex flex-col items-center gap-2 py-8 text-center">
+              <p className="font-semibold text-text">Nothing booked this week.</p>
+              <p className="text-sm text-dim">Your week is open — add the first session when you're ready.</p>
+              <button type="button" onClick={() => setEditing("new")} disabled={clients.length === 0} className="btn btn-primary">
+                Add appointment
+              </button>
+            </div>
+          ) : agendaDays.length === 0 ? (
+            <p className="empty-state mt-6 py-8 text-center">No appointments on that day.</p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-5">
+              {agendaDays.map((d) => {
+                const key = localDateKey(d);
+                const isToday = key === todayKey;
+                const items = [...(byDay.get(key) ?? [])].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+                return (
+                  <li key={key}>
+                    <div aria-label={dayHeading(d)} aria-current={isToday ? "date" : undefined} className="mb-2 flex items-baseline gap-2 border-b border-border pb-1.5">
+                      <h3 className="text-sm font-bold text-text">{dayHeading(d)}</h3>
+                      <span className="text-xs tabular-nums text-dim">{items.length}</span>
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {items.map((a) => (
+                        <AppointmentRow
+                          key={a.id}
+                          appointment={a}
+                          onEdit={() => setEditing(a)}
+                          onDelete={() => setDeleting(a)}
+                          onStatus={() => setStatusFor(a)}
+                          onClient={() => onOpenClient(a.clientId)}
+                        />
+                      ))}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
           {setStatus.isError && (
             <p role="alert" className="mt-3 text-sm font-semibold text-amber-text">
               {plainErrorMessage(setStatus.error)}
             </p>
           )}
         </>
+      )}
+
+      {/* Status lives in ONE labelled pill, opened into four big, keyboard-operable choices. A native
+          <select> was unthemeable, generic, and cost extra taps for the most common action. */}
+      {statusFor && (
+        <Modal
+          title="Change appointment status"
+          description={`${statusFor.title} · ${statusFor.clientName}`}
+          onRequestClose={() => setStatusFor(null)}
+        >
+          <div role="group" aria-label={`Status for ${statusFor.title}`} className="flex flex-col gap-2">
+            {APPOINTMENT_STATUSES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-label={`Set status ${s}`}
+                aria-pressed={s === statusFor.status}
+                disabled={setStatus.isPending}
+                onClick={() => chooseStatus(statusFor, s)}
+                className={`flex min-h-11 items-center justify-between rounded-card border px-4 text-left text-sm font-semibold transition-colors ${
+                  s === statusFor.status ? "border-accent2 bg-surface2 text-text" : "border-border text-dim hover:text-text"
+                }`}
+              >
+                {s}
+                {s === statusFor.status && <span aria-hidden="true" className="text-accent2">✓</span>}
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
 
       {deleting && (
@@ -200,9 +325,7 @@ export function Schedule({ clients }: { clients: Client[] }) {
           onConfirm={() => remove.mutate(deleting.id)}
           onCancel={() => setDeleting(null)}
         >
-          <p>
-            "{deleting.title}" with {deleting.clientName} will be removed from the schedule. This can't be undone.
-          </p>
+          <p>"{deleting.title}" with {deleting.clientName} will be removed from the schedule. This can't be undone.</p>
           {remove.isError && (
             <p role="alert" className="mt-2 font-semibold text-amber-text">
               {plainErrorMessage(remove.error)}
@@ -214,42 +337,53 @@ export function Schedule({ clients }: { clients: Client[] }) {
   );
 }
 
-function Block({
+/** A flat appointment row: no nested box, one bold anchor, a labelled type chip and a client link. */
+function AppointmentRow({
   appointment: a,
   onEdit,
   onDelete,
   onStatus,
+  onClient,
 }: {
   appointment: Appointment;
   onEdit: () => void;
   onDelete: () => void;
-  onStatus: (status: AppointmentStatus) => void;
+  onStatus: () => void;
+  onClient: () => void;
 }) {
   const inactive = a.status === "Cancelled" || a.status === "No-show";
   return (
-    <li className={"rounded-lg border border-l-4 border-border bg-surface p-2 text-sm " + TYPE_BORDER[a.type]}>
-      <p className="font-mono text-xs text-text">{timeRangeText(a.startsAt, a.endsAt)}</p>
-      <p className={"mt-0.5 break-words font-semibold " + (inactive ? "text-dim line-through" : "text-text")}>{a.title}</p>
-      <p className="break-words text-xs text-dim">
-        {a.clientName} · {a.type}
-      </p>
-      {a.location && <p className="break-all text-xs text-dim">{a.location}</p>}
-      {a.note && <p className="mt-1 break-words text-xs text-dim">{a.note}</p>}
-      <select
-        aria-label={`Status for ${a.title}`}
-        value={a.status}
-        onChange={(e) => onStatus(e.target.value as AppointmentStatus)}
-        className="mt-2 min-h-10 w-full rounded-lg border border-border-strong bg-surface2 px-2 text-sm text-text lg:px-1 lg:text-xs"
-      >
-        {APPOINTMENT_STATUSES.map((s) => (
-          <option key={s}>{s}</option>
-        ))}
-      </select>
-      <div className="mt-1 flex gap-1">
-        <button type="button" aria-label={`Edit ${a.title}`} onClick={onEdit} className="min-h-10 rounded-lg px-2 text-xs text-dim underline-offset-2 hover:text-text hover:underline">
+    <li className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3 hover:border-strong sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-3">
+      <span aria-hidden="true" className={`hidden h-9 w-[3px] shrink-0 rounded-full sm:block ${TYPE_RAIL[a.type]}`} />
+      <div className="min-w-0 w-full sm:flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="whitespace-nowrap text-sm tabular-nums text-dim">{timeRangeText(a.startsAt, a.endsAt)}</span>
+          <span className={`rounded-full bg-surface2 px-2 py-0.5 text-[11px] font-bold ${TYPE_TEXT[a.type]}`}>{a.type}</span>
+        </div>
+        <p className={`mt-0.5 break-words font-semibold ${inactive ? "text-dim line-through" : "text-text"}`}>{a.title}</p>
+        <div className="flex flex-wrap items-center gap-x-2 text-sm">
+          <button type="button" onClick={onClient} aria-label={`Open ${a.clientName}`} className="font-semibold text-accent-text underline underline-offset-4">
+            {a.clientName}
+          </button>
+          {a.location && <span className="break-all text-dim">· {a.location}</span>}
+        </div>
+        {a.note && <p className="mt-1 break-words text-xs text-dim">{a.note}</p>}
+      </div>
+      <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
+        <button
+          type="button"
+          aria-label={`Status for ${a.title}`}
+          onClick={onStatus}
+          className={`flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-surface2 px-3 text-xs font-bold ${STATUS_TEXT[a.status]}`}
+        >
+          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
+          {a.status}
+          <span aria-hidden="true">▾</span>
+        </button>
+        <button type="button" aria-label={`Edit ${a.title}`} onClick={onEdit} className="btn btn-secondary min-h-11">
           Edit
         </button>
-        <button type="button" aria-label={`Delete ${a.title}`} onClick={onDelete} className="min-h-10 rounded-lg px-2 text-xs text-dim underline-offset-2 hover:text-text hover:underline">
+        <button type="button" aria-label={`Delete ${a.title}`} onClick={onDelete} className="btn btn-ghost min-h-11 text-amber-text">
           Delete
         </button>
       </div>

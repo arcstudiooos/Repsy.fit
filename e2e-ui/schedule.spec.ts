@@ -82,8 +82,12 @@ async function mockSchedule(page: Page, initial: Appt[]) {
   return state;
 }
 
-const day = (page: Page, name: string) => page.getByRole("group", { name });
 const week = (page: Page) => page.getByRole("region", { name: "Schedule" });
+// The week rail is now a role=group of seven day chips; each agenda day is a plain <li> headed by a
+// labelled <div> (no more role=group), with its appointment rows in a sibling <ul>.
+const weekRail = (page: Page) => week(page).getByRole("group", { name: "Week" });
+const day = (page: Page, name: string) =>
+  week(page).getByRole("heading", { name, level: 3 }).locator("xpath=../..");
 
 test("the calendar is its own destination, and Business is only money and its numbers", async ({ page }) => {
   await mockSchedule(page, []);
@@ -115,14 +119,17 @@ test("week view: 7 day columns Mon-Sun, today highlighted, times in the viewer's
   await expect(week(page)).toContainText("Nov 9 - Nov 15, 2026");
   // The note states the timezone handling.
   await expect(week(page)).toContainText(KOLKATA);
+  // The old "Times are shown in your timezone (X) and stored in UTC." note became one shorter line.
+  await expect(week(page)).toContainText("All times in your timezone");
   await expect(week(page)).toContainText("stored in UTC");
-  const days = week(page).getByRole("list", { name: "Week" }).getByRole("group");
+  // The seven-day <ul> of column groups is now a role=group rail of seven tappable day chips.
+  const days = weekRail(page).getByRole("button");
   await expect(days).toHaveCount(7);
-  await expect(days.first()).toHaveAccessibleName("Mon, Nov 9");
-  await expect(days.last()).toHaveAccessibleName("Sun, Nov 15");
-  // Today (Thu 12 Nov) is the only highlighted column.
-  await expect(week(page).locator('[aria-current="date"]')).toHaveCount(1);
-  await expect(day(page, "Thu, Nov 12")).toHaveAttribute("aria-current", "date");
+  await expect(days.first()).toHaveAccessibleName(/^Mon, Nov 9: \d+ appointments?$/);
+  await expect(days.last()).toHaveAccessibleName(/^Sun, Nov 15: \d+ appointments?$/);
+  // Today (Thu 12 Nov) is the only highlighted chip in the rail; the agenda header is marked too.
+  await expect(weekRail(page).locator('[aria-current="date"]')).toHaveCount(1);
+  await expect(day(page, "Thu, Nov 12").locator('[aria-current="date"]')).toHaveCount(1);
   // 04:30 UTC is 10:00 AM in Kolkata, on Thursday.
   const block = day(page, "Thu, Nov 12").getByRole("listitem");
   await expect(block).toContainText(/10:00\sAM/);
@@ -141,12 +148,13 @@ test("appointment blocks use the type colours", async ({ page }) => {
   ]);
   const blocks = day(page, "Thu, Nov 12").getByRole("listitem");
   await expect(blocks).toHaveCount(4);
-  // Each block names its type, so it can be found by it.
-  const ofType = (type: string) => blocks.filter({ hasText: type });
-  await expect(ofType("Session")).toHaveCSS("border-left-color", "rgb(255, 74, 31)"); // workout orange
-  await expect(ofType("Call")).toHaveCSS("border-left-color", "rgb(14, 124, 107)"); // nutrition teal
-  await expect(ofType("Check-in review")).toHaveCSS("border-left-color", "rgb(124, 92, 252)"); // recovery violet
-  await expect(ofType("Other")).toHaveCSS("border-left-color", "rgb(217, 119, 6)"); // habit amber
+  // Each row still names its type on a labelled chip; the type colour moved off the left border onto
+  // a small bg-type-* rail span, so assert the same four tokens on that span's background.
+  const rail = (type: string) => blocks.filter({ hasText: type }).locator('span[aria-hidden="true"]').first();
+  await expect(rail("Session")).toHaveCSS("background-color", "rgb(255, 74, 31)"); // workout orange
+  await expect(rail("Call")).toHaveCSS("background-color", "rgb(14, 124, 107)"); // nutrition teal
+  await expect(rail("Check-in review")).toHaveCSS("background-color", "rgb(124, 92, 252)"); // recovery violet
+  await expect(rail("Other")).toHaveCSS("background-color", "rgb(217, 119, 6)"); // habit amber
 });
 
 test("previous / next week and back to today", async ({ page }) => {
@@ -160,7 +168,9 @@ test("previous / next week and back to today", async ({ page }) => {
   await week(page).getByRole("button", { name: "Previous week" }).click();
   await week(page).getByRole("button", { name: "Previous week" }).click();
   await expect(week(page)).toContainText("Nov 2 - Nov 8, 2026");
-  await expect(week(page)).toContainText("No appointments this week.");
+  // Empty-week copy was rewritten around a single clear statement and a call to action.
+  await expect(week(page)).toContainText("Nothing booked this week.");
+  await expect(week(page)).toContainText("Your week is open");
   await week(page).getByRole("button", { name: "This week" }).click();
   await expect(week(page)).toContainText("Nov 9 - Nov 15, 2026");
   await expect(week(page)).toContainText("Strength session");
@@ -169,7 +179,8 @@ test("previous / next week and back to today", async ({ page }) => {
 
 test("add: local times are sent as UTC", async ({ page }) => {
   const server = await mockSchedule(page, []);
-  await week(page).getByRole("button", { name: "Add appointment" }).click();
+  // An empty week shows two "Add appointment" buttons (header + empty state); either opens the form.
+  await week(page).getByRole("button", { name: "Add appointment" }).first().click();
   const form = page.getByRole("form", { name: "Add appointment" });
   await expect(form.getByLabel("Client").locator("option")).toHaveText(["Maya Patel", "Arjun Rao"]);
   await form.getByLabel("Client").selectOption({ label: "Arjun Rao" });
@@ -197,7 +208,8 @@ test("add: local times are sent as UTC", async ({ page }) => {
 
 test("the form refuses an end before the start, in plain words, without calling the server", async ({ page }) => {
   const server = await mockSchedule(page, []);
-  await week(page).getByRole("button", { name: "Add appointment" }).click();
+  // An empty week shows two "Add appointment" buttons (header + empty state); either opens the form.
+  await week(page).getByRole("button", { name: "Add appointment" }).first().click();
   const form = page.getByRole("form", { name: "Add appointment" });
   await form.getByLabel("Title").fill("Backwards");
   await form.getByLabel("Starts").fill("2026-11-13T10:00");
@@ -225,10 +237,16 @@ test("edit: the form shows local times and PATCHes UTC", async ({ page }) => {
 test("status can be changed from the block", async ({ page }) => {
   const server = await mockSchedule(page, [appt()]);
   const block = day(page, "Thu, Nov 12").getByRole("listitem");
-  await block.getByLabel("Status for Strength session").selectOption("No-show");
+  // The full-width <select> became a status pill that opens a modal of four labelled choices.
+  await block.getByRole("button", { name: "Status for Strength session" }).click();
+  const statusDialog = page.getByRole("dialog", { name: "Change appointment status" });
+  await expect(statusDialog).toContainText("Strength session · Maya Patel");
+  await statusDialog.getByRole("button", { name: "Set status No-show" }).click();
   await expect.poll(() => server.patches.length).toBe(1);
   expect(server.patches[0]).toEqual({ id: "ap1", status: "No-show" });
-  await expect(block.getByLabel("Status for Strength session")).toHaveValue("No-show");
+  // The pill's visible label is the current status; the change is reversible from the toast.
+  await expect(block.getByRole("button", { name: "Status for Strength session" })).toContainText("No-show");
+  await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
 });
 
 test("delete asks first; Cancel keeps it, Delete removes it", async ({ page }) => {
