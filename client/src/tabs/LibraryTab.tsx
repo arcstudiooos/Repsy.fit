@@ -50,18 +50,24 @@ export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClient
 
   return (
     <>
-      <h2 className="text-2xl">Library</h2>
-      <div role="group" aria-label="Library view" className="mt-3 flex flex-wrap gap-2">
+      <h2 className="page-title">Library</h2>
+      <p className="text-sm text-dim">Build once, reuse for many clients — templates, programs and the tools behind them.</p>
+      {/* One quiet tab strip instead of six filled boxes. All six destinations stay reachable in the
+          original order (muscle memory), with the utility separated by a hairline and muted. */}
+      <div
+        role="group"
+        aria-label="Library view"
+        className="mt-3 flex flex-nowrap gap-1 overflow-x-auto border-b border-border"
+      >
         {LIBRARY_VIEWS.map((v) => (
           <button
             key={v}
             type="button"
             aria-pressed={view === v}
             onClick={() => setView(v)}
-            className={
-              "min-h-10 rounded-full border px-4 text-sm font-semibold " +
-              (view === v ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
-            }
+            className={`relative flex min-h-11 shrink-0 items-center px-3 text-sm font-semibold transition-colors first:pl-0 ${
+              view === v ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent2" : "text-dim hover:text-text"
+            }`}
           >
             {v}
           </button>
@@ -88,6 +94,7 @@ export function LibraryTab({ view: viewProp, onViewChange, onAssign, macroClient
 function TemplatesView({ onAssign }: { onAssign: Props["onAssign"] }) {
   const query = useQuery({ queryKey: queryKeys.templates, queryFn: listTemplates });
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   // null = no form; "new" = creating; a template = editing it.
   const [editing, setEditing] = useState<WorkoutTemplate | "new" | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
@@ -125,7 +132,7 @@ function TemplatesView({ onAssign }: { onAssign: Props["onAssign"] }) {
             <input
               id="template-search"
               type="search"
-              className={inputClass}
+              className="min-h-11 w-full rounded-none border-0 border-b border-border-strong bg-transparent px-0 text-text placeholder:text-dim focus:border-accent2"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name"
@@ -144,54 +151,82 @@ function TemplatesView({ onAssign }: { onAssign: Props["onAssign"] }) {
         ) : query.isError ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : all.length === 0 ? (
-          <p className="rounded-card bg-surface2 px-4 py-6 text-center text-dim">
+          <p className="mt-4 py-8 text-center text-dim">
             No templates yet. Create your first one with New template.
           </p>
         ) : shown.length === 0 ? (
-          <p className="rounded-card bg-surface2 px-4 py-6 text-center text-dim">No template matches "{search.trim()}".</p>
+          <p className="mt-4 py-8 text-center text-dim">No template matches "{search.trim()}".</p>
         ) : (
-          <ul aria-label="Templates" className="flex flex-col gap-3">
-            {shown.map((t) => (
-              <li key={t.id} className="card p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="card-title">{t.name}</h3>
-                  {t.focus !== "" && (
-                    <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{t.focus}</span>
+          <ul aria-label="Templates" className="mt-4 flex flex-col divide-y divide-border">
+            {shown.map((t) => {
+              const full = expanded.has(t.id);
+              const rows = full ? t.exercises : t.exercises.slice(0, 3);
+              return (
+              <li key={t.id} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-start sm:gap-4">
+                {/* One calm typographic row: no framed chip, no nested boxes, no mono numerals. */}
+                <div className="min-w-0 w-full sm:flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <h3 className="card-title">{t.name}</h3>
+                    {t.focus !== "" && <span className="text-sm text-dim">· {t.focus}</span>}
+                    <span className="ml-auto whitespace-nowrap text-xs tabular-nums text-dim">
+                      {t.exercises.length} {t.exercises.length === 1 ? "exercise" : "exercises"}
+                    </span>
+                  </div>
+                  <ol className="mt-2 flex flex-col gap-1">
+                    {rows.map((e, i) => (
+                      <li key={i} className="text-sm text-text">
+                        <span className="font-semibold">{e.name}</span>{" "}
+                        <span className="tabular-nums text-dim">
+                          {e.sets} × {e.reps} · Rest {e.rest}s
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  {t.exercises.length > 3 && (
+                    <button
+                      type="button"
+                      aria-expanded={full}
+                      onClick={() =>
+                        setExpanded((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(t.id)) next.delete(t.id);
+                          else next.add(t.id);
+                          return next;
+                        })
+                      }
+                      className="mt-1 min-h-10 text-sm font-semibold text-accent-text underline underline-offset-4"
+                    >
+                      {full ? "Show fewer" : `View all ${t.exercises.length} exercises`}
+                    </button>
                   )}
-                  <span className="font-mono text-xs text-dim">
-                    {t.exercises.length} {t.exercises.length === 1 ? "exercise" : "exercises"}
-                  </span>
+                  {t.notes !== "" && <p className="mt-2 whitespace-pre-wrap text-sm text-dim">{t.notes}</p>}
                 </div>
-                <ol className="mt-2 flex flex-col gap-0.5 text-sm text-text">
-                  {t.exercises.map((e, i) => (
-                    <li key={i}>
-                      <span className="font-semibold">{e.name}</span>{" "}
-                      <span className="font-mono text-dim">
-                        {e.sets} × {e.reps} · Rest {e.rest}s
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-                {t.notes !== "" && <p className="mt-2 whitespace-pre-wrap text-sm text-dim">{t.notes}</p>}
-                <div className="mt-3 flex flex-wrap gap-2">
+                {/* A three-column grid on phone keeps all actions on ONE row — no orphaned Delete,
+                    no tall empty gap — and keeps Assign visibly first. */}
+                <div className="grid w-full grid-cols-3 items-center gap-2 sm:flex sm:w-auto">
+                  {/* Assign is the unmistakable first action; the one orange stays on New template. */}
                   <button
                     type="button"
                     aria-label={`Assign ${t.name} to client`}
                     aria-expanded={assigning === t.id}
                     onClick={() => setAssigning(assigning === t.id ? null : t.id)}
-                    className="btn btn-primary"
+                    className="btn btn-secondary min-h-11 justify-center whitespace-nowrap"
                   >
-                    Assign to client
+                    <span className="sm:hidden">Assign</span>
+                    <span className="hidden sm:inline">Assign to client</span>
+                    <span aria-hidden="true" className="font-bold text-accent2">→</span>
                   </button>
-                  <button type="button" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)} className={smallButton}>
+                  <button type="button" aria-label={`Edit ${t.name}`} onClick={() => setEditing(t)} className={`${smallButton} justify-center`}>
                     Edit
                   </button>
-                  <button type="button" aria-label={`Delete ${t.name}`} onClick={() => setToDelete(t)} className={smallButton}>
+                  {/* Destructive action: amber, last, and behind the existing confirm. */}
+                  <button type="button" aria-label={`Delete ${t.name}`} onClick={() => setToDelete(t)} className="btn btn-ghost min-h-11 justify-center text-amber-text">
                     Delete
                   </button>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>
