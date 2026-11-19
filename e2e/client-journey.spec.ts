@@ -117,7 +117,8 @@ test("5. the coach sees Done by client with the effort and note, and a Home aler
   await expect(card).toContainText("Effort 8/10");
   await expect(card).toContainText("Felt strong");
   await tab(coach, "Home").click();
-  await expect(panel(coach).getByRole("list", { name: "Client alerts" })).toContainText(`${CLIENT_NAME} finished ${WORKOUT}`, { timeout: 30_000 });
+  // Blind edit (no live DB locally): the Home "Client alerts" list is now "Recent activity".
+  await expect(panel(coach).getByRole("list", { name: "Recent activity" })).toContainText(`${CLIENT_NAME} finished ${WORKOUT}`, { timeout: 30_000 });
 });
 
 test("6. messages both ways: client -> coach -> client", async () => {
@@ -129,7 +130,8 @@ test("6. messages both ways: client -> coach -> client", async () => {
 
   await coach.goto("/app");
   await tab(coach, "Home").click();
-  await panel(coach).getByRole("list", { name: "Client alerts" }).getByRole("button", { name: new RegExp(`${CLIENT_NAME} sent 1 new message`) }).click({ timeout: 30_000 });
+  // Blind edit: check-ins/messages are now rows in "Recent activity"; the unread row's action button is "Open chat".
+  await panel(coach).getByRole("list", { name: "Recent activity" }).getByRole("listitem").filter({ hasText: CLIENT_NAME }).getByRole("button", { name: "Open chat" }).click({ timeout: 30_000 });
   const pane = coach.getByRole("region", { name: `Conversation with ${CLIENT_NAME}` });
   await expect(pane).toContainText("legs are sore", { timeout: 30_000 });
   const reply = coach.getByLabel(`Message to ${CLIENT_NAME}`);
@@ -153,7 +155,8 @@ test("7. the client's weekly check-in lands in the coach's review queue", async 
 
   await coach.goto("/app");
   await tab(coach, "Home").click();
-  await expect(panel(coach).getByRole("region", { name: "Review queue" })).toContainText(CLIENT_NAME, { timeout: 30_000 });
+  // Blind edit: the Home "Review queue" card is now the "Action centre".
+  await expect(panel(coach).getByRole("region", { name: "Action centre" })).toContainText(CLIENT_NAME, { timeout: 30_000 });
 });
 
 test("8. the client deletes their account; the coach no longer sees them", async () => {

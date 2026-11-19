@@ -109,7 +109,9 @@ test("Clients shows the roster; a client card opens the workspace with sub-tabs 
   await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await page.getByRole("button", { name: "Open Leo Brooks" }).click();
+  // Leo is at-risk in this mock, so he also appears in the relocated "Needs attention" panel; the roster
+  // card (which also shows his goal) is the real target, so filter to it to stay unambiguous.
+  await page.getByRole("button", { name: "Open Leo Brooks" }).filter({ hasText: "Muscle gain" }).click();
   await expect(header(page)).toContainText("Leo Brooks");
   await expect(header(page)).toContainText("Muscle gain");
   const sub = page.getByRole("tablist", { name: "Client workspace: Leo Brooks" }).getByRole("tab");
@@ -129,7 +131,7 @@ test("Clients shows the roster; a client card opens the workspace with sub-tabs 
   await expect(page.getByRole("button", { name: "Back to all clients" })).toBeHidden();
   await page.getByRole("navigation", { name: "Clients" }).getByRole("button", { name: "All clients" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Clients" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open Leo Brooks" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Open Leo Brooks" }).filter({ hasText: "Muscle gain" })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("Switch client: a searchable list that works with 30+ clients and by keyboard", async ({ page }) => {
@@ -201,50 +203,36 @@ test("Business is money and the numbers about it, nothing else", async ({ page }
   ]);
 });
 
-test("Home: the morning job first, with counts", async ({ page }) => {
+test("Home: the KPIs and the dashboard sections, in priority order", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
   const panel = page.getByRole("tabpanel").first();
-  // Nov 2026 redesign. DOM order IS visual order and tab order (no `order-*` utilities), so this
-  // list pins the priority of the dashboard, not just its markup:
-  //   Today's Tasks leads because it is the only list with a verb attached - the morning job.
-  //   Client activity was demoted below the check-ins it provides context for: "joined 3 days ago"
-  //   is a nice-to-know, and it used to cost a full row above the actual work.
-  await expect(panel.getByRole("heading", { level: 3 })).toHaveText([
-    "Today's Tasks",
-    "Needs attention · 1",
-    "Review queue",
-    "New check-ins · 7",
-    "Client activity · 1",
-    "AI weekly summary",
-  ]);
+  // Nov 2026 redesign: three KPI buttons summarise the roster (total / at-risk / pending reviews) at a glance.
+  await expect(panel.getByRole("button", { name: "Total clients: 32. Open the client directory." })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "At risk: 1. Open clients that need attention." })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Pending reviews: 0. Open the action centre." })).toBeVisible();
+  // DOM order IS visual order and tab order (no `order-*` utilities), so this pins the dashboard's priority:
+  // the action centre and client health lead, then the morning job (Today's tasks) beside recent activity,
+  // then the full-width weekly report.
+  const labels = await panel.locator("section[aria-label]").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
+  expect(labels).toEqual(["Action centre", "Client health", "Today's tasks", "Recent activity", "Weekly coaching report"]);
 });
 
-test("Home: new check-ins grouped by client, 5 rows then See all; a row opens that client's workspace", async ({ page }) => {
+test("Home: recent check-ins are rows in Recent activity whose View check-in opens the client's workspace", async ({ page }) => {
   await mockApi(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
-  const rows = page.getByRole("list", { name: "New check-ins" }).getByRole("listitem");
-  await expect(rows).toHaveCount(5);
-  await expect(rows.nth(0)).toContainText("Maya Patel");
-  await expect(rows.nth(0)).toContainText("+2 earlier");
-  await expect(rows.nth(0)).toContainText("energy 4/5");
-  await expect(rows.nth(1)).toContainText("Leo Brooks");
-  await expect(rows.nth(1)).not.toContainText("earlier");
-  const seeAll = page.getByRole("button", { name: "See all (7)" });
-  await seeAll.click();
-  await expect(rows).toHaveCount(7);
-  await page.getByRole("button", { name: "Show fewer" }).click();
-  await expect(rows).toHaveCount(5);
-  // Maya's latest is a daily check-in, so her row opens her Check-ins.
-  await page.getByRole("button", { name: "Open check-ins: Maya Patel" }).click();
+  const activity = page.getByRole("list", { name: "Recent activity" });
+  // Check-ins are no longer grouped into their own card; each is a row in Recent activity with a View check-in button.
+  // Maya's newest is a daily check-in, so her first row opens her Check-ins.
+  await activity.getByRole("listitem").filter({ hasText: "Maya Patel" }).first().getByRole("button", { name: "View check-in" }).click();
   await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: "Check-ins", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(header(page)).toContainText("Maya Patel");
-  // Leo's latest is a weekly progress log, which lives on Progress.
+  // Leo's newest is a weekly progress log, which opens Progress.
   await page.getByRole("tab", { name: "Home" }).click();
-  await page.getByRole("list", { name: "New check-ins" }).getByRole("button", { name: "Open progress: Leo Brooks" }).click();
+  await activity.getByRole("listitem").filter({ hasText: "Leo Brooks" }).first().getByRole("button", { name: "View check-in" }).click();
   await expect(page.getByRole("tab", { name: "Progress", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(header(page)).toContainText("Leo Brooks");
 });

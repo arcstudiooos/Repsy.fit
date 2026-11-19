@@ -1,8 +1,8 @@
-// The Home dashboard's layout contract (Nov 2026 redesign).
+// The Home dashboard's layout contract (Nov 2026 coach-command-centre redesign).
 //
-// Home used to be six stacked full-width cards. Three of the six were usually EMPTY, so the screen
-// spent most of its height saying nothing was wrong. These tests pin the rules that fixed it, so a
-// later change cannot quietly bring the wall of rows back.
+// Home opens with three KPI buttons, then a 2x2 card grid (Action centre + Client health, then
+// Today's tasks + Recent activity), then a full-width Weekly coaching report. These tests pin those
+// rules so a later change cannot quietly bring back the old wall of stacked, usually-empty rows.
 import { expect, test, type Page, type Route, emptyApi } from "./fixtures";
 
 const client = (id: string, name: string) => ({
@@ -41,42 +41,62 @@ async function openHome(page: Page, data: Record<string, unknown> = {}) {
   await page.getByRole("tab", { name: "Home" }).click();
 }
 
-const rail = (page: Page) => page.getByRole("group", { name: "Today at a glance" });
+const panel = (page: Page) => page.getByRole("tabpanel").first();
 
-test("the counts live on one rail instead of a card each", async ({ page }) => {
+test("the three KPIs are buttons that navigate", async ({ page }) => {
   await openHome(page, {
     "/clients": [client("c1", "Maya Patel"), client("c2", "Garima Sharma"), client("c3", "Leo Brooks")],
-    "/tasks/today": { date: "2026-11-16", tasks: [idle("c1", "Maya Patel", 9), idle("c2", "Garima Sharma", 12)] },
     "/at-risk": { date: "2026-11-16", clients: [{ clientId: "c1", clientName: "Maya Patel", reasons: [{ rule: "no-checkin", text: "No check-in for 8 days" }] }] },
     "/review-queue": { pendingCount: 2, items: [] },
   });
-  // Five facts on one line: what used to need three near-empty cards to say.
-  await expect(rail(page)).toContainText("Clients");
-  await expect(rail(page)).toContainText("Needs attention");
-  await expect(rail(page)).toContainText("Waiting on you");
-  await expect(rail(page)).toContainText("Idle 7+ days");
-  await expect(rail(page)).toContainText("Check-ins today");
+  // The whole KPI card is one button with a chevron, so it is obvious it goes somewhere - the old
+  // rail was five flat numbers nobody knew were clickable.
+  const kpis = panel(page).getByRole("button", { name: /\. Open (the client directory|clients that need attention|the action centre)\.$/ });
+  await expect(kpis).toHaveCount(3);
+  await expect(panel(page).getByRole("button", { name: "Total clients: 3. Open the client directory." })).toBeVisible();
+  await expect(panel(page).getByRole("button", { name: "At risk: 1. Open clients that need attention." })).toBeVisible();
+  await expect(panel(page).getByRole("button", { name: "Pending reviews: 2. Open the action centre." })).toBeVisible();
+
+  // The first two KPIs jump to the Clients tab.
+  await panel(page).getByRole("button", { name: /^Total clients:/ }).click();
+  await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
+
+  // The third stays on Home and reveals the Action centre.
+  await page.getByRole("tab", { name: "Home" }).click();
+  await panel(page).getByRole("button", { name: /^Pending reviews:/ }).click();
+  await expect(page.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
+  await expect(panel(page).getByRole("region", { name: "Action centre" })).toBeVisible();
 });
 
-test("the dashboard is a grid, not a stack of full-width rows", async ({ page }) => {
-  await openHome(page, {
-    "/clients": [client("c1", "Maya Patel")],
-    "/tasks/today": { date: "2026-11-16", tasks: [idle("c1", "Maya Patel", 9)] },
-  });
-  await page.setViewportSize({ width: 1280, height: 900 });
-  const tasks = page.getByRole("region", { name: "Today's Tasks" });
-  const attention = page.getByRole("region", { name: "Needs attention" });
-  const tasksBox = await tasks.boundingBox();
-  const attentionBox = await attention.boundingBox();
-  expect(tasksBox).not.toBeNull();
-  expect(attentionBox).not.toBeNull();
-  // Side by side: they share a row, so an empty block cannot cost a full row of its own.
-  expect(attentionBox!.x).toBeGreaterThan(tasksBox!.x + tasksBox!.width - 10);
-  // And neither one spans the whole dashboard.
-  expect(tasksBox!.width).toBeLessThan(1100);
+test("the dashboard is a 2x2 grid with a full-width report, not a stack of full-width rows", async ({ page }) => {
+  await openHome(page, { "/clients": [client("c1", "Maya Patel")] });
+  await page.setViewportSize({ width: 1280, height: 1100 });
+  const action = panel(page).getByRole("region", { name: "Action centre" });
+  const health = panel(page).getByRole("region", { name: "Client health" });
+  const tasks = panel(page).getByRole("region", { name: "Today's tasks" });
+  const activity = panel(page).getByRole("region", { name: "Recent activity" });
+  const weekly = panel(page).getByRole("region", { name: "Weekly coaching report" });
+  const [a, h, t, ac, w] = await Promise.all([
+    action.boundingBox(),
+    health.boundingBox(),
+    tasks.boundingBox(),
+    activity.boundingBox(),
+    weekly.boundingBox(),
+  ]);
+  // Row 1: Action centre and Client health share a row (side by side, tops aligned).
+  expect(h!.x).toBeGreaterThan(a!.x + a!.width - 10);
+  expect(Math.abs(h!.y - a!.y)).toBeLessThan(40);
+  // Row 2: Today's tasks and Recent activity share the next row, below row 1.
+  expect(ac!.x).toBeGreaterThan(t!.x + t!.width - 10);
+  expect(t!.y).toBeGreaterThan(a!.y + 10);
+  // Neither grid card spans the whole dashboard, so an empty block cannot cost a full row of its own.
+  expect(a!.width).toBeLessThan(1100);
+  // The weekly report is full-width and sits below the grid.
+  expect(w!.width).toBeGreaterThan(a!.width + 50);
+  expect(w!.y).toBeGreaterThan(t!.y + 10);
 });
 
-test("a repeated row action is quiet; the loud button is not repeated", async ({ page }) => {
+test("the Today's tasks row actions are quiet ghost buttons, not loud repeated ones", async ({ page }) => {
   await openHome(page, {
     "/clients": [client("c1", "Maya Patel"), client("c2", "Garima Sharma")],
     "/tasks/today": {
@@ -84,12 +104,11 @@ test("a repeated row action is quiet; the loud button is not repeated", async ({
       tasks: [idle("c1", "Maya Patel", 9), idle("c2", "Garima Sharma", 12), idle("c3", "Leo Brooks", 15)],
     },
   });
-  const tasks = page.getByRole("region", { name: "Today's Tasks" });
-  // Every row offers the same two actions, so BOTH have to be quiet: "New plan" finishes the job
-  // in a dialog, "AI Coach" is the route into the conversation.
-  const rowButtons = tasks.getByRole("button", { name: /New plan|AI Coach/ });
+  const tasks = panel(page).getByRole("region", { name: "Today's tasks" });
+  // Every idle row offers the same two actions ("New plan" and "AI Coach"), so BOTH stay quiet:
+  // three identical solid buttons would mean none of them is important - these are ghost.
+  const rowButtons = tasks.getByRole("button", { name: /New plan|Plan with AI Coach/ });
   await expect(rowButtons).toHaveCount(6);
-  // Three identical solid buttons would mean none of them is important: these are ghost.
   for (const cls of await rowButtons.evaluateAll((els) => els.map((e) => e.className))) {
     expect(cls).toContain("btn-ghost");
     expect(cls).not.toContain("btn-primary");
@@ -98,14 +117,12 @@ test("a repeated row action is quiet; the loud button is not repeated", async ({
 
 test("on a phone it is a single column and every card is still reachable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await openHome(page, {
-    "/clients": [client("c1", "Maya Patel")],
-    "/tasks/today": { date: "2026-11-16", tasks: [idle("c1", "Maya Patel", 9)] },
-  });
-  const tasks = await page.getByRole("region", { name: "Today's Tasks" }).boundingBox();
-  const checkIns = await page.getByRole("region", { name: "New check-ins" }).boundingBox();
+  await openHome(page, { "/clients": [client("c1", "Maya Patel")] });
+  const action = await panel(page).getByRole("region", { name: "Action centre" }).boundingBox();
+  const health = await panel(page).getByRole("region", { name: "Client health" }).boundingBox();
   // Stacked, not side by side.
-  expect(checkIns!.y).toBeGreaterThan(tasks!.y + tasks!.height - 10);
+  expect(health!.y).toBeGreaterThan(action!.y + action!.height - 10);
   // No horizontal overflow.
-  expect(tasks!.width).toBeLessThanOrEqual(390);
+  expect(action!.width).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
 });

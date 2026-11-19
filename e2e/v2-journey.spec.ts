@@ -114,9 +114,10 @@ test("5. the coach assigns a program to the client", async () => {
   await form.getByRole("button", { name: "Assign plan" }).click();
   await expect(panel(page).getByRole("list", { name: "Assignments" })).toContainText("Journey leg day", { timeout: 30_000 });
 
-  // Home's Today's Tasks lists it now - while it is still Active (Done work drops off the list).
+  // Home's Today's tasks lists it now - while it is still Active (Done work drops off the list).
   await tab(page, "Home").click();
-  await expect(panel(page).getByRole("region", { name: "Today's Tasks" })).toContainText("Workout due today: Journey leg day", {
+  // Blind edit (no live DB locally): the card's aria-label is now lower-case "Today's tasks".
+  await expect(panel(page).getByRole("region", { name: "Today's tasks" })).toContainText("Workout due today: Journey leg day", {
     timeout: 30_000,
   });
 });
@@ -239,18 +240,22 @@ test("11. Home shows the coach the result: the check-in waits in the review queu
   await page.goto("/app");
   await tab(page, "Home").click();
   // Every new progress check-in waits in the review queue for the coach (Prompt 52).
-  await expect(panel(page).getByRole("region", { name: "Review queue" })).toContainText(CLIENT_NAME, { timeout: 30_000 });
-  // The smart-alerts card ("Needs attention") and Today's Tasks render from real data, not an error.
-  await expect(panel(page).getByRole("region", { name: "Needs attention" })).toBeVisible();
-  await expect(panel(page).getByRole("region", { name: "Today's Tasks" })).toBeVisible();
+  // Blind edit (no live DB locally): the Home "Review queue" card is now the "Action centre".
+  await expect(panel(page).getByRole("region", { name: "Action centre" })).toContainText(CLIENT_NAME, { timeout: 30_000 });
+  // The at-risk card moved off Home to the Clients tab; Client health is Home's roster-status card, and
+  // Today's tasks render from real data, not an error.
+  await expect(panel(page).getByRole("region", { name: "Client health" })).toBeVisible();
+  await expect(panel(page).getByRole("region", { name: "Today's tasks" })).toBeVisible();
   await expect(panel(page).getByRole("alert")).toHaveCount(0);
 });
 
 test("12. the weekly summary generates (AI fallback) and a CSV really downloads", async () => {
   await page.goto("/app");
   await tab(page, "Home").click();
-  const summary = panel(page).getByRole("region", { name: "AI weekly summary" });
-  await summary.getByRole("button", { name: "Generate this week's summary" }).click();
+  // Blind edit (no live DB locally): the Home "AI weekly summary" card is now "Weekly coaching report",
+  // and its empty-state generate button reads "Generate weekly report".
+  const summary = panel(page).getByRole("region", { name: "Weekly coaching report" });
+  await summary.getByRole("button", { name: "Generate weekly report" }).click();
   // With no AI key CI takes the fallback path: either way the card must end with real text, not an error.
   // AI or the facts fallback, the saved summary always ends with its "Week of ... saved" line.
   await expect(summary).toContainText("Week of", { timeout: 60_000 });

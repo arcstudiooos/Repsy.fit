@@ -499,12 +499,13 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
             selectTab("ai");
           }
         }}
-        onOpenClient={(clientId, sub) => openWorkspace(clientId, sub)}
         onOpenThread={(clientId) => {
           setSelectedClientId(clientId);
           selectTab("messages");
         }}
+        onOpenClient={(clientId, sub) => openWorkspace(clientId, sub)}
         onOpenClients={() => selectTab("clients")}
+        onOpenCalendar={() => selectTab("calendar")}
       />
     );
   } else if (activeTab === "ai") {

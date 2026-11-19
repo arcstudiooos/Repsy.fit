@@ -40,6 +40,8 @@ async function mock(page: Page, opts: { waiting?: unknown[]; alerts?: object; no
     if (path.startsWith("/api/tasks/today")) return route.fulfill({ json: { date: "2026-11-12", tasks: [] } });
     if (path === "/api/checkins/recent") return route.fulfill({ json: { items: [] } });
     if (path === "/api/at-risk") return route.fulfill({ json: { date: "2026-11-12", clients: [] } });
+    if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
+    if (path === "/api/weekly-summary") return route.fulfill({ json: { weekStart: "2026-11-09", summary: null } });
     if (/\/(assignments|chat|progress)$/.test(path)) return route.fulfill({ json: [] });
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
@@ -88,7 +90,7 @@ test("clients who joined with the code carry a badge", async ({ page }) => {
   await expect(sam).not.toContainText("Joined with code");
 });
 
-test("Home: client activity rows - waiting, messages (opens the thread), finished with effort, joined", async ({ page }) => {
+test("Home: recent activity rows - waiting, messages (opens the thread), finished with effort, joined", async ({ page }) => {
   const recent = new Date(Date.now() - 2 * 3_600_000).toISOString();
   await mock(page, {
     alerts: {
@@ -100,32 +102,34 @@ test("Home: client activity rows - waiting, messages (opens the thread), finishe
   });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
-  const alerts = page.getByRole("list", { name: "Client alerts" });
-  await expect(alerts.getByRole("listitem")).toHaveCount(4);
-  await expect(alerts).toContainText("2 clients waiting for approval");
-  await expect(alerts).toContainText("Maya Patel finished Leg day · effort 8/10 · 2 hours ago");
-  await expect(alerts).toContainText('"Tough but good"');
-  await expect(alerts).toContainText("Maya Patel joined with your code");
-  await alerts.getByRole("button", { name: /Sam Lee sent 3 new messages/ }).click();
+  // The "Client activity" card is now "Recent activity"; alerts render as compact rows with named actions.
+  const activity = page.getByRole("list", { name: "Recent activity" });
+  await expect(activity.getByRole("listitem")).toHaveCount(4);
+  await expect(activity).toContainText("2 clients waiting for approval");
+  // The compact row shows effort and time, but not the free-text note (it is no longer surfaced here).
+  await expect(activity).toContainText("Maya Patel finished Leg day · effort 8/10 · 2 hours ago");
+  await expect(activity).toContainText("Maya Patel joined with your code");
+  await activity.getByRole("listitem").filter({ hasText: "Sam Lee" }).getByRole("button", { name: "Open chat" }).click();
   await expect(page.getByRole("tab", { name: "Messages" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "Conversation with Sam Lee" })).toBeVisible();
 });
 
-test("Home: the waiting row opens the Clients tab; no activity shows no card", async ({ page }) => {
+test("Home: the waiting row opens the Clients tab", async ({ page }) => {
   await mock(page, { alerts: { waiting: 1, joined: [], finished: [], unread: [] }, waiting: [W("p1", "Priya Shah")] });
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
-  await page.getByRole("button", { name: /1 client waiting for approval/ }).click();
+  await page.getByRole("list", { name: "Recent activity" }).getByRole("listitem").filter({ hasText: "waiting for approval" }).getByRole("button", { name: "Review" }).click();
   await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("list", { name: "Waiting for approval" })).toBeVisible();
 });
 
-test("Home without any client activity has no Client activity card", async ({ page }) => {
+test("Home without any client activity shows the Recent activity empty state", async ({ page }) => {
   await mock(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Home" }).click();
-  await expect(page.getByRole("region", { name: "Today's Tasks" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Client activity" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Today's tasks" })).toBeVisible();
+  // Recent activity always renders now; with no alerts and no check-ins it shows its empty state.
+  await expect(page.getByRole("region", { name: "Recent activity" })).toContainText("No recent updates from your clients.");
 });
 
 test("a coach whose only people are waiting still finds them (banner on Home, list in Clients)", async ({ page }) => {

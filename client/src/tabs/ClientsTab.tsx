@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteClient, listClients, queryKeys } from "../api";
+import { deleteClient, getAtRiskClients, listClients, queryKeys } from "../api";
 import { initials } from "../ClientHeader";
 import { AddClientForm } from "../components/AddClientForm";
 import { NewPlanDialog } from "../components/NewPlanDialog";
@@ -13,6 +13,7 @@ import type { DemoSeed } from "../lib/useDemoSeed";
 import type { Client } from "../types";
 import { useCoachUnits } from "../lib/useCoachUnits";
 import { showWeight } from "../lib/snapshotFormat";
+import { localToday } from "./AiCoachTab";
 
 // The invite panel (Prompt 65) loads on first open, so its form validation (zod) stays out of /app.
 // Prompt 76: the join-code panel (with the QR encoder) is its own lazy chunk too.
@@ -159,6 +160,7 @@ export function ClientsTab({
           <ClientInvitePanel key={inviteFor.id} client={inviteFor} onClose={() => setInviteFor(null)} />
         </Suspense>
       )}
+      <NeedsAttentionPanel onOpenClient={onOpenClient} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {clients.map((client) => (
           <ClientCard
@@ -191,6 +193,42 @@ export function ClientsTab({
         </ConfirmDialog>
       )}
     </>
+  );
+}
+
+/**
+ * Clients needing attention (relocated Nov 2026 from the Home dashboard). The rules-only at-risk
+ * endpoint, worst first, each with its exact reasons. The Home "At risk" KPI and Client-health links
+ * land here. Clicking a row opens that client's workspace. Renders nothing while everyone is on track,
+ * so a healthy roster is not topped by an empty card.
+ */
+function NeedsAttentionPanel({ onOpenClient }: { onOpenClient: (clientId: string) => void }) {
+  const date = localToday();
+  const query = useQuery({ queryKey: queryKeys.atRisk(date), queryFn: () => getAtRiskClients(date) });
+  const clients = query.data?.clients ?? [];
+  if (query.isPending || query.isError || clients.length === 0) return null;
+
+  return (
+    <section id="needs-attention" aria-label="Needs attention" className="card dense mb-4 scroll-mt-4 p-5">
+      <h3 className="card-title">
+        Needs attention <span className="font-normal text-dim"> · {clients.length}</span>
+      </h3>
+      <p className="text-sm text-dim">Clients a rule flagged this week - look here first.</p>
+      <ul aria-label="Needs attention" className="mt-3 divide-y divide-border">
+        {clients.map((item) => (
+          <li key={item.clientId}>
+            <button type="button" aria-label={`Open ${item.clientName}`} onClick={() => onOpenClient(item.clientId)} className="block w-full py-3 text-left">
+              <span className="block font-semibold text-text">{item.clientName}</span>
+              {item.reasons.map((reason) => (
+                <span key={reason.rule} className="block text-sm text-dim">
+                  {reason.text}
+                </span>
+              ))}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

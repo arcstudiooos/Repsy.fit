@@ -116,8 +116,9 @@ test("an empty card says so in plain words", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Sleep & Recovery" })).toContainText("No sleep or recovery logged");
 });
 
-test("the Needs attention card on Home shows the sleep reason line", async ({ page }) => {
+test("the Needs attention panel on the Clients tab shows the sleep reason line", async ({ page }) => {
   await openTab(page);
-  await page.getByRole("tab", { name: "Home" }).click();
-  await expect(page.getByText("Sleep under 6h average this week")).toBeVisible();
+  // Relocated Nov 2026: the at-risk "Needs attention" panel moved from Home to the top of the Clients tab.
+  await page.getByRole("tab", { name: "Clients" }).click();
+  await expect(page.getByRole("region", { name: "Needs attention" }).getByText("Sleep under 6h average this week")).toBeVisible();
 });
