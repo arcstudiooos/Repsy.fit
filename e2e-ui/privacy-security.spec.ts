@@ -131,6 +131,9 @@ test("Clients carries the permission line", async ({ page }) => {
   await mockApp(page);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
+  // Redesign Nov 2026: the consent line is shown where it's relevant - while the Add-client form is
+  // open - not permanently at the top of the tab. Open the form to see it.
+  await page.getByRole("button", { name: "Add client" }).click();
   await expect(page.getByText("Only add real client data you have permission to store.")).toBeVisible();
 });
 

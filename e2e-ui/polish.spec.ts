@@ -83,6 +83,14 @@ async function mockApi(page: Page, setup: Setup = {}) {
         },
       });
     }
+    // The redesigned Clients tab renders <JoinCodePanel/> (0-client state) and <WaitingList/>
+    // standalone, plus the at-risk flags on cards - they read these endpoints, so answer them with
+    // valid empty data instead of 404ing into error alerts.
+    if (req.method() === "GET" && path === "/api/join-code") {
+      return route.fulfill({ json: { code: "COACH-000000", active: true, approveNewClients: false, link: "https://app.repsy.fit/join/COACH-000000" } });
+    }
+    if (path === "/api/clients/waiting") return route.fulfill({ json: [] });
+    if (req.method() === "GET" && path === "/api/at-risk") return route.fulfill({ json: { date: "2026-11-12", clients: [] } });
     return route.fulfill({ status: 404, json: { error: "Not found" } });
   });
 }

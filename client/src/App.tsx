@@ -448,6 +448,10 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
       <ClientsTab
         selectedClientId={selectedClientId}
         onOpenClient={(clientId) => openWorkspace(clientId, "plans")}
+        onMessage={(clientId) => {
+          setSelectedClientId(clientId);
+          selectTab("messages");
+        }}
         onClientCreated={setSelectedClientId}
         onClientDeleted={(deletedId, nextClientId) => {
           // If the deleted client was selected, select the next remaining one (or none).

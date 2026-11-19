@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { WaitingList } from "./WaitingList";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getJoinCode, queryKeys, regenerateJoinCode, updateJoinCode } from "../api";
 import type { JoinCode } from "../types";
@@ -9,7 +8,7 @@ import { QrCode } from "./QrCode";
 
 // Prompt 76: the coach's one join code. Clients open the link (or type the code) to sign up under
 // this coach. Lazy-loaded with the Clients tab's invite pieces so the QR encoder stays out of /app.
-export function JoinCodePanel() {
+export function JoinCodePanel({ embedded = false }: { embedded?: boolean } = {}) {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: queryKeys.joinCode, queryFn: getJoinCode });
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
@@ -69,14 +68,14 @@ export function JoinCodePanel() {
 
   if (query.isPending) {
     return (
-      <section aria-label="Invite clients" className="card mb-4 p-5" aria-busy="true">
+      <section aria-label="Invite clients" className={embedded ? "" : "card mb-4 p-5"} aria-busy="true">
         <p className="text-sm text-dim">Loading your join code...</p>
       </section>
     );
   }
   if (query.isError || typeof query.data?.code !== "string") {
     return (
-      <section aria-label="Invite clients" className="card mb-4 p-5">
+      <section aria-label="Invite clients" className={embedded ? "" : "card mb-4 p-5"}>
         <p role="alert" className="text-sm font-semibold text-amber-text">
           Couldn't load your join code{query.error ? `: ${plainErrorMessage(query.error)}` : "."}
         </p>
@@ -92,11 +91,11 @@ export function JoinCodePanel() {
     "btn btn-secondary min-h-11";
 
   return (
-    <section aria-label="Invite clients" className="card mb-4 p-4">
+    <section aria-label="Invite clients" className={embedded ? "" : "card mb-4 p-4"}>
       {/* Compact bar: the code and the three share actions. Settings sit behind "Invite settings". */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h3 className="card-title">Invite clients</h3>
-        <p className={`font-mono text-xl font-bold tracking-wider ${off ? "text-dim line-through" : "text-text"}`} data-testid="join-code">
+        {!embedded && <h3 className="card-title">Invite clients</h3>}
+        <p className={`tabular-nums text-xl font-bold tracking-wider ${off ? "text-dim line-through" : "text-text"}`} data-testid="join-code">
           {jc.code}
         </p>
         <div className="flex flex-wrap gap-2 sm:ml-auto">
@@ -197,8 +196,6 @@ export function JoinCodePanel() {
           Your current code and link ({jc.code}) will stop working straight away. Clients who already joined are not affected.
         </ConfirmDialog>
       )}
-      {/* Prompt 84: clients waiting for approval, with Approve / Decline - always shown, never folded away. */}
-      <WaitingList />
     </section>
   );
 }

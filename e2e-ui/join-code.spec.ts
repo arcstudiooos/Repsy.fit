@@ -47,6 +47,9 @@ async function open(page: Page, opts: { failFirst?: boolean; share?: boolean } =
   }
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
+  // Redesign Nov 2026: with clients on the roster, the invite config lives in a modal behind the
+  // header's "Invite" button (no longer a panel at the top of the Clients tab).
+  await page.getByRole("button", { name: "Invite", exact: true }).click();
   const panel = page.getByRole("region", { name: "Invite clients" });
   return { panel, calls, recover: () => (state.failing = false) };
 }

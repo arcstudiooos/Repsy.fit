@@ -324,23 +324,28 @@ test("client cards show the last check-in and adherence from GET /api/clients (n
   await openTab(page, "Clients");
   const maya = panel(page).getByRole("button", { name: "Open Maya Patel" });
   await expect(maya).toContainText("Checked in 3 days ago");
-  await expect(maya).toContainText("Adherence 82%");
+  // Redesign Nov 2026: the card shows adherence as a number + a progress bar (role=img,
+  // aria-label "Adherence 82%"), not the old bold "Adherence 82%" string.
+  await expect(maya).toContainText("82%");
+  await expect(maya.getByRole("img", { name: "Adherence 82%" })).toBeVisible();
   await expect(maya).not.toContainText("assignments");
   const leo = panel(page).getByRole("button", { name: "Open Leo Brooks" });
   await expect(leo).toContainText("No check-ins yet");
   await expect(leo).not.toContainText("Adherence");
   expect(assignmentGets).toEqual([]);
-  // "Client access" stays on the card; Delete moved into the ⋯ menu.
-  await expect(panel(page).getByRole("button", { name: "Client access for Maya Patel" })).toHaveText("Client access");
+  // Redesign Nov 2026: "Client access" and Delete are both menu items now; the card's visible
+  // controls are the Message button + the ⋯ overflow (neither is a bare card button any more).
+  await expect(panel(page).getByRole("button", { name: "Client access for Maya Patel" })).toHaveCount(0);
   await expect(panel(page).getByRole("button", { name: "Delete Maya Patel" })).toHaveCount(0);
+  await expect(panel(page).getByRole("button", { name: "Message Maya Patel" })).toBeVisible();
   const more = panel(page).getByRole("button", { name: "More actions for Maya Patel" });
   await expect(more).toHaveAttribute("aria-haspopup", "menu");
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");
-  // The menu opens with its FIRST item focused. Nov 2026 added "New plan" above Delete, so the
-  // destructive item is no longer the one sitting under the keyboard when the menu opens - which is
-  // the better order anyway.
-  await expect(page.getByRole("menuitem")).toHaveText(["New plan", "Delete"]);
+  // The menu opens with its FIRST item focused. Nov 2026 added "New plan" above, and "Client access"
+  // moved in from the card, so the destructive item is no longer the one sitting under the keyboard
+  // when the menu opens - which is the better order anyway.
+  await expect(page.getByRole("menuitem")).toHaveText(["New plan", "Client access", "Delete"]);
   await expect(page.getByRole("menuitem", { name: "New plan" })).toBeFocused();
   await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(page.getByRole("dialog")).toContainText("Delete Maya Patel?");

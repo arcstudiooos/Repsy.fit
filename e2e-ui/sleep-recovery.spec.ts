@@ -116,9 +116,12 @@ test("an empty card says so in plain words", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Sleep & Recovery" })).toContainText("No sleep or recovery logged");
 });
 
-test("the Needs attention panel on the Clients tab shows the sleep reason line", async ({ page }) => {
+test("an at-risk client's card shows the sleep reason line on the Clients tab", async ({ page }) => {
   await openTab(page);
-  // Relocated Nov 2026: the at-risk "Needs attention" panel moved from Home to the top of the Clients tab.
+  // Redesign Nov 2026: the separate "Needs attention" panel is gone; at-risk reasons now render on
+  // the flagged client's own card in the roster (amber "Needs attention" chip + each reason line).
   await page.getByRole("tab", { name: "Clients" }).click();
-  await expect(page.getByRole("region", { name: "Needs attention" }).getByText("Sleep under 6h average this week")).toBeVisible();
+  const maya = page.getByRole("button", { name: "Open Maya Patel" });
+  await expect(maya).toContainText("Needs attention");
+  await expect(maya).toContainText("Sleep under 6h average this week");
 });

@@ -42,12 +42,16 @@ async function openClients(page: Page) {
 
 test("inviting a client near the bottom leaves the coach where they were", async ({ page }) => {
   await openClients(page);
-  const trigger = page.getByRole("button", { name: "Client access for Client 11" });
-  await trigger.scrollIntoViewIfNeeded();
+  // Redesign Nov 2026: "Client access" opens from the card's ⋯ menu now; the dialog it opens still
+  // sits over the roster without moving the page.
+  const more = page.getByRole("button", { name: "More actions for Client 11" });
+  await more.scrollIntoViewIfNeeded();
+  await more.click();
+  const access = page.getByRole("menuitem", { name: "Client access" });
   const before = await page.evaluate(() => window.scrollY);
   expect(before).toBeGreaterThan(0); // we really are scrolled down the roster
 
-  await trigger.click();
+  await access.click();
   const dialog = page.getByRole("dialog", { name: "Client sign-in for Client 11" });
   await expect(dialog).toBeVisible();
   // The old code called window.scrollTo({ top: 0 }) here, throwing the coach to the top of the
@@ -65,18 +69,22 @@ test("inviting a client near the bottom leaves the coach where they were", async
 
 test("closing it returns focus to the card's own button, so the keyboard keeps its place", async ({ page }) => {
   await openClients(page);
-  const trigger = page.getByRole("button", { name: "Client access for Client 03" });
-  await trigger.click();
+  // The ⋯ trigger is the card's own button now; MenuButton hands focus back to it on item select,
+  // so the dialog's return-focus lands there too.
+  const more = page.getByRole("button", { name: "More actions for Client 03" });
+  await more.click();
+  await page.getByRole("menuitem", { name: "Client access" }).click();
   const dialog = page.getByRole("dialog", { name: "Client sign-in for Client 03" });
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
-  await expect(trigger).toBeFocused();
+  await expect(more).toBeFocused();
 });
 
 test("the roster is still behind it, not replaced by it", async ({ page }) => {
   await openClients(page);
-  await page.getByRole("button", { name: "Client access for Client 00" }).click();
+  await page.getByRole("button", { name: "More actions for Client 00" }).click();
+  await page.getByRole("menuitem", { name: "Client access" }).click();
   await expect(page.getByRole("dialog", { name: "Client sign-in for Client 00" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Clients" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("Client 05")).toBeVisible();

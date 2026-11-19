@@ -41,6 +41,8 @@ async function mockApi(page: Page, clients: Clients | "missing") {
     if (req.method() === "GET" && url.pathname === "/api/clients") return route.fulfill({ json: CLIENTS });
     if (req.method() === "GET" && url.pathname === "/api/tasks/today") return route.fulfill({ json: { date: "2026-11-11", tasks: [] } });
     if (req.method() === "GET" && url.pathname === "/api/checkins/recent") return route.fulfill({ json: { items: [] } });
+    // The redesigned Clients tab renders <WaitingList/> standalone, which reads /api/clients/waiting.
+    if (req.method() === "GET" && url.pathname === "/api/clients/waiting") return route.fulfill({ json: [] });
     if (req.method() === "GET" && url.pathname === "/api/at-risk") {
       requested.push(url.searchParams.get("date") ?? "");
       if (clients === "missing") return route.fulfill({ status: 404, json: { error: "Not found" } });
@@ -53,50 +55,55 @@ async function mockApi(page: Page, clients: Clients | "missing") {
 }
 
 const panel = (page: Page) => page.getByRole("tabpanel").first();
-const list = (page: Page) => panel(page).getByRole("list", { name: "Needs attention" });
+// Redesign Nov 2026: at-risk is flagged ON each client's card (no separate "Needs attention" panel);
+// the card's main button (aria-label "Open <name>") holds the amber chip and the reason lines.
+const openCards = (page: Page) => panel(page).getByRole("button", { name: /^Open / });
 
-test("rows show the client and every exact reason, at the top of the Clients tab", async ({ page }) => {
+test("each at-risk client is flagged on its own card and sorted to the top of the roster", async ({ page }) => {
   const requested = await mockApi(page, AT_RISK);
   await page.goto("/app");
-  // Relocated Nov 2026: the at-risk "Needs attention" panel now sits above the Clients roster, not on Home.
   await page.getByRole("tab", { name: "Clients" }).click();
-  await expect(panel(page).getByRole("heading", { level: 3, name: "Needs attention" })).toBeVisible();
-  const rows = list(page).getByRole("listitem");
-  await expect(rows).toHaveCount(2);
-  await expect(rows.nth(0)).toContainText("Leo Brooks");
-  await expect(rows.nth(0)).toContainText("Adherence 45% over the last 2 weeks");
-  await expect(rows.nth(0)).toContainText("No check-in for 12 days");
-  await expect(rows.nth(1)).toContainText("Maya Patel");
-  await expect(rows.nth(1)).toContainText("Weight went up 3 logs in a row (68 → 69.5 kg) while the goal is fat loss");
+  // Both clients are at-risk here, so they sort at-risk-first then alphabetically: Leo before Maya.
+  const cards = openCards(page);
+  await expect(cards).toHaveCount(2);
+  await expect(cards.nth(0)).toContainText("Leo Brooks");
+  await expect(cards.nth(1)).toContainText("Maya Patel");
+  // Each card carries the "Needs attention" chip and every exact reason the rule engine returned.
+  const leo = page.getByRole("button", { name: "Open Leo Brooks" });
+  await expect(leo).toContainText("Needs attention");
+  await expect(leo).toContainText("Adherence 45% over the last 2 weeks");
+  await expect(leo).toContainText("No check-in for 12 days");
+  const maya = page.getByRole("button", { name: "Open Maya Patel" });
+  await expect(maya).toContainText("Needs attention");
+  await expect(maya).toContainText("Weight went up 3 logs in a row (68 → 69.5 kg) while the goal is fat loss");
   expect(requested[0]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
 
-test("clicking a row selects that client and opens their workspace", async ({ page }) => {
+test("opening an at-risk client's card selects them and opens their workspace", async ({ page }) => {
   await mockApi(page, AT_RISK);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  await list(page).getByRole("button", { name: "Open Maya Patel" }).click();
-  // The relocated panel opens the client's workspace (no longer specifically the Progress sub-tab).
+  await page.getByRole("button", { name: "Open Maya Patel" }).click();
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
-test("nobody needing attention renders no panel at all", async ({ page }) => {
+test("nobody needing attention flags no card at all", async ({ page }) => {
   await mockApi(page, []);
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  // New: the panel renders nothing when everyone is on track, so a healthy roster is not topped by an empty card.
-  await expect(list(page)).toHaveCount(0);
-  await expect(panel(page).getByRole("region", { name: "Needs attention" })).toHaveCount(0);
-  // The roster itself still renders.
-  await expect(panel(page).getByRole("button", { name: "Open Maya Patel" })).toBeVisible();
+  // New: with everyone on track, no card wears the amber "Needs attention" chip.
+  const maya = panel(page).getByRole("button", { name: "Open Maya Patel" });
+  await expect(maya).toBeVisible();
+  await expect(maya).not.toContainText("Needs attention");
+  await expect(panel(page).getByRole("button", { name: "Open Leo Brooks" })).not.toContainText("Needs attention");
 });
 
-test("a missing endpoint renders no rows and never fabricates attention", async ({ page }) => {
+test("a missing endpoint flags no card and never fabricates attention", async ({ page }) => {
   await mockApi(page, "missing");
   await page.goto("/app");
   await page.getByRole("tab", { name: "Clients" }).click();
-  // New: on an at-risk error the relocated panel renders nothing (it never invents flagged clients);
-  // the roster below stays usable.
-  await expect(list(page)).toHaveCount(0);
-  await expect(panel(page).getByRole("button", { name: "Open Leo Brooks" })).toBeVisible();
+  // New: on an at-risk error no card is flagged (it never invents attention); the roster stays usable.
+  const leo = panel(page).getByRole("button", { name: "Open Leo Brooks" });
+  await expect(leo).toBeVisible();
+  await expect(leo).not.toContainText("Needs attention");
 });
