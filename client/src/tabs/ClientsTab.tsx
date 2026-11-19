@@ -60,6 +60,8 @@ export function ClientsTab({
       // Drop the deleted client's cached assignments / chat / progress, then refresh every list.
       queryClient.removeQueries({ queryKey: ["clients", client.id] });
       await queryClient.invalidateQueries({ queryKey: queryKeys.clients });
+      // The Needs-attention panel reads /api/at-risk; without this a just-deleted client lingers there.
+      void queryClient.invalidateQueries({ queryKey: ["at-risk"] });
       setConfirmClient(null);
     },
     onError: (error, client) => {
