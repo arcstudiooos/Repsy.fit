@@ -183,7 +183,10 @@ test("bubbles: coach on the right, client on the left, rendered as plain text (n
   // Coach bubble hugs the right edge, client bubble the left.
   expect(coachBox!.x + coachBox!.width).toBeGreaterThan(paneBox!.x + paneBox!.width - 40);
   expect(clientBox!.x).toBeLessThan(paneBox!.x + 40);
-  await expect(coach.locator("div").first()).toHaveCSS("background-color", "rgb(14, 124, 107)");
+  // Premium redesign: role reads from alignment + surface + a quiet label, not a teal fill.
+  // Accent2 is reserved for selection/actions, so the coach bubble is a neutral surface2 card.
+  await expect(coach.locator("div").first()).toHaveCSS("background-color", "rgb(241, 237, 230)");
+  await expect(fromClient.locator("div").first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
   // The pane says clearly that this is not the AI Coach.
   await expect(pane(page)).toContainText("Client messages - separate from the AI Coach");
 });

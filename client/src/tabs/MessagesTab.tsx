@@ -41,28 +41,40 @@ export function MessagesTab({ clients, selectedClientId, onSelect, chat, setChat
     () => new Set(Object.entries(pendingBy).filter(([, list]) => list.some((p) => p.status === "failed")).map(([id]) => id)),
     [pendingBy],
   );
+  // Phone (<md) is a master-detail flow: the list first, then a full-width thread with a Back
+  // button. Desktop keeps the two-column view. The desktop specs and all chat state are unchanged.
+  const [mobileThread, setMobileThread] = useState(false);
+  const openClient = (id: string) => {
+    onSelect(id);
+    setMobileThread(true);
+  };
   return (
     <>
       <h2 className="page-title">Messages</h2>
       <p className="mt-1 text-sm text-dim">Your conversations with clients.</p>
       {/* minmax(0, 1fr): grid tracks may shrink below their content, so a long preview or the
           message box placeholder can never push the page sideways on a phone. */}
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[17rem_minmax(0,1fr)]">
-        <ConversationList clients={clients} selectedClientId={selectedClientId} onSelect={onSelect} failedFor={failedFor} />
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-0 md:grid-cols-[17rem_minmax(0,1fr)] md:gap-4">
+        <div className={mobileThread ? "hidden md:block" : "block"}>
+          <ConversationList clients={clients} selectedClientId={selectedClientId} onSelect={openClient} failedFor={failedFor} />
+        </div>
         {client ? (
-          <Conversation
-            key={client.id}
-            client={client}
-            pending={pendingBy[client.id] ?? []}
-            setPending={(update) =>
-              setPendingBy((all) => ({ ...all, [client.id]: update(all[client.id] ?? []) }))
-            }
-            setPendingFor={(clientId, update) =>
-              setPendingBy((all) => ({ ...all, [clientId]: update(all[clientId] ?? []) }))
-            }
-            draft={drafts[client.id] ?? ""}
-            setDraft={(text) => setDrafts((all) => ({ ...all, [client.id]: text }))}
-          />
+          <div className={mobileThread ? "block" : "hidden md:block"}>
+            <Conversation
+              key={client.id}
+              client={client}
+              onBack={() => setMobileThread(false)}
+              pending={pendingBy[client.id] ?? []}
+              setPending={(update) =>
+                setPendingBy((all) => ({ ...all, [client.id]: update(all[client.id] ?? []) }))
+              }
+              setPendingFor={(clientId, update) =>
+                setPendingBy((all) => ({ ...all, [clientId]: update(all[clientId] ?? []) }))
+              }
+              draft={drafts[client.id] ?? ""}
+              setDraft={(text) => setDrafts((all) => ({ ...all, [client.id]: text }))}
+            />
+          </div>
         ) : (
           <section className="card p-6 text-dim">Pick a client to open your conversation.</section>
         )}
@@ -97,7 +109,7 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
     });
 
   return (
-    <section aria-label="Conversations" className="card p-3">
+    <section aria-label="Conversations" className="py-1">
       <label htmlFor="message-search" className="sr-only">
         Search clients by name
       </label>
@@ -107,7 +119,7 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
         placeholder="Search clients"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 text-base text-text"
+        className="min-h-11 w-full rounded-none border-0 border-b border-border-strong bg-transparent px-0 text-base text-text placeholder:text-dim focus:border-accent2"
       />
       {threads.isError && threads.data === undefined && (
         <p role="status" className="mt-2 text-sm text-dim">
@@ -117,7 +129,7 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
       {shown.length === 0 ? (
         <p className="mt-3 px-1 text-sm text-dim">No clients match "{search.trim()}".</p>
       ) : (
-        <ul aria-label="Clients" className="mt-2 space-y-1">
+        <ul aria-label="Clients" className="mt-1 divide-y divide-border">
           {shown.map((c) => {
             const summary = byClient.get(c.id);
             const selected = c.id === selectedClientId;
@@ -140,8 +152,8 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
                   aria-label={`${c.name}${unread ? `, ${summary!.unreadCount} unread` : ""}`}
                   onClick={() => onSelect(c.id)}
                   className={
-                    "flex min-h-11 w-full items-start gap-2 rounded-lg px-3 py-2 text-left " +
-                    (selected ? "bg-surface2 ring-1 ring-border" : "hover:bg-surface2")
+                    "flex min-h-11 w-full items-start gap-2 px-2 py-3 text-left " +
+                    (selected ? "bg-surface2" : "hover:bg-surface2")
                   }
                 >
                   <span className="min-w-0 flex-1">
@@ -197,6 +209,7 @@ type Updater = (list: Pending[]) => Pending[];
 
 function Conversation({
   client,
+  onBack,
   pending,
   setPending,
   setPendingFor,
@@ -204,6 +217,7 @@ function Conversation({
   setDraft,
 }: {
   client: Client;
+  onBack: () => void;
   pending: Pending[];
   setPending: (update: Updater) => void;
   /** For mutation callbacks: they can finish after the coach has switched to another client. */
@@ -304,9 +318,14 @@ function Conversation({
 
   return (
     <section aria-label={`Conversation with ${client.name}`} className="card flex min-h-[26rem] flex-col p-0">
-      <header className="border-b border-border px-5 py-3">
-        <h3 className="card-title">{client.name}</h3>
-        <p className="text-xs text-dim">Client messages - separate from the AI Coach</p>
+      <header className="flex items-center gap-2 border-b border-border px-4 py-3 sm:px-5">
+        <button type="button" onClick={onBack} className="min-h-11 shrink-0 rounded px-1 text-sm font-semibold text-accent2 md:hidden">
+          ‹ Conversations
+        </button>
+        <div className="min-w-0">
+          <h3 className="card-title">{client.name}</h3>
+          <p className="text-xs text-dim">Client messages - separate from the AI Coach</p>
+        </div>
       </header>
 
       <div className="max-h-[28rem] flex-1 overflow-y-auto px-5 py-4">
@@ -353,7 +372,7 @@ function Conversation({
       <form
         aria-label="Write a message"
         aria-describedby="message-hint"
-        className="flex flex-wrap items-end gap-2 border-t border-border p-3"
+        className="flex flex-wrap items-center gap-2 border-t border-border p-3"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -385,21 +404,21 @@ function Conversation({
 
 const timeOf = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
 
-/** Coach on the right in teal, client on the left in the card's soft surface. Plain text only. */
+/** Roles read from alignment + surface + a quiet label, not a loud colour fill. Plain text only. */
 function Bubble({ message, clientName }: { message: ThreadMessage; clientName: string }) {
   const mine = message.sender === "coach";
   return (
     <li data-sender={message.sender} className={"flex " + (mine ? "justify-end" : "justify-start")}>
       <div
         className={
-          "max-w-[80%] rounded-2xl px-4 py-2 " +
-          (mine ? "rounded-br-sm bg-accent2 text-white" : "rounded-bl-sm border border-border-strong bg-surface2 text-text")
+          "max-w-[min(85%,65ch)] rounded-card border border-border px-4 py-2 text-text " +
+          (mine ? "bg-surface2" : "bg-surface")
         }
       >
         <p className="sr-only">{mine ? "You" : clientName}:</p>
         {/* React renders this as text (never HTML); pre-wrap keeps line breaks. */}
         <p className="whitespace-pre-wrap break-words">{message.body}</p>
-        <p className={"mt-1 font-mono text-[11px] " + (mine ? "text-white/80" : "text-dim")}>{timeOf(message.createdAt)}</p>
+        <p className="mt-1 text-[11px] tabular-nums text-dim">{timeOf(message.createdAt)}</p>
       </div>
     </li>
   );
@@ -412,8 +431,8 @@ function PendingBubble({ pending, onRetry, onDiscard }: { pending: Pending; onRe
       <div className="max-w-[80%] text-right">
         <div
           className={
-            "rounded-2xl rounded-br-sm px-4 py-2 text-left " +
-            (failed ? "border border-amber bg-surface text-text" : "bg-accent2 text-white opacity-70")
+            "rounded-card px-4 py-2 text-left " +
+            (failed ? "border border-amber bg-surface text-text" : "border border-border bg-surface2 text-text")
           }
         >
           <p className="whitespace-pre-wrap break-words">{pending.body}</p>
