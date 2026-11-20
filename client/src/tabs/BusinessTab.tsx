@@ -82,17 +82,16 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked }: B
     <>
       {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
       <h2 className="no-print page-title">Business</h2>
-      <div role="group" aria-label="Business view" className="no-print mt-3 flex flex-wrap gap-2">
+      <div role="group" aria-label="Business view" className="no-print mt-3 flex flex-nowrap gap-1 overflow-x-auto border-b border-border">
         {VIEWS.map((v) => (
           <button
             key={v}
             type="button"
             aria-pressed={view === v}
             onClick={() => setView(v)}
-            className={
-              "min-h-10 rounded-full border px-4 text-sm font-semibold " +
-              (view === v ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
-            }
+            className={`relative flex min-h-11 shrink-0 items-center px-3 text-sm font-semibold transition-colors first:pl-0 ${
+              view === v ? "text-text after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent2" : "text-dim hover:text-text"
+            }`}
           >
             {v}
           </button>
@@ -162,7 +161,7 @@ function PaymentsView({ clients }: { clients: Client[] }) {
             />
           )}
 
-          <div role="group" aria-label="Filter plans" className="mt-4 flex flex-wrap gap-2">
+          <div role="group" aria-label="Filter plans" className="mt-4 flex flex-wrap gap-x-5 gap-y-1">
             {FILTERS.map((f) => (
               <button
                 key={f}
@@ -170,11 +169,11 @@ function PaymentsView({ clients }: { clients: Client[] }) {
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
                 className={
-                  "min-h-10 rounded-full border px-3 text-sm font-semibold " +
-                  (filter === f ? "border-text bg-text text-bg" : "border-border-strong bg-surface2 text-text hover:border-dim")
+                  "relative min-h-10 text-sm font-semibold transition-colors " +
+                  (filter === f ? "text-text after:absolute after:inset-x-0 after:bottom-1 after:h-0.5 after:rounded-full after:bg-accent2" : "text-dim hover:text-text")
                 }
               >
-                {f} <span className="font-body font-normal tabular-nums">{counts[f]}</span>
+                {f} <span className="font-normal tabular-nums text-dim">{counts[f]}</span>
               </button>
             ))}
           </div>
@@ -186,7 +185,7 @@ function PaymentsView({ clients }: { clients: Client[] }) {
           ) : shown.length === 0 ? (
             <div className="card mt-4 p-6 text-center text-dim">No plans match "{filter}".</div>
           ) : (
-            <ul aria-label="Client plans" className="mt-4 space-y-3">
+            <ul aria-label="Client plans" className="mt-4 divide-y divide-border border-t border-border">
               {shown.map((row) => (
                 <PlanRow key={row.plan.id} row={row} currency={query.data.currency} today={today} />
               ))}
@@ -221,25 +220,29 @@ function PlanRow({ row, currency, today }: { row: BusinessPlanRow; currency: str
   const { client, plan, lastPayment } = row;
   const [open, setOpen] = useState<"pay" | "edit" | null>(null);
   return (
-    <li className="card p-4">
+    <li className="py-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <p className="font-semibold text-text">{client.name}</p>
           <p className="text-sm text-dim">
             {plan.planName} · {plan.billingCycle} ·{" "}
-            <span className="font-mono text-text">{money(plan.priceAmount, currency)}</span>
+            <span className="tabular-nums text-text">{money(plan.priceAmount, currency)}</span>
           </p>
           <p className="mt-1 text-xs text-dim">
             {lastPayment ? `Last payment ${money(lastPayment.amount, currency)} on ${dayText(lastPayment.paidOn)}` : "No payments recorded yet"}
           </p>
         </div>
-        {/* Phones: this column wraps under the name, so it lines up on the left there. */}
+        {/* Phones: this column wraps under the name, so it lines up on the left there.
+            The status chip only shows when it is NOT a plain Active plan - "Active" on every row is
+            noise, and the due/overdue line already carries the urgency. */}
         <div className="flex flex-col items-start gap-1 text-left sm:items-end sm:text-right">
-          <span className="rounded-full bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-text">{plan.status}</span>
+          {plan.status !== "Active" && (
+            <span className="rounded-full bg-surface2 px-2.5 py-0.5 text-xs font-semibold text-text">{plan.status}</span>
+          )}
           <DueText plan={plan} today={today} />
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         {plan.status !== "Ended" && (
           <button
             type="button"

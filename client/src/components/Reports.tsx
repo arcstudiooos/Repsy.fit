@@ -140,12 +140,12 @@ export function Reports({ clients }: { clients: Client[] }) {
 
         {/* Inspo C4: each export is a card that says what is inside it, rather than a bare button
             whose contents a coach has to download to discover. */}
-        <div role="group" aria-label="CSV exports" className="mt-3">
+        <div role="group" aria-label="CSV exports" className="mt-4">
           <p className="text-sm font-bold">Download a CSV</p>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+          <ul className="mt-1 divide-y divide-border border-t border-border">
             {EXPORTS.map((e) => (
-              <li key={e.type} className="flex flex-col gap-2 rounded-card border border-border-strong bg-surface2 p-3">
-                <div>
+              <li key={e.type} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+                <div className="min-w-0">
                   <p className="font-semibold text-text">{e.label}</p>
                   <p className="mt-0.5 text-sm text-dim">{e.description}</p>
                 </div>
@@ -153,7 +153,7 @@ export function Reports({ clients }: { clients: Client[] }) {
                   type="button"
                   disabled={!clientId || csv.isPending}
                   onClick={() => checkRange() && csv.mutate(e.type)}
-                  className={buttonClass + " min-h-10 self-start disabled:opacity-60"}
+                  className={buttonClass + " min-h-10 shrink-0 disabled:opacity-60"}
                 >
                   {csv.isPending ? "Preparing..." : `Download ${e.label.toLowerCase()}`}
                 </button>
@@ -256,9 +256,9 @@ function ReportView({ report }: { report: ProgressReport }) {
             {measureRows.map((m) => (
               <tr key={m.key} className="border-t border-border">
                 <td className="py-1">{m.label}</td>
-                <td className="py-1 font-mono">{show(m.first, m.unit)}</td>
-                <td className="py-1 font-mono">{show(m.latest, m.unit)}</td>
-                <td className="py-1 font-mono">
+                <td className="py-1 tabular-nums">{show(m.first, m.unit)}</td>
+                <td className="py-1 tabular-nums">{show(m.latest, m.unit)}</td>
+                <td className="py-1 tabular-nums">
                   {m.count < 2 ? "-" : `${(m.latest as number) - (m.first as number) > 0 ? "+" : ""}${round1((m.latest as number) - (m.first as number))} ${m.unit}`}
                 </td>
               </tr>
@@ -272,8 +272,8 @@ function ReportView({ report }: { report: ProgressReport }) {
 
       <h4 className="mt-5 text-lg">Assignments completed</h4>
       <p className="mt-1 text-sm">
-        <span className="font-mono text-lg font-semibold">{assignments.done}</span> of{" "}
-        <span className="font-mono">{assignments.total}</span> assignments marked Done
+        <span className="tabular-nums text-lg font-semibold">{assignments.done}</span> of{" "}
+        <span className="tabular-nums">{assignments.total}</span> assignments marked Done
       </p>
 
       <h4 className="mt-5 text-lg">Check-in averages</h4>
@@ -286,7 +286,7 @@ function ReportView({ report }: { report: ProgressReport }) {
             {checkInRows.map(([k, v]) => (
               <div key={k}>
                 <dt className="text-dim">{k}</dt>
-                <dd className="font-mono font-semibold">{v}</dd>
+                <dd className="tabular-nums font-semibold">{v}</dd>
               </div>
             ))}
           </dl>

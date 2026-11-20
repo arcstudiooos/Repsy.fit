@@ -12,15 +12,15 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs text-dim">{label}</dt>
-      <dd className="font-mono text-sm text-text">{value}</dd>
+      <dd className="tabular-nums text-sm text-text">{value}</dd>
     </div>
   );
 }
 
 function Row({ row }: { row: EngagementRow }) {
   return (
-    <li className="card flex flex-wrap items-center gap-x-5 gap-y-2 p-4">
-      <span aria-label={row.rank === null ? "Not ranked" : `Rank ${row.rank}`} className="w-10 shrink-0 font-heading text-3xl text-text">
+    <li className="flex flex-wrap items-center gap-x-5 gap-y-2 py-4">
+      <span aria-label={row.rank === null ? "Not ranked" : `Rank ${row.rank}`} className="w-8 shrink-0 font-heading text-3xl tabular-nums text-text">
         {row.rank === null ? "-" : row.rank}
       </span>
       <div className="min-w-0 flex-1">
@@ -57,7 +57,7 @@ export function Engagement() {
       ) : query.data.clients.length === 0 ? (
         <div className="card mt-4 p-6 text-center text-dim">Add a client to see engagement.</div>
       ) : (
-        <ol aria-label="Engagement leaderboard" className="mt-4 space-y-3">
+        <ol aria-label="Engagement leaderboard" className="mt-4 divide-y divide-border border-t border-border">
           {query.data.clients.map((row) => (
             <Row key={row.clientId} row={row} />
           ))}

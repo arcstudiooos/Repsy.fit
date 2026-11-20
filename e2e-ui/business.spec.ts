@@ -81,10 +81,10 @@ test("Business is the last tab, and says it is record-keeping only", async ({ pa
   const panel = page.getByRole("tabpanel").first();
   // One short line now (owner, Nov 2026): Repsy takes no payments; these are the coach's own records.
   await expect(panel).toContainText("Record-keeping only: Repsy doesn't take payments. These are your own records.");
-  // Filter counts use the body font (Geist Mono's zero looked slashed).
+  // Filter counts use the body font with tabular-nums (Geist Mono's zero looked slashed).
   const allCount = page.getByRole("group", { name: "Filter plans" }).getByRole("button", { name: /^All/ }).locator("span");
   await expect(allCount).toHaveText("0");
-  await expect(allCount).toHaveClass(/font-body/);
+  await expect(allCount).toHaveClass(/tabular-nums/);
   await expect(allCount).not.toHaveClass(/font-mono/);
   await expect(panel).toContainText("No plans yet.");
   await expect(page.getByRole("region", { name: "Selected client" })).toHaveCount(0);
