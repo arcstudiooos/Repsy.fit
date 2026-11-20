@@ -92,8 +92,9 @@ test("shows the 4 draft buttons, calm with a type-colour dot, and says nothing r
   await expect(row(page).getByRole("button")).toHaveText(["Workout", "Nutrition", "Habit", "Recovery"]);
   for (const type of ["Workout", "Nutrition", "Habit", "Recovery"]) {
     const colour = new RegExp(`bg-type-${type.toLowerCase()}`);
-    // Neutral button (surface2 + border); only the small dot carries the type colour.
-    await expect(button(page, type)).toHaveClass(/bg-surface2/);
+    // Neutral button (surface + border); only the small dot carries the type colour.
+    // Redesigned from bg-surface2 to bg-surface and from 40px to a 44px tap target.
+    await expect(button(page, type)).toHaveClass(/bg-surface(?!2)/);
     await expect(button(page, type)).toHaveClass(/border-border/);
     await expect(button(page, type)).not.toHaveClass(colour);
     await expect(button(page, type).getByTestId("type-dot")).toHaveClass(colour);

@@ -40,6 +40,7 @@ const secondaryButton =
 export function AiCoachTab({ client, onOpenPlanner }: Props) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [morePrompts, setMorePrompts] = useState(false);
   const [suggestion, setSuggestion] = useState<AiSuggestion | null>(null);
   const [suggestionKey, setSuggestionKey] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
@@ -81,6 +82,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
   return (
     <>
       <h2 className="page-title">AI Coach</h2>
+      <p className="text-sm text-dim">Ask about the client or draft a plan — nothing reaches them until you assign it.</p>
 
       {client && <ClientSummary client={client} />}
 
@@ -93,7 +95,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
         ) : chatQuery.isError ? (
           <ErrorState error={chatQuery.error} onRetry={() => void chatQuery.refetch()} />
         ) : (
-          <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto">
+          <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pb-24 sm:pb-0">
             <Conversation messages={chatQuery.data ?? []} />
             {ask.isError && (
               <div role="alert" className="rounded-card border border-border-strong bg-surface2 px-4 py-2.5 text-text">
@@ -122,18 +124,26 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
         className="sticky bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 border-t border-border bg-surface px-4 pb-3 pt-3 sm:static sm:z-auto sm:mx-0 sm:border-t-0 sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-0"
       >
       {/* Phones: one row that scrolls sideways, so the pinned area stays short. */}
-      <div role="group" aria-label="Quick prompts" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
-        {QUICK_PROMPTS.map((prompt) => (
+      <div role="group" aria-label="Quick prompts" className="-mx-1 flex flex-wrap gap-2 px-1 sm:mx-0 sm:px-0">
+        {QUICK_PROMPTS.slice(0, morePrompts ? QUICK_PROMPTS.length : 2).map((prompt) => (
           <button
             key={prompt}
             type="button"
             disabled={!client || ask.isPending}
             onClick={() => send(prompt)}
-            className={secondaryButton + " min-h-10 shrink-0 whitespace-nowrap rounded-full"}
+            className={secondaryButton + " min-h-11 shrink-0 whitespace-nowrap"}
           >
             {prompt}
           </button>
         ))}
+        <button
+          type="button"
+          aria-expanded={morePrompts}
+          onClick={() => setMorePrompts((v) => !v)}
+          className="min-h-11 shrink-0 px-2 text-sm font-semibold text-accent2 underline underline-offset-4"
+        >
+          {morePrompts ? "Fewer prompts" : "More prompts"}
+        </button>
       </div>
 
       <div className="mt-3 flex items-end gap-2">
@@ -151,7 +161,7 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
           type="button"
           disabled={!client || ask.isPending || !draft.trim()}
           onClick={() => send(draft)}
-          className="btn btn-primary"
+          className={draft.trim() ? "btn btn-primary min-h-11" : "btn btn-secondary min-h-11"}
         >
           {ask.isPending ? "Thinking..." : "Send"}
         </button>
@@ -165,38 +175,33 @@ export function AiCoachTab({ client, onOpenPlanner }: Props) {
 function ClientSummary({ client }: { client: Client }) {
   const [open, setOpen] = useState(false);
   const weight = client.weightKg === null ? null : `${client.weightKg} kg`;
+  // The coach needs goal / level / weight / focus VISIBLE while drafting - never behind a toggle.
   const line = [client.goal, client.level, weight, client.focus].filter((v): v is string => !!v && v.trim() !== "").join(" · ");
-  const rows: [string, string][] = [
-    ["Goal", client.goal],
-    ["Level", client.level],
+  const extra: [string, string][] = [
     ["Age", client.age === null ? "-" : String(client.age)],
-    ["Weight", weight ?? "-"],
     ["Height", client.heightCm === null ? "-" : `${client.heightCm} cm`],
-    ["Focus", client.focus || "-"],
     ["Notes", client.notes || "-"],
   ];
   return (
-    <section aria-label="Client summary" className="mt-3 rounded-card border border-border-strong bg-surface2 px-3 py-1.5">
-      <div className="flex items-center gap-2">
-        <p className="min-w-0 flex-1 truncate text-sm text-text" title={line}>
-          {line || "No details yet"}
-        </p>
+    <section aria-label="Client summary" className="mt-3 border-y border-border py-2">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <p className="min-w-0 flex-1 text-sm tabular-nums text-text">{line || "No details yet"}</p>
         <button
           type="button"
           aria-expanded={open}
           aria-controls="client-summary-details"
           onClick={() => setOpen((o) => !o)}
-          className="min-h-10 shrink-0 rounded-lg px-2 text-sm font-semibold text-accent2 underline underline-offset-4"
+          className="min-h-11 shrink-0 text-sm font-semibold text-accent2 underline underline-offset-4"
         >
           {open ? "Less" : "More"}
         </button>
       </div>
       {open && (
-        <dl id="client-summary-details" className="mb-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
-          {rows.map(([label, value]) => (
-            <div key={label} className="contents">
+        <dl id="client-summary-details" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {extra.map(([label, value]) => (
+            <div key={label} className="flex gap-1">
               <dt className="text-dim">{label}</dt>
-              <dd className="whitespace-pre-wrap text-text">{value}</dd>
+              <dd className="whitespace-pre-wrap tabular-nums text-text">{value}</dd>
             </div>
           ))}
         </dl>
@@ -241,15 +246,15 @@ function AutoAssignPanel({ client, onOpenPlanner }: { client: Client; onOpenPlan
 
   return (
     <section className="mt-4">
-      <p className="mb-2 text-sm text-dim">Draft a plan with AI - you review it before anything reaches {client.name}.</p>
-      <div role="group" aria-label="Draft a plan with AI" className="flex flex-wrap gap-2">
+      <p className="mb-2 text-sm text-dim">Draft a plan with AI — you review it before anything reaches {client.name}.</p>
+      <div role="group" aria-label="Draft a plan with AI" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {AUTO_ASSIGN_BUTTONS.map(([type, label]) => (
           <button
             key={type}
             type="button"
             disabled={generate.isPending}
             onClick={() => run(type)}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border-strong bg-surface2 px-3 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-card border border-border-strong bg-surface px-3 text-sm font-semibold text-text hover:border-dim disabled:cursor-not-allowed disabled:opacity-60"
           >
             {/* Calm neutral buttons; the type colour is only the small dot. */}
             <span aria-hidden="true" data-testid="type-dot" className={`h-2.5 w-2.5 shrink-0 rounded-full ${TYPE_DOT[type]}`} />
@@ -379,12 +384,12 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
         </div>
       ) : (
         <>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
             <button
               type="button"
               disabled={busy}
               onClick={() => act(assign)}
-              className="btn btn-primary"
+              className="btn btn-primary min-h-11"
             >
               {assign.isPending ? "Assigning..." : "Assign to client"}
             </button>
@@ -400,14 +405,15 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
                 }
                 setEditing(!editing);
               }}
-              className={secondaryButton}
+              className={secondaryButton + " min-h-11"}
             >
               {editing ? "Done editing" : "Edit"}
             </button>
-            <button type="button" disabled={busy} onClick={() => act(park)} className={secondaryButton}>
+            {/* Low-frequency actions stay reachable but read as quiet text, not peers of Assign. */}
+            <button type="button" disabled={busy} onClick={() => act(park)} className="min-h-11 px-2 text-sm font-semibold text-dim underline underline-offset-4 hover:text-text">
               {park.isPending ? "Sending..." : "Review later"}
             </button>
-            <button type="button" disabled={busy} onClick={onDismiss} className={secondaryButton}>
+            <button type="button" disabled={busy} onClick={onDismiss} className="min-h-11 px-2 text-sm font-semibold text-dim underline underline-offset-4 hover:text-text">
               Dismiss
             </button>
           </div>
@@ -425,27 +431,28 @@ function SuggestionCard({ clientId, clientName, suggestion, date, label = "AI su
 function Conversation({ messages }: { messages: ChatMessage[] }) {
   if (messages.length === 0) {
     return (
-      <div className="rounded-card bg-surface2 px-4 py-6 text-center text-dim">
-        No conversation yet - ask your first question below.
+      <div className="py-8 text-center">
+        <p className="text-dim">No conversation yet — ask your first question below.</p>
       </div>
     );
   }
   return (
-    <ol aria-label="Conversation" className="flex flex-col gap-3">
+    <ol aria-label="Conversation" className="flex flex-col gap-4">
       {messages.map((m) => {
         const isCoach = m.role === "coach";
         return (
           <li key={m.id} className={"flex flex-col " + (isCoach ? "items-end" : "items-start")}>
+            {/* Role reads from alignment + surface + a small label, never from a loud colour. */}
             <div
               className={
-                "max-w-[85%] rounded-card px-4 py-2.5 " +
-                (isCoach ? "whitespace-pre-wrap bg-accent text-on-accent" : "border border-border bg-surface text-text")
+                "max-w-[min(85%,65ch)] rounded-card border border-border px-4 py-2.5 text-text " +
+                (isCoach ? "whitespace-pre-wrap bg-surface2" : "bg-surface")
               }
             >
               {isCoach ? m.content : <FormattedText text={m.content} />}
             </div>
-            <span className="mt-1 text-xs text-dim">
-              {isCoach ? "You" : "AI coach"} · {timeFormat.format(new Date(m.createdAt))}
+            <span className="mt-1 text-xs tabular-nums text-dim">
+              {isCoach ? "You" : "AI Coach"} · {timeFormat.format(new Date(m.createdAt))}
             </span>
           </li>
         );

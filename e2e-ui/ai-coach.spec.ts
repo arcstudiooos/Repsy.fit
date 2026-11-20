@@ -128,13 +128,15 @@ test("summary card is one line (goal · level · weight · focus) and More shows
   await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
 });
 
-test("coach messages sit right in accent colour, AI messages left in a white card", async ({ page }) => {
+test("coach messages sit right in a neutral surface, AI messages left in a white card", async ({ page }) => {
   await mockApi(page);
   await openAiCoach(page);
   const coach = conversation(page).getByText("How is Maya doing?", { exact: true });
   // AI text is formatted (paragraphs, lists) inside its card.
   const ai = conversation(page).getByRole("listitem").filter({ hasText: "Maya is consistent with training." }).locator("> div");
-  await expect(coach).toHaveCSS("background-color", "rgb(255, 74, 31)");
+  // Premium redesign: role is shown by alignment + surface + label, never by a loud accent fill.
+  // Accent is reserved for the single current primary action, so the coach bubble is neutral.
+  await expect(coach).toHaveCSS("background-color", "rgb(241, 237, 230)");
   await expect(ai).toHaveCSS("background-color", "rgb(255, 255, 255)");
   const c = (await coach.boundingBox())!;
   const a = (await ai.boundingBox())!;
@@ -142,17 +144,24 @@ test("coach messages sit right in accent colour, AI messages left in a white car
   expect(c.x).toBeGreaterThan(a.x);
 });
 
-test("quick prompt chips are exactly the four questions (no plan-making chips) and tapping one sends it", async ({ page }) => {
+test("quick prompts stay discoverable: two shown, More reveals all four, and tapping one sends it", async ({ page }) => {
   const mock = await mockApi(page);
   await openAiCoach(page);
-  const chips = panel(page).getByRole("group", { name: "Quick prompts" }).getByRole("button");
-  await expect(chips).toHaveText([
+  const group = panel(page).getByRole("group", { name: "Quick prompts" });
+  // Premium redesign: only two prompts show by default so they don't crowd the composer.
+  // All four remain reachable behind the labelled toggle - nothing was deleted.
+  await expect(group.getByRole("button")).toHaveText(["Summarise this client", "What changed since the last check-in?", "More prompts"]);
+  const more = group.getByRole("button", { name: "More prompts" });
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await more.click();
+  await expect(group.getByRole("button")).toHaveText([
     "Summarise this client",
     "What changed since the last check-in?",
     "What should I focus on this week?",
     "Any warning signs?",
+    "Fewer prompts",
   ]);
-  await chips.nth(1).click();
+  await group.getByRole("button", { name: "What changed since the last check-in?" }).click();
   await expect(conversation(page)).toContainText("Answer about c-maya: keep going.");
   expect(mock.asked).toEqual([{ clientId: "c-maya", question: "What changed since the last check-in?" }]);
 });
