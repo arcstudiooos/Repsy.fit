@@ -63,7 +63,7 @@ test("sitemap, robots and the 404 page are built", () => {
 
 test("/pricing is its own page and opens at the prices", async ({ page }) => {
   const html = dist("pricing.html");
-  expect(html).toContain("<title>Repsy Coach pricing - plans from $39 a month</title>");
+  expect(html).toContain("<title>Repsy Coach pricing - free for 2 clients, then from $17 a month</title>");
   expect(html).toContain('href="https://repsy.fit/pricing"');
   await page.goto("/pricing");
   // The dev/preview server serves index.html for it; what matters is that the app shows the landing.

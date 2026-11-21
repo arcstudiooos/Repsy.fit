@@ -149,7 +149,7 @@ export default function Landing() {
         <Section id="faq" n="07" kicker="Questions" title="FAQ">
           <Faq />
         </Section>
-        <Section id="start" n="08" kicker="Start free" title="Get your free trial">
+        <Section id="start" n="08" kicker="Start free" title="Get started free">
           <p className="landing-dim mt-4 max-w-2xl text-lg">
             Leave your name and email and we'll set you up. In the meantime, the app is open with
             sample data.

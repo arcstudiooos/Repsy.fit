@@ -8,6 +8,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProgressCharts } from "../components/ProgressCharts";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { formatDay } from "../lib/dates";
+import { showWeight } from "../lib/snapshotFormat";
 import { localDateKey } from "../lib/schedule";
 import { MyStreaksSection } from "./sections";
 import type { MyMeasurement } from "../types";
@@ -37,9 +38,18 @@ export default function ProgressView() {
             {plainErrorMessage(progress.error ?? profile.error)}
           </p>
         ) : progress.data.length === 0 ? (
-          <p className="card mt-4 p-4 text-sm text-dim">
-            No check-ins yet. Send a weekly check-in and your weight and plan adherence charts will appear here.
-          </p>
+          <div className="card mt-4 p-4 text-sm text-dim">
+            <p>
+              No check-ins yet. Send a weekly check-in and your weight and plan adherence charts will appear here.
+            </p>
+            {profile.data.weightKg != null && (
+              <p className="mt-2 text-dim">
+                Starting point:{" "}
+                <span className="tabular-nums text-text">{showWeight(profile.data.weightKg, units)}</span> (from sign-up). This
+                is the weight from your sign-up, not a logged weigh-in.
+              </p>
+            )}
+          </div>
         ) : (
           <ProgressCharts logs={progress.data} units={units} />
         )}

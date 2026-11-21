@@ -8,7 +8,7 @@ const key = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
 const TODAY = key(new Date());
 const YESTERDAY = key(new Date(Date.now() - 86_400_000));
 
-async function mock(page: Page, opts: { checkInDay?: number; units?: "kg" | "lb"; existing?: Record<string, unknown> | null } = {}) {
+async function mock(page: Page, opts: { checkInDay?: number; units?: "kg" | "lb"; existing?: Record<string, unknown> | null; noPlan?: boolean } = {}) {
   const sent: { method: string; path: string; body: unknown }[] = [];
   const habits = [
     { id: "h1", name: "10k steps", week: [false, false, false, false, false, true, false], currentStreak: 1, bestStreak: 4 },
@@ -21,7 +21,11 @@ async function mock(page: Page, opts: { checkInDay?: number; units?: "kg" | "lb"
     const body = req.postData() ? req.postDataJSON() : undefined;
     if (req.method() !== "GET") sent.push({ method: req.method(), path, body });
     if (path === "/api/client-auth/me") return route.fulfill({ json: { id: "c1", name: "Maya Patel", loginEmail: "maya@example.com", joinStatus: "active", coachName: "Anna Rivers", needsWelcome: false } });
-    if (path === "/api/client-auth/my-assignments") return route.fulfill({ json: [] });
+    if (path === "/api/client-auth/my-assignments") {
+      // Weekly check-in reads this week's assignments to decide whether to ask plan-adherence.
+      // Default to a non-empty week so the plan-path fields render; opts.noPlan tests the empty week.
+      return route.fulfill({ json: opts.noPlan ? [] : [{ id: "wk1", type: "Workout", title: "Upper body", details: "", reasoning: "", status: "Active", date: TODAY, completedAt: null, completedBy: null, clientEffort: null, clientNote: "" }] });
+    }
     if (path === "/api/client-auth/my-assignments/n1") {
       return route.fulfill({ json: { id: "n1", type: "Nutrition", title: "High-protein day", details: "Hit your protein.", reasoning: "", status: "Active", date: TODAY, completedAt: null, completedBy: null, clientEffort: null, clientNote: "",
         meals: [{ id: "m1", name: "Overnight oats", mealType: "Breakfast", calories: 420, proteinG: 25, carbsG: 55, fatG: 10 }, { id: "m2", name: "Chicken bowl", mealType: "Lunch", calories: 650, proteinG: 50, carbsG: 60, fatG: 18 }] } });
@@ -138,6 +142,22 @@ test("weekly check-in needs something, and checks ranges", async ({ page }) => {
   await page.getByRole("button", { name: "Send to my coach" }).click();
   await expect(page.getByRole("alert")).toContainText("from 0 to 100");
   expect(sent).toEqual([]);
+});
+
+test("weekly check-in with no plan: asks how the week felt + what they need, never plan adherence", async ({ page }) => {
+  const { sent } = await mock(page, { noPlan: true });
+  await page.goto("/client/weekly");
+  await expect(page.getByLabel("Plan followed (%)")).toHaveCount(0);
+  await expect(page.getByLabel("Workouts done")).toHaveCount(0);
+  await page.getByLabel("How did the week feel? (optional)").fill("Tough but okay");
+  await page.getByLabel("What do you need from me this week? (optional)").fill("A plan please");
+  await page.getByRole("button", { name: "Send to my coach" }).click();
+  await expect(page.getByRole("status")).toHaveText("Sent to your coach. Thanks!");
+  expect(sent[0]).toEqual({
+    method: "POST",
+    path: "/api/client-auth/my-progress",
+    body: { date: TODAY, weightKg: null, adherence: null, workoutsDone: null, note: "How the week felt: Tough but okay\nWhat I need this week: A plan please" },
+  });
 });
 
 test("a Nutrition plan shows the client's targets and the coach's meals with macros", async ({ page }) => {

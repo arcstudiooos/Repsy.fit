@@ -6,6 +6,7 @@ import { formatDay } from "../lib/dates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addMyProgress,
+  getMyAssignments,
   getMyCheckIn,
   getMyHabits,
   getMyProgress,
@@ -16,7 +17,7 @@ import {
   saveMyProfile,
   tickMyHabit,
 } from "../api";
-import { addDays, localDateKey } from "../lib/schedule";
+import { addDays, localDateKey, weekStartOf } from "../lib/schedule";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
 import type { ClientAssignment, MyCheckIn, MyProgressLog } from "../types";
@@ -454,11 +455,29 @@ export function WeeklyPage() {
     queryKey: queryKeys.myProgress,
     queryFn: getMyProgress,
   });
+  // Honesty (coaching doc): never ask "how much of the plan did you follow?" to a client who had no
+  // plan that week. Fetch this check-in week's assignments; only a confirmed plan turns on the
+  // adherence + workouts fields. While the week's assignments load (or fail to load) we keep those
+  // fields hidden and ask the open questions instead - the honest default.
+  const weekStart = weekStartOf(new Date());
+  const assignments = useQuery({
+    queryKey: queryKeys.myAssignments(
+      localDateKey(weekStart),
+      localDateKey(addDays(weekStart, 6)),
+    ),
+    queryFn: () =>
+      getMyAssignments(
+        localDateKey(weekStart),
+        localDateKey(addDays(weekStart, 6)),
+      ),
+  });
+  const hasPlan = (assignments.data?.length ?? 0) > 0;
   const units = profile.data?.units ?? "kg";
   const [weight, setWeight] = useState("");
   const [adherence, setAdherence] = useState("");
   const [workouts, setWorkouts] = useState("");
   const [note, setNote] = useState("");
+  const [needs, setNeeds] = useState("");
   const [error, setError] = useState<string | null>(null);
   const send = useMutation({
     mutationFn: (body: Parameters<typeof addMyProgress>[0]) =>
@@ -474,6 +493,27 @@ export function WeeklyPage() {
       (!Number.isFinite(w) || kg === null || kg <= 0 || kg > 500)
     )
       return setError(`Weight: a number in ${units}.`);
+    // No plan that week: never collect or send adherence / workouts. Send them absent and gather the
+    // two honest questions (how the week felt, what they need) as the note.
+    if (!hasPlan) {
+      const feel = note.trim();
+      const need = needs.trim();
+      if (kg === null && feel === "" && need === "")
+        return setError("Fill in at least one thing.");
+      setError(null);
+      const parts = [
+        feel && `How the week felt: ${feel}`,
+        need && `What I need this week: ${need}`,
+      ].filter(Boolean);
+      send.mutate({
+        date: localDateKey(new Date()),
+        weightKg: kg,
+        adherence: null,
+        workoutsDone: null,
+        note: parts.join("\n"),
+      });
+      return;
+    }
     const a = numOrNull(adherence);
     if (a !== null && (!Number.isInteger(a) || a < 0 || a > 100))
       return setError(
@@ -514,7 +554,7 @@ export function WeeklyPage() {
       <p className="mt-1 text-sm text-dim">
         Your coach reviews this and may adjust your plan.
       </p>
-      {profile.isPending ? (
+      {profile.isPending || assignments.isPending ? (
         <LoadingState />
       ) : profile.isError ? (
         <p role="alert" className="mt-4 text-sm font-semibold text-amber-text">
@@ -543,6 +583,8 @@ export function WeeklyPage() {
                 className={inputClass}
               />
             </div>
+            {hasPlan && (
+              <>
             <div>
               <label
                 htmlFor="wk-adherence"
@@ -588,23 +630,45 @@ export function WeeklyPage() {
                 className={inputClass}
               />
             </div>
+              </>
+            )}
           </div>
           <div>
             <label
               htmlFor="wk-note"
               className="mb-1 block text-sm font-semibold"
             >
-              How did the week go? (optional)
+              {hasPlan
+                ? "How did the week go? (optional)"
+                : "How did the week feel? (optional)"}
             </label>
             <textarea
               id="wk-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              maxLength={500}
+              maxLength={hasPlan ? 500 : 220}
               rows={3}
               className="w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
             />
           </div>
+          {!hasPlan && (
+            <div>
+              <label
+                htmlFor="wk-needs"
+                className="mb-1 block text-sm font-semibold"
+              >
+                What do you need from me this week? (optional)
+              </label>
+              <textarea
+                id="wk-needs"
+                value={needs}
+                onChange={(e) => setNeeds(e.target.value)}
+                maxLength={220}
+                rows={3}
+                className="w-full rounded-lg border border-border-strong bg-surface2 px-3 py-2 text-base text-text"
+              />
+            </div>
+          )}
           {(error || send.isError) && (
             <p role="alert" className="text-sm font-semibold text-amber-text">
               {error ?? plainErrorMessage(send.error)}

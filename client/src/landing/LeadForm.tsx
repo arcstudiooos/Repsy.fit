@@ -45,7 +45,7 @@ export default function LeadForm() {
         </p>
         <p className="landing-dim mt-2">
           {result.kind === "saved"
-            ? "We'll email you when your free trial is ready. You can open the app with sample data now."
+            ? "We'll email you when your account is ready. You can open the app with sample data now."
             : "No need to sign up twice - we have your email."}
         </p>
         <a href="/app" className="l-link mt-4 inline-flex min-h-10 items-center text-sm font-bold uppercase tracking-wider underline decoration-2 underline-offset-[6px]">

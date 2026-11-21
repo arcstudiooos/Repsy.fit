@@ -93,6 +93,8 @@ test("an address the coach already invited is told to check their email (not sig
 test("welcome questions: lb converts to kg, injuries are sent, then the client home", async ({ page }) => {
   const { sent } = await mock(page);
   await page.goto("/client/welcome");
+  await expect(page.getByText("Starting weight", { exact: true })).toBeVisible();
+  await expect(page.getByText("Your starting point - you can update it anytime in Me.")).toBeVisible();
   await page.getByLabel("Your main goal").selectOption("Muscle gain");
   await page.getByLabel("Age").fill("29");
   await page.getByLabel("Height (cm)").fill("165");

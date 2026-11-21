@@ -315,8 +315,32 @@ function TodayView() {
           <ErrorBox error={plans.error} onRetry={() => void plans.refetch()} />
         ) : plans.data.length === 0 ? (
           <div className="card p-5 text-center">
-            <p className="text-base font-semibold text-text">Nothing planned for today.</p>
-            <p className="mt-1 text-sm text-dim">Enjoy the rest, or look ahead at your week.</p>
+            <p className="text-base font-semibold text-text">Your coach hasn’t published a plan yet.</p>
+            <p className="mt-1 text-sm text-dim">You’ll see it here the moment it’s ready.</p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="/client/messages"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  navigate("/client/messages");
+                }}
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-accent2 underline underline-offset-4"
+              >
+                Message your coach
+              </a>
+              <a
+                href="/client/checkin"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  navigate("/client/checkin");
+                }}
+                className="inline-flex min-h-11 items-center text-sm font-semibold text-accent2 underline underline-offset-4"
+              >
+                Do today’s check-in
+              </a>
+            </div>
           </div>
         ) : (
           <>
@@ -424,7 +448,7 @@ function WeekView() {
                         {done}/{items.length} done
                       </span>
                     ) : (
-                      <span className="text-sm text-dim">Rest day</span>
+                      <span className="text-sm text-dim">No plan set</span>
                     )}
                   </div>
                   {items.length === 0 ? null : (

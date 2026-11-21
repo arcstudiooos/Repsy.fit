@@ -95,7 +95,7 @@ test("an empty day says so; a load error shows Retry", async ({ page }) => {
   await page.goto("/client");
   await expect(page.getByRole("alert")).toBeVisible();
   await page.getByRole("button", { name: "Retry" }).click();
-  await expect(page.getByText("Nothing planned for today.")).toBeVisible();
+  await expect(page.getByText("Your coach hasn’t published a plan yet.")).toBeVisible();
 });
 
 test("the week view shows Monday to Sunday with done marks, and moves between weeks", async ({ page }) => {
@@ -110,7 +110,7 @@ test("the week view shows Monday to Sunday with done marks, and moves between we
   await expect(today).toContainText("1/2 done");
   await expect(today).toContainText("(done)");
   await page.getByRole("button", { name: "Next week" }).click();
-  await expect(page.getByText("Rest day")).toHaveCount(7);
+  await expect(page.getByText("No plan set")).toHaveCount(7);
   await page.getByRole("button", { name: "Previous week" }).click();
   await expect(days.filter({ hasText: "Today" })).toContainText("Lower body A");
 });

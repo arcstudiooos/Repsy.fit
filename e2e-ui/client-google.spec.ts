@@ -33,7 +33,7 @@ test("no button when Google is not set up on the server", async ({ page }) => {
 });
 
 for (const [reason, text] of [
-  ["noaccount", "No client account for this Google account. Ask your coach for their join link."],
+  ["noaccount", "No coach linked yet - enter your join code below, or open your coach’s join link to finish joining."],
   ["link", "A client account with this email already exists. Sign in with your email and password."],
   ["cancelled", "Google sign-in was cancelled."],
   ["something-new", "Google sign-in didn't work. Please try again, or use your email and password."],
@@ -44,6 +44,16 @@ for (const [reason, text] of [
     await expect(page.getByRole("alert")).toHaveText(text);
   });
 }
+
+test(`client sign-in explains ?google=noaccount and points at the join-code field`, async ({ page }) => {
+  await mock(page, true);
+  await page.goto(`/client/login?google=noaccount`);
+  await expect(page.getByRole("alert")).toHaveText(
+    "No coach linked yet - enter your join code below, or open your coach’s join link to finish joining.",
+  );
+  // Actionable: the existing join-code input is focused so the newcomer can type the code straight away.
+  await expect(page.locator("#join-code-input")).toBeFocused();
+});
 
 test("the join page explains a code that stopped working during the Google round trip", async ({ page }) => {
   await mock(page, true);

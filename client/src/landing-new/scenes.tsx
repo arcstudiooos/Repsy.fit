@@ -461,7 +461,7 @@ export function Hero() {
           style={{ color: "var(--mute)" }}
         >
           {[
-            "7-day free trial",
+            "Free for 2 clients",
             "Clients install nothing",
             "AI suggests, you decide",
           ].map((t) => (
@@ -2040,7 +2040,7 @@ export function Get() {
             style={{ color: "var(--mute)" }}
           >
             {[
-              "7-day free trial",
+              "Free for 2 clients",
               "No card to start",
               "Export your data any time",
             ].map((t) => (

@@ -19,33 +19,38 @@ async function open(page: Page): Promise<Mock> {
     return route.fulfill({ json: [] });
   });
   await page.goto("/?design=classic");
-  await expect(page.locator("#pricing").getByTestId("plan")).toHaveCount(3);
+  await expect(page.locator("#pricing").getByTestId("plan")).toHaveCount(6);
   return mock;
 }
 
 const form = (page: Page) => page.getByRole("form", { name: "Start free" });
 
-test("3 plans at the published prices, trial noted once, payments honestly 'coming soon'", async ({ page }) => {
+test("the real plans at the published prices, no false trial, payments honestly 'coming soon'", async ({ page }) => {
   await open(page);
   const plans = page.locator("#pricing").getByTestId("plan");
-  await expect(plans.nth(0)).toContainText("Solo");
-  await expect(plans.nth(0)).toContainText("$39/mo");
-  await expect(plans.nth(0)).toContainText("Up to 30 clients");
-  await expect(plans.nth(1)).toContainText("Pro");
-  await expect(plans.nth(1)).toContainText("$89/mo");
-  await expect(plans.nth(2)).toContainText("Studio");
-  await expect(plans.nth(2)).toContainText("$199/mo");
+  // Free-forever tier plus one price per roster size - mirrors server/src/billing/plans.ts.
+  await expect(plans.nth(0)).toContainText("Starter");
+  await expect(plans.nth(0)).toContainText("$0/mo");
+  await expect(plans.nth(0)).toContainText("Up to 2 clients, free forever");
+  await expect(plans.nth(1)).toContainText("Pro 5");
+  await expect(plans.nth(1)).toContainText("$17/mo");
+  await expect(plans.nth(1)).toContainText("Up to 5 clients");
+  await expect(plans.nth(5)).toContainText("Pro 100");
+  await expect(plans.nth(5)).toContainText("$150/mo");
+  await expect(plans.nth(5)).toContainText("Up to 100 clients");
   const body = await page.evaluate(() => {
     // The <noscript> shell for non-JS crawlers is in the DOM but never rendered: not visitor copy.
     const copy = document.body.cloneNode(true) as HTMLElement;
     copy.querySelectorAll("noscript").forEach((n) => n.remove());
     return copy.textContent ?? "";
   });
-  expect(body.match(/7-day free trial/gi)).toHaveLength(1);
+  // The real model is a free-forever tier, not a trial - the old "7-day free trial" claim is gone.
+  expect(body).not.toMatch(/free trial/i);
+  expect(body).toContain("free forever");
   expect(body).toContain("Client payments: coming soon.");
   expect(body).not.toMatch(/stripe|checkout|credit card|testimonial|trusted by/i);
   // Plan buttons go to the start-free form, not a checkout.
-  for (let i = 0; i < 3; i++) await expect(plans.nth(i).getByRole("link")).toHaveAttribute("href", "#start");
+  for (let i = 0; i < 6; i++) await expect(plans.nth(i).getByRole("link")).toHaveAttribute("href", "#start");
 });
 
 test("FAQ: the 6 questions, each opens with a plain answer, by keyboard too", async ({ page }) => {

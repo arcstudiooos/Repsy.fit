@@ -30,7 +30,7 @@ import { GOOGLE_ERRORS, GoogleButton, InternalLink, TextField, inputClass, valid
 const CLIENT_GOOGLE_ERRORS: Record<string, string> = {
   ...GOOGLE_ERRORS,
   link: "A client account with this email already exists. Sign in with your email and password.",
-  noaccount: "No client account for this Google account. Ask your coach for their join link.",
+  noaccount: "No coach linked yet - enter your join code below, or open your coach’s join link to finish joining.",
   othercoach: "This Google account already has a Repsy client account with another coach. Sign in from the client sign-in page.",
   badcode: "This join code is not valid. Please ask your coach for a new one.",
 };
@@ -71,6 +71,16 @@ function ClientLoginPage() {
   const [busy, setBusy] = useState(false);
   const justSet = new URLSearchParams(window.location.search).get("set") === "1";
   const justDeleted = new URLSearchParams(window.location.search).get("deleted") === "1";
+  // Prompt 78: a Google attempt with no linked coach lands here with ?google=noaccount. Instead of a
+  // dead-end, guide the newcomer to the join-code field already below and put their cursor in it.
+  const needsJoinCode = new URLSearchParams(window.location.search).get("google") === "noaccount";
+  useEffect(() => {
+    if (!needsJoinCode) return;
+    const el = document.getElementById("join-code-input");
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    (el as HTMLInputElement).focus({ preventScroll: true });
+  }, [needsJoinCode]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -492,7 +502,8 @@ function WelcomeForm({ initial, coachName, onDone }: { initial: ClientProfile; c
           </div>
         </div>
         <fieldset>
-          <legend className="mb-1 text-sm font-semibold">Weight</legend>
+          <legend className="mb-1 text-sm font-semibold">Starting weight</legend>
+          <p className="-mt-1 mb-1 text-xs text-dim">Your starting point - you can update it anytime in Me.</p>
           <div className="flex gap-2">
             <input
               id="welcome-weight"

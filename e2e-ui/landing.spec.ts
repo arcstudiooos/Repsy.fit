@@ -80,8 +80,9 @@ test("landing copy sticks to shipped features: no testimonials, logos or user co
     expect(text).toContain(fact);
   }
   expect(text).not.toMatch(/testimonial|trusted by|\d[\d,]*\+? (coaches|users|customers)/i);
-  // The only prices are the 3 published plans (Prompt 41).
-  expect(text.match(/\$\d+/g)).toEqual(["$39", "$89", "$199"]);
+  // The only prices are the real plans from server/src/billing/plans.ts: free for 2 clients, then
+  // one price per roster size (Prompt 41, corrected).
+  expect(text.match(/\$\d+/g)).toEqual(["$0", "$17", "$25", "$45", "$90", "$150"]);
 });
 
 test("Start free opens the dashboard at /app with all 7 tabs", async ({ page }) => {
