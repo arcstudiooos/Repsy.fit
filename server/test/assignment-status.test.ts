@@ -1,5 +1,6 @@
 // Assignment status change + delete (Prompt 24). Prisma is mocked, so these run without a database.
 import request, { TEST_COACH_ID } from "./helpers/authedRequest.js";
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma } = vi.hoisted(() => ({
@@ -50,7 +51,7 @@ describe("PATCH /api/clients/:clientId/assignments/:assignmentId", () => {
     const data = prisma.assignment.update.mock.calls[0][0].data;
     expect(prisma.assignment.update.mock.calls[0][0].where).toEqual({ id: stored.id });
     if (status === "Done") expect(data).toEqual({ status, completedAt: expect.any(Date), completedBy: "coach" });
-    else expect(data).toEqual({ status, completedAt: null, completedBy: null, clientEffort: null, clientNote: "" });
+    else expect(data).toEqual({ status, completedAt: null, completedBy: null, clientEffort: null, clientNote: "", clientSetLog: Prisma.DbNull });
   });
 
   it("changes only the status, even when other fields are sent", async () => {

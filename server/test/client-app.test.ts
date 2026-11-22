@@ -1,6 +1,7 @@
 // Prompt 79: the client's own plans (list, one, mark done) and the coach's "completed by", Prisma mocked.
 import supertest from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Prisma } from "@prisma/client";
 
 const prismaMock = vi.hoisted(() => {
   const mock: Record<string, any> = {
@@ -104,11 +105,11 @@ describe("POST /api/client-auth/my-assignments/:id/done", () => {
     expect(prismaMock.assignment.findFirst.mock.calls[0][0].where).toEqual({ id: "a1", clientId: "c1", status: "Done" });
   });
 
-  it("undoing clears the completion, effort and note", async () => {
+  it("undoing clears the completion, effort, note and per-set log", async () => {
     await done("a1", { done: false });
     expect(prismaMock.assignment.updateMany.mock.calls[0][0].where).toEqual({ id: "a1", clientId: "c1", status: { in: ["Active", "Done"] } });
     expect(prismaMock.assignment.updateMany.mock.calls[0][0].data).toEqual({
-      status: "Active", completedAt: null, completedBy: null, clientEffort: null, clientNote: "",
+      status: "Active", completedAt: null, completedBy: null, clientEffort: null, clientNote: "", clientSetLog: Prisma.DbNull,
     });
   });
 
@@ -126,10 +127,54 @@ describe("POST /api/client-auth/my-assignments/:id/done", () => {
     [{ done: true, effort: 11 }, "Effort must be a whole number from 1 to 10."],
     [{ done: true, effort: 6.5 }, "Effort must be a whole number from 1 to 10."],
     [{ done: true, note: "x".repeat(501) }, "Please keep the note under 500 characters."],
-    [{ done: true, title: "Easy day" }, "Only done, effort and note can be sent."],
-    [{ done: true, status: "Paused" }, "Only done, effort and note can be sent."],
-    [{ done: true, details: "nothing" }, "Only done, effort and note can be sent."],
+    [{ done: true, title: "Easy day" }, "Only done, effort, note and setLog can be sent."],
+    [{ done: true, status: "Paused" }, "Only done, effort, note and setLog can be sent."],
+    [{ done: true, details: "nothing" }, "Only done, effort, note and setLog can be sent."],
   ])("rejects %j (a client can never edit the plan itself)", async (body, error) => {
+    const res = await done("a1", body);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error });
+    expect(prismaMock.assignment.updateMany).not.toHaveBeenCalled();
+  });
+
+  // Nov 2026 in-workout logging: the per-set log is stored so the coach sees what was lifted.
+  const setLog = {
+    exercises: [
+      {
+        seq: 1,
+        name: "Back Squat",
+        plannedSets: 2,
+        plannedReps: "6",
+        plannedWeightKg: 60,
+        sets: [
+          { done: true, reps: "6", weightKg: 60 },
+          { done: true, reps: "5", weightKg: 62.5 },
+        ],
+      },
+    ],
+  };
+
+  it("stores the per-set log when the client finishes", async () => {
+    const res = await done("a1", { done: true, effort: 8, setLog });
+    expect(res.status).toBe(200);
+    expect(prismaMock.assignment.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ clientSetLog: setLog }) }),
+    );
+  });
+
+  it("clears the per-set log when the client un-finishes", async () => {
+    await done("a1", { done: false });
+    const { data } = prismaMock.assignment.updateMany.mock.calls[0][0];
+    // Prisma needs DbNull (not null) to write SQL NULL into a nullable Json column.
+    expect(data.clientSetLog).not.toBeNull();
+    expect(String(data.clientSetLog)).toContain("DbNull");
+  });
+
+  it.each([
+    [{ done: true, setLog: { exercises: [{ ...setLog.exercises[0], sets: new Array(31).fill({ done: true, reps: "6", weightKg: 60 }) }] } }, "Please log 30 sets or fewer per exercise."],
+    [{ done: true, setLog: { exercises: new Array(41).fill(setLog.exercises[0]) } }, "Please log 40 exercises or fewer."],
+    [{ done: true, setLog: { exercises: [{ ...setLog.exercises[0], sets: [{ done: true, reps: "6", weightKg: 1001 }] }] } }, "Logged weight must be between 0 and 1000 kg."],
+  ])("rejects an oversized or out-of-range log", async (body, error) => {
     const res = await done("a1", body);
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ error });
@@ -163,6 +208,6 @@ describe("the coach's status change records who completed it", () => {
   it("Active or Paused clears who / when", async () => {
     prismaMock.assignment.findFirst.mockResolvedValue({ ...PLAN, status: "Done", completedBy: "client" });
     await signedIn(app).patch("/api/clients/c1/assignments/a1").send({ status: "Paused" });
-    expect(prismaMock.assignment.update.mock.calls[0][0].data).toEqual({ status: "Paused", completedAt: null, completedBy: null, clientEffort: null, clientNote: "" });
+    expect(prismaMock.assignment.update.mock.calls[0][0].data).toEqual({ status: "Paused", completedAt: null, completedBy: null, clientEffort: null, clientNote: "", clientSetLog: Prisma.DbNull });
   });
 });

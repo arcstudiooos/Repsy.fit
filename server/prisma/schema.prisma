@@ -321,6 +321,12 @@ model Assignment {
   clientNote   String    @default("")
   /// Prompt 80: meals from the coach's library attached to a Nutrition plan (the coach's own meals only).
   mealIds      String[]  @default([])
+  /// Nov 2026 in-workout logging: what the CLIENT actually did, per set, when they finished this
+  /// workout. NULL until they finish one (and cleared if they un-finish it). Shape:
+  /// { exercises: [{ seq, name, plannedSets, plannedReps, plannedWeightKg, sets: [{ done, reps, weightKg }] }] }
+  /// Weights are ALWAYS kg; the client app converts for display. Read by the coach so performed
+  /// load/reps reach them instead of dying in the browser's localStorage.
+  clientSetLog Json?
 
   client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   /// Inspo W3: the structured form of this workout. EMPTY for every plan written before Nov 2026

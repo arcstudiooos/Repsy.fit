@@ -173,7 +173,12 @@ test("Finish workout saves effort and a note, then shows Done; Mark as not done 
   await expect(doneBox.getByRole("status")).toHaveText("✓ Done");
   await expect(doneBox).toContainText("Effort 8/10");
   await expect(doneBox).toContainText("Squats felt heavy");
-  expect(marks[0]).toEqual({ id: "w1", done: true, effort: 8, note: "Squats felt heavy" });
+  expect(marks[0]).toMatchObject({ id: "w1", done: true, effort: 8, note: "Squats felt heavy" });
+  // Nov 2026 logging: the per-set log rides along so the coach sees what was actually done.
+  // Nothing was ticked here, so every set is done:false and the planned numbers come through.
+  expect(marks[0].setLog.exercises[0]).toMatchObject({ seq: 1, name: "Back Squat", plannedSets: 4, plannedReps: "6" });
+  expect(marks[0].setLog.exercises[0].sets).toHaveLength(4);
+  expect(marks[0].setLog.exercises[0].sets.every((s: { done: boolean }) => s.done === false)).toBe(true);
   await doneBox.getByRole("button", { name: "Mark as not done" }).click();
   await expect(page.getByRole("button", { name: "Finish workout" })).toBeVisible();
 });
@@ -208,6 +213,33 @@ test("the rest button resets the timer even for the same exercise; ticks from re
   await expect(timer).toContainText("1:50");
 });
 
+test("logging: planned numbers are pre-filled, an edited weight and ticked sets reach the coach", async ({ page }) => {
+  const { marks } = await mock(page);
+  await page.goto("/client/plan/w1");
+  const squat = page.getByRole("group", { name: "Sets for Back Squat" });
+  // The coach wrote "4 sets × 6 reps" with no load, so reps pre-fill and weight is empty.
+  await expect(squat.getByLabel("Back Squat set 1 reps")).toHaveValue("6");
+  await expect(squat.getByLabel("Back Squat set 1 weight in kg")).toHaveValue("");
+  // Log set 1 at a real weight, and a different rep count on set 2.
+  await squat.getByLabel("Back Squat set 1 weight in kg").fill("60");
+  await squat.getByLabel("Back Squat set 2 weight in kg").fill("62.5");
+  await squat.getByLabel("Back Squat set 2 reps").fill("5");
+  await squat.getByRole("button", { name: "Back Squat set 2" }).click(); // sets 1-2 done
+  await expect(squat.getByRole("button", { name: "Back Squat set 1" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.getByRole("button", { name: "Finish workout" }).click();
+  const form = page.getByRole("form", { name: "Finish workout" });
+  // The summary states done-vs-planned before anything is sent.
+  await expect(form.getByRole("region", { name: "What you did" })).toContainText("2 of 4 sets");
+  await form.getByRole("button", { name: "Save as done" }).click();
+  await expect(page.getByRole("region", { name: "Finished" })).toBeVisible();
+
+  const squatLog = marks[0].setLog.exercises[0];
+  expect(squatLog.sets[0]).toEqual({ done: true, reps: "6", weightKg: 60 });
+  expect(squatLog.sets[1]).toEqual({ done: true, reps: "5", weightKg: 62.5 });
+  expect(squatLog.sets[2].done).toBe(false);
+});
+
 test("a plan without exercise lines shows its text and a simple Mark done", async ({ page }) => {
   const { marks } = await mock(page);
   await page.goto("/client/plan/n1");
@@ -216,7 +248,8 @@ test("a plan without exercise lines shows its text and a simple Mark done", asyn
   await page.getByRole("button", { name: "Mark done" }).click();
   await page.getByRole("button", { name: "Save as done" }).click();
   await expect(page.getByRole("region", { name: "Finished" })).toBeVisible();
-  expect(marks).toEqual([{ id: "n1", done: true, effort: null }]);
+  // A plan with no exercise lines has nothing to log, so setLog is explicitly null.
+  expect(marks).toEqual([{ id: "n1", done: true, effort: null, setLog: null }]);
 });
 
 test("a plan that isn't theirs (or is paused) is a plain error with a way back", async ({ page }) => {

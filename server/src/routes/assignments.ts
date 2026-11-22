@@ -1,6 +1,7 @@
 // Assignments API - see "API contract" in CLAUDE.md.
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { allowedExerciseIds, deriveStructure, writeSections } from "../workouts/persist.js";
 import { coachIdOf } from "../auth/requireCoach.js";
@@ -187,7 +188,7 @@ assignmentsRouter.patch(
           ? assignment.status === "Done"
             ? { status: "Done" }
             : { status: "Done", completedAt: new Date(), completedBy: "coach" }
-          : { status: parsed.data.status, completedAt: null, completedBy: null, clientEffort: null, clientNote: "" },
+          : { status: parsed.data.status, completedAt: null, completedBy: null, clientEffort: null, clientNote: "", clientSetLog: Prisma.DbNull },
     });
     res.json(updated);
   }),

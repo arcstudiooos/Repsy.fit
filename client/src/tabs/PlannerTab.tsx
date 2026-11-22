@@ -9,6 +9,8 @@ import { ManualAssignmentForm, type TemplatePrefill } from "../components/Manual
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { MenuButton } from "../components/MenuButton";
 import { formatDay } from "../lib/dates";
+import { useCoachUnits } from "../lib/useCoachUnits";
+import { showWeight } from "../lib/snapshotFormat";
 import {
   ASSIGNMENT_STATUSES,
   ASSIGNMENT_TYPES,
@@ -242,6 +244,7 @@ function AssignmentCard({
   registerResume?: (clientId: string, assignmentId: string) => () => void;
 }) {
   const queryClient = useQueryClient();
+  const units = useCoachUnits();
   const { clientId } = assignment;
   // The list, the Clients tab counts (same assignments cache) and Progress completion numbers.
   const refresh = () =>
@@ -437,6 +440,25 @@ function AssignmentCard({
             {assignment.clientEffort != null && <span className="font-normal text-text"> · Effort {assignment.clientEffort}/10</span>}
           </p>
           {assignment.clientNote && <p className="mt-1 whitespace-pre-wrap text-text">“{assignment.clientNote}”</p>}
+          {/* Nov 2026: what they actually lifted, per exercise - the point of in-workout logging. */}
+          {assignment.clientSetLog && assignment.clientSetLog.exercises.length > 0 && (
+            <ul aria-label="Logged sets" className="mt-2 grid gap-0.5">
+              {assignment.clientSetLog.exercises.map((ex) => {
+                const did = ex.sets.filter((s) => s.done).length;
+                const loads = ex.sets.filter((s) => s.done && s.weightKg !== null).map((s) => s.weightKg as number);
+                return (
+                  <li key={ex.seq} className="text-text">
+                    <span className="font-semibold">{ex.name}</span>
+                    <span className="tabular-nums text-dim">
+                      {" "}
+                      - {did}/{ex.plannedSets} sets
+                      {loads.length > 0 ? ` · ${showWeight(Math.max(...loads), units)}` : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       )}
       <div className="mt-2">

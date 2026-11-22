@@ -1,0 +1,13 @@
+-- In-workout set logging (Nov 2026).
+--
+-- Until now a client's per-set progress lived only in their browser's localStorage: the dots they
+-- tapped were never sent anywhere, so the coach received "Done by client" plus an effort score and
+-- nothing about what was actually lifted. Progression decisions had no data behind them.
+--
+-- One nullable JSONB column on the existing table. Nothing is reinterpreted: every existing row
+-- keeps NULL, which the readers treat as "no log", exactly as before this change.
+--
+-- Shape: { exercises: [{ seq, name, plannedSets, plannedReps, plannedWeightKg,
+--                        sets: [{ done, reps, weightKg }] }] }
+-- Weights are always kg; the client app converts for display.
+ALTER TABLE "assignments" ADD COLUMN "clientSetLog" JSONB;

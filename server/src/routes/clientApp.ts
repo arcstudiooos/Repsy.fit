@@ -4,6 +4,7 @@
 // never change its title, details, date, type or anything else the coach wrote.
 import { Router } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { rateLimit } from "../auth/rateLimit.js";
 import { clientAccountIdOf, requireActiveClient } from "../auth/clientSession.js";
@@ -27,6 +28,7 @@ export const CLIENT_ASSIGNMENT_SELECT = {
   completedBy: true,
   clientEffort: true,
   clientNote: true,
+  clientSetLog: true,
 } as const;
 
 const dayIndex = (d: string) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86_400_000;
@@ -84,6 +86,33 @@ clientAppRouter.get(
   }),
 );
 
+/** One set the client actually did. Weights are kg; the client app converts for display. */
+const LoggedSetSchema = z.object({
+  done: z.boolean({ error: "Each set's done must be true or false." }),
+  reps: z.string({ error: "Logged reps must be text." }).trim().max(24, "Please keep logged reps under 24 characters.").nullable(),
+  weightKg: z
+    .number({ error: "Logged weight must be a number in kg." })
+    .min(0, "Logged weight must be between 0 and 1000 kg.")
+    .max(1000, "Logged weight must be between 0 and 1000 kg.")
+    .nullable(),
+});
+
+/** The whole workout's log. Bounded so a client cannot post an unbounded blob. */
+const SetLogSchema = z.object({
+  exercises: z
+    .array(
+      z.object({
+        seq: z.number().int().min(1).max(200),
+        name: z.string().trim().max(120),
+        plannedSets: z.number().int().min(0).max(30),
+        plannedReps: z.string().trim().max(24),
+        plannedWeightKg: z.number().min(0).max(1000).nullable(),
+        sets: z.array(LoggedSetSchema).max(30, "Please log 30 sets or fewer per exercise."),
+      }),
+    )
+    .max(40, "Please log 40 exercises or fewer."),
+});
+
 const DoneSchema = strictWith(
 z
   .object({
@@ -96,13 +125,14 @@ z
       .nullable()
       .optional(),
     note: z.string({ error: "The note must be text." }).trim().max(500, "Please keep the note under 500 characters.").optional(),
+    setLog: SetLogSchema.nullable().optional(),
   })
-, "Only done, effort and note can be sent.");
+, "Only done, effort, note and setLog can be sent.");
 
-// POST /api/client-auth/my-assignments/:id/done { done, effort?, note? } -> the updated plan.
-//   done: true  -> status Done, completedAt now, completedBy "client", the effort and note saved (an
-//                  already-Done plan is returned unchanged)
-//   done: false -> status Active, completion, effort and note cleared
+// POST /api/client-auth/my-assignments/:id/done { done, effort?, note?, setLog? } -> the updated plan.
+//   done: true  -> status Done, completedAt now, completedBy "client", the effort, note and per-set
+//                  log saved (an already-Done plan is returned unchanged)
+//   done: false -> status Active, completion, effort, note and the per-set log cleared
 clientAppRouter.post(
   "/my-assignments/:id/done",
   requireActiveClient,
@@ -110,7 +140,7 @@ clientAppRouter.post(
   asyncHandler(async (req, res) => {
     const parsed = DoneSchema.safeParse(req.body ?? {});
     if (!parsed.success) return void res.status(400).json({ error: parsed.error.issues[0].message });
-    const { done, effort, note } = parsed.data;
+    const { done, effort, note, setLog } = parsed.data;
     const clientId = clientAccountIdOf(req);
     // One conditional write: only this client's own, not-Paused plan can change (no read-then-write gap).
     // Marking done only completes a plan that is still Active: an already-Done plan keeps who finished it
@@ -118,8 +148,8 @@ clientAppRouter.post(
     const result = await prisma.assignment.updateMany({
       where: { id: req.params.id, clientId, status: done ? "Active" : { in: ["Active", "Done"] } },
       data: done
-        ? { status: "Done", completedAt: new Date(), completedBy: "client", clientEffort: effort ?? null, clientNote: note ?? "" }
-        : { status: "Active", completedAt: null, completedBy: null, clientEffort: null, clientNote: "" },
+        ? { status: "Done", completedAt: new Date(), completedBy: "client", clientEffort: effort ?? null, clientNote: note ?? "", clientSetLog: setLog ? (setLog as Prisma.InputJsonValue) : Prisma.DbNull }
+        : { status: "Active", completedAt: null, completedBy: null, clientEffort: null, clientNote: "", clientSetLog: Prisma.DbNull },
     });
     if (result.count !== 1) {
       const already = done

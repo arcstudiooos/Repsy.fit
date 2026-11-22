@@ -10,14 +10,15 @@ import { lazy, Suspense, useEffect, useState, type FormEvent, type ReactNode } f
 import { PlanDetails, inline } from "../components/FormattedText";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMyAssignment, getMyAssignments, getMySessions, getMyStreaks, getMyUnreadCount, markMyAssignment, queryKeys } from "../api";
+import { getMyAssignment, getMyAssignments, getMyProfile, getMySessions, getMyStreaks, getMyUnreadCount, markMyAssignment, queryKeys } from "../api";
 import { addDays, localDateKey, weekStartOf } from "../lib/schedule";
 import { TYPE_CHIP } from "../lib/typeChip";
 import { LoadingState, plainErrorMessage } from "../components/States";
 import { navigate } from "../route";
-import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment } from "../types";
+import { ASSIGNMENT_TYPES, type ClientAccount, type ClientAssignment, type WorkoutSetLog } from "../types";
 import { fmtDay, fmtTime, MyPlanSection, MySessionsSection } from "./sections";
 import { clock, parsePlanLines, type PlanLine } from "./planLines";
+import { showWeight } from "../lib/snapshotFormat";
 import { RestTimer } from "./RestTimer";
 import { MeSettings } from "./MeSettings";
 import { MessagesView, CLIENT_MESSAGES_POLL_MS } from "./MessagesView";
@@ -520,6 +521,54 @@ function useChecklist(id: string) {
   return { setsDone, setDone };
 }
 
+const LB_PER_KG = 2.2046226218;
+const logKey = (id: string) => `repsy:client-setlog:${id}`;
+/** What the client typed per set, as typed, keyed `${seq}:${setIndex}`. Display units, not kg: it is
+ *  a draft of the inputs. Converted to kg only when the workout is finished. */
+type SetEntry = { weight: string; reps: string };
+function useSetEntries(id: string) {
+  const [entries, setEntries] = useState<Record<string, SetEntry>>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(logKey(id)) ?? "{}");
+      if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, SetEntry>;
+      return {};
+    } catch {
+      return {};
+    }
+  });
+  const setEntry = (key: string, patch: Partial<SetEntry>) =>
+    setEntries((c) => {
+      const next = { ...c, [key]: { weight: c[key]?.weight ?? "", reps: c[key]?.reps ?? "", ...patch } };
+      try {
+        localStorage.setItem(logKey(id), JSON.stringify(next));
+      } catch {
+        // Private mode / full storage: the draft just isn't remembered.
+      }
+      return next;
+    });
+  return { entries, setEntry };
+}
+
+/** The planned load the coach wrote ("60 kg", "135 lb", "bodyweight") as kg, or null. */
+export function plannedKg(load: string | undefined): number | null {
+  if (!load) return null;
+  const m = /^(\d+(?:\.\d+)?)\s*(kg|lb)/i.exec(load.trim());
+  if (!m) return null; // "bodyweight" and anything unparsed: no number to pre-fill.
+  const n = Number(m[1]);
+  return /lb/i.test(m[2]) ? Math.round((n / LB_PER_KG) * 100) / 100 : n;
+}
+
+/** kg -> the number shown in the client's unit (no unit suffix: the field has its own label). */
+const inUnits = (kg: number | null, units: "kg" | "lb") =>
+  kg === null ? "" : String(Math.round((units === "lb" ? kg * LB_PER_KG : kg) * 100) / 100);
+
+/** What the client typed, back to kg for storage. */
+const toKg = (typed: string, units: "kg" | "lb"): number | null => {
+  const n = Number(typed.trim());
+  if (typed.trim() === "" || !Number.isFinite(n) || n < 0 || n > 1000) return null;
+  return units === "lb" ? Math.round((n / LB_PER_KG) * 100) / 100 : Math.round(n * 100) / 100;
+};
+
 function PlanDetail({ id }: { id: string }) {
   const plan = useQuery({ queryKey: queryKeys.myAssignment(id), queryFn: () => getMyAssignment(id), retry: false });
   const back = (
@@ -559,11 +608,44 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
   const lines = parsePlanLines(plan.details);
   const exercises = lines.filter((l) => l.kind === "exercise");
   const { setsDone, setDone } = useChecklist(plan.id);
+  const { entries, setEntry } = useSetEntries(plan.id);
+  const profile = useQuery({ queryKey: queryKeys.myProfile, queryFn: getMyProfile });
+  const units = profile.data?.units ?? "kg";
   const doneOf = (seq: number, sets: number) => Math.min(setsDone[seq] ?? 0, sets);
   const fullDone = exercises.filter((e) => e.kind === "exercise" && doneOf(e.seq, e.sets) >= e.sets).length;
   const [rest, setRest] = useState<{ sec: number; label: string; nonce: number } | null>(null);
   const date = new Date(`${plan.date}T00:00:00`).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
   const startRest = (sec: number, label: string) => setRest((r) => ({ sec, label, nonce: (r?.nonce ?? 0) + 1 }));
+
+  /** The value shown in a set's field: what the client typed, else the coach's prescription. */
+  const shown = (l: Extract<PlanLine, { kind: "exercise" }>, k: number) => {
+    const e = entries[`${l.seq}:${k}`];
+    return {
+      weight: e?.weight ?? inUnits(plannedKg(l.load), units),
+      reps: e?.reps ?? (l.timed ? l.reps : l.reps),
+    };
+  };
+
+  /** What actually happened, for the finish summary and the coach. Weights in kg. */
+  const buildSetLog = (): WorkoutSetLog => ({
+    exercises: exercises.flatMap((l) =>
+      l.kind === "exercise"
+        ? [
+            {
+              seq: l.seq,
+              name: l.name,
+              plannedSets: l.sets,
+              plannedReps: l.reps,
+              plannedWeightKg: plannedKg(l.load),
+              sets: Array.from({ length: l.sets }, (_, k) => {
+                const v = shown(l, k);
+                return { done: k < doneOf(l.seq, l.sets), reps: v.reps.trim() || null, weightKg: toKg(v.weight, units) };
+              }),
+            },
+          ]
+        : [],
+    ),
+  });
 
   return (
     <article className="mt-3">
@@ -602,28 +684,48 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
                       <span aria-hidden="true">▶</span>&nbsp;{clock(l.restSec)}
                     </button>
                   </div>
-                  {/* One dot per set: tick sets as you do them. Ticking a set starts that exercise's rest. */}
-                  <div role="group" aria-label={`Sets for ${l.name}`} className="mt-2 flex flex-wrap gap-1.5">
+                  {/* One row per set: the coach's numbers pre-filled, edit only if it differed, then
+                      one tap on the set button confirms it and starts that exercise's rest. */}
+                  <div role="group" aria-label={`Sets for ${l.name}`} className="mt-2 grid gap-1.5">
                     {Array.from({ length: l.sets }, (_, k) => {
                       const done = doneOf(l.seq, l.sets);
                       const isDone = k < done;
+                      const v = shown(l, k);
+                      const key = `${l.seq}:${k}`;
                       return (
-                        <button
-                          key={k}
-                          type="button"
-                          aria-pressed={isDone}
-                          aria-label={`${l.name} set ${k + 1}`}
-                          onClick={() => {
-                            const next = k + 1 === done ? k : k + 1;
-                            setDone(l.seq, next);
-                            if (next > done) startRest(l.restSec, l.name);
-                          }}
-                          className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold ${
-                            isDone ? "border-accent2 bg-accent2 text-white" : "border-border-strong bg-surface2 text-dim hover:border-dim"
-                          }`}
-                        >
-                          {isDone ? "✓" : k + 1}
-                        </button>
+                        <div key={k} className="flex items-center gap-1.5">
+                          <input
+                            aria-label={`${l.name} set ${k + 1} weight in ${units}`}
+                            value={v.weight}
+                            onChange={(e) => setEntry(key, { weight: e.target.value, reps: v.reps })}
+                            inputMode="decimal"
+                            placeholder="-"
+                            className="min-h-11 w-16 rounded-lg border border-border-strong bg-surface2 px-2 text-center text-sm tabular-nums text-text"
+                          />
+                          <span className="w-5 shrink-0 text-xs text-dim">{units}</span>
+                          <span aria-hidden="true" className="shrink-0 text-xs text-dim">×</span>
+                          <input
+                            aria-label={`${l.name} set ${k + 1} reps`}
+                            value={v.reps}
+                            onChange={(e) => setEntry(key, { weight: v.weight, reps: e.target.value })}
+                            className="min-h-11 w-16 rounded-lg border border-border-strong bg-surface2 px-2 text-center text-sm tabular-nums text-text"
+                          />
+                          <button
+                            type="button"
+                            aria-pressed={isDone}
+                            aria-label={`${l.name} set ${k + 1}`}
+                            onClick={() => {
+                              const next = k + 1 === done ? k : k + 1;
+                              setDone(l.seq, next);
+                              if (next > done) startRest(l.restSec, l.name);
+                            }}
+                            className={`ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${
+                              isDone ? "border-accent2 bg-accent2 text-white" : "border-border-strong bg-surface2 text-dim hover:border-dim"
+                            }`}
+                          >
+                            {isDone ? "✓" : k + 1}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -660,7 +762,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
       )}
 
       <div id="finish-box">
-        <FinishBox plan={plan} />
+        <FinishBox plan={plan} setLog={exercises.length > 0 ? buildSetLog() : null} units={units} />
       </div>
       {/* All exercises ticked: one tap to the finish step (sticky above the phone tab bar). */}
       {exercises.length > 0 && plan.status !== "Done" && fullDone >= exercises.length && (
@@ -678,7 +780,7 @@ function PlanBody({ plan }: { plan: ClientAssignment }) {
   );
 }
 
-function FinishBox({ plan }: { plan: ClientAssignment }) {
+function FinishBox({ plan, setLog, units }: { plan: ClientAssignment; setLog: WorkoutSetLog | null; units: "kg" | "lb" }) {
   const refresh = useRefreshPlans();
   const qc = useQueryClient();
   const isWorkout = plan.type === "Workout";
@@ -686,7 +788,7 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
   const [effort, setEffort] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const mark = useMutation({
-    mutationFn: (body: { done: boolean; effort?: number | null; note?: string }) => markMyAssignment(plan.id, body),
+    mutationFn: (body: { done: boolean; effort?: number | null; note?: string; setLog?: WorkoutSetLog | null }) => markMyAssignment(plan.id, body),
     onSuccess: async (updated) => {
       qc.setQueryData(queryKeys.myAssignment(plan.id), updated);
       setOpen(false);
@@ -730,10 +832,33 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
   }
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    mark.mutate({ done: true, effort, note: note.trim() || undefined });
+    mark.mutate({ done: true, effort, note: note.trim() || undefined, setLog });
   };
   return (
     <form onSubmit={submit} aria-label={isWorkout ? "Finish workout" : "Mark done"} className="mt-6 card p-4">
+      {setLog && setLog.exercises.length > 0 && (
+        /* What you did against what was planned, before you send it. */
+        <section aria-label="What you did" className="mb-4">
+          <h2 className="card-title">What you did</h2>
+          <ul className="mt-1 divide-y divide-border border-t border-border">
+            {setLog.exercises.map((ex) => {
+              const did = ex.sets.filter((s) => s.done).length;
+              const loads = ex.sets.filter((s) => s.done && s.weightKg !== null).map((s) => s.weightKg as number);
+              const changed = loads.length > 0 && ex.plannedWeightKg !== null && loads.some((kg) => kg !== ex.plannedWeightKg);
+              return (
+                <li key={ex.seq} className="flex flex-wrap items-baseline justify-between gap-x-3 py-1.5">
+                  <span className="min-w-0 text-sm text-text">{ex.name}</span>
+                  <span className="text-sm tabular-nums text-dim">
+                    {did} of {ex.plannedSets} sets
+                    {loads.length > 0 ? ` · ${[...new Set(loads.map((kg) => showWeight(kg, units)))].join(", ")}` : ""}
+                    {changed ? " (changed)" : ""}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       <fieldset>
         <legend className="text-base font-semibold text-text">How hard was it? (optional)</legend>
         <p className="text-xs text-dim">1 = very easy, 10 = everything you had</p>
@@ -742,7 +867,7 @@ function FinishBox({ plan }: { plan: ClientAssignment }) {
           {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
             <label
               key={n}
-              className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border font-mono text-sm font-semibold has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
+              className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border tabular-nums text-sm font-semibold has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
                 effort === n ? "border-accent bg-accent text-on-accent" : "border-border-strong bg-surface2 text-text hover:border-dim"
               }`}
             >

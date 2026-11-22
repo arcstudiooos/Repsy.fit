@@ -96,8 +96,33 @@ export interface Assignment {
   completedBy?: "coach" | "client" | null;
   clientEffort?: number | null;
   clientNote?: string;
+  /** Nov 2026 in-workout logging: the client's per-set log, so the coach sees what was lifted. */
+  clientSetLog?: WorkoutSetLog | null;
   /** Prompt 80: meals from the coach's library on a Nutrition plan. */
   mealIds?: string[];
+}
+
+/** One set the client actually did (Nov 2026 in-workout logging). Weights are ALWAYS kg. */
+export interface LoggedSet {
+  done: boolean;
+  reps: string | null;
+  weightKg: number | null;
+}
+
+/** One exercise's planned prescription plus what was actually done, set by set. */
+export interface LoggedExercise {
+  /** parsePlanLines seq: 1, 2, 3... across the whole plan. */
+  seq: number;
+  name: string;
+  plannedSets: number;
+  plannedReps: string;
+  plannedWeightKg: number | null;
+  sets: LoggedSet[];
+}
+
+/** The whole workout's log, stored on Assignment.clientSetLog. */
+export interface WorkoutSetLog {
+  exercises: LoggedExercise[];
 }
 
 /** Prompt 79: what a CLIENT sees of one of their assignments (no coach id, no AI / manual source). */
@@ -113,6 +138,8 @@ export interface ClientAssignment {
   completedBy: "coach" | "client" | null;
   clientEffort: number | null;
   clientNote: string;
+  /** Nov 2026 in-workout logging: what the client actually did, per set. NULL until they finish. */
+  clientSetLog?: WorkoutSetLog | null;
   /** Prompt 80: only on GET one plan - a Nutrition plan's meals from the coach's library. */
   meals?: { id: string; name: string; mealType: string; calories: number; proteinG: number; carbsG: number; fatG: number }[];
 }

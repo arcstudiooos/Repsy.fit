@@ -87,6 +87,7 @@ import type {
   MyAccount,
   MyPayment,
   ClientAssignment,
+  WorkoutSetLog,
   ClientProfile,
   ThreadMessage,
   ThreadSummary,
@@ -404,7 +405,7 @@ export const saveMyProfile = (input: Partial<Omit<ClientProfile, "level">> & { l
 export const getMyAssignments = (from: string, to: string) =>
   request<ClientAssignment[]>("GET", `/client-auth/my-assignments?from=${enc(from)}&to=${enc(to)}`);
 export const getMyAssignment = (id: string) => request<ClientAssignment>("GET", `/client-auth/my-assignments/${enc(id)}`);
-export const markMyAssignment = (id: string, body: { done: boolean; effort?: number | null; note?: string }) =>
+export const markMyAssignment = (id: string, body: { done: boolean; effort?: number | null; note?: string; setLog?: WorkoutSetLog | null }) =>
   request<ClientAssignment>("POST", `/client-auth/my-assignments/${enc(id)}/done`, body);
 /** Prompt 80: the client's habits, daily / weekly check-ins and targets. */
 function localDay(): string {
