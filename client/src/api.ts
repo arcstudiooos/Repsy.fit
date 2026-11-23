@@ -279,8 +279,8 @@ export const copyProgram = (id: string) => request<Program>("POST", `/programs/$
 export const previewProgram = (id: string, clientId: string, startDate: string) =>
   request<ProgramPreview>("POST", `/programs/${id}/preview`, { clientId, startDate });
 /** Materialises real assignments on the client's calendar. */
-export const assignProgram = (id: string, clientId: string, startDate: string) =>
-  request<{ created: number; startDate: string }>("POST", `/programs/${id}/assign`, { clientId, startDate });
+export const assignProgram = (id: string, clientId: string, startDate: string, asDraft = false) =>
+  request<{ created: number; startDate: string }>("POST", `/programs/${id}/assign`, { clientId, startDate, asDraft });
 
 // ----- Forms (Inspo C1/C2) -----
 /** The coach's own forms plus Repsy's samples. */

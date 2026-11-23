@@ -280,6 +280,10 @@ programsRouter.post(
       return;
     }
 
+    // Draft/Publish tie-in: a coach can apply a program as DRAFTS, so the weeks land in the client's
+    // planner unpublished for a final check, then publish - instead of going live the moment they commit.
+    const asDraft = (req.body as { asDraft?: unknown }).asDraft === true;
+
     const created = await prisma.$transaction(
       result.dated.map((d) =>
         prisma.assignment.create({
@@ -291,7 +295,7 @@ programsRouter.post(
             details: d.details,
             date: d.date,
             source: "program",
-            status: "Active",
+            status: asDraft ? "Draft" : "Active",
           },
         }),
       ),

@@ -438,6 +438,7 @@ function AssignProgram({
   const queryClient = useQueryClient();
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const [startDate, setStartDate] = useState(localToday());
+  const [asDraft, setAsDraft] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const clientName = clients.find((c) => c.id === clientId)?.name ?? "the client";
@@ -447,7 +448,7 @@ function AssignProgram({
     onError: (e) => setProblem(plainErrorMessage(e)),
   });
   const commit = useMutation({
-    mutationFn: () => assignProgram(program.id, clientId, startDate),
+    mutationFn: () => assignProgram(program.id, clientId, startDate, asDraft),
     onSuccess: async (result) => {
       // The client's plans changed, so anything showing them must refetch.
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -520,21 +521,26 @@ function AssignProgram({
       ) : (
         <>
           <p className="text-sm font-semibold text-text">
-            This adds {preview.data.count} {preview.data.count === 1 ? "plan" : "plans"} to {clientName}'s calendar.
+            This adds {preview.data.count} {preview.data.count === 1 ? "plan" : "plans"} to {clientName}'s calendar
+            {asDraft ? " as drafts to review and publish" : ""}.
           </p>
           <ol className="grid gap-1.5">
             {preview.data.items.map((item, i) => (
               <li key={i} className="flex flex-wrap items-center gap-2 border-b border-border pb-1.5 text-sm last:border-b-0">
-                <span className="font-mono text-xs text-dim">{item.date}</span>
+                <span className="tabular-nums text-xs text-dim">{item.date}</span>
                 <span className={"rounded-full px-2 py-0.5 text-xs font-semibold " + TYPE_CHIP[item.type]}>{item.type}</span>
                 <span className="text-text">{item.title}</span>
                 <span className="text-xs text-dim">{item.phaseName}</span>
               </li>
             ))}
           </ol>
+          <label className="flex items-center gap-2 text-sm font-semibold text-text">
+            <input type="checkbox" checked={asDraft} onChange={(e) => setAsDraft(e.target.checked)} className="h-4 w-4" />
+            Add as drafts — review in the planner and publish when ready
+          </label>
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={commit.isPending} className="btn btn-primary min-h-11" onClick={() => commit.mutate()}>
-              {commit.isPending ? "Adding..." : `Add these ${preview.data.count} to the calendar`}
+              {commit.isPending ? "Adding..." : asDraft ? `Add these ${preview.data.count} as drafts` : `Add these ${preview.data.count} to the calendar`}
             </button>
             <button type="button" className="btn btn-secondary min-h-11" onClick={() => preview.reset()}>
               Change the dates

@@ -193,6 +193,16 @@ describe("assigning: the template becomes real assignments", () => {
     });
   });
 
+  it("applies as DRAFTS when asked, so the weeks land unpublished for a final check before publish", async () => {
+    prisma.program.findFirst.mockResolvedValue(program());
+    const res = await request(app).post("/api/programs/p1/assign").send({ clientId: "cl1", startDate: MON, asDraft: true });
+    expect(res.status).toBe(201);
+    // Every created row is a Draft, which the client never sees until the coach publishes it.
+    for (const call of prisma.assignment.create.mock.calls) {
+      expect(call[0].data.status).toBe("Draft");
+    }
+  });
+
   it("writes them all in ONE transaction, so a half-assigned program cannot exist", async () => {
     prisma.program.findFirst.mockResolvedValue(program());
     await assign();

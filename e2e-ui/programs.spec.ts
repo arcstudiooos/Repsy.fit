@@ -165,6 +165,18 @@ test("only after the preview can the plans be committed", async ({ page }) => {
   await expect(page.getByRole("status")).toContainText("Added 3 plans to Maya Patel's calendar.");
 });
 
+test("a program can be applied AS DRAFTS, to review in the planner before publishing", async ({ page }) => {
+  const { posted } = await openPrograms(page);
+  await page.getByRole("button", { name: "Give to a client" }).click();
+  const panel = page.getByRole("region", { name: "Give 8 week strength to a client" });
+  await panel.getByRole("button", { name: "Show me the dates" }).click();
+  // Opt into drafts: the commit button relabels and the assign call carries asDraft.
+  await panel.getByLabel(/Add as drafts/).check();
+  await panel.getByRole("button", { name: "Add these 3 as drafts" }).click();
+  const assign = posted.find((p) => p.url.endsWith("/assign"));
+  expect(assign?.body).toMatchObject({ asDraft: true });
+});
+
 test("changing the date drops the stale preview rather than committing it", async ({ page }) => {
   const { posted } = await openPrograms(page);
   await page.getByRole("button", { name: "Give to a client" }).click();
