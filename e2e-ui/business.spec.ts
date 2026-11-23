@@ -28,6 +28,10 @@ async function mockBusiness(page: Page, rows: Row[], currency = "INR") {
     const req = route.request();
     const path = new URL(req.url()).pathname;
     if (path === "/api/auth/me") return route.fulfill({ json: { ...ME, currency } });
+    if (path === "/api/billing/me") return route.fulfill({ json: {
+      status: "free", tier: "Starter", clientLimit: 2, price: 0, daysLeft: null, isFree: true,
+      message: null, renewsOn: null, clientsUsed: 0, enterpriseFrom: 100, catalogue: [], paypal: null,
+    } });
     if (path === "/api/clients") return route.fulfill({ json: CLIENTS });
     if (path === "/api/business/plans") return route.fulfill({ json: { currency, plans: state.rows } });
     const plan = /^\/api\/clients\/([^/]+)\/plan$/.exec(path);
@@ -54,6 +58,8 @@ async function mockBusiness(page: Page, rows: Row[], currency = "INR") {
       return route.fulfill({ status: 201, json: { payment: body, plan: r.plan } });
     }
     if (path === "/api/review-queue") return route.fulfill({ json: { pendingCount: 0, items: [] } });
+    if (path === "/api/messages/threads") return route.fulfill({ json: { threads: [] } });
+    if (/^\/api\/clients\/[^/]+\/messages$/.test(path)) return route.fulfill({ json: { messages: [], hasMore: false } });
     return route.fulfill({ json: emptyApi(path) });
   });
   await page.goto("/app");
@@ -88,6 +94,26 @@ test("Business is the last tab, and says it is record-keeping only", async ({ pa
   await expect(allCount).not.toHaveClass(/font-mono/);
   await expect(panel).toContainText("No plans yet.");
   await expect(page.getByRole("region", { name: "Selected client" })).toHaveCount(0);
+  // Money truth in one place: the coach's own plan sits beside the payments they record, from the
+  // same billing source Account uses (here the mocked free tier).
+  const mine = page.getByRole("region", { name: "My plan" });
+  await expect(mine).toContainText("Free plan · 2 clients");
+  await expect(mine).toContainText("0 of 2 clients used.");
+});
+
+test("an overdue row offers a one-tap Message action that opens that client's chat", async ({ page }) => {
+  await mockBusiness(page, [
+    row(CLIENTS[0], { nextDueDate: iso(-3) }),
+    row(CLIENTS[1], { nextDueDate: iso(5) }),
+  ]);
+  const overdueRow = plans(page).filter({ hasText: "Maya Patel" });
+  const chase = overdueRow.getByRole("button", { name: /Message Maya Patel about their overdue payment/ });
+  await expect(chase).toBeVisible();
+  await chase.click();
+  await expect(page.getByRole("tab", { name: "Messages" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "Conversation with Maya Patel" })).toBeVisible();
+  // A non-overdue row has no chase action.
+  await expect(plans(page).filter({ hasText: "Leo Brooks" }).getByRole("button", { name: /overdue payment/ })).toHaveCount(0);
 });
 
 test("rows show plan, price in the coach's currency, status, and due state (overdue / due soon)", async ({ page }) => {

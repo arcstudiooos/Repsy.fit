@@ -488,7 +488,12 @@ function Dashboard({ coach, onLogout, loggingOut }: { coach: Coach; onLogout: ()
   } else if (activeTab === "business") {
     panelContent = (
       <Suspense fallback={<LoadingState />}>
-        <BusinessTab clients={clients} view={businessView} onViewChange={setBusinessView} blocked={clientsGate} />
+        <BusinessTab clients={clients} view={businessView} onViewChange={setBusinessView} blocked={clientsGate}
+          onMessage={(clientId) => {
+            setSelectedClientId(clientId);
+            selectTab("messages");
+          }}
+        />
       </Suspense>
     );
   } else if (clientsGate) {

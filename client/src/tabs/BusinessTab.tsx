@@ -3,7 +3,7 @@
 // invoice. The help line under the heading says so.
 import { lazy, Suspense, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
+import { getBilling, getBusinessPlans, queryKeys, recordPayment, saveClientPlan } from "../api";
 import { Engagement } from "../components/Engagement";
 import { Modal } from "../components/Modal";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
@@ -73,11 +73,13 @@ type BusinessTabProps = {
   /** Shown instead of the client-based views while clients load, fail or don't exist yet. Library still works. */
   blocked?: ReactNode;
   /** The Library view (App owns its template / macro hand-offs). */
+  /** Opens the Messages tab for a client - used by the overdue-payment chase action. */
+  onMessage?: (clientId: string) => void;
 };
 
 // Prompt 69: the Business tab has a view switch (Payments / Schedule / Engagement / Reports / Library).
 // It stays one tab: the switch is inside the tab.
-export function BusinessTab({ clients, view, onViewChange: setView, blocked }: BusinessTabProps) {
+export function BusinessTab({ clients, view, onViewChange: setView, blocked, onMessage }: BusinessTabProps) {
   return (
     <>
       {/* Printing a report prints only the report: the heading and view switch stay on screen. */}
@@ -100,7 +102,7 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked }: B
       {blocked ? (
         <div className="mt-4">{blocked}</div>
       ) : view === "Payments" ? (
-        <PaymentsView clients={clients} />
+        <PaymentsView clients={clients} onMessage={onMessage} />
       ) : view === "Engagement" ? (
         <Engagement />
       ) : (
@@ -112,9 +114,12 @@ export function BusinessTab({ clients, view, onViewChange: setView, blocked }: B
   );
 }
 
-function PaymentsView({ clients }: { clients: Client[] }) {
+function PaymentsView({ clients, onMessage }: { clients: Client[]; onMessage?: (clientId: string) => void }) {
   const today = localToday();
   const query = useQuery({ queryKey: queryKeys.businessPlans, queryFn: getBusinessPlans });
+  // The coach's own subscription, from the SAME source Account/Billing uses. Money truth in one
+  // place: the plan and its price sit beside the payments they record for clients.
+  const billing = useQuery({ queryKey: queryKeys.billing, queryFn: getBilling });
   const [filter, setFilter] = useState<Filter>("All");
   const [adding, setAdding] = useState(false);
 
@@ -142,6 +147,24 @@ function PaymentsView({ clients }: { clients: Client[] }) {
         )}
       </div>
       <p className="mt-1 text-xs text-dim">Record-keeping only: Repsy doesn't take payments. These are your own records.</p>
+
+      {/* The coach's own plan, from the one billing source Account uses - so the price here can
+          never disagree with Account, Billing or the public pricing page. */}
+      {billing.data && (
+        <section aria-label="My plan" className="mt-4 border-y border-border py-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h3 className="font-semibold text-text">My plan</h3>
+            <p className="text-sm text-text">
+              {billing.data.isFree
+                ? `Free plan · ${billing.data.clientLimit} clients`
+                : `$${billing.data.price}/mo · ${billing.data.clientLimit} clients`}
+            </p>
+          </div>
+          <p className="mt-1 text-sm text-dim tabular-nums">
+            {billing.data.clientsUsed} of {billing.data.clientLimit} clients used.
+          </p>
+        </section>
+      )}
 
       {query.isPending || (query.isError && query.isFetching) ? (
         <div className="mt-4">
@@ -187,7 +210,7 @@ function PaymentsView({ clients }: { clients: Client[] }) {
           ) : (
             <ul aria-label="Client plans" className="mt-4 divide-y divide-border border-t border-border">
               {shown.map((row) => (
-                <PlanRow key={row.plan.id} row={row} currency={query.data.currency} today={today} />
+                <PlanRow key={row.plan.id} row={row} currency={query.data.currency} today={today} onMessage={onMessage} />
               ))}
             </ul>
           )}
@@ -216,9 +239,10 @@ function DueText({ plan, today }: { plan: ClientPlan; today: string }) {
   return <span className="text-sm text-dim">Due {dayText(plan.nextDueDate)}</span>;
 }
 
-function PlanRow({ row, currency, today }: { row: BusinessPlanRow; currency: string; today: string }) {
+function PlanRow({ row, currency, today, onMessage }: { row: BusinessPlanRow; currency: string; today: string; onMessage?: (clientId: string) => void }) {
   const { client, plan, lastPayment } = row;
   const [open, setOpen] = useState<"pay" | "edit" | null>(null);
+  const overdue = dueState(plan, today) === "overdue";
   return (
     <li className="py-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
@@ -243,6 +267,16 @@ function PlanRow({ row, currency, today }: { row: BusinessPlanRow; currency: str
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
+        {overdue && onMessage && (
+          <button
+            type="button"
+            onClick={() => onMessage(client.id)}
+            aria-label={`Message ${client.name} about their overdue payment`}
+            className="btn btn-secondary min-h-11"
+          >
+            Message {client.name.split(" ")[0]}
+          </button>
+        )}
         {plan.status !== "Ended" && (
           <button
             type="button"
