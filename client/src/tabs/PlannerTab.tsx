@@ -305,6 +305,7 @@ function AssignmentCard({
   const busy = statusMutation.isPending || deleteMutation.isPending || editMutation.isPending;
   const error = statusMutation.error ?? deleteMutation.error;
   const isDone = assignment.status === "Done";
+  const isDraft = assignment.status === "Draft";
 
   if (building) {
     return (
@@ -375,35 +376,49 @@ function AssignmentCard({
         <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">
           {assignment.source === "ai" ? "AI" : "Manual"}
         </span>
+        {isDraft && (
+          <span className="rounded-full bg-amber px-2.5 py-0.5 text-xs font-bold text-amber-text">Draft</span>
+        )}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-dim">
         <span>{formatDay(assignment.date)}</span>
-        <div role="group" aria-label="Status" className="flex items-center gap-1">
-          {isDone && (
-            <span title="Done" className="mr-1 font-bold text-accent2">
-              ✓
-            </span>
-          )}
-          {ASSIGNMENT_STATUSES.map((s) => {
-            const isCurrent = s === assignment.status;
-            return (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={isCurrent}
-                disabled={busy}
-                onClick={() => !isCurrent && statusMutation.mutate(s)}
-                className={
-                  "rounded-lg border px-2 py-0.5 text-xs font-semibold disabled:cursor-not-allowed " +
-                  (isCurrent ? "border-text bg-surface2 font-bold text-text" : "border-border text-dim hover:border-dim hover:text-text")
-                }
+        {isDraft ? (
+          // A draft is coach-only. Publishing is the one meaningful action; the Active/Done/Paused
+          // toggle only makes sense once the client can actually see the plan.
+          <span className="text-dim">Only you can see this until you publish it.</span>
+        ) : (
+          <div role="group" aria-label="Status" className="flex items-center gap-1">
+            {isDone && (
+              <span title="Done" className="mr-1 font-bold text-accent2">
+                ✓
+              </span>
+            )}
+            {ASSIGNMENT_STATUSES.filter((s) => s !== "Draft").map((s) => {
+              const isCurrent = s === assignment.status;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={isCurrent}
+                  disabled={busy}
+                  onClick={() => !isCurrent && statusMutation.mutate(s)}
+                  className={
+                    "rounded-lg border px-2 py-0.5 text-xs font-semibold disabled:cursor-not-allowed " +
+                    (isCurrent ? "border-text bg-surface2 font-bold text-text" : "border-border text-dim hover:border-dim hover:text-text")
+                  }
               >
                 {s}
               </button>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
         <div className="ml-auto flex items-center gap-2">
+          {isDraft && (
+            <button type="button" disabled={busy} onClick={() => statusMutation.mutate("Active")} className="btn btn-primary">
+              {statusMutation.isPending ? "Publishing..." : "Publish to client"}
+            </button>
+          )}
           {/* Nov 2026: the structured builder is the depth of a workout, so it is a visible button on
               the card - not a line hidden in the "..." menu where a coach had to go looking for it.
               Only a workout has sections and sets; Nutrition / Habit / Recovery stay plain text. */}

@@ -21,7 +21,7 @@ export type AssignmentType = (typeof ASSIGNMENT_TYPES)[number];
 export const ASSIGNMENT_SOURCES = ["ai", "manual"] as const;
 export type AssignmentSource = (typeof ASSIGNMENT_SOURCES)[number];
 
-export const ASSIGNMENT_STATUSES = ["Active", "Done", "Paused"] as const;
+export const ASSIGNMENT_STATUSES = ["Active", "Done", "Paused", "Draft"] as const;
 export type AssignmentStatus = (typeof ASSIGNMENT_STATUSES)[number];
 
 export const CHAT_ROLES = ["coach", "ai"] as const;

@@ -186,6 +186,7 @@ test("create one Nutrition and one Habit: source manual, form clears, cards show
     details: "Breakfast: 3 eggs, oats 60g\nLunch: chicken 150g, rice 100g",
     reasoning: "Supports fat loss while keeping protein high.",
     source: "manual",
+    status: "Active",
     date: "2026-11-12",
   });
   const nutrition = cardFor(page, "1800 kcal high-protein day");
@@ -215,6 +216,7 @@ test("create one Nutrition and one Habit: source manual, form clears, cards show
     details: "Walk after lunch\nTake the stairs",
     reasoning: "",
     source: "manual",
+    status: "Active",
     date: localToday(),
   });
   const habit = cardFor(page, "Daily 10k steps");
@@ -289,3 +291,21 @@ test("switching client resets the draft, and a save goes only to the selected cl
   expect(mock.assignments["c-leo"]).toHaveLength(1);
   expect(mock.assignments["c-maya"] ?? []).toHaveLength(0);
 });
+
+test("Save as draft sends status Draft, and the draft card shows a Draft badge with a Publish action", async ({ page }) => {
+  const mock = await mockApi(page);
+  await openPlanner(page);
+  await typePicker(page).getByRole("button", { name: "Habit" }).click();
+  await title(page).fill("Private WIP plan");
+  await details(page).fill("Still working on this");
+  await form(page).getByRole("button", { name: "Save as draft" }).click();
+
+  expect(mock.posts[0]).toMatchObject({ title: "Private WIP plan", status: "Draft" });
+  const card = cardFor(page, "Private WIP plan");
+  await expect(card.getByText("Draft", { exact: true })).toBeVisible();
+  await expect(card).toContainText("Only you can see this until you publish it.");
+  // A draft shows Publish, not the Active/Done/Paused toggle.
+  await expect(card.getByRole("button", { name: "Publish to client" })).toBeVisible();
+  await expect(card.getByRole("group", { name: "Status" })).toHaveCount(0);
+});
+

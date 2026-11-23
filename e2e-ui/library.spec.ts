@@ -245,6 +245,7 @@ test("'Open in Plans instead': the old cross-tab route still works for a coach w
       details: "1. Back Squat — 3 sets × 6 reps · Rest 120s\n2. Leg Press — 3 sets × 12 reps · Rest 90s\n\nWarm up first",
       reasoning: "From template: Leg day - lighter week",
       source: "manual",
+      status: "Active",
       date: "2026-12-01",
     })}`,
   ]);

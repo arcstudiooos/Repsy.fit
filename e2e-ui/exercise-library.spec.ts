@@ -155,6 +155,6 @@ test("the selected list adds no new fields to what is saved", async ({ page }) =
   await form(page).getByLabel("Extra notes (optional)").fill("Back Squat 5x5");
   await form(page).getByRole("button", { name: "Assign plan" }).click();
   await expect.poll(() => mock.posts.length).toBe(1);
-  expect(Object.keys(mock.posts[0]).sort()).toEqual(["date", "details", "reasoning", "source", "title", "type"]);
+  expect(Object.keys(mock.posts[0]).sort()).toEqual(["date", "details", "reasoning", "source", "status", "title", "type"]);
   expect(mock.posts[0].details).toBe("1. Back Squat — 3 sets × 10 reps · Rest 60s\n\nBack Squat 5x5");
 });

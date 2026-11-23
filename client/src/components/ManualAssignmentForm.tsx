@@ -199,6 +199,10 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel, s
 
   function submit(ev: FormEvent) {
     ev.preventDefault();
+    save("Active");
+  }
+
+  function save(status: "Active" | "Draft") {
     if (!canSubmit) return;
     const input: NewAssignment = {
       type,
@@ -206,6 +210,7 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel, s
       details: fromExercises ? workoutDetails(exercises, details.trim()) : details.trim(),
       reasoning: reasoning.trim(),
       source: "manual",
+      status,
     };
     if (date) input.date = date;
     if (type === "Nutrition" && mealIds.length > 0) input.mealIds = mealIds;
@@ -313,6 +318,14 @@ export function ManualAssignmentForm({ clientId, onCreated, prefill, onCancel, s
           className="btn btn-primary"
         >
           {mutation.isPending ? "Saving..." : "Assign plan"}
+        </button>
+        <button
+          type="button"
+          disabled={!canSubmit}
+          onClick={() => save("Draft")}
+          className="btn btn-secondary"
+        >
+          Save as draft
         </button>
         {onCancel && (
           <button

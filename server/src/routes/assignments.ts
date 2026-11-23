@@ -16,7 +16,7 @@ import {
 
 export const ASSIGNMENT_TYPES = ["Workout", "Nutrition", "Habit", "Recovery"] as const;
 export const ASSIGNMENT_SOURCES = ["ai", "manual"] as const;
-export const ASSIGNMENT_STATUSES = ["Active", "Done", "Paused"] as const;
+export const ASSIGNMENT_STATUSES = ["Active", "Done", "Paused", "Draft"] as const;
 
 /** Today as "YYYY-MM-DD" (UTC). */
 export const today = () => new Date().toISOString().slice(0, 10);
