@@ -209,7 +209,7 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
           </p>
         </div>
         <p className="rounded-full border border-border px-3 py-1 text-sm font-semibold" data-estimate>
-          Estimated time <span className="font-mono">{clockLabel(estimate)}</span>
+          Estimated time <span className="tabular-nums">{clockLabel(estimate)}</span>
         </p>
       </div>
 

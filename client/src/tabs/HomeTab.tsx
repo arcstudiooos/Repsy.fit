@@ -516,7 +516,7 @@ function TaskRow({ task, onOpen, onNewPlan }: { task: TodayTask; onOpen: Props["
           <p className="font-semibold text-text">{task.clientName}</p>
           <p className="text-sm text-dim">{task.text}</p>
         </div>
-        <p className="shrink-0 font-mono text-sm text-text">{timeRangeText(task.startsAt, task.endsAt)}</p>
+        <p className="shrink-0 whitespace-nowrap tabular-nums text-sm text-text">{timeRangeText(task.startsAt, task.endsAt)}</p>
       </li>
     );
   }

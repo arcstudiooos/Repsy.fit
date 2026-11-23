@@ -194,7 +194,7 @@ export function MealLibrary() {
                     <span className="rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-dim">{m.dietType}</span>
                   )}
                 </div>
-                <p className="mt-2 font-mono text-sm text-text">{macroLine(m)}</p>
+                <p className="mt-2 tabular-nums text-sm text-text">{macroLine(m)}</p>
                 <p className="text-xs text-dim">{m.stock ? "Repsy numbers - copy it to change them" : "Numbers you set"}</p>
                 {m.ingredients !== "" && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-text">

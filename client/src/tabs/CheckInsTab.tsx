@@ -314,14 +314,14 @@ function SleepRecoveryCard({ checkIns, today }: { checkIns: DailyCheckIn[]; toda
           <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2">
             <div>
               <dt className="text-sm text-dim">Sleep, 7-day average</dt>
-              <dd className="font-mono text-lg">
+              <dd className="tabular-nums text-lg">
                 {summary.sleepAverage === null ? "-" : `${summary.sleepAverage} h`}
                 <span className="ml-2 text-xs text-dim">{summary.sleepNights} of 7 nights logged</span>
               </dd>
             </div>
             <div>
               <dt className="text-sm text-dim">Recovery, 7-day average</dt>
-              <dd className="font-mono text-lg">
+              <dd className="tabular-nums text-lg">
                 {summary.recoveryAverage === null ? "-" : `${summary.recoveryAverage}/5`}
                 <span className="ml-2 text-xs text-dim">{summary.recoveryDays} of 7 days logged</span>
               </dd>

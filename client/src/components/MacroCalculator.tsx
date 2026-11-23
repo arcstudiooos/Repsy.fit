@@ -249,7 +249,7 @@ export function MacroCalculator({ initialClientId = null, onPrefillUsed }: Props
       {calc.data && (
         <div role="region" aria-label="Macro result" className="card mt-4 p-5">
           <p className="font-heading text-4xl">{calc.data.calories} kcal</p>
-          <p className="mt-2 font-mono text-sm text-text">
+          <p className="mt-2 tabular-nums text-sm text-text">
             Protein {calc.data.proteinG}g · Carbs {calc.data.carbsG}g · Fat {calc.data.fatG}g
           </p>
           <p className="mt-1 text-xs text-dim">

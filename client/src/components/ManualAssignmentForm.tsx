@@ -514,7 +514,7 @@ function MealPicker({ selected, onChange }: { selected: string[]; onChange: (ids
               <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded px-2 text-sm hover:bg-surface2">
                 <input type="checkbox" checked={selected.includes(m.id)} onChange={() => toggle(m.id)} className="h-4 w-4" />
                 <span className="min-w-0 flex-1 truncate text-text">{m.name}</span>
-                <span className="font-mono text-xs text-dim">{m.calories} kcal</span>
+                <span className="tabular-nums text-xs text-dim">{m.calories} kcal</span>
               </label>
             </li>
           ))}
