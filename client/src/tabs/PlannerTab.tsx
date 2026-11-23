@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { PlanDetails, inline } from "../components/FormattedText";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteAssignment, listAssignments, queryKeys, updateAssignment, updateAssignmentStatus } from "../api";
+import { deleteAssignment, listAssignments, queryKeys, repeatWeek, updateAssignment, updateAssignmentStatus } from "../api";
 import { PlanEditor, planProblem, type PlanFields } from "../components/PlanEditor";
 import { WorkoutBuilder } from "../components/WorkoutBuilder";
 import { PlanGrid } from "../components/PlanGrid";
+import { weekStartOf } from "../lib/schedule";
 import { ManualAssignmentForm, type TemplatePrefill } from "../components/ManualAssignmentForm";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import { MenuButton } from "../components/MenuButton";
@@ -39,6 +40,11 @@ type Props = {
 type Filter = "All" | AssignmentType;
 const FILTERS: Filter[] = ["All", ...ASSIGNMENT_TYPES];
 
+/** The Monday of the current local week as "YYYY-MM-DD" (the target week for Repeat last week). */
+function mondayOfThisWeek(): string {
+  return weekStartOf(new Date()).toLocaleDateString("en-CA");
+}
+
 // Plans (the Manual Planner; a sub-tab of the client workspace since Nov 2026): everything assigned to the selected client
 // (GET /api/clients/:clientId/assignments, newest first), with instant type filters.
 export function PlannerTab({
@@ -70,6 +76,16 @@ export function PlannerTab({
     queryKey: queryKeys.assignments(client?.id ?? "none"),
     queryFn: () => listAssignments(client!.id),
     enabled: !!client,
+  });
+
+  const queryClient = useQueryClient();
+  // Repeat last week: clone the previous calendar week's plans into this week (dates +7 days).
+  const repeat = useMutation({
+    mutationFn: () => repeatWeek(client!.id, mondayOfThisWeek()),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.assignments(client!.id) });
+      window.alert(result.created === 0 ? "No plans in last week to repeat." : `Copied ${result.created} plan${result.created === 1 ? "" : "s"} into this week.`);
+    },
   });
 
   const all = assignmentsQuery.data ?? [];
@@ -197,6 +213,18 @@ export function PlannerTab({
         {client && !formOpen && (
           <button type="button" onClick={() => setFormOpen(true)} className="btn btn-primary">
             <span aria-hidden="true">+ </span>New plan
+          </button>
+        )}
+        {client && (
+          <button
+            type="button"
+            disabled={repeat.isPending}
+            onClick={() => {
+              if (window.confirm("Copy last week's plans into this week? Each plan's date moves forward 7 days.")) repeat.mutate();
+            }}
+            className="btn btn-secondary"
+          >
+            {repeat.isPending ? "Repeating..." : "Repeat last week"}
           </button>
         )}
         {client && onOpenMacroCalculator && (

@@ -172,6 +172,9 @@ export const listAssignments = (clientId: string) =>
   request<Assignment[]>("GET", `/clients/${enc(clientId)}/assignments`);
 export const createAssignment = (clientId: string, input: NewAssignment) =>
   request<Assignment>("POST", `/clients/${enc(clientId)}/assignments`, input);
+/** Clone the week before `weekStart` into that week (dates +7 days). Returns how many were copied. */
+export const repeatWeek = (clientId: string, weekStart: string) =>
+  request<{ created: number; assignments: Assignment[] }>("POST", `/clients/${enc(clientId)}/assignments/repeat-week`, { weekStart });
 export const updateAssignmentStatus = (clientId: string, assignmentId: string, status: AssignmentStatus) =>
   request<Assignment>("PATCH", `/clients/${enc(clientId)}/assignments/${enc(assignmentId)}`, { status });
 /** Nov 2026: edit a plan's title, details, reasoning and / or date (same PATCH, without `status`). */

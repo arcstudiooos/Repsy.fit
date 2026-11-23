@@ -36,6 +36,7 @@ const COACH_ROUTES: [string, string][] = [
   ["get", "/api/clients/c1"],
   ["delete", "/api/clients/c1"],
   ["get", "/api/clients/c1/assignments"],
+  ["post", "/api/clients/c1/assignments/repeat-week"],
   ["get", "/api/clients/c1/progress"],
   ["get", "/api/clients/c1/checkins"],
   ["get", "/api/clients/c1/habits"],

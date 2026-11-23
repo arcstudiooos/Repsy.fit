@@ -144,6 +144,61 @@ assignmentsRouter.post(
   }),
 );
 
+// POST /api/clients/:clientId/assignments/repeat-week { weekStart } -> clone the PRIOR 7 days of this
+// client's plans into the week beginning weekStart (each date shifted forward 7 days). The single
+// biggest time-saver: next week's schedule from last week's, in one tap. Clones are fresh Active
+// plans (no carried-over completion); Draft sources are skipped (you don't repeat an unpublished plan).
+const RepeatWeekSchema = z.object({
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "weekStart must be a date in YYYY-MM-DD form."),
+});
+const shiftDate = (date: string, days: number) => {
+  const dt = new Date(`${date}T00:00:00Z`);
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+};
+assignmentsRouter.post(
+  "/repeat-week",
+  asyncHandler(async (req, res) => {
+    const parsed = RepeatWeekSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: validationMessage(parsed.error) });
+      return;
+    }
+    const { clientId } = req.params as { clientId: string };
+    const coachId = coachIdOf(req);
+    const client = await findClient(clientId, coachId);
+    if (!client) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+    const target = parsed.data.weekStart;
+    const source = await prisma.assignment.findMany({
+      where: { clientId: client.id, coachId, status: { not: "Draft" }, date: { gte: shiftDate(target, -7), lte: shiftDate(target, -1) } },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    });
+    const created = [];
+    for (const a of source) {
+      const clone = await prisma.assignment.create({
+        data: {
+          coachId,
+          clientId: client.id,
+          type: a.type,
+          title: a.title,
+          details: a.details,
+          reasoning: a.reasoning,
+          source: a.source,
+          status: "Active",
+          date: shiftDate(a.date, 7),
+          mealIds: a.mealIds,
+        },
+      });
+      await deriveStructure(clone);
+      created.push(clone);
+    }
+    res.status(201).json({ created: created.length, assignments: created });
+  }),
+);
+
 // PATCH /api/clients/:clientId/assignments/:assignmentId - returns the full assignment. Two kinds of body:
 // with `status` it changes the status only (Active / Done / Paused; any other field is ignored, as before);
 // without `status` it edits `title`, `details`, `reasoning` and / or `date` (at least one, nothing else).

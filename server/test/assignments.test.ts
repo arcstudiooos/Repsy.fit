@@ -126,3 +126,56 @@ describe("GET /api/clients/:clientId/assignments", () => {
     expect(prisma.assignment.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/clients/:clientId/assignments/repeat-week", () => {
+  const src = (over: Record<string, unknown>) => ({
+    id: "s", coachId: TEST_COACH_ID, clientId: client.id, type: "Workout", title: "Plan", details: "Back squat 4x6",
+    reasoning: "r", source: "manual", status: "Active", date: "2026-11-09", mealIds: [] as string[], ...over,
+  });
+
+  it("clones the 7 days before weekStart into that week, dates +7, fresh and Active", async () => {
+    prisma.assignment.findMany.mockResolvedValue([
+      src({ id: "s1", title: "Mon squats", date: "2026-11-09" }),
+      src({ id: "s2", type: "Nutrition", title: "Wed meals", details: "Eat well", date: "2026-11-11", mealIds: ["m1"] }),
+    ]);
+    const res = await request(app).post(`/api/clients/${client.id}/assignments/repeat-week`).send({ weekStart: "2026-11-16" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.created).toBe(2);
+    // The source window is exactly the prior 7 days, and never a Draft.
+    expect(prisma.assignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: { not: "Draft" }, date: { gte: "2026-11-09", lte: "2026-11-15" } }) }),
+    );
+    expect(prisma.assignment.create).toHaveBeenCalledTimes(2);
+    const datas = prisma.assignment.create.mock.calls.map((c) => c[0].data);
+    expect(datas.map((d) => d.date)).toEqual(["2026-11-16", "2026-11-18"]);
+    for (const d of datas) {
+      expect(d.status).toBe("Active");
+      // A clone starts fresh: no completion is carried over.
+      expect(d).not.toHaveProperty("completedAt");
+      expect(d).not.toHaveProperty("clientEffort");
+    }
+    expect(datas[1].mealIds).toEqual(["m1"]);
+  });
+
+  it("copies nothing when the prior week was empty", async () => {
+    prisma.assignment.findMany.mockResolvedValue([]);
+    const res = await request(app).post(`/api/clients/${client.id}/assignments/repeat-week`).send({ weekStart: "2026-11-16" });
+    expect(res.status).toBe(201);
+    expect(res.body.created).toBe(0);
+    expect(prisma.assignment.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a bad weekStart", async () => {
+    const res = await request(app).post(`/api/clients/${client.id}/assignments/repeat-week`).send({ weekStart: "last-monday" });
+    expect(res.status).toBe(400);
+    expect(prisma.assignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("404s for a client that is not this coach's", async () => {
+    prisma.client.findFirst.mockResolvedValue(null);
+    const res = await request(app).post(`/api/clients/missing/assignments/repeat-week`).send({ weekStart: "2026-11-16" });
+    expect(res.status).toBe(404);
+    expect(prisma.assignment.create).not.toHaveBeenCalled();
+  });
+});

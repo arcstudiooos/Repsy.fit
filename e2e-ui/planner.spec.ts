@@ -83,6 +83,14 @@ async function mockApi(page: Page, initial: Record<string, Assignment[]> = {}): 
       (mock.assignments[clientId] ??= []).push(saved);
       return route.fulfill({ status: 201, json: saved });
     }
+    // Repeat last week: clone the prior week forward. Must be matched BEFORE the :assignmentId route.
+    const repeat = path.match(/^\/api\/clients\/([^/]+)\/assignments\/repeat-week$/);
+    if (repeat && req.method() === "POST") {
+      const clientId = decodeURIComponent(repeat[1]);
+      const clones = (mock.assignments[clientId] ?? []).map((a) => assignment(clientId, { ...a, title: a.title }));
+      (mock.assignments[clientId] ??= []).push(...clones);
+      return route.fulfill({ status: 201, json: { created: clones.length, assignments: clones } });
+    }
     // Plans "Edit" (Nov 2026): PATCH without status changes title / details / reasoning / date.
     const one = path.match(/^\/api\/clients\/([^/]+)\/assignments\/([^/]+)$/);
     if (one && req.method() === "PATCH") {
@@ -350,3 +358,33 @@ test("client cards show the last check-in and adherence from GET /api/clients (n
   await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(page.getByRole("dialog")).toContainText("Delete Maya Patel?");
 });
+
+test("Repeat last week copies the prior week's plans forward after a confirm", async ({ page }) => {
+  await mockApi(page, {
+    "c-maya": [
+      assignment("c-maya", { type: "Workout", title: "Squat day" }),
+      assignment("c-maya", { type: "Nutrition", title: "Protein plan" }),
+    ],
+  });
+  const posts: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.url().endsWith("/repeat-week")) posts.push(r.postData() ?? "");
+  });
+  await page.goto("/app");
+  await openTab(page, "Plans");
+  await expect(cards(page)).toHaveCount(2);
+
+  // Cancelling the confirm sends nothing.
+  page.once("dialog", (d) => d.dismiss());
+  await panel(page).getByRole("button", { name: "Repeat last week" }).click();
+  expect(posts).toHaveLength(0);
+  await expect(cards(page)).toHaveCount(2);
+
+  // Accepting both the confirm and the success alert copies the week forward and refreshes.
+  page.on("dialog", (d) => d.accept());
+  await panel(page).getByRole("button", { name: "Repeat last week" }).click();
+  await expect(cards(page)).toHaveCount(4);
+  expect(posts).toHaveLength(1);
+  expect(JSON.parse(posts[0])).toHaveProperty("weekStart");
+});
+
