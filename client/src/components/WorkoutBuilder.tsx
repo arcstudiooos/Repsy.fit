@@ -263,7 +263,7 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
                 />
               </div>
             )}
-            <div className="ml-auto flex gap-1">
+            <div className="ml-auto flex flex-wrap justify-end gap-1">
               <button type="button" className="btn btn-secondary min-h-10" disabled={si === 0} onClick={() => setSections(move(sections, si, si - 1))}>
                 Move up
               </button>
@@ -274,6 +274,20 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
                 onClick={() => setSections(move(sections, si, si + 1))}
               >
                 Move down
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary min-h-10"
+                aria-label={`Duplicate the ${section.protocol} section`}
+                onClick={() =>
+                  setSections([
+                    ...sections.slice(0, si + 1),
+                    { ...section, exercises: section.exercises.map((e) => ({ ...e, repsPerSet: [...e.repsPerSet] })) },
+                    ...sections.slice(si + 1),
+                  ])
+                }
+              >
+                Duplicate section
               </button>
               <button type="button" className="btn btn-secondary min-h-10" onClick={() => setSections(sections.filter((_, i) => i !== si))}>
                 Remove section
@@ -335,7 +349,7 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
                           : "One number per set"}
                       </p>
                     </div>
-                    <div className="flex items-end gap-1">
+                    <div className="flex flex-wrap items-end gap-1">
                       <button type="button" className="btn btn-secondary min-h-10" disabled={ei === 0} onClick={() => update(si, { exercises: move(section.exercises, ei, ei - 1) })}>
                         Up
                       </button>
@@ -346,6 +360,22 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
                         onClick={() => update(si, { exercises: move(section.exercises, ei, ei + 1) })}
                       >
                         Down
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary min-h-10"
+                        aria-label={`Duplicate ${ex.name || "exercise"}`}
+                        onClick={() =>
+                          update(si, {
+                            exercises: [
+                              ...section.exercises.slice(0, ei + 1),
+                              { ...ex, repsPerSet: [...ex.repsPerSet] },
+                              ...section.exercises.slice(ei + 1),
+                            ],
+                          })
+                        }
+                      >
+                        Duplicate
                       </button>
                       <button type="button" className="btn btn-secondary min-h-10" onClick={() => update(si, { exercises: section.exercises.filter((_, j) => j !== ei) })}>
                         Remove

@@ -213,3 +213,17 @@ test("only a workout offers the builder", async ({ page }) => {
   await page.getByRole("button", { name: /^More actions for/ }).first().click();
   await expect(page.getByRole("menuitem", { name: "Edit" })).toBeVisible();
 });
+
+test("Duplicate copies an exercise in place, and Duplicate section copies the whole block", async ({ page }) => {
+  await openBuilder(page);
+  await expect(page.getByLabel("Exercise")).toHaveCount(1);
+  // One tap duplicates the exercise with its reps.
+  await page.getByRole("button", { name: "Duplicate Back Squat" }).click();
+  await expect(page.getByLabel("Exercise")).toHaveCount(2);
+  await expect(page.getByLabel("Exercise").nth(0)).toHaveValue("Back Squat");
+  await expect(page.getByLabel("Exercise").nth(1)).toHaveValue("Back Squat");
+  await expect(page.getByLabel("Reps per set").nth(1)).toHaveValue("6, 6, 6, 6");
+  // Duplicating the section copies both exercises into a new block below.
+  await page.getByRole("button", { name: /Duplicate the .* section/ }).first().click();
+  await expect(page.getByLabel("Exercise")).toHaveCount(4);
+});
