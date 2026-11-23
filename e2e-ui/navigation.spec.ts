@@ -213,10 +213,10 @@ test("Home: the KPIs and the dashboard sections, in priority order", async ({ pa
   await expect(panel.getByRole("button", { name: "At risk: 1. Open clients that need attention." })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Pending reviews: 0. Open the action centre." })).toBeVisible();
   // DOM order IS visual order and tab order (no `order-*` utilities), so this pins the dashboard's priority:
-  // the action centre and client health lead, then the morning job (Today's tasks) beside recent activity,
-  // then the full-width weekly report.
+  // the Needs-attention triage list leads (Home's one job), then the action centre and client health,
+  // then the morning job (Today's tasks) beside recent activity, then the full-width weekly report.
   const labels = await panel.locator("section[aria-label]").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
-  expect(labels).toEqual(["Action centre", "Client health", "Today's tasks", "Recent activity", "Weekly coaching report"]);
+  expect(labels).toEqual(["Needs attention", "Action centre", "Client health", "Today's tasks", "Recent activity", "Weekly coaching report"]);
 });
 
 test("Home: recent check-ins are rows in Recent activity whose View check-in opens the client's workspace", async ({ page }) => {

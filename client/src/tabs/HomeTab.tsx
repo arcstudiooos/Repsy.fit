@@ -18,7 +18,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Modal } from "../components/Modal";
 import { NewPlanDialog } from "../components/NewPlanDialog";
 import { ErrorState, LoadingState } from "../components/States";
-import type { Client, RecentCheckIn, ReviewItem, TodayTask, WeeklyFacts } from "../types";
+import type { AtRiskClient, Client, RecentCheckIn, ReviewItem, TodayTask, WeeklyFacts } from "../types";
 import { TYPE_CHIP } from "../lib/typeChip";
 import { timeRangeText } from "../lib/schedule";
 import { formatDay } from "../lib/dates";
@@ -84,6 +84,10 @@ export function HomeTab({ onOpenTask, onOpenThread, onOpenClient, onOpenClients,
           onClick={() => actionCentreRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
           goTo="the action centre"
         />
+      </div>
+
+      <div className="mt-4">
+        <AttentionList clients={atRiskQ.data?.clients ?? null} loading={atRiskQ.isPending} onOpenClient={onOpenClient} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
@@ -377,6 +381,57 @@ export function clientHealth(clients: Client[], atRiskIds: Set<string>) {
   return { total, inactive, attention, onTrack: total - inactive - attention };
 }
 
+/** Home's one job: who needs attention today, each named with the reason and a one-tap open.
+ *  The reasons are the live at-risk rules (adherence / inactive / weight / sleep) - no AI, no vanity. */
+function AttentionList({
+  clients,
+  loading,
+  onOpenClient,
+}: {
+  clients: AtRiskClient[] | null;
+  loading: boolean;
+  onOpenClient: (clientId: string, sub: "progress" | "checkins") => void;
+}) {
+  return (
+    <section aria-label="Needs attention" className="card dense p-5">
+      <CardHead
+        icon={<IconPulse />}
+        title={`Needs attention${clients && clients.length ? ` (${clients.length})` : ""}`}
+        sub="Who to check on today, and why."
+      />
+      {loading || clients === null ? (
+        <div className="mt-3">
+          <LoadingState />
+        </div>
+      ) : clients.length === 0 ? (
+        <p className="mt-3 text-sm text-dim">
+          No one needs attention right now. <span className="font-semibold text-text">On track</span> means a client has checked in recently with no
+          warning signs in adherence, weight or sleep.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border border-t border-border">
+          {clients.map((c) => (
+            <li key={c.clientId} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+              <div className="min-w-0 sm:flex-1">
+                <p className="font-semibold text-text">{c.clientName}</p>
+                <p className="text-sm text-dim">{c.reasons.map((r) => r.text).join(" · ")}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenClient(c.clientId, "checkins")}
+                aria-label={`Open ${c.clientName}`}
+                className="btn btn-secondary w-full min-h-11 sm:w-auto"
+              >
+                Open
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function ClientHealth({
   clients,
   atRiskIds,
@@ -426,6 +481,8 @@ function ClientHealth({
         <HealthStat dot="bg-amber" value={attention} label="Needs attention" />
         <HealthStat dot="bg-border-strong" value={inactive} label={`Inactive (${INACTIVE_DAYS}+ days)`} />
       </dl>
+
+      <p className="mt-3 text-xs text-dim">On track = checked in recently with no warning signs in adherence, weight or sleep.</p>
 
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 border-t border-border pt-3 text-sm font-semibold">
         <button type="button" onClick={onOpenClients} className="text-accent-text underline-offset-4 hover:underline">

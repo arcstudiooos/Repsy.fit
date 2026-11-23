@@ -107,3 +107,26 @@ test("a missing endpoint flags no card and never fabricates attention", async ({
   await expect(leo).toBeVisible();
   await expect(leo).not.toContainText("Needs attention");
 });
+
+test("Home names each at-risk client with its reason and a one-tap open", async ({ page }) => {
+  await mockApi(page, AT_RISK);
+  await page.goto("/app"); // Home is the default tab - its one job is triage.
+  const region = page.getByRole("region", { name: "Needs attention" });
+  await expect(region).toContainText("Needs attention (2)");
+  await expect(region).toContainText("Leo Brooks");
+  await expect(region).toContainText("Adherence 45% over the last 2 weeks");
+  await expect(region).toContainText("No check-in for 12 days");
+  await expect(region).toContainText("Maya Patel");
+  // One tap on the named row opens that client - "act on the first flagged client".
+  await region.getByRole("button", { name: "Open Maya Patel" }).click();
+  await expect(page.getByRole("region", { name: "Selected client" })).toContainText("Maya Patel");
+});
+
+test("Home with everyone on track states the on-track definition, never a bare zero", async ({ page }) => {
+  await mockApi(page, []);
+  await page.goto("/app");
+  const region = page.getByRole("region", { name: "Needs attention" });
+  await expect(region).toContainText("No one needs attention");
+  // The definition is stated in plain words where the number would otherwise sit unexplained.
+  await expect(region).toContainText(/On track/);
+});
