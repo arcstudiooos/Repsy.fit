@@ -96,6 +96,8 @@ test("a plan written as text opens on what the coach already wrote", async ({ pa
   // Parsed from "4 sets x 6 reps": four sets of six, shown the way they are written.
   await expect(page.getByLabel("Reps per set")).toHaveValue("6, 6, 6, 6");
   await expect(page.getByLabel("Exercise")).toHaveValue("Back Squat");
+  // Sets, reps AND rest are on the row itself - no "More options" needed for the core prescription.
+  await expect(page.getByLabel("Rest (s)")).toBeVisible();
   await expect(page.getByText(/Read from the plan text/)).toBeVisible();
   await expect(page.getByText("4 sets")).toBeVisible();
 });

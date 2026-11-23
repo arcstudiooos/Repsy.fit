@@ -308,7 +308,7 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
               const showAdvanced = open === key;
               return (
                 <li key={ei} className="rounded-lg border border-border-strong bg-surface2 p-2">
-                  <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_auto]">
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
                     <div>
                       <label htmlFor={`ex-${key}-name`} className="mb-1 block text-xs font-bold">
                         Exercise
@@ -341,13 +341,27 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
                         onChange={(e) => updateEx(si, ei, { repsPerSet: textToReps(e.target.value) })}
                         placeholder="12, 12, 10"
                         inputMode="numeric"
-                        className={field + " font-mono"}
+                        className={field + " tabular-nums"}
                       />
                       <p className="mt-0.5 text-xs text-dim">
                         {ex.repsPerSet.length
                           ? `${ex.repsPerSet.length} ${ex.repsPerSet.length === 1 ? "set" : "sets"}`
                           : "One number per set"}
                       </p>
+                    </div>
+                    <div>
+                      <label htmlFor={`ex-${key}-rest`} className="mb-1 block text-xs font-bold">
+                        Rest (s)
+                      </label>
+                      <input
+                        id={`ex-${key}-rest`}
+                        type="number"
+                        min={0}
+                        max={3600}
+                        value={ex.restSec}
+                        onChange={(e) => updateEx(si, ei, { restSec: Math.max(0, Number(e.target.value) || 0) })}
+                        className={field + " tabular-nums"}
+                      />
                     </div>
                     <div className="flex flex-wrap items-end gap-1">
                       <button type="button" className="btn btn-secondary min-h-10" disabled={ei === 0} onClick={() => update(si, { exercises: move(section.exercises, ei, ei - 1) })}>
@@ -405,20 +419,6 @@ export function WorkoutBuilder({ clientId, assignmentId, title = "this workout",
                             updateEx(si, ei, { loadPerSet: e.target.value.split(",").map((l) => l.trim()).filter(Boolean).slice(0, 20) })
                           }
                           placeholder="60 kg, 60 kg, 65 kg"
-                          className={field}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor={`ex-${key}-rest`} className="mb-1 block text-xs font-bold">
-                          Rest between sets (s)
-                        </label>
-                        <input
-                          id={`ex-${key}-rest`}
-                          type="number"
-                          min={0}
-                          max={3600}
-                          value={ex.restSec}
-                          onChange={(e) => updateEx(si, ei, { restSec: Math.max(0, Number(e.target.value) || 0) })}
                           className={field}
                         />
                       </div>
