@@ -37,6 +37,8 @@ type Setup = {
   threadFails?: () => boolean;
   /** Home tab badge count. */
   reviewCount?: number;
+  /** The client snapshot shown beside an open thread (fields default to blanks). */
+  snapshot?: Record<string, number | string | null>;
 };
 
 /** A small fake server: threads per client, unread client messages, and a POST that can fail. */
@@ -45,6 +47,7 @@ async function mockServer(page: Page, setup: Setup = {}) {
   let failSends = setup.failSends ?? 0;
   const posts: string[] = [];
   const threadGets: string[] = [];
+  const snapshotGets: string[] = [];
   const reviewQueueGets: number[] = [];
   let seq = 100;
 
@@ -72,6 +75,17 @@ async function mockServer(page: Page, setup: Setup = {}) {
         },
       });
     }
+    const snap = /^\/api\/clients\/([^/]+)\/snapshot$/.exec(path);
+    if (snap) {
+      snapshotGets.push(snap[1]);
+      return route.fulfill({
+        json: {
+          latestWeightKg: null, latestWeightOn: null, adherencePercent: null, adherenceDays: 7,
+          lastWorkoutOn: null, lastWorkoutTitle: null, totalWorkoutsDone: 0, currentStreak: 0, longestStreak: 0,
+          ...(setup.snapshot ?? {}),
+        },
+      });
+    }
     const m = /^\/api\/clients\/([^/]+)\/messages$/.exec(path);
     if (m) {
       const id = m[1];
@@ -94,7 +108,7 @@ async function mockServer(page: Page, setup: Setup = {}) {
     }
     return route.fulfill({ json: emptyApi(path) });
   });
-  return { posts, threadGets, reviewQueueGets, threads };
+  return { posts, threadGets, snapshotGets, reviewQueueGets, threads };
 }
 
 async function openMessages(page: Page) {
@@ -143,6 +157,35 @@ test("client list: names, last-message previews, unread dots, search by name", a
   await expect(rows.first()).toContainText("Casey Lin");
   await page.getByLabel("Search clients by name").fill("zzz");
   await expect(page.getByRole("region", { name: "Conversations" })).toContainText('No clients match "zzz".');
+});
+
+test("waiting-first: a client awaiting a reply sorts above a newer coach message, with a count and badge", async ({ page }) => {
+  await mockServer(page, {
+    threads: {
+      // Maya: coach answered last, and most recently.
+      "c-maya": [msg({ id: "m1", sender: "coach", body: "All set for Monday", createdAt: "2026-11-11T12:00:00.000Z" })],
+      // Arjun: the client asked earlier and is still waiting for a reply.
+      "c-arjun": [msg({ id: "a1", clientId: "c-arjun", sender: "client", body: "Can we move Friday?", createdAt: "2026-11-11T09:00:00.000Z" })],
+    },
+  });
+  await openMessages(page);
+  const rows = list(page).getByRole("button");
+  // Despite Maya's message being newer, Arjun is waiting, so he leads - no client waits unseen.
+  await expect(rows.first()).toContainText("Arjun Rao");
+  await expect(rows.first()).toContainText("Waiting");
+  await expect(page.getByRole("region", { name: "Conversations" })).toContainText("1 waiting for reply");
+});
+
+test("context beside the chat: opening a conversation loads that client's snapshot", async ({ page }) => {
+  const server = await mockServer(page, {
+    threads: { "c-arjun": [msg({ id: "a1", clientId: "c-arjun", sender: "client", body: "Can we move Friday?" })] },
+    snapshot: { totalWorkoutsDone: 12, adherencePercent: 82 },
+  });
+  await openMessages(page);
+  await list(page).getByRole("button", { name: /Arjun Rao/ }).click();
+  await expect(pane(page)).toHaveAttribute("aria-label", "Conversation with Arjun Rao");
+  // The coach can see the client's state without leaving the thread.
+  expect(server.snapshotGets).toContain("c-arjun");
 });
 
 test("selecting a conversation opens it, marks it read and clears its unread dot", async ({ page }) => {

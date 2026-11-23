@@ -9,6 +9,7 @@ import { getMessageThread, listThreads, queryKeys, sendMessage } from "../api";
 import { ErrorState, LoadingState, plainErrorMessage } from "../components/States";
 import type { Client, ThreadMessage, ThreadSummary } from "../types";
 import { relativeTime } from "../lib/dates";
+import { ClientSnapshotCards } from "../components/ClientSnapshotCards";
 
 /** How often the list and the open thread are re-fetched. There are no WebSockets or push in v2. */
 export const MESSAGES_POLL_MS = 20_000;
@@ -99,14 +100,23 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
     [threads.data],
   );
   const term = search.trim().toLowerCase();
+  // "Waiting for a reply" = the client spoke last and the coach hasn't answered. Messages' one job is
+  // that no client waits unseen, so these sort ABOVE everything, longest-waiting first; the rest fall
+  // in by most-recent. (unreadCount can be 0 on a read-but-unanswered message, so sender is the signal.)
+  const isWaiting = (id: string) => byClient.get(id)?.lastMessage?.sender === "client";
   const shown = clients
     .filter((c) => c.name.toLowerCase().includes(term))
-    // Most recent conversation first; clients with no messages keep their usual order after them.
     .sort((a, b) => {
+      const aw = isWaiting(a.id);
+      const bw = isWaiting(b.id);
+      if (aw !== bw) return aw ? -1 : 1;
       const at = byClient.get(a.id)?.lastMessage?.createdAt ?? "";
       const bt = byClient.get(b.id)?.lastMessage?.createdAt ?? "";
-      return at === bt ? 0 : at < bt ? 1 : -1;
+      if (at === bt) return 0;
+      // Among waiting, OLDEST first (the client kept waiting longest). Otherwise newest first.
+      return aw ? (at < bt ? -1 : 1) : at < bt ? 1 : -1;
     });
+  const waitingCount = clients.filter((c) => isWaiting(c.id)).length;
 
   return (
     <section aria-label="Conversations" className="py-1">
@@ -126,6 +136,11 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
           Couldn't load message previews.
         </p>
       )}
+      {waitingCount > 0 && (
+        <p className="mt-2 px-1 text-xs font-bold tracking-wide text-amber-text uppercase">
+          {waitingCount} waiting for reply
+        </p>
+      )}
       {shown.length === 0 ? (
         <p className="mt-3 px-1 text-sm text-dim">No clients match "{search.trim()}".</p>
       ) : (
@@ -135,6 +150,7 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
             const selected = c.id === selectedClientId;
             // The open conversation is being read right now, so it never shows a dot.
             const unread = !selected && (summary?.unreadCount ?? 0) > 0;
+            const waiting = summary?.lastMessage?.sender === "client";
             const last = summary?.lastMessage;
             const failed = failedFor.has(c.id);
             const preview = failed
@@ -161,6 +177,9 @@ function ConversationList({ clients, selectedClientId, onSelect, failedFor }: Pr
                       <span className={"min-w-0 flex-1 truncate text-sm text-text " + (unread ? "font-bold" : "font-semibold")}>
                         {c.name}
                       </span>
+                      {waiting && !failed && (
+                        <span className="shrink-0 rounded-full bg-surface2 px-1.5 py-0.5 text-[11px] font-bold text-amber-text">Waiting</span>
+                      )}
                       {last && !failed && (
                         <time dateTime={last.createdAt} className="shrink-0 text-xs text-dim">
                           {relativeTime(last.createdAt)}
@@ -317,7 +336,14 @@ function Conversation({
   }, [scrollKey]);
 
   return (
-    <section aria-label={`Conversation with ${client.name}`} className="card flex min-h-[26rem] flex-col p-0">
+    <div className="flex flex-col gap-3">
+      {/* Context beside the chat: the client's snapshot (weight, adherence, last check-in) sits with the
+          thread so the coach answers without leaving to look it up. It fails silent if there's no data,
+          and stays OUTSIDE the conversation region so it never counts as a message. */}
+      <div className="px-1">
+        <ClientSnapshotCards clientId={client.id} today={new Date().toLocaleDateString("en-CA")} />
+      </div>
+      <section aria-label={`Conversation with ${client.name}`} className="card flex min-h-[26rem] flex-col p-0">
       <header className="flex items-center gap-2 border-b border-border px-4 py-3 sm:px-5">
         <button type="button" onClick={onBack} className="min-h-11 shrink-0 rounded px-1 text-sm font-semibold text-accent2 md:hidden">
           ‹ Conversations
@@ -399,6 +425,7 @@ function Conversation({
         </p>
       </form>
     </section>
+    </div>
   );
 }
 
